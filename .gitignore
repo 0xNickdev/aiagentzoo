@@ -1,0 +1,14 @@
+node_modules
+dist
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+data/
+apps/node/data/
+prototype-static/
+target/
+.anchor/
+test-ledger/
+art/

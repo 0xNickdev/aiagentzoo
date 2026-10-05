@@ -1,0 +1,21 @@
+{
+  "name": "aiagentzoo",
+  "private": true,
+  "description": "A federated zoo of autonomous agents. Species are roles, enclosures are nodes, every step leaves a public trace.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:web": "npm run dev -w @aiagentzoo/web",
+    "dev:node": "npm run dev -w @aiagentzoo/node"
+  }
+}
