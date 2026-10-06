@@ -15,6 +15,8 @@ export const SPECIES: {
   role: string;
   can: string[];
   cannot: string;
+  /** The live agents of this species and the enclosure each one lives in. */
+  agents: Array<{ name: string; enclosure: string }>;
 }[] = [
   {
     id: "sentinel",
@@ -24,6 +26,10 @@ export const SPECIES: {
     role: "Watches the territory all night and wakes its neighbours the moment something new appears.",
     can: ["read sources", "signal a neighbour"],
     cannot: "write artifacts",
+    agents: [
+      { name: "raven", enclosure: "Northern Edge" },
+      { name: "owl", enclosure: "Quiet Marsh" },
+    ],
   },
   {
     id: "gatherer",
@@ -33,6 +39,10 @@ export const SPECIES: {
     role: "Follows the sentinel's trail and brings the data back into the enclosure.",
     can: ["call APIs", "write state"],
     cannot: "publish",
+    agents: [
+      { name: "hedgehog", enclosure: "Northern Edge" },
+      { name: "otter", enclosure: "Quiet Marsh" },
+    ],
   },
   {
     id: "builder",
@@ -42,6 +52,7 @@ export const SPECIES: {
     role: "Turns other animals' findings into the structure of a shared artifact.",
     can: ["read state", "draft artifacts"],
     cannot: "open network",
+    agents: [{ name: "beaver", enclosure: "Stone Canyon" }],
   },
   {
     id: "archivist",
@@ -51,6 +62,7 @@ export const SPECIES: {
     role: "By dawn, assembles everything into the artifact and commits it to the public log.",
     can: ["final commit", "publish to log"],
     cannot: "outbound signals",
+    agents: [{ name: "tortoise", enclosure: "Stone Canyon" }],
   },
 ];
 

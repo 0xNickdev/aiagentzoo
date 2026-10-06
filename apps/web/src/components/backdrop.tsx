@@ -28,7 +28,15 @@ function useImage(src?: string): boolean {
   return ok;
 }
 
-const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%)";
+/**
+ * Backdrops bleed this far past their section on both sides and fade over
+ * that distance, so neighbouring photos cross-fade instead of meeting at a seam.
+ */
+const BLEED = "16vh";
+const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%)";
+/** Strips are brighter than sections, so they take a longer, eased fade. */
+const STRIP_FADE =
+  "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.25) 14%, rgba(0,0,0,0.7) 26%, #000 38%, #000 62%, rgba(0,0,0,0.7) 74%, rgba(0,0,0,0.25) 86%, transparent 100%)";
 
 /**
  * Atmosphere behind a section: a tinted glow that is always there, an
@@ -44,6 +52,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
     const el = ref.current;
     if (!el || !hasReveal || !window.matchMedia("(pointer: fine)").matches) return;
     const section = el.parentElement!;
+    // Coordinates are relative to the backdrop itself, which is taller than the section.
     const target = { x: 0.5, y: 0.5, r: 0 };
     const current = { x: 0.5, y: 0.5, r: 0 };
     let raf = 0;
@@ -57,7 +66,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
       raf = requestAnimationFrame(loop);
     };
     const move = (e: PointerEvent) => {
-      const rect = section.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       target.x = (e.clientX - rect.left) / rect.width;
       target.y = (e.clientY - rect.top) / rect.height;
       target.r = 260;
@@ -74,7 +83,12 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
   }, [hasReveal]);
 
   return (
-    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 overflow-hidden"
+      style={{ top: `-${BLEED}`, bottom: `-${BLEED}`, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+    >
       <div
         className="absolute inset-0"
         style={{ background: `radial-gradient(70% 55% at ${glowAt}, rgba(${tint},0.16), transparent 70%)` }}
@@ -84,7 +98,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
           src={src}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ opacity, objectPosition: position, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+          style={{ opacity, objectPosition: position }}
         />
       )}
       {hasReveal && (
@@ -107,36 +121,33 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
 }
 
 /**
- * Full-bleed cinematic band between sections, with a slow parallax and
- * an optional line of copy over it.
+ * Cinematic band between sections. It overlaps the neighbouring sections'
+ * fades so the page reads as one continuous night, and carries live content.
  */
 export function Strip({ src, tint = "120,150,130", children }: { src: string; tint?: string; children?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const ok = useImage(src);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], ["-12%", "12%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
 
   return (
-    <div
-      ref={ref}
-      className="relative h-[55vh] min-h-[340px] w-full overflow-hidden sm:h-[70vh]"
-      style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
-    >
+    <div ref={ref} className="relative -my-[8vh] min-h-[360px] w-full sm:h-[58vh]">
       <div
-        className="absolute inset-0"
-        style={{ background: `radial-gradient(80% 60% at 50% 55%, rgba(${tint},0.22), transparent 75%)` }}
-      />
-      {ok && (
-        <motion.img
-          src={src}
-          alt=""
-          aria-hidden
-          style={{ y }}
-          className="absolute inset-[-12%_0] h-[124%] w-full object-cover"
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 overflow-hidden"
+        style={{ top: "-12vh", bottom: "-12vh", maskImage: STRIP_FADE, WebkitMaskImage: STRIP_FADE }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ background: `radial-gradient(80% 60% at 50% 55%, rgba(${tint},0.22), transparent 75%)` }}
         />
-      )}
+        {ok && (
+          <motion.img src={src} alt="" style={{ y }} className="absolute inset-[-10%_0] h-[120%] w-full object-cover" />
+        )}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(1,1,1,0.45),transparent_70%)]" />
+      </div>
       {children && (
-        <div className="relative z-10 flex h-full items-center justify-center px-5 text-center">{children}</div>
+        <div className="relative z-10 flex h-full min-h-[360px] flex-col items-center justify-center px-5 py-16 text-center">{children}</div>
       )}
     </div>
   );

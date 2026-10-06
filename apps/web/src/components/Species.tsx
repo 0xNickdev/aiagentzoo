@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { SPECIES } from "../data";
+import { openPassport } from "../passportStore";
 import { Reveal, Section, SectionHead } from "./ui";
 
 export default function Species() {
@@ -11,7 +12,7 @@ export default function Species() {
       <SectionHead
         eyebrow="Species"
         title={["A species is a role,", "not a skin"]}
-        text="Permissions are enforced by the runtime, not the prompt. A neighbour's event is data to an animal — never a command."
+        text="Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt — a neighbour's event is data, never a command."
       />
 
       <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-4">
@@ -37,6 +38,26 @@ export default function Species() {
                   <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{s.animal}</span>
                 </div>
                 <p className="mt-3 text-sm font-light leading-relaxed text-white/65">{s.role}</p>
+
+                <div className="mt-5">
+                  <p className="mb-2 text-[10px] font-light uppercase tracking-[0.25em] text-white/40">Living in the zoo</p>
+                  <div className="flex flex-wrap gap-2">
+                    {s.agents.map((a) => (
+                      <button
+                        key={a.name}
+                        type="button"
+                        onClick={() => openPassport(a.name)}
+                        className="liquid-glass flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-left transition hover:bg-white/10"
+                      >
+                        <img src={`/agents/${a.name}.webp`} alt="" className="h-8 w-8 rounded-full" />
+                        <span className="leading-tight">
+                          <span className="block text-[11px] uppercase tracking-[0.15em] text-white/90">{a.name}</span>
+                          <span className="block text-[10px] font-light text-white/45">{a.enclosure}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <ul className="mt-5 flex flex-wrap gap-2 text-[10px] font-light uppercase tracking-[0.15em]">
                   {s.can.map((c) => (

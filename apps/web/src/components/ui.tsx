@@ -19,7 +19,7 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
 
 export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: string[]; text?: string }) {
   return (
-    <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-20">
+    <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
       <Reveal>
         <p className="mb-6 text-xs font-light uppercase tracking-[0.3em] text-white/50">{eyebrow}</p>
       </Reveal>
@@ -49,7 +49,7 @@ export function Section({
   backdrop?: BackdropProps;
 }) {
   return (
-    <section id={id} className={`relative isolate px-5 py-24 sm:px-8 sm:py-32 md:py-40 ${className}`}>
+    <section id={id} className={`relative px-5 py-20 sm:px-8 sm:py-24 md:py-28 ${className}`}>
       {backdrop && <Backdrop {...backdrop} />}
       <div className="relative z-10 mx-auto max-w-7xl">{children}</div>
     </section>

@@ -37,10 +37,15 @@ export default function Keeper() {
   const riseClass = `transition-all duration-[900ms] ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`;
 
   return (
-    <section ref={ref} id="keeper" className="relative flex h-screen w-full items-end justify-center overflow-hidden bg-black">
+    <section ref={ref} id="keeper" className="relative flex h-screen w-full items-end justify-center overflow-hidden">
       <div
         className={`absolute inset-0 transition-all duration-[1400ms] ${mounted ? "scale-100 opacity-100" : "scale-105 opacity-0"}`}
-        style={{ transitionTimingFunction: ENTRANCE }}
+        style={{
+          transitionTimingFunction: ENTRANCE,
+          // The video fades in from the top, so the section above shows through instead of meeting a hard edge.
+          maskImage: "linear-gradient(to bottom, transparent 0%, #000 30%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 30%)",
+        }}
       >
         <video className="h-full w-full object-cover" src={VIDEO_URL} autoPlay muted loop playsInline />
       </div>

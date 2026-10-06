@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { SPECIES, SPECIES_COLOR } from "../data";
 import { NODE_URLS, useLiveZoo } from "../sim/live";
 import { GuardianButton, WakeButton } from "./Guardian";
-import Passport from "./Passport";
+import { openPassport } from "../passportStore";
 import { NightWatch as Engine, PARTS, type LogEntry, type Snapshot } from "../sim/nightWatch";
 import { Reveal, Section, SectionHead } from "./ui";
 
@@ -25,7 +25,6 @@ export default function NightWatch() {
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [showBrief, setShowBrief] = useState(false);
-  const [passport, setPassport] = useState<string | null>(null);
   const live = useLiveZoo(engineRef);
 
   useEffect(() => {
@@ -123,7 +122,7 @@ export default function NightWatch() {
                 <button
                   key={name}
                   type="button"
-                  onClick={() => setPassport(name)}
+                  onClick={() => openPassport(name)}
                   className="liquid-glass flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white"
                 >
                   <img src={`/agents/${name}.webp`} alt="" className="h-6 w-6 rounded-full" />
@@ -238,7 +237,6 @@ export default function NightWatch() {
           </div>
         </aside>
       </Reveal>
-      <Passport agent={passport} onClose={() => setPassport(null)} />
     </Section>
   );
 }
