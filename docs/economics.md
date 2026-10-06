@@ -54,7 +54,7 @@ The token launches through **ClawPump** on the pump.fun bonding curve:
 
 1. **v1 (now):** the economics above run on internal credits per node (`FeedLedger`). Every movement is an entry and shows up in the public log as `cycle.settled`, `stake.locked`, `stake.slashed`.
 2. **Launch:** the token goes live via ClawPump. From day one it can be spent on feed for your own animal — a token that cannot be spent on a cycle is useless to the network.
-3. **v2:** feed deposits, enclosure stakes and signal-fee settlement move to an on-chain program; nodes settle the same `FeedLedger` movements on Solana.
+3. **v2:** feed deposits, enclosure stakes and signal-fee settlement move to the on-chain program [`zoo_feed`](../onchain/README.md); nodes settle the same `FeedLedger` movements on Solana. Anyone can feed any enclosure; the keeper or the warden can retire it and get everything back.
 
 ### What we will not do
 

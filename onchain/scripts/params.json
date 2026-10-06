@@ -1,0 +1,12 @@
+{
+  "decimals": 6,
+  "cyclePrice": 10,
+  "modelPricePerThousand": 5,
+  "operatorShareBps": 8000,
+  "signalFee": 2,
+  "receiverShareBps": 5000,
+  "enclosureStake": 10000,
+  "slashBps": 1000,
+  "spamRejectBps": 5000,
+  "spamMinSignals": 10
+}
