@@ -89,3 +89,100 @@ test("a signed signal over HTTP becomes a published brief", async () => {
     server.close();
   }
 });
+
+import { generateKeyPairSync, sign as edSign } from "node:crypto";
+import { base58Decode, sessionMessage, verifyGuardian } from "../src/guardian.ts";
+import { PassportIndex } from "../src/passport.ts";
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Encode(bytes: Uint8Array): string {
+  let n = 0n;
+  for (const b of bytes) n = n * 256n + BigInt(b);
+  let out = "";
+  while (n > 0n) {
+    out = B58[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  for (const b of bytes) {
+    if (b !== 0) break;
+    out = "1" + out;
+  }
+  return out;
+}
+
+/** A Solana-style wallet: base58 ed25519 address that signs raw message bytes. */
+function wallet() {
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const raw = Buffer.from(publicKey.export({ format: "jwk" }).x!, "base64url");
+  const address = base58Encode(raw);
+  const session = (issued = new Date(), ttl = 3_600_000) => {
+    const message = sessionMessage(address, issued.toISOString(), new Date(issued.getTime() + ttl).toISOString());
+    return { publicKey: address, message, signature: edSign(null, Buffer.from(message), privateKey).toString("base64") };
+  };
+  return { address, raw, session };
+}
+
+test("base58 round-trips a Solana address", () => {
+  const w = wallet();
+  assert.deepEqual(Buffer.from(base58Decode(w.address)), w.raw);
+});
+
+test("guardian sessions verify, and forgeries do not", () => {
+  const w = wallet();
+  const good = w.session();
+  assert.deepEqual(verifyGuardian(good), { ok: true, address: w.address });
+  assert.equal(verifyGuardian({ ...good, publicKey: wallet().address }).ok, false);
+  assert.equal(verifyGuardian({ ...good, message: good.message.replace("costs nothing", "costs 1 SOL") }).ok, false);
+  assert.equal(verifyGuardian(w.session(new Date(Date.now() - 2 * 86_400_000))).ok, false);
+  assert.equal(verifyGuardian(w.session(new Date(), 3 * 86_400_000)).ok, false);
+});
+
+test("visitors and guardians wake sentinels within limits; passports count it", async () => {
+  const node = { id: "north.zoo", identity: Identity.generate(), operator: "op" };
+  const ledger = new FeedLedger();
+  ledger.deposit("keeper", 1000);
+  const { defineAgent, species } = await import("@aiagentzoo/sdk");
+  const enclosure = new Enclosure({
+    node,
+    keeper: "keeper",
+    ledger,
+    agents: [
+      defineAgent({ name: "raven", species: species.sentinel, async onWake(ctx) { await ctx.trace("scan", { fresh: 0 }); } }),
+      defineAgent({ name: "hedgehog", species: species.gatherer, async onWake() {} }),
+    ],
+  });
+  await enclosure.lockStake();
+  const passports = await PassportIndex.build(enclosure);
+  const server = createNodeServer({
+    enclosure,
+    passports,
+    visitor: { agents: ["raven"], agentCooldownMs: 0, visitorCooldownMs: 60_000, guardianCooldownMs: 60_000 },
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  const wake = (agent: string, body: unknown = {}) =>
+    fetch(`${base}/v1/visitor/wake/${agent}`, { method: "POST", body: JSON.stringify(body) });
+
+  try {
+    assert.equal((await wake("hedgehog")).status, 403);
+    assert.equal((await wake("raven")).status, 202);
+    const limited = await wake("raven");
+    assert.equal(limited.status, 429);
+    assert.ok((await limited.json()).retryAfterMs > 0);
+
+    const w = wallet();
+    const signed = await wake("raven", { guardian: w.session() });
+    assert.deepEqual(await signed.json(), { woke: "raven", by: `guardian:${w.address}` });
+    assert.equal((await wake("raven", { guardian: { ...w.session(), signature: Buffer.alloc(64).toString("base64") } })).status, 401);
+
+    await (enclosure as any).agents.get("raven").queue;
+    const passport = await (await fetch(`${base}/v1/agents/raven`)).json();
+    assert.equal(passport.wakes, 2);
+    assert.deepEqual(passport.wokenBy, { schedule: 0, signal: 0, visitor: 1, guardian: 1, warden: 0 });
+    assert.equal(passport.cycles, 2);
+    assert.match(passport.lastSteps[0].summary, /scan|woke/);
+    assert.equal((await fetch(`${base}/v1/agents/nobody`)).status, 404);
+  } finally {
+    server.close();
+  }
+});

@@ -10,6 +10,7 @@ import {
 } from "@aiagentzoo/sdk";
 import { nightWatch } from "./agents/nightWatch.ts";
 import { loadConfig } from "./config.ts";
+import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
@@ -54,11 +55,23 @@ const enclosure = new Enclosure({
 await enclosure.lockStake();
 enclosure.start();
 
+const visitorAgents = enclosure
+  .snapshot()
+  .filter((a) => a.species === "sentinel")
+  .map((a) => a.name);
+
 const server = createNodeServer({
   enclosure,
   adminToken: config.adminToken,
   corsOrigin: config.corsOrigin,
-  meta: { role: config.role, model: model?.id ?? null },
+  meta: { role: config.role, model: model?.id ?? null, visitorAgents },
+  passports: await PassportIndex.build(enclosure),
+  visitor: {
+    agents: visitorAgents,
+    agentCooldownMs: Number(process.env.ZOO_VISITOR_AGENT_COOLDOWN_MS ?? 60_000),
+    visitorCooldownMs: Number(process.env.ZOO_VISITOR_COOLDOWN_MS ?? 5 * 60_000),
+    guardianCooldownMs: Number(process.env.ZOO_GUARDIAN_COOLDOWN_MS ?? 60_000),
+  },
 });
 
 server.listen(config.port, () => {

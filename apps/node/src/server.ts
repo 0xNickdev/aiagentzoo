@@ -1,6 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import type { Enclosure, LogEntry, ZooEvent } from "@aiagentzoo/sdk";
+import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
+import type { PassportIndex } from "./passport.ts";
 
 export interface ServerOptions {
   enclosure: Enclosure;
@@ -10,11 +12,29 @@ export interface ServerOptions {
   corsOrigin?: string;
   /** Present the node as a member of a named federation. */
   meta?: Record<string, unknown>;
+  /** Agent passports derived from the log. */
+  passports?: PassportIndex;
+  /** Public wake button. Disabled when unset. */
+  visitor?: VisitorPolicy;
+}
+
+export interface VisitorPolicy {
+  /** Agents visitors may wake. Keep this to cheap, harmless species. */
+  agents: string[];
+  /** Minimum gap between any two public wake-ups of the same agent. */
+  agentCooldownMs: number;
+  /** Per anonymous visitor (by IP). */
+  visitorCooldownMs: number;
+  /** Per signed-in guardian wallet. */
+  guardianCooldownMs: number;
 }
 
 const MAX_BODY = 256 * 1024;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {} }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor }: ServerOptions) {
+  const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
+  const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
+  const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
   const streams = new Set<ServerResponse>();
   enclosure.log.subscribe((entry) => {
     const frame = `id: ${entry.seq}\nevent: entry\ndata: ${JSON.stringify(entry)}\n\n`;
@@ -60,6 +80,37 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
 
       if (req.method === "GET" && path === "/v1/agents") return json(res, 200, enclosure.snapshot());
+
+      const passport = /^\/v1\/agents\/([a-z0-9-]+)$/.exec(path);
+      if (req.method === "GET" && passport) {
+        const found = passports?.get(passport[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "no such agent" });
+      }
+
+      const visit = /^\/v1\/visitor\/wake\/([a-z0-9-]+)$/.exec(path);
+      if (req.method === "POST" && visit) {
+        const agent = visit[1]!;
+        if (!visitor || !visitor.agents.includes(agent)) return json(res, 403, { error: "visitors cannot wake this agent" });
+        const body = (await readJson(req)) as { guardian?: GuardianSession };
+        let by = "visitor";
+        let caller = clientIp(req);
+        let callerLimit = visitorCooldown;
+        if (body.guardian) {
+          const check = verifyGuardian(body.guardian);
+          if (!check.ok) return json(res, 401, { error: check.reason });
+          by = `guardian:${check.address}`;
+          caller = check.address;
+          callerLimit = guardianCooldown;
+        }
+        const callerWait = callerLimit.wait(caller);
+        if (callerWait > 0) return json(res, 429, { error: "slow down", retryAfterMs: callerWait });
+        const agentWait = agentCooldown.wait(agent);
+        if (agentWait > 0) return json(res, 429, { error: `${agent} was just woken`, retryAfterMs: agentWait });
+        callerLimit.hit(caller);
+        agentCooldown.hit(agent);
+        void enclosure.wake(agent, { type: "manual", note: by });
+        return json(res, 202, { woke: agent, by });
+      }
 
       if (req.method === "GET" && path === "/v1/log") {
         const after = clampInt(url.searchParams.get("after"), 0, 0, Number.MAX_SAFE_INTEGER);
@@ -130,6 +181,11 @@ async function latestArtifact(enclosure: Enclosure): Promise<LogEntry | undefine
     for (const entry of page) if (entry.event.kind === "artifact") latest = entry;
     after = page[page.length - 1]!.seq;
   }
+}
+
+function clientIp(req: IncomingMessage): string {
+  const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
+  return forwarded || req.socket.remoteAddress || "unknown";
 }
 
 function authorized(req: IncomingMessage, token: string | undefined): boolean {
