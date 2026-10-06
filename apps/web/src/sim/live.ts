@@ -53,6 +53,12 @@ const ANIMATE_WINDOW_MS = 60_000;
 function describe(e: Entry["event"]): string | null {
   const p = e.payload ?? {};
   switch (e.type) {
+    case "agent.woke": {
+      const note = String(p.note ?? "");
+      if (note.startsWith("guardian:")) return `was woken by guardian ${note.slice(9, 13)}…${note.slice(-4)}`;
+      if (note === "visitor") return "was woken by a visitor";
+      return null;
+    }
     case "launches.found":
       return `found ${p.launches?.length ?? 0} new pump.fun launches → ${e.to?.agent}${e.to?.node !== e.from.node ? ` @${e.to?.node}` : ""}`;
     case "profiles.found":

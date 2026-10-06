@@ -2,12 +2,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { SPECIES, SPECIES_COLOR } from "../data";
 import { NODE_URLS, useLiveZoo } from "../sim/live";
+import { GuardianButton, WakeButton } from "./Guardian";
+import Passport from "./Passport";
 import { NightWatch as Engine, PARTS, type LogEntry, type Snapshot } from "../sim/nightWatch";
 import { Reveal, Section, SectionHead } from "./ui";
 
 const SPEEDS = [1, 3, 8];
 const LIVE_SECTIONS = ["Night in review", "Top volume", "Graduated", "Went to zero", "Suspicious", "Freshly promoted"];
 const OBSERVATION_TARGET = 200;
+const AGENTS = ["raven", "hedgehog", "owl", "otter", "beaver", "tortoise"];
 const STATUS_LABEL: Record<Snapshot["status"], string> = {
   building: "assembling",
   published: "published",
@@ -22,6 +25,7 @@ export default function NightWatch() {
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [showBrief, setShowBrief] = useState(false);
+  const [passport, setPassport] = useState<string | null>(null);
   const live = useLiveZoo(engineRef);
 
   useEffect(() => {
@@ -113,6 +117,22 @@ export default function NightWatch() {
             </>)}
           </div>
 
+          {live.enabled && (
+            <div className="absolute right-4 top-4 flex max-w-[60%] flex-wrap justify-end gap-2 sm:right-6 sm:top-6">
+              {AGENTS.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setPassport(name)}
+                  className="liquid-glass flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white"
+                >
+                  <img src={`/agents/${name}.webp`} alt="" className="h-6 w-6 rounded-full" />
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="absolute bottom-4 left-4 flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-light uppercase tracking-[0.2em] text-white/50 sm:bottom-6 sm:left-6">
             {SPECIES.map((s) => (
               <span key={s.id} className="flex items-center gap-2">
@@ -124,6 +144,22 @@ export default function NightWatch() {
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4">
+          {live.enabled && (
+            <div className="liquid-glass rounded-3xl bg-black/30 p-6">
+              <div className="flex items-center justify-between text-[10px] font-light uppercase tracking-[0.25em] text-white/50">
+                <span>Your move</span>
+                <span>real cycles</span>
+              </div>
+              <p className="mt-3 text-sm font-light leading-relaxed text-white/70">
+                Wake a sentinel on its live node. It really scans pump.fun or DexScreener, and the step lands in the public log under your name.
+              </p>
+              <div className="mt-4 grid gap-3">
+                <WakeButton agent="raven" />
+                <WakeButton agent="owl" />
+              </div>
+              <GuardianButton className="mt-5" />
+            </div>
+          )}
           <div className="liquid-glass rounded-3xl p-6">
             <div className="flex justify-between text-[10px] font-light uppercase tracking-[0.25em] text-white/50">
               <span>Artifact</span>
@@ -202,6 +238,7 @@ export default function NightWatch() {
           </div>
         </aside>
       </Reveal>
+      <Passport agent={passport} onClose={() => setPassport(null)} />
     </Section>
   );
 }
