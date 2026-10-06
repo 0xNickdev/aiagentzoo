@@ -19,6 +19,18 @@ Accounts: `config` = PDA `["config"]`, `vault` = PDA `["vault"]` (authority: con
 
 Invariant (tested): vault balance == Σ stake + Σ feed of all enclosures.
 
+## Deployed
+
+| Cluster | What | Address |
+|---|---|---|
+| devnet | program | [`BETwmWnijzhfa8NDEBZ6g2T9nPyWbqKwo6Wd2GT9W7Jr`](https://explorer.solana.com/address/BETwmWnijzhfa8NDEBZ6g2T9nPyWbqKwo6Wd2GT9W7Jr?cluster=devnet) |
+| devnet | config | `3YRFQKbua7qpc36VPVdCFmPMzo6921GjdSA7XtAZ279p` |
+| devnet | test mint (Token-2022, 6 decimals) | `43uLtcNKWhzHXUQwC6vW2hMJvvwS9boGUfwFyCinjsNx` |
+| devnet | enclosures north / marsh / canyon | `6gDFLZk1XEMEJUa2M3VKB8fEckMHcR9rKKbmM9xy8Pcd` / `ApBV7MiqbuSdg8zd3qycUbDLymaL8hGpFarbmExMk4mS` / `6V2P1CAqu36TCHCWyLxrnGiRMnSkK3EDYLF3F8Tdnc8U` |
+| mainnet | — | after the token launch and review |
+
+`scripts/demo.ts` runs the whole economy against a deployed program: open the three enclosures, feed them, settle cycles and a signal.
+
 ## Develop
 
 ```bash
