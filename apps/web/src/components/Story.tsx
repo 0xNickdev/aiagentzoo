@@ -1,6 +1,7 @@
 import { CYCLE, DONTS, ROADMAP, TOKEN } from "../data";
 import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
 import StaggeredFade from "../StaggeredFade";
+import { TokenAddress } from "./TokenAddress";
 import { Reveal, Section, SectionHead } from "./ui";
 
 export function Cycle() {
@@ -28,6 +29,7 @@ export function Token() {
         title={["A budget and a stake", "in a living network"]}
         text="Not “zoo money”. Without a token, an enclosure can be watched. With one, its animal can work."
       />
+      <TokenAddress />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TOKEN.map((t, i) => (
           <Reveal key={t.title} delay={i * 0.1}>
