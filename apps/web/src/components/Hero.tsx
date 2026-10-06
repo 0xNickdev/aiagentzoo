@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import StaggeredFade from "../StaggeredFade";
+import { GITHUB_URL, GitHubIcon } from "../links";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260619_191346_9d19d66e-86a4-47f7-8dc6-712c1788c3b2.mp4";
@@ -42,6 +43,15 @@ export default function Hero() {
               {link.label}
             </a>
           ))}
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="liquid-glass flex items-center gap-2 rounded-full px-4 py-2 text-sm uppercase tracking-[0.2em] text-white/90 transition-colors duration-300 hover:text-white"
+          >
+            <GitHubIcon size={16} />
+            GitHub
+          </a>
         </div>
         <button
           type="button"
@@ -75,6 +85,19 @@ export default function Hero() {
                 {link.label}
               </motion.a>
             ))}
+            <motion.a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 font-light uppercase tracking-[0.25em] text-white/90 transition-colors hover:text-white"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + NAV_LINKS.length * 0.06 }}
+            >
+              <GitHubIcon size={18} />
+              GitHub
+            </motion.a>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,5 @@
 import { CYCLE, DONTS, ROADMAP, TOKEN } from "../data";
+import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { Reveal, Section, SectionHead } from "./ui";
 
@@ -72,10 +73,23 @@ export function Roadmap() {
 }
 
 export function Footer() {
+  const link = "transition-colors hover:text-white";
   return (
-    <footer className="flex flex-col gap-3 border-t border-white/[0.06] px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/40 sm:flex-row sm:justify-between sm:px-8">
-      <span>AiAgentZoo · 2026</span>
-      <span>The map on this page is a simulation, not live network data</span>
+    <footer className="flex flex-col gap-4 border-t border-white/[0.06] px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/40 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <span>AiAgentZoo · 2026 · MIT</span>
+      <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${link}`}>
+          <GitHubIcon size={14} />
+          GitHub
+        </a>
+        <a href={NPM_URL} target="_blank" rel="noopener noreferrer" className={link}>
+          npm · @aiagentzoo/sdk
+        </a>
+        <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className={link}>
+          Docs
+        </a>
+      </nav>
+      <span className="sm:max-w-xs sm:text-right">The map mirrors live nodes; offline, it falls back to a simulation</span>
     </footer>
   );
 }
