@@ -1,0 +1,45 @@
+{
+  "name": "@aiagentzoo/sdk",
+  "version": "0.1.0",
+  "description": "SDK for AiAgentZoo: define species and agents, run enclosures with budgets, signed signals and a hash-chained public log.",
+  "license": "MIT",
+  "type": "module",
+  "author": "AiAgentZoo",
+  "homepage": "https://github.com/0xNickdev/aiagentzoo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xNickdev/aiagentzoo.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": "https://github.com/0xNickdev/aiagentzoo/issues",
+  "keywords": ["ai", "agents", "autonomous-agents", "multi-agent", "federation", "solana", "claude"],
+  "engines": { "node": ">=20" },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./claude": { "types": "./dist/claude.d.ts", "import": "./dist/claude.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.70.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": { "optional": true }
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "*",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  },
+  "publishConfig": { "access": "public" }
+}
