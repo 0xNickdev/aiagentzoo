@@ -239,7 +239,11 @@ export class Enclosure {
     const budget = new Budget(def.name, { ...DEFAULT_BUDGET, ...def.budget });
     const outputs: unknown[] = [];
     const ctx = this.context(def, reason, budget, outputs);
-    await this.emit("trace", "agent.woke", def.name, { reason: reason.type, ...(reason.type === "signal" ? { signal: reason.event.id } : {}) });
+    await this.emit("trace", "agent.woke", def.name, {
+      reason: reason.type,
+      ...(reason.type === "signal" ? { signal: reason.event.id } : {}),
+      ...(reason.type === "manual" && reason.note ? { note: reason.note } : {}),
+    });
 
     try {
       await def.onWake(ctx);
@@ -368,6 +372,14 @@ export class Enclosure {
 
         const result = await this.route(event);
         this.ledger?.settleSignal(target.node === this.node.id ? this.keeper : `remote:${target.node}`, result.accepted, event.id);
+        // The sender records the verdict too, so both sides of every signal are on the record.
+        await this.emit("trace", "signal.delivered", name, {
+          id: event.id,
+          to: target,
+          type,
+          accepted: result.accepted,
+          ...(result.reason ? { reason: result.reason } : {}),
+        });
         await this.recordSignal(result.accepted);
         return result;
       },

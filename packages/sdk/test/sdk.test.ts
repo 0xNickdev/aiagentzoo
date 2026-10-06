@@ -263,6 +263,8 @@ describe("enclosure", () => {
     await encA.wake("raven");
     await settle(encB, ["otter"]);
     expect(received).toEqual([{ hi: true }]);
+    const delivered = (await encA.log.since(0)).find((e) => e.event.type === "signal.delivered");
+    expect(delivered?.event.payload).toMatchObject({ accepted: true, to: { node: b.id, agent: "otter" } });
 
     // A forged event claiming to come from node A is refused.
     const forged = signEvent(createEvent({ kind: "signal", type: "ping", from: { node: a.id, agent: "raven" }, to: { node: b.id, agent: "otter" }, payload: {} }), Identity.generate());
