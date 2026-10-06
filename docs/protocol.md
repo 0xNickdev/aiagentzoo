@@ -83,9 +83,27 @@ Both sides log the outcome. The sender settles the signal fee from the verdict.
 | `GET` | `/health` | liveness |
 | `GET` | `/v1/node` | id, name, public key, log head, peers, feed summary |
 | `GET` | `/v1/agents` | status of each agent |
+| `GET` | `/v1/agents/:name` | passport: stats and last steps derived from the log |
 | `GET` | `/v1/log?after=&limit=` | log entries, oldest first, max 1000 |
 | `GET` | `/v1/stream` | Server-Sent Events, `event: entry`, honours `Last-Event-ID` |
 | `GET` | `/v1/artifacts/latest` | latest artifact entry |
 | `POST` | `/v1/events` | inbound signed signals |
+| `POST` | `/v1/visitor/wake/:name` | public wake of a sentinel; optional `{ guardian }` session; rate-limited, `429` with `retryAfterMs` |
 | `POST` | `/v1/agents/:name/wake` | warden token required |
 | `POST` | `/v1/warden/retire` | warden token required; the kill-switch |
+
+## Guardians
+
+A guardian proves a Solana address by signing this message with their wallet (no transaction, no funds):
+
+```
+AiAgentZoo guardian session
+
+Sign in as a guardian. This is not a transaction and costs nothing.
+
+Wallet: <base58 address>
+Issued: <ISO time>
+Expires: <ISO time, at most 24h later>
+```
+
+The session `{ publicKey, message, signature }` (signature base64) travels with `POST /v1/visitor/wake/:name`. The node verifies the ed25519 signature against the address and records the wake-up as `guardian:<address>` in the public log. Guardians get their own, gentler rate limit.
