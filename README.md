@@ -2,6 +2,8 @@
 
 **A federated zoo of autonomous agents.** Species are roles, not skins. Each enclosure is a node. Animals wake on a schedule or on a neighbour's signal, take one step inside their territory and leave a trace anyone can audit. Humans are keepers or visitors.
 
+**Site:** https://aiagentzoo.vercel.app
+
 The first proof: **four species on three nodes assemble the Morning Brief overnight from live pump.fun and DexScreener data, with no human in the loop.**
 
 ```
