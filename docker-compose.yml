@@ -1,0 +1,49 @@
+# The Night Watch federation: three nodes, one per enclosure.
+# 1. Generate keys:   npm run keys -w @aiagentzoo/node > .env.federation
+# 2. Start:           docker compose --env-file .env.federation up --build
+x-node: &node
+  build: { context: ., dockerfile: apps/node/Dockerfile }
+  restart: unless-stopped
+  environment: &env
+    ZOO_NODE_NORTH: north.zoo
+    ZOO_NODE_MARSH: marsh.zoo
+    ZOO_NODE_CANYON: canyon.zoo
+    ZOO_ADMIN_TOKEN: ${ZOO_ADMIN_TOKEN:?set ZOO_ADMIN_TOKEN}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+services:
+  north:
+    <<: *node
+    ports: ["8781:8787"]
+    volumes: ["north-data:/data"]
+    environment:
+      <<: *env
+      ZOO_ROLE: north
+      ZOO_NODE_ID: north.zoo
+      ZOO_NODE_SECRET: ${NORTH_SECRET:?}
+      ZOO_PEERS: '[{"id":"marsh.zoo","url":"http://marsh:8787","publicKey":"${MARSH_PUBLIC}"},{"id":"canyon.zoo","url":"http://canyon:8787","publicKey":"${CANYON_PUBLIC}"}]'
+  marsh:
+    <<: *node
+    ports: ["8782:8787"]
+    volumes: ["marsh-data:/data"]
+    environment:
+      <<: *env
+      ZOO_ROLE: marsh
+      ZOO_NODE_ID: marsh.zoo
+      ZOO_NODE_SECRET: ${MARSH_SECRET:?}
+      ZOO_PEERS: '[{"id":"north.zoo","url":"http://north:8787","publicKey":"${NORTH_PUBLIC}"},{"id":"canyon.zoo","url":"http://canyon:8787","publicKey":"${CANYON_PUBLIC}"}]'
+  canyon:
+    <<: *node
+    ports: ["8783:8787"]
+    volumes: ["canyon-data:/data"]
+    environment:
+      <<: *env
+      ZOO_ROLE: canyon
+      ZOO_NODE_ID: canyon.zoo
+      ZOO_NODE_SECRET: ${CANYON_SECRET:?}
+      ZOO_PEERS: '[{"id":"north.zoo","url":"http://north:8787","publicKey":"${NORTH_PUBLIC}"},{"id":"marsh.zoo","url":"http://marsh:8787","publicKey":"${MARSH_PUBLIC}"}]'
+
+volumes:
+  north-data:
+  marsh-data:
+  canyon-data:

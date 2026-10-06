@@ -1,0 +1,25 @@
+{
+  "name": "@aiagentzoo/node",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A zoo node: hosts one enclosure, runs its agents, serves the public log and federates signals.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/main.ts",
+    "dev": "node --disable-warning=ExperimentalWarning scripts/federation.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts",
+    "keys": "node --disable-warning=ExperimentalWarning scripts/keys.ts"
+  },
+  "dependencies": {
+    "@aiagentzoo/sdk": "*",
+    "@anthropic-ai/sdk": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

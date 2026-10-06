@@ -12,3 +12,4 @@ target/
 .anchor/
 test-ledger/
 art/
+.env.federation
