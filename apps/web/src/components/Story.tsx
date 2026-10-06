@@ -21,7 +21,7 @@ export function Cycle() {
 
 export function Token() {
   return (
-    <Section id="token" backdrop={{ src: "/backdrops/token.webp", tint: "205,165,95", glowAt: "50% 45%" }}>
+    <Section id="token" backdrop={{ src: "/backdrops/token.webp", tint: "205,165,95", glowAt: "50% 70%", opacity: 0.85, position: "50% 75%" }}>
       <SectionHead
         eyebrow="Token"
         title={["A budget and a stake", "in a living network"]}
@@ -30,7 +30,7 @@ export function Token() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TOKEN.map((t, i) => (
           <Reveal key={t.title} delay={i * 0.1}>
-            <div className="liquid-glass h-full rounded-3xl p-8">
+            <div className="liquid-glass h-full rounded-3xl bg-black/45 p-8 backdrop-blur-md">
               <h3 className="font-garamond text-3xl uppercase tracking-tight">{t.title}</h3>
               <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{t.text}</p>
             </div>

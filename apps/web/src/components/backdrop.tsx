@@ -12,6 +12,8 @@ export interface BackdropProps {
   glowAt?: string;
   /** Image opacity. */
   opacity?: number;
+  /** CSS object-position for the photos, e.g. "50% 80%" to keep the subject in frame. */
+  position?: string;
 }
 
 function useImage(src?: string): boolean {
@@ -33,7 +35,7 @@ const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%
  * optional photo that melts into the page at the top and bottom, and an
  * optional second photo revealed around the cursor.
  */
-export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%", opacity = 0.55 }: BackdropProps) {
+export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%", opacity = 0.55, position = "50% 50%" }: BackdropProps) {
   const hasBase = useImage(src);
   const hasReveal = useImage(reveal);
   const ref = useRef<HTMLDivElement>(null);
@@ -82,7 +84,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
           src={src}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ opacity, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+          style={{ opacity, objectPosition: position, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
         />
       )}
       {hasReveal && (
@@ -91,6 +93,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           style={{
+            objectPosition: position,
             opacity: Math.min(1, opacity + 0.35),
             maskImage: "radial-gradient(circle var(--rr, 0px) at var(--rx, 50%) var(--ry, 50%), #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%)",
             WebkitMaskImage: "radial-gradient(circle var(--rr, 0px) at var(--rx, 50%) var(--ry, 50%), #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%)",
@@ -114,7 +117,11 @@ export function Strip({ src, tint = "120,150,130", children }: { src: string; ti
   const y = useTransform(scrollYProgress, [0, 1], ["-12%", "12%"]);
 
   return (
-    <div ref={ref} className="relative h-[55vh] min-h-[340px] w-full overflow-hidden sm:h-[70vh]">
+    <div
+      ref={ref}
+      className="relative h-[55vh] min-h-[340px] w-full overflow-hidden sm:h-[70vh]"
+      style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+    >
       <div
         className="absolute inset-0"
         style={{ background: `radial-gradient(80% 60% at 50% 55%, rgba(${tint},0.22), transparent 75%)` }}
@@ -124,11 +131,10 @@ export function Strip({ src, tint = "120,150,130", children }: { src: string; ti
           src={src}
           alt=""
           aria-hidden
-          style={{ y, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+          style={{ y }}
           className="absolute inset-[-12%_0] h-[124%] w-full object-cover"
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#010101] via-transparent to-[#010101]" />
       {children && (
         <div className="relative z-10 flex h-full items-center justify-center px-5 text-center">{children}</div>
       )}
