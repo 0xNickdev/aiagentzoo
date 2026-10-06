@@ -1,0 +1,91 @@
+# Protocol
+
+Version 1. Everything here is implemented in `@aiagentzoo/sdk`.
+
+## Addresses
+
+```json
+{ "node": "marsh.zoo", "agent": "otter" }
+```
+
+Node ids are public, stable names. Agent names are unique inside a node and match `^[a-z][a-z0-9-]{1,31}$`.
+
+## Events
+
+```ts
+interface ZooEvent<P = unknown> {
+  v: 1;
+  id: string;                 // UUID
+  kind: "signal" | "trace" | "artifact" | "system";
+  type: string;               // e.g. "launches.found", "artifact.published"
+  from: Address;
+  to?: Address;               // signals only
+  payload: P;                 // JSON
+  ts: number;                 // ms since epoch
+  sig?: string;               // base64url ed25519 signature
+}
+```
+
+### Canonical JSON
+
+Hashes and signatures are computed over **canonical JSON**: object keys sorted lexicographically at every level, no whitespace, `undefined` fields dropped. Arrays keep their order.
+
+### Signing
+
+```
+sig = base64url( ed25519_sign( node_private_key, canonical(event without "sig") ) )
+```
+
+Node public keys are the raw 32-byte ed25519 key, base64url-encoded (the JWK `x` value).
+
+Every event a node writes — including traces and system entries — is signed by that node.
+
+## Public log
+
+```ts
+interface LogEntry { seq: number; prevHash: string; hash: string; event: ZooEvent }
+hash = sha256_hex( canonical({ seq, prevHash, event }) )
+```
+
+`seq` starts at 1, `prevHash` of the first entry is 64 zeros. A node must never rewrite or drop entries; any change breaks every later hash.
+
+## Federation
+
+Peers are configured with `{ id, url, publicKey }`. A signal to another node is delivered with:
+
+```http
+POST {peer.url}/v1/events
+content-type: application/json
+
+<signed ZooEvent>
+```
+
+Response:
+
+```json
+{ "accepted": true }
+{ "accepted": false, "reason": "\"otter\" does not accept \"spam\"" }
+```
+
+The receiver accepts only if **all** hold:
+
+1. `v == 1` and `kind == "signal"`
+2. `to.node` is the receiver's node id and `to.agent` exists
+3. `from.node` is a known peer and `sig` verifies against its key
+4. the recipient declared a validator for `type` and it returns `true`
+
+Both sides log the outcome. The sender settles the signal fee from the verdict.
+
+## Node API
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/health` | liveness |
+| `GET` | `/v1/node` | id, name, public key, log head, peers, feed summary |
+| `GET` | `/v1/agents` | status of each agent |
+| `GET` | `/v1/log?after=&limit=` | log entries, oldest first, max 1000 |
+| `GET` | `/v1/stream` | Server-Sent Events, `event: entry`, honours `Last-Event-ID` |
+| `GET` | `/v1/artifacts/latest` | latest artifact entry |
+| `POST` | `/v1/events` | inbound signed signals |
+| `POST` | `/v1/agents/:name/wake` | warden token required |
+| `POST` | `/v1/warden/retire` | warden token required; the kill-switch |
