@@ -190,3 +190,116 @@ muted desaturated palette, photorealistic macro, square 1:1
 ```
 
 **Negative для агентов:** `full body, multiple animals, background scenery, text, logo, cartoon, bright colors, cracked glass, cropped sphere`
+
+---
+
+# Фоны секций и широкие полосы
+
+Задача — убрать «голую черноту», сохранив кино-эстетику видео: ночь, мох, коряги, стеклянные сферы, лунный свет. Тона — глубокий мох, сине-серый, тёплый янтарь, **не чистый чёрный**.
+
+Сайт сам растворяет края картинок в странице и затемняет центр под текстом, так что края кадра могут быть насыщенными.
+
+| Файл (в `apps/web/public/backdrops/`) | Где | Формат |
+|---|---|---|
+| `species-base` | Виды, основной фон | 16:9 |
+| `species-reveal` | Виды, проявляется под курсором | 16:9, **тот же кадр** |
+| `watch` | Ночной дозор | 16:9 |
+| `cycle` | Цикл | 16:9 |
+| `token` | Токен | 16:9 |
+| `roadmap` | Путь | 16:9 |
+| `strip-nightfall` | Полоса «Nightfall» | 21:9 |
+| `strip-spheres` | Полоса «Every step leaves a trace» | 21:9 |
+
+**Общая негативная часть для всех:**
+```
+pure black background, flat black, text, letters, logo, watermark, UI, frame, border, people, buildings, cartoon, illustration, anime, 3d render look, plastic, oversaturated, neon, HDR halos, lens flare spam, harsh daylight, blurry, low detail, jpeg artifacts
+```
+
+## 1. species-base — ночная поляна (16:9)
+```
+Wide cinematic establishing shot of an ancient forest clearing at night, eye-level, 35mm lens.
+Gnarled moss-covered driftwood and fallen logs frame the left and right thirds; carpets of deep green moss,
+curled ferns, small pale mushrooms and smooth river stones on the ground. Low silver mist hangs between the trees.
+Cool moonlight falls from upper left through a gap in the canopy, rim-lighting moss and bark.
+A few perfectly clear glass spheres rest on the moss at different distances, catching tiny moon reflections.
+Deep moss-green and slate-blue night palette, rich shadow detail, never pure black, gentle film grain.
+The central third is calm, softer and darker for text overlay. Photorealistic, editorial nature documentary,
+fine natural texture, high dynamic range in the shadows, 16:9.
+```
+
+## 2. species-reveal — тот же кадр, «скрытая жизнь» (16:9)
+**Генерировать с картинкой №1 как референсом (image-to-image, сила изменения ~0.45–0.55), чтобы композиция совпала до пикселя:** эффект строится на том, что под курсором «проявляется» второй слой.
+```
+Exactly the same forest clearing, same camera, same composition and same objects as the reference image,
+now revealing its hidden living network: the moss glows with soft bioluminescent cyan-green light,
+hair-thin luminous mycelium threads run along the ground and up the driftwood, connecting every glass sphere,
+and each glass sphere glows from inside with warm amber light like a sleeping lantern.
+Dozens of tiny fireflies hang in the mist. Same moonlight from upper left. Magical but photorealistic,
+restrained, no neon, no fantasy creatures, deep moss-green and slate-blue palette with amber accents,
+central third calmer for text overlay, 16:9.
+```
+
+## 3. watch — долина с тремя вольерами (16:9)
+```
+High aerial view at night of a misty forested valley, looking down at a 60-degree angle.
+Three distinct clearings far apart: on the left a mossy forest edge, top right a still marsh with black water
+reflecting the moon, bottom centre a pale stone canyon. Hair-thin threads of soft white light arc between
+the three clearings like a quiet network. Rolling fog fills the valley between them, treetops in deep green
+and blue-grey moonlight, a faint warm glow in each clearing. Calm, vast, cinematic, never pure black,
+low-contrast centre for UI overlay, photorealistic aerial cinematography, 16:9.
+```
+
+## 4. cycle — следы на мху (16:9)
+```
+Macro photograph at blue hour of wet emerald moss on an old log. A trail of tiny animal footprints pressed
+into the moss leads from the left edge toward a single perfectly clear glass sphere on the right third,
+which refracts the scene upside down. Dew drops on every moss tip catch cool light; a few droplets are
+mid-fall with tiny ripples in a small puddle. Shallow depth of field, soft bokeh of more dew behind.
+Deep moss-green and slate-blue palette, one soft warm highlight inside the sphere, never pure black,
+calm darker centre for text, ultra-detailed macro, 100mm macro lens, photorealistic, 16:9.
+```
+
+## 5. token — сферы с янтарным светом (16:9)
+```
+Close cinematic still life in a mossy stone niche at night: seven perfectly clear glass spheres of different sizes
+resting on velvet moss and weathered stone, each filled with a different amount of warm amber light like stored energy,
+from almost empty to brimming. The light spills onto the moss and stone in soft pools. Thin silver rim light on the glass,
+faint mist in the background, gnarled driftwood framing the edges. Warm amber and deep moss-green palette with
+slate-blue shadows, never pure black, calm darker centre for text overlay, shallow depth of field, 50mm lens,
+photorealistic, luxurious and restrained, 16:9.
+```
+
+## 6. roadmap — тропа перед рассветом (16:9)
+```
+A narrow winding path through an old forest just before dawn, eye-level, receding into soft fog.
+Along the path, at regular intervals, glass spheres sit on moss-covered stones, each with a faint inner glow,
+like waymarks leading into the distance. Tall dark trunks, ferns at the edges, the sky at the end of the path
+turning from deep blue to the first hint of pale gold. Atmospheric perspective, layered mist, cool blue and moss-green
+palette warming toward the horizon, never pure black, calm centre for text, photorealistic, cinematic, 35mm, 16:9.
+```
+
+## 7. strip-nightfall — панорама сумерек (21:9)
+```
+Ultra-wide panoramic shot of a forest canopy at nightfall seen from a ridge: layers of treetops fading into mist,
+the sky a deep gradient from dusky indigo at the top to soft slate-blue near the horizon, a pale moon half-hidden
+behind thin clouds. A few tiny warm lights glow deep within the forest, far apart, like enclosures waking up.
+Calm, vast, quiet, slow. Deep indigo, slate-blue and moss-green palette, never pure black, fine detail in the
+canopy, horizon slightly below centre, empty calm centre for a headline, photorealistic landscape photography, 21:9.
+```
+
+## 8. strip-spheres — ряд сфер на коряге (21:9)
+```
+Ultra-wide macro panorama along a long moss-covered fallen log at night: a row of perfectly clear glass spheres
+of slightly different sizes resting on the moss, receding into soft focus toward both edges. Each sphere holds
+a faint warm amber glow; fireflies drift above; tiny footprints and dew trace a path between the spheres.
+Shallow depth of field with the central spheres in crisp focus, creamy bokeh beyond. Moss-green, slate-blue and
+amber palette, never pure black, calm centre for a headline, ultra-detailed, photorealistic macro, 21:9.
+```
+
+## Если захочется движения
+Любой фон можно оживить image-to-video на 6–8 секунд с бесшовным циклом:
+```
+very slow subtle motion: mist drifting left to right, fireflies floating, light flickering gently inside the glass spheres,
+static camera, no zoom, seamless loop, the composition stays exactly the same
+```
+Присылайте видео `.mp4`, я подключу их вместо картинок.

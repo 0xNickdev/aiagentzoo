@@ -4,7 +4,10 @@ import { Reveal, Section, SectionHead } from "./ui";
 
 export default function Species() {
   return (
-    <Section id="species">
+    <Section
+      id="species"
+      backdrop={{ src: "/backdrops/species-base.webp", reveal: "/backdrops/species-reveal.webp", tint: "110,150,110", glowAt: "50% 30%" }}
+    >
       <SectionHead
         eyebrow="Species"
         title={["A species is a role,", "not a skin"]}
@@ -21,7 +24,7 @@ export default function Species() {
                   src={s.image}
                   alt={`${s.name} — ${s.animal.toLowerCase()}`}
                   loading="lazy"
-                  className="relative max-h-full w-full object-contain object-bottom"
+                  className="relative max-h-full w-full object-contain object-bottom [-webkit-mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)] [mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)]"
                   animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 6 + i, repeat: Infinity, ease: "easeInOut" }}
                   whileHover={{ scale: 1.04 }}

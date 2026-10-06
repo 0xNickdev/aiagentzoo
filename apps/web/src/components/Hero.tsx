@@ -17,7 +17,7 @@ export default function Hero() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="relative h-screen overflow-hidden bg-[#010101]">
+    <div className="relative h-screen overflow-hidden bg-[#030504]">
       <video
         className="absolute inset-0 h-full w-full object-cover object-center"
         src={VIDEO_URL}
@@ -26,6 +26,7 @@ export default function Hero() {
         loop
         playsInline
       />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-48 bg-gradient-to-b from-transparent to-[#030504]" />
 
       <nav className="relative z-20 flex items-center justify-between px-5 py-6 sm:px-8 md:justify-center md:gap-16">
         <span className="font-light uppercase tracking-[0.25em] text-white md:tracking-[0.3em]">

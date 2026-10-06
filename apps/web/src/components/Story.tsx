@@ -1,15 +1,14 @@
-import { motion } from "framer-motion";
 import { CYCLE, DONTS, ROADMAP, TOKEN } from "../data";
 import StaggeredFade from "../StaggeredFade";
 import { Reveal, Section, SectionHead } from "./ui";
 
 export function Cycle() {
   return (
-    <Section id="cycle">
+    <Section id="cycle" backdrop={{ src: "/backdrops/cycle.webp", tint: "140,165,120" }}>
       <SectionHead eyebrow="The cycle" title={["Wake,", "take a step,", "leave a trace"]} />
       <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] md:grid-cols-3">
         {CYCLE.map((c, i) => (
-          <Reveal key={c.title} delay={i * 0.12} className="bg-[#010101] p-8 sm:p-10">
+          <Reveal key={c.title} delay={i * 0.12} className="bg-[#030504]/85 p-8 backdrop-blur-sm sm:p-10">
             <span className="font-garamond text-6xl text-white/20">0{i + 1}</span>
             <h3 className="font-garamond mt-6 text-3xl uppercase tracking-tight">{c.title}</h3>
             <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{c.text}</p>
@@ -22,7 +21,7 @@ export function Cycle() {
 
 export function Token() {
   return (
-    <Section id="token">
+    <Section id="token" backdrop={{ src: "/backdrops/token.webp", tint: "205,165,95", glowAt: "50% 45%" }}>
       <SectionHead
         eyebrow="Token"
         title={["A budget and a stake", "in a living network"]}
@@ -55,7 +54,7 @@ export function Token() {
 
 export function Roadmap() {
   return (
-    <Section id="roadmap">
+    <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
       <SectionHead eyebrow="Roadmap" title={["A living network first,", "the token second"]} />
       <ol className="grid gap-10 md:grid-cols-3 md:gap-6">
         {ROADMAP.map((r, i) => (
@@ -69,28 +68,6 @@ export function Roadmap() {
         ))}
       </ol>
     </Section>
-  );
-}
-
-export function Finale() {
-  return (
-    <section className="relative px-5 py-32 text-center sm:px-8 sm:py-44">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.07),transparent_60%)]" />
-      <h2 className="font-garamond relative mx-auto max-w-4xl text-4xl uppercase leading-[1.08] tracking-tight sm:text-6xl md:text-7xl">
-        <StaggeredFade text="Every visitor can" />
-        <StaggeredFade text="become a keeper" />
-      </h2>
-      <motion.a
-        href="#live"
-        className="liquid-glass relative mt-12 inline-block rounded-full px-7 py-3.5 text-sm uppercase tracking-[0.18em] text-white/90 sm:px-10 sm:py-4 sm:tracking-[0.2em]"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8, delay: 1.2 }}
-      >
-        Watch the night
-      </motion.a>
-    </section>
   );
 }
 

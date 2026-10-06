@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import StaggeredFade from "../StaggeredFade";
+import { Backdrop, type BackdropProps } from "./backdrop";
 
 export function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
   return (
@@ -36,10 +37,21 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
   );
 }
 
-export function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
+export function Section({
+  id,
+  children,
+  className = "",
+  backdrop,
+}: {
+  id?: string;
+  children: ReactNode;
+  className?: string;
+  backdrop?: BackdropProps;
+}) {
   return (
-    <section id={id} className={`relative px-5 py-24 sm:px-8 sm:py-32 md:py-40 ${className}`}>
-      <div className="mx-auto max-w-7xl">{children}</div>
+    <section id={id} className={`relative isolate px-5 py-24 sm:px-8 sm:py-32 md:py-40 ${className}`}>
+      {backdrop && <Backdrop {...backdrop} />}
+      <div className="relative z-10 mx-auto max-w-7xl">{children}</div>
     </section>
   );
 }

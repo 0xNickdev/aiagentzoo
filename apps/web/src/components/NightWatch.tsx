@@ -90,7 +90,7 @@ export default function NightWatch() {
   const progress = live.enabled ? (live.brief ? 1 : Math.min(live.stats.observed / OBSERVATION_TARGET, 1)) : (snap?.progress ?? 0);
 
   return (
-    <Section id="live">
+    <Section id="live" backdrop={{ src: "/backdrops/watch.webp", tint: "90,130,165", glowAt: "50% 65%", opacity: 0.45 }}>
       <SectionHead
         eyebrow={live.enabled ? `Live enclosures · ${live.connected}/${NODE_URLS.length} nodes online` : "Live enclosures · simulation"}
         title={["The Night Watch"]}

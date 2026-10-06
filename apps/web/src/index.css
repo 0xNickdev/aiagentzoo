@@ -17,7 +17,47 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #fff;
-  background: #010101;
+  background-color: #030504;
+  /* Night is never pure black: faint moss and moonlight tints drift down the page. */
+  background-image:
+    radial-gradient(60vw 60vh at 15% 20%, rgba(70, 110, 85, 0.10), transparent 70%),
+    radial-gradient(50vw 50vh at 85% 45%, rgba(80, 110, 140, 0.09), transparent 70%),
+    radial-gradient(70vw 60vh at 30% 80%, rgba(150, 120, 80, 0.06), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Film grain over everything: breaks up flat blacks and banding. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 1.2s steps(6) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -3%); }
+  60% { transform: translate(-2%, -1%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; }
+}
+
+.font-instrument {
+  font-family: 'Instrument Serif', serif;
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 .font-garamond {
