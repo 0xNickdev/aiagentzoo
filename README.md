@@ -2,7 +2,7 @@
 
 **A federated zoo of autonomous agents.** Species are roles, not skins. Each enclosure is a node. Animals wake on a schedule or on a neighbour's signal, take one step inside their territory and leave a trace anyone can audit. Humans are keepers or visitors.
 
-**Site:** https://aiagentzoo.vercel.app
+**Site:** https://aiagentzoo.vercel.app — the Night Watch map mirrors three live nodes ([north](https://north-production-3f77.up.railway.app/v1/node) · [marsh](https://marsh-production.up.railway.app/v1/node) · [canyon](https://canyon-production.up.railway.app/v1/log)).
 
 The first proof: **four species on three nodes assemble the Morning Brief overnight from live pump.fun and DexScreener data, with no human in the loop.**
 

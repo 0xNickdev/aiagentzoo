@@ -13,8 +13,6 @@ FROM node:24-slim
 WORKDIR /repo
 ENV NODE_ENV=production ZOO_DATA_DIR=/data PORT=8787
 COPY --from=build /repo /repo
-VOLUME /data
 EXPOSE 8787
 WORKDIR /repo/apps/node
-USER node
 CMD ["node", "--disable-warning=ExperimentalWarning", "src/main.ts"]

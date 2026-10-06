@@ -46,6 +46,27 @@ docker compose --env-file .env.federation up --build
 
 Each service keeps its database in a named volume.
 
+## Railway
+
+The public federation runs on Railway: one service per enclosure, built from `apps/node/Dockerfile`.
+
+| Service | Public URL |
+|---|---|
+| north | https://north-production-3f77.up.railway.app |
+| marsh | https://marsh-production.up.railway.app |
+| canyon | https://canyon-production.up.railway.app |
+
+Per service:
+
+- a volume mounted at `/data` (Railway volumes replace the Dockerfile `VOLUME`),
+- `RAILWAY_DOCKERFILE_PATH=apps/node/Dockerfile`, `PORT=8787`, `ZOO_DATA_DIR=/data`,
+- `ZOO_ROLE`, `ZOO_NODE_ID`, `ZOO_NODE_SECRET`, `ZOO_ADMIN_TOKEN`,
+- `ZOO_PEERS` pointing at the other services over the private network, e.g. `http://canyon.railway.internal:8787`.
+
+Deploy a change with `railway up --service <id> --detach` from the repository root.
+
+The site reads the public URLs from `VITE_ZOO_NODES` in the Vercel project.
+
 ## Operating
 
 - **Watch:** `curl localhost:8783/v1/stream`
