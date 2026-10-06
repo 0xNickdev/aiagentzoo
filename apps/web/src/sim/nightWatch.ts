@@ -57,7 +57,9 @@ type Action =
   | { type: "archive" }
   | { type: "patrol" }
   | { type: "collect"; part: number }
-  | { type: "build"; part: number };
+  | { type: "build"; part: number }
+  /** Mirrors a real wake-up from a live node: animate only, no simulated work. */
+  | { type: "live" };
 
 interface Animal {
   name: string;
@@ -99,6 +101,8 @@ const hash = () => Math.random().toString(16).slice(2, 8);
 export class NightWatch {
   speed = 1;
   paused = false;
+  /** When true the map mirrors real node events instead of simulating a night. */
+  live = false;
 
   private minute = 0;
   private animals: Animal[] = [];
@@ -166,6 +170,10 @@ export class NightWatch {
   }
 
   private timeLabel() {
+    if (this.live) {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
     const m = Math.floor(NIGHT_START + this.minute) % (24 * 60);
     return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   }
@@ -215,6 +223,7 @@ export class NightWatch {
   }
 
   private perform(a: Animal, action: Action) {
+    if (action.type === "live") return;
     this.stats.cycles += 1;
     this.stats.feed += FEED_PER_CYCLE;
     switch (action.type) {
@@ -267,6 +276,51 @@ export class NightWatch {
     this.wake(s.to, { type: s.to.species === "builder" ? "build" : "collect", part: s.part });
   }
 
+  /** Animate a real wake-up reported by a node. */
+  liveWake(name: string) {
+    const a = this.animals.find((x) => x.sprite === name);
+    if (a) this.wake(a, { type: "live" });
+  }
+
+  /** Animate a real signal reported by a node. */
+  liveSignal(from: string, to: string, accepted = true) {
+    const a = this.animals.find((x) => x.sprite === from);
+    const b = this.animals.find((x) => x.sprite === to);
+    if (a && b) this.signals.push({ from: a, to: b, part: -1, accepted, t: 0 });
+  }
+
+  /** Movement and signal flight without any simulated decisions. */
+  private animate(dt: number) {
+    const move = 0.45 * dt;
+    for (const a of this.animals) {
+      if (a.awake && a.moving) {
+        const dx = a.tx - a.ox;
+        const dy = a.ty - a.oy;
+        const d = Math.hypot(dx, dy);
+        if (d <= move) {
+          a.ox = a.tx;
+          a.oy = a.ty;
+          a.moving = false;
+          this.ripples.push({ enc: a.enc, x: a.ox, y: a.oy, age: 0, tint: SPECIES_COLOR[a.species] });
+          a.queue.shift();
+          if (a.queue.length) this.newTarget(a);
+          else a.sleepIn = 2.5;
+        } else {
+          a.ox += (dx / d) * move;
+          a.oy += (dy / d) * move;
+        }
+        a.trail.push({ x: a.ox, y: a.oy, life: 1 });
+      } else if (a.awake) {
+        a.sleepIn -= dt;
+        if (a.sleepIn <= 0) a.awake = false;
+      }
+      for (const p of a.trail) p.life -= dt * 0.12;
+      while (a.trail.length && a.trail[0]!.life <= 0) a.trail.shift();
+    }
+    for (const s of this.signals) s.t += dt * 0.6;
+    this.signals = this.signals.filter((s) => s.t < 1);
+  }
+
   private ambient(dt: number) {
     for (const m of this.motes) {
       m.x += m.vx * dt;
@@ -290,6 +344,10 @@ export class NightWatch {
   step(dt: number) {
     this.ambient(dt);
     if (this.paused) return;
+    if (this.live) {
+      this.animate(dt);
+      return;
+    }
     if (this.status !== "building") {
       this.resetIn -= dt;
       if (this.resetIn <= 0) this.reset();

@@ -1,10 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { SPECIES, SPECIES_COLOR } from "../data";
+import { NODE_URLS, useLiveZoo } from "../sim/live";
 import { NightWatch as Engine, PARTS, type LogEntry, type Snapshot } from "../sim/nightWatch";
 import { Reveal, Section, SectionHead } from "./ui";
 
 const SPEEDS = [1, 3, 8];
+const LIVE_SECTIONS = ["Night in review", "Top volume", "Graduated", "Went to zero", "Suspicious", "Freshly promoted"];
+const OBSERVATION_TARGET = 200;
 const STATUS_LABEL: Record<Snapshot["status"], string> = {
   building: "assembling",
   published: "published",
@@ -18,6 +21,8 @@ export default function NightWatch() {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [showBrief, setShowBrief] = useState(false);
+  const live = useLiveZoo(engineRef);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -26,6 +31,7 @@ export default function NightWatch() {
       if (entry === "reset") setLog([]);
       else setLog((prev) => [entry, ...prev].slice(0, 40));
     });
+    engine.live = NODE_URLS.length > 0;
     engineRef.current = engine;
 
     let w = 0;
@@ -78,10 +84,15 @@ export default function NightWatch() {
     setSpeed(next);
   };
 
+  const status: Snapshot["status"] = live.enabled ? (live.brief ? "published" : "building") : (snap?.status ?? "building");
+  const parts = live.enabled ? LIVE_SECTIONS : PARTS;
+  const done = live.enabled ? parts.map(() => Boolean(live.brief)) : (snap?.done ?? []);
+  const progress = live.enabled ? (live.brief ? 1 : Math.min(live.stats.observed / OBSERVATION_TARGET, 1)) : (snap?.progress ?? 0);
+
   return (
     <Section id="live">
       <SectionHead
-        eyebrow="Live enclosures · simulation"
+        eyebrow={live.enabled ? `Live enclosures · ${live.connected}/${NODE_URLS.length} nodes online` : "Live enclosures · simulation"}
         title={["The Night Watch"]}
         text="Three nodes, four species, zero humans in the loop. By 07:00 the pack has to ship the Morning Brief."
       />
@@ -92,12 +103,14 @@ export default function NightWatch() {
 
           <div className="absolute left-4 top-4 flex items-center gap-2 sm:left-6 sm:top-6">
             <span className="font-garamond mr-2 text-3xl tracking-tight text-white sm:text-4xl">{snap?.clock ?? "22:00"}</span>
+            {!live.enabled && (<>
             <button type="button" onClick={togglePause} className="liquid-glass rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
               {paused ? "Resume" : "Pause"}
             </button>
             <button type="button" onClick={cycleSpeed} className="liquid-glass rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
               ×{speed}
             </button>
+            </>)}
           </div>
 
           <div className="absolute bottom-4 left-4 flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-light uppercase tracking-[0.2em] text-white/50 sm:bottom-6 sm:left-6">
@@ -114,29 +127,49 @@ export default function NightWatch() {
           <div className="liquid-glass rounded-3xl p-6">
             <div className="flex justify-between text-[10px] font-light uppercase tracking-[0.25em] text-white/50">
               <span>Artifact</span>
-              <span className={snap?.status === "building" ? "text-white/70" : "text-white"}>{STATUS_LABEL[snap?.status ?? "building"]}</span>
+              <span className={status === "building" ? "text-white/70" : "text-white"}>{STATUS_LABEL[status]}</span>
             </div>
             <h3 className="font-garamond mt-3 text-3xl uppercase tracking-tight">Morning Brief</h3>
             <div className="mt-4 h-px w-full bg-white/10">
-              <div className="h-px bg-white transition-[width] duration-700" style={{ width: `${Math.round((snap?.progress ?? 0) * 100)}%` }} />
+              <div className="h-px bg-white transition-[width] duration-700" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
             <ol className="mt-4 grid gap-1.5 text-[13px] font-light">
-              {PARTS.map((p, i) => (
-                <li key={p} className={`flex gap-3 transition-colors duration-500 ${snap?.done[i] ? "text-white" : "text-white/30"}`}>
-                  <span>{snap?.done[i] ? "●" : "○"}</span>
+              {parts.map((p, i) => (
+                <li key={p} className={`flex gap-3 transition-colors duration-500 ${done[i] ? "text-white" : "text-white/30"}`}>
+                  <span>{done[i] ? "●" : "○"}</span>
                   {p}
                 </li>
               ))}
             </ol>
+            {live.brief && (
+              <button
+                type="button"
+                onClick={() => setShowBrief((v) => !v)}
+                className="liquid-glass mt-5 rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-white/90"
+              >
+                {showBrief ? "Hide" : "Read"} {live.brief.id}
+              </button>
+            )}
+            {showBrief && live.brief && (
+              <pre className="mt-4 max-h-[360px] overflow-auto whitespace-pre-wrap text-[11px] font-light leading-relaxed text-white/70">{live.brief.markdown}</pre>
+            )}
           </div>
 
           <div className="liquid-glass grid grid-cols-2 gap-5 rounded-3xl p-6">
-            {[
-              [snap?.cycles ?? 0, "cycles"],
-              [(snap?.feed ?? 0).toFixed(1), "feed burned"],
-              [snap?.signals ?? 0, "signals accepted"],
-              [snap?.rejected ?? 0, "rejected"],
-            ].map(([value, label]) => (
+            {(live.enabled
+              ? [
+                  [live.stats.cycles, "cycles"],
+                  [live.stats.feed.toFixed(1), "feed spent"],
+                  [live.stats.signals, "signals accepted"],
+                  [live.stats.rejected, "rejected"],
+                ]
+              : [
+                  [snap?.cycles ?? 0, "cycles"],
+                  [(snap?.feed ?? 0).toFixed(1), "feed burned"],
+                  [snap?.signals ?? 0, "signals accepted"],
+                  [snap?.rejected ?? 0, "rejected"],
+                ]
+            ).map(([value, label]) => (
               <div key={label}>
                 <b className="font-garamond block text-3xl font-normal leading-none">{value}</b>
                 <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{label}</span>
@@ -151,7 +184,7 @@ export default function NightWatch() {
             </div>
             <ul className="mt-3 max-h-[300px] overflow-hidden text-[12px] font-light leading-snug [mask-image:linear-gradient(to_bottom,#000_70%,transparent)]">
               <AnimatePresence initial={false}>
-                {log.map((e) => (
+                {(live.enabled ? live.log : log).map((e) => (
                   <motion.li
                     key={e.id}
                     layout
