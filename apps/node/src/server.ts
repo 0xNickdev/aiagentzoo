@@ -5,6 +5,7 @@ import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
 import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
 import { WATCH_PREFIX } from "./agents/nightWatch.ts";
+import { type GuestHouse, isGuestNode } from "./guests.ts";
 
 export interface ServerOptions {
   enclosure: Enclosure;
@@ -22,6 +23,8 @@ export interface ServerOptions {
   briefs?: BriefIndex;
   /** Guardian watchlists. Enabled on the node whose sentinel reads them. */
   watchlist?: { perGuardian: number; maxGuardians: number };
+  /** Guest enclosures for outside agents. Disabled when unset. */
+  guests?: GuestHouse;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -43,7 +46,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -78,7 +81,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           publicKey: enclosure.node.identity.publicKey,
           retired: enclosure.isRetired,
           head: head ? { seq: head.seq, hash: head.hash } : null,
-          peers: enclosure.peers.list().map(({ id, url: peerUrl, publicKey }) => ({ id, url: peerUrl, publicKey })),
+          peers: enclosure.peers.list().filter((p) => !isGuestNode(p.id)).map(({ id, url: peerUrl, publicKey }) => ({ id, url: peerUrl, publicKey })),
           feed: ledger
             ? {
                 keeper: ledger.balance(enclosure.keeper),
@@ -87,6 +90,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
                 params: ledger.params,
               }
             : null,
+          guests: guests ? guests.list().length : null,
           ...meta,
         });
       }
@@ -194,8 +198,35 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return;
       }
 
+      if (req.method === "GET" && path === "/v1/guests") {
+        if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
+        return json(res, 200, { policy: guests.policy, guests: guests.list() });
+      }
+      const guestOf = /^\/v1\/guests\/([a-z0-9-]+)$/.exec(path);
+      if (req.method === "GET" && guestOf) {
+        const found = guests?.get(guestOf[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "no such guest" });
+      }
+      if (req.method === "POST" && path === "/v1/guests") {
+        if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
+        const result = await guests.register((await readJson(req)) as ZooEvent);
+        return result.ok ? json(res, 200, { admitted: true, guest: result.value }) : json(res, result.status, { admitted: false, reason: result.reason });
+      }
+      const evict = /^\/v1\/guests\/([a-z0-9-]+)\/evict$/.exec(path);
+      if (req.method === "POST" && evict) {
+        if (!authorized(req, adminToken)) return json(res, 401, { error: "warden token required" });
+        const body = (await readJson(req)) as { reason?: string };
+        const gone = await guests?.evict(evict[1]!, body.reason ?? "evicted by warden");
+        return gone ? json(res, 200, { evicted: evict[1] }) : json(res, 404, { error: "no such guest" });
+      }
+
       if (req.method === "POST" && path === "/v1/events") {
         const event = (await readJson(req)) as ZooEvent;
+        if (typeof event?.from?.node === "string" && isGuestNode(event.from.node)) {
+          if (!guests) return json(res, 403, { accepted: false, reason: "no guest enclosures on this node" });
+          const result = await guests.receive(event);
+          return result.ok ? json(res, 200, result.value) : json(res, result.status, { accepted: false, reason: result.reason });
+        }
         const result = await enclosure.deliver(event);
         return json(res, 200, result);
       }

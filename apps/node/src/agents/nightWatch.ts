@@ -1,4 +1,5 @@
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species } from "@aiagentzoo/sdk";
+import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
 import type { Launch, Market } from "../sources.ts";
 
 /**
@@ -42,6 +43,27 @@ export interface Observation {
   watchedBy?: string[];
 }
 
+export const VERDICTS = ["promising", "watch", "suspicious"] as const;
+
+/** One token a guest agent reported, with its verdict and a short note. */
+export interface GuestItem {
+  mint: string;
+  verdict: (typeof VERDICTS)[number];
+  note: string;
+}
+
+/** What a guest reported over one night. */
+export interface GuestReport {
+  guest: string;
+  species: string;
+  token: string | null;
+  items: GuestItem[];
+  at: number;
+}
+
+const MAX_GUEST_ITEMS = 30;
+const MAX_GUESTS_PER_BRIEF = 50;
+
 /** Guardian watchlists live in the north enclosure's state under this prefix. */
 export const WATCH_PREFIX = "watch:";
 export const WATCH_EVERY_MS = 60 * 60_000;
@@ -66,6 +88,17 @@ const isLaunch = (l: unknown) => {
 const isObservation = (o: unknown) => {
   const x = o as Partial<Observation>;
   return isMint(x?.mint) && typeof x.symbol === "string" && x.symbol.length <= 32 && typeof x.seenAt === "number";
+};
+
+const isGuestReport: SignalValidator = (payload, event) => {
+  if (!isGuestNode(event.from.node)) return "guest reports come from guest enclosures";
+  const items = (payload as { items?: unknown } | null)?.items;
+  if (!Array.isArray(items) || items.length === 0 || items.length > MAX_GUEST_ITEMS) return `items must hold 1-${MAX_GUEST_ITEMS} tokens`;
+  const ok = items.every((i) => {
+    const x = i as Partial<GuestItem>;
+    return isMint(x?.mint) && VERDICTS.includes(x.verdict as GuestItem["verdict"]) && (x.note === undefined || (typeof x.note === "string" && x.note.length <= 280));
+  });
+  return ok ? true : `each item needs a mint, a verdict (${VERDICTS.join(", ")}) and an optional note up to 280 chars`;
 };
 
 /** The id of the night a timestamp belongs to: the date of the next brief. */
@@ -223,10 +256,12 @@ export interface Sections {
   promoted: Observation[];
   /** Tokens guardians asked the zoo to watch, with who asked. */
   watched: Observation[];
+  /** Reports from outside agents living in guest enclosures. */
+  guests: GuestReport[];
   updatedAt: number;
 }
 
-export function buildSections(night: string, obs: Observation[], now: number): Sections {
+export function buildSections(night: string, obs: Observation[], now: number, guests: GuestReport[] = []): Sections {
   const usd = (n: number | null | undefined) => n ?? 0;
   const pump = obs.filter((o) => o.source === "pump");
   const suspicious = obs
@@ -250,6 +285,7 @@ export function buildSections(night: string, obs: Observation[], now: number): S
     suspicious,
     promoted: obs.filter((o) => o.source === "dex-profile" && !o.watchedBy?.length).slice(0, 10),
     watched: obs.filter((o) => o.watchedBy?.length).slice(0, 100),
+    guests: [...guests].sort((a, b) => a.at - b.at).slice(0, MAX_GUESTS_PER_BRIEF),
     updatedAt: now,
   };
 }
@@ -291,7 +327,19 @@ export function renderBrief(s: Sections, review: string): string {
       ? s.watched.map((o) => `- **${o.symbol}** \`${o.mint}\` — vol ${money(o.market?.volume24hUsd)}, liq ${money(o.market?.liquidityUsd)}, 24h ${pct(o.market?.priceChange24h)} · watched by ${(o.watchedBy ?? []).map((a) => `${a.slice(0, 4)}…${a.slice(-4)}`).join(", ")}`).join("\n")
       : "_No tokens on guardian watch yet._",
     "",
-    "_Data: pump.fun, DexScreener. Observations, not financial advice._",
+    "## From the guest enclosures",
+    s.guests?.length
+      ? s.guests
+          .map((g) =>
+            [
+              `**${g.guest}** (${g.species}${g.token ? `, token \`${g.token}\`` : ""})`,
+              ...g.items.map((i) => `- ${i.verdict} \`${i.mint}\`${i.note ? ` — ${i.note}` : ""}`),
+            ].join("\n"),
+          )
+          .join("\n\n")
+      : "_No guest reports this night._",
+    "",
+    "_Data: pump.fun, DexScreener; guest reports are the guests' own and signed by their wallets. Observations, not financial advice._",
   ].join("\n");
 }
 
@@ -300,28 +348,45 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
     name: "beaver",
     species: species.builder,
     budget: { steps: 10, signals: 0 },
-    accepts: { observations: listOf("items", isObservation) },
+    accepts: { observations: listOf("items", isObservation), "guest.report": isGuestReport },
     async onWake(ctx) {
       if (ctx.reason.type !== "signal") return;
+      const event = ctx.reason.event;
       const night = nightOf(ctx.now, cfg.briefAt);
-      const key = `obs:${night}`;
-      const store = (await ctx.state.get<Record<string, Observation>>(key)) ?? {};
-      for (const item of (ctx.reason.event.payload as { items: Observation[] }).items) {
-        if (Object.keys(store).length >= 1000 && !store[item.mint]) break;
-        const prev = store[item.mint];
-        store[item.mint] = prev
-          ? {
-              ...prev,
-              ...item,
-              symbol: item.symbol !== "?" ? item.symbol : prev.symbol,
-              name: item.name || prev.name,
-              source: prev.source,
-              watchedBy: [...new Set([...(prev.watchedBy ?? []), ...(item.watchedBy ?? [])])],
-            }
-          : item;
+      const obsKey = `obs:${night}`;
+      const reportsKey = `reports:${night}`;
+      const store = (await ctx.state.get<Record<string, Observation>>(obsKey)) ?? {};
+      const reports = (await ctx.state.get<Record<string, GuestReport>>(reportsKey)) ?? {};
+
+      if (event.type === "guest.report") {
+        const name = event.from.agent;
+        const guest = await ctx.state.get<Guest>(`${GUEST_PREFIX}${name}`);
+        if (!guest || (!reports[name] && Object.keys(reports).length >= MAX_GUESTS_PER_BRIEF)) return;
+        const byMint = new Map((reports[name]?.items ?? []).map((i) => [i.mint, i]));
+        for (const item of (event.payload as { items: GuestItem[] }).items) {
+          byMint.delete(item.mint);
+          byMint.set(item.mint, { mint: item.mint, verdict: item.verdict, note: cleanText(item.note ?? "", 200) });
+        }
+        reports[name] = { guest: name, species: guest.species, token: guest.token, items: [...byMint.values()].slice(-MAX_GUEST_ITEMS), at: ctx.now };
+        await ctx.state.set(reportsKey, reports);
+      } else {
+        for (const item of (event.payload as { items: Observation[] }).items) {
+          if (Object.keys(store).length >= 1000 && !store[item.mint]) break;
+          const prev = store[item.mint];
+          store[item.mint] = prev
+            ? {
+                ...prev,
+                ...item,
+                symbol: item.symbol !== "?" ? item.symbol : prev.symbol,
+                name: item.name || prev.name,
+                source: prev.source,
+                watchedBy: [...new Set([...(prev.watchedBy ?? []), ...(item.watchedBy ?? [])])],
+              }
+            : item;
+        }
+        await ctx.state.set(obsKey, store);
       }
-      await ctx.state.set(key, store);
-      const sections = buildSections(night, Object.values(store), ctx.now);
+      const sections = buildSections(night, Object.values(store), ctx.now, Object.values(reports));
       await ctx.artifact.draft(`brief:${night}`, sections);
     },
   });

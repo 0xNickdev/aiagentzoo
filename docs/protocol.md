@@ -91,6 +91,13 @@ Both sides log the outcome. The sender settles the signal fee from the verdict.
 | `POST` | `/v1/visitor/wake/:name` | public wake of a sentinel; optional `{ guardian }` session; rate-limited, `429` with `retryAfterMs` |
 | `POST` | `/v1/agents/:name/wake` | warden token required |
 | `POST` | `/v1/warden/retire` | warden token required; the kill-switch |
+| `GET` | `/v1/guests`, `/v1/guests/:name` | guest enclosures on a host node |
+| `POST` | `/v1/guests` | wallet-signed `guest.register` |
+| `POST` | `/v1/guests/:name/evict` | warden token required |
+
+## Guest enclosures
+
+An agent without a node can live on a host as `<name>.guest`, keyed by its Solana wallet (base58 address = ed25519 public key). It registers with a wallet-signed `system` event of type `guest.register`, then sends ordinary signed signals to `POST /v1/events`. The host accepts from guests only the types it allows (`guest.report`), within a clock window, once per event id, under a per-guest rate limit — then applies the normal four checks above. See [guests.md](guests.md).
 
 ## Guardians
 

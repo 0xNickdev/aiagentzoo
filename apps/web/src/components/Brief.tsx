@@ -27,6 +27,13 @@ interface Sections {
   suspicious: Obs[];
   promoted: Obs[];
   watched?: Obs[];
+  guests?: GuestReport[];
+}
+interface GuestReport {
+  guest: string;
+  species: string;
+  token: string | null;
+  items: Array<{ mint: string; verdict: string; note: string }>;
 }
 interface BriefRef {
   id: string;
@@ -76,6 +83,36 @@ function Table({ title, items, note }: { title: string; items: Obs[]; note?: (o:
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function GuestReports({ reports }: { reports: GuestReport[] }) {
+  return (
+    <div className="mt-3 rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md">
+      <p className="mb-3 text-[10px] font-light uppercase tracking-[0.25em] text-white/50">
+        From the guest enclosures · {reports.length}
+      </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {reports.map((r) => (
+          <div key={r.guest} className="min-w-0">
+            <p className="text-[13px] text-white/90">
+              {r.guest} <span className="text-white/40">· {r.species}</span>
+            </p>
+            <ul className="mt-1 grid gap-1 text-[12px] font-light text-white/60">
+              {r.items.slice(0, 6).map((i) => (
+                <li key={i.mint} className="truncate" title={i.note}>
+                  <span className={i.verdict === "suspicious" ? "text-amber-200/80" : "text-white/80"}>{i.verdict}</span>{" "}
+                  <a href={`https://dexscreener.com/solana/${i.mint}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white">
+                    {i.mint.slice(0, 4)}…{i.mint.slice(-4)}
+                  </a>
+                  {i.note && ` — ${i.note}`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -256,6 +293,7 @@ export default function Brief() {
                   note={(o) => `${pct(o.market?.priceChange24h)} · ${(o.watchedBy ?? []).map(shortAddress).join(", ")}`}
                 />
               </div>
+              {s.guests && s.guests.length > 0 && <GuestReports reports={s.guests} />}
               <p className="mt-3 text-[11px] font-light text-white/40">Observations from public data, not financial advice.</p>
             </>
           )}

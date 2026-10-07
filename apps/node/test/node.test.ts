@@ -228,3 +228,77 @@ test("guardians manage a watchlist and the raven hands it to the hedgehog", asyn
     server.close();
   }
 });
+
+import { randomBytes } from "node:crypto";
+import { GuestHouse } from "../src/guests.ts";
+
+test("an outside agent moves into a guest enclosure and lands in the brief", async () => {
+  const canyon = { id: "canyon.zoo", identity: Identity.generate(), operator: "op" };
+  const briefs: string[] = [];
+  const enclosure = new Enclosure({
+    node: canyon,
+    keeper: "keeper",
+    agents: nightWatch({
+      role: "canyon",
+      nodes: { north: "north.zoo", marsh: "marsh.zoo", canyon: canyon.id },
+      briefAt: "07:00",
+      scanEveryMs: 60_000,
+      onBrief: (_id, md) => void briefs.push(md),
+    }),
+  });
+  const guests = await GuestHouse.open(enclosure, { signalCooldownMs: 60_000 });
+  const server = createNodeServer({ enclosure, adminToken: "t", guests });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  const post = async (path: string, body: unknown, headers: Record<string, string> = {}) => {
+    const res = await fetch(`${base}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+    return { status: res.status, body: await res.json() };
+  };
+
+  // A Solana keypair file: seed then public key.
+  const seed = randomBytes(32);
+  const key = Identity.fromSeed(seed);
+  const address = base58Encode(Buffer.from(key.publicKey, "base64url"));
+  const from = { node: "crab.guest", agent: "crab" };
+  const register = (payload: Record<string, unknown>, signer = key, who = from) =>
+    signEvent(createEvent({ kind: "system", type: "guest.register", from: who, payload: { wallet: address, species: "sentinel", ...payload } }), signer);
+  const report = (items: unknown[], type = "guest.report") =>
+    signEvent(createEvent({ kind: "signal", type, from, to: { node: canyon.id, agent: "beaver" }, payload: { items } }), key);
+
+  try {
+    assert.equal((await post("/v1/guests", register({ about: "x" }, Identity.generate()))).status, 401);
+    assert.equal((await post("/v1/guests", register({ about: "x" }, key, { node: "beaver.guest", agent: "beaver" }))).status, 409);
+    assert.equal((await post("/v1/guests", register({ about: "" }))).status, 400);
+
+    const admitted = await post("/v1/guests", register({ about: "Watches **ClawPump** launches", token: MINT }));
+    assert.equal(admitted.status, 200);
+    assert.equal(admitted.body.guest.about, "Watches ClawPump launches");
+    const list = await (await fetch(`${base}/v1/guests`)).json();
+    assert.equal(list.guests[0].wallet, address);
+    const node = await (await fetch(`${base}/v1/node`)).json();
+    assert.equal(node.guests, 1);
+    assert.equal(node.peers.length, 0);
+
+    // Guests may not pose as gatherers.
+    assert.equal((await post("/v1/events", report([obs()], "observations"))).status, 403);
+    const sent = await post("/v1/events", report([{ mint: MINT, verdict: "suspicious", note: "[click](https://evil) same art as a rug" }]));
+    assert.deepEqual(sent.body, { accepted: true });
+    assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "watch" }]))).status, 429);
+
+    await (enclosure as any).agents.get("beaver").queue;
+    await enclosure.wake("tortoise");
+    assert.match(briefs[0]!, /## From the guest enclosures/);
+    assert.match(briefs[0]!, /\*\*crab\*\* \(sentinel, token/);
+    assert.match(briefs[0]!, /suspicious `6ReK\w+` — click https:\/\/evil same art as a rug/);
+
+    const log = await (await fetch(`${base}/v1/log?limit=1000`)).json();
+    assert.equal(verifyChain(log), null);
+    assert.ok(log.some((e: any) => e.event.type === "guest.signal" && e.event.payload.signal.sig));
+
+    assert.equal((await post("/v1/guests/crab/evict", {})).status, 401);
+    assert.equal((await post("/v1/guests/crab/evict", {}, { authorization: "Bearer t" })).status, 200);
+    assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "watch" }]))).status, 403);
+  } finally {
+    server.close();
+  }
+});

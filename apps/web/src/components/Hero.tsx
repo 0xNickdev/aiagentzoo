@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: "Species", href: "#species" },
   { label: "Night Watch", href: "#live" },
   { label: "Brief", href: "#brief" },
+  { label: "Guests", href: "#guests" },
   { label: "Token", href: "#token" },
   { label: "Roadmap", href: "#roadmap" },
 ];

@@ -4,6 +4,7 @@ import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
 import Brief from "./components/Brief";
+import Guests from "./components/Guests";
 import Keeper from "./components/Keeper";
 import Passport from "./components/Passport";
 import { closePassport, usePassport } from "./passportStore";
@@ -23,6 +24,7 @@ export default function App() {
       </Strip>
       <NightWatch />
       <Brief />
+      <Guests />
       <Cycle />
       <Strip src="/backdrops/strip-spheres.webp" tint="200,170,110">
         <p className="font-garamond max-w-3xl text-3xl uppercase leading-tight tracking-tight text-white/90 sm:text-5xl">

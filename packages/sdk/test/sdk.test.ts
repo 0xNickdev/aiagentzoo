@@ -42,6 +42,13 @@ describe("identity and events", () => {
     const restored = Identity.import(id.export());
     expect(restored.publicKey).toBe(id.publicKey);
   });
+
+  it("derives an identity from a raw ed25519 seed (RFC 8032 test 1)", () => {
+    const seed = Buffer.from("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60", "hex");
+    const id = Identity.fromSeed(seed);
+    expect(Buffer.from(id.publicKey, "base64url").toString("hex")).toBe("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a");
+    expect(() => Identity.fromSeed(seed.subarray(0, 31))).toThrow();
+  });
 });
 
 describe("public log", () => {

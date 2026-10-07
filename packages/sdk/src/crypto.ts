@@ -52,6 +52,15 @@ export class Identity {
     return new Identity(privateKey, rawPublicKey(createPublicKey(privateKey)));
   }
 
+  /**
+   * From a raw 32-byte ed25519 seed. A Solana keypair file holds 64 bytes,
+   * seed first: `Identity.fromSeed(keypair.slice(0, 32))`.
+   */
+  static fromSeed(seed: Uint8Array): Identity {
+    if (seed.length !== 32) throw new Error("ed25519 seed must be 32 bytes");
+    return Identity.import(Buffer.concat([PKCS8_ED25519_PREFIX, seed]).toString("base64"));
+  }
+
   export(): string {
     return this.privateKey.export({ format: "der", type: "pkcs8" }).toString("base64");
   }
@@ -72,6 +81,8 @@ export function verifySignature(publicKey: string, message: string, signature: s
     return false;
   }
 }
+
+const PKCS8_ED25519_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
 
 function rawPublicKey(key: KeyObject): string {
   const jwk = key.export({ format: "jwk" });

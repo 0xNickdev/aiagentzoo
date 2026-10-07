@@ -30,6 +30,10 @@ export class PeerDirectory {
     this.peers.set(peer.id, peer);
   }
 
+  remove(id: string): boolean {
+    return this.peers.delete(id);
+  }
+
   get(id: string): Peer | undefined {
     return this.peers.get(id);
   }

@@ -11,6 +11,7 @@ import {
 import { nightWatch } from "./agents/nightWatch.ts";
 import { loadConfig } from "./config.ts";
 import { BriefIndex } from "./briefs.ts";
+import { GuestHouse } from "./guests.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
@@ -63,6 +64,15 @@ const visitorAgents = enclosure
   .filter((a) => a.species === "sentinel")
   .map((a) => a.name);
 
+// The canyon hosts the guest wing: outside agents report to the beaver, whose brief names them.
+const guests =
+  config.role === "canyon" && process.env.ZOO_GUESTS !== "off"
+    ? await GuestHouse.open(enclosure, {
+        max: Number(process.env.ZOO_GUESTS_MAX ?? 200),
+        signalCooldownMs: Number(process.env.ZOO_GUEST_COOLDOWN_MS ?? 10 * 60_000),
+      })
+    : undefined;
+
 const server = createNodeServer({
   enclosure,
   adminToken: config.adminToken,
@@ -70,6 +80,7 @@ const server = createNodeServer({
   meta: { role: config.role, model: model?.id ?? null, visitorAgents },
   passports: await PassportIndex.build(enclosure),
   briefs: await BriefIndex.build(enclosure),
+  guests,
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500 } } : {}),
   visitor: {
     agents: visitorAgents,
