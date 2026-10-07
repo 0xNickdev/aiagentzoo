@@ -186,3 +186,45 @@ test("visitors and guardians wake sentinels within limits; passports count it", 
     server.close();
   }
 });
+
+import { BriefIndex } from "../src/briefs.ts";
+import { defineTool } from "@aiagentzoo/sdk";
+
+test("guardians manage a watchlist and the raven hands it to the hedgehog", async () => {
+  const node = { id: "north.zoo", identity: Identity.generate(), operator: "op" };
+  const enclosure = new Enclosure({
+    node,
+    keeper: "keeper",
+    tools: [
+      defineTool({ name: "pump.latest", capability: "sources:read", run: async () => [] }),
+      defineTool({ name: "dex.markets", capability: "net:fetch", run: async () => [] }),
+    ],
+    agents: nightWatch({ role: "north", nodes: { north: "north.zoo", marsh: "marsh.zoo", canyon: "canyon.zoo" }, briefAt: "07:00", scanEveryMs: 60_000 }),
+  });
+  const server = createNodeServer({ enclosure, briefs: await BriefIndex.build(enclosure), watchlist: { perGuardian: 2, maxGuardians: 10 } });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  const post = (body: unknown) => fetch(`${base}/v1/watchlist`, { method: "POST", body: JSON.stringify(body) });
+  const MINT_A = "GDHKBq66FF9qHwbFryMkLsvwrsLZrStT1m4SEUghpump";
+  const MINT_B = "6ReKEafCz73AxMeR2EYs9bKjQi8Lt4TgFfTVBZ6Lpump";
+  try {
+    const w = wallet();
+    assert.equal((await post({ mint: MINT_A })).status, 401);
+    assert.equal((await post({ guardian: w.session(), mint: "not-a-mint" })).status, 400);
+    assert.deepEqual((await (await post({ guardian: w.session(), mint: MINT_A })).json()).mints, [MINT_A]);
+    await post({ guardian: w.session(), mint: MINT_B });
+    assert.equal((await post({ guardian: w.session(), mint: "So11111111111111111111111111111111111111112" })).status, 409);
+    assert.deepEqual((await (await fetch(`${base}/v1/watchlist/${w.address}`)).json()).mints, [MINT_A, MINT_B]);
+    assert.deepEqual((await (await post({ guardian: w.session(), mint: MINT_B, action: "remove" })).json()).mints, [MINT_A]);
+
+    await enclosure.wake("raven");
+    const log = await enclosure.log.since(0);
+    const sent = log.find((e) => e.event.type === "watch.check");
+    assert.deepEqual(sent?.event.payload, { owners: { [MINT_A]: [w.address] } });
+    const delivered = log.find((e) => e.event.type === "signal.delivered");
+    assert.equal((delivered?.event.payload as { accepted: boolean }).accepted, true);
+    assert.deepEqual(await (await fetch(`${base}/v1/briefs`)).json(), []);
+  } finally {
+    server.close();
+  }
+});

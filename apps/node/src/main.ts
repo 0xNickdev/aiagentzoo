@@ -10,6 +10,7 @@ import {
 } from "@aiagentzoo/sdk";
 import { nightWatch } from "./agents/nightWatch.ts";
 import { loadConfig } from "./config.ts";
+import { BriefIndex } from "./briefs.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
@@ -68,6 +69,8 @@ const server = createNodeServer({
   corsOrigin: config.corsOrigin,
   meta: { role: config.role, model: model?.id ?? null, visitorAgents },
   passports: await PassportIndex.build(enclosure),
+  briefs: await BriefIndex.build(enclosure),
+  ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500 } } : {}),
   visitor: {
     agents: visitorAgents,
     agentCooldownMs: Number(process.env.ZOO_VISITOR_AGENT_COOLDOWN_MS ?? 60_000),

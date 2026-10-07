@@ -38,7 +38,13 @@ export interface Observation {
   market: Omit<Market, "mint" | "symbol" | "name"> | null;
   seenAt: number;
   scout: string;
+  /** Guardian wallets that asked the zoo to watch this token. */
+  watchedBy?: string[];
 }
+
+/** Guardian watchlists live in the north enclosure's state under this prefix. */
+export const WATCH_PREFIX = "watch:";
+export const WATCH_EVERY_MS = 60 * 60_000;
 
 const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const MAX_BATCH = 30;
@@ -87,6 +93,15 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
     accepts: {
       "launches.found": listOf("launches", isLaunch),
       "profiles.found": listOf("mints", isMint),
+      "watch.check": (payload) => {
+        const owners = (payload as { owners?: unknown } | null)?.owners;
+        if (!owners || typeof owners !== "object") return "owners must be an object";
+        const entries = Object.entries(owners as Record<string, unknown>);
+        if (entries.length === 0 || entries.length > MAX_BATCH) return `1-${MAX_BATCH} watched tokens`;
+        return entries.every(([m, o]) => isMint(m) && Array.isArray(o) && o.length <= 50 && o.every((a) => typeof a === "string" && MINT.test(a)))
+          ? true
+          : "malformed watch list";
+      },
     },
     async onWake(ctx) {
       if (ctx.reason.type !== "signal") {
@@ -96,9 +111,14 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
       const event = ctx.reason.event;
       let launches: Launch[];
       let source: Observation["source"];
+      let watchedBy: Record<string, string[]> = {};
       if (event.type === "launches.found") {
         launches = (event.payload as { launches: Launch[] }).launches;
         source = "pump";
+      } else if (event.type === "watch.check") {
+        watchedBy = (event.payload as { owners: Record<string, string[]> }).owners;
+        launches = Object.keys(watchedBy).map((mint) => ({ mint, name: "", symbol: "?", createdAt: 0, creator: "", marketCapUsd: null, complete: false, hasSocials: true }));
+        source = "dex-profile";
       } else {
         const mints = (event.payload as { mints: string[] }).mints;
         launches = mints.map((mint) => ({ mint, name: "", symbol: "?", createdAt: 0, creator: "", marketCapUsd: null, complete: false, hasSocials: true }));
@@ -122,6 +142,7 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
           market: market ? (({ mint: _m, symbol: _s, name: _n, ...rest }) => rest)(market) : null,
           seenAt: ctx.now,
           scout: event.from.agent,
+          ...(watchedBy[l.mint] ? { watchedBy: watchedBy[l.mint] } : {}),
         };
       });
       await ctx.trace("gathered", { count: observations.length, withMarket: markets.length, from: event.from.agent });
@@ -140,6 +161,19 @@ function northAgents(cfg: NightWatchConfig): AgentDefinition[] {
     schedule: { every: cfg.scanEveryMs },
     budget: { steps: 10, signals: 3 },
     async onWake(ctx) {
+      // Once an hour, hand the guardians' watched tokens to the hedgehog.
+      const lastWatch = (await ctx.state.get<number>("raven:watchAt")) ?? 0;
+      if (ctx.now - lastWatch >= WATCH_EVERY_MS) {
+        const owners: Record<string, string[]> = {};
+        for (const key of await ctx.state.keys(WATCH_PREFIX)) {
+          const owner = key.slice(WATCH_PREFIX.length);
+          for (const mint of (await ctx.state.get<string[]>(key)) ?? []) (owners[mint] ??= []).push(owner);
+        }
+        await ctx.state.set("raven:watchAt", ctx.now);
+        const mints = Object.keys(owners).slice(0, MAX_BATCH);
+        if (mints.length) await ctx.signal("hedgehog", "watch.check", { owners: Object.fromEntries(mints.map((m) => [m, owners[m]!])) });
+      }
+
       const cursor = (await ctx.state.get<number>("raven:cursor")) ?? ctx.now - cfg.scanEveryMs;
       const latest = await ctx.use<Launch[]>("pump.latest", { limit: 50 });
       const fresh = latest.filter((l) => l.createdAt > cursor).slice(0, MAX_BATCH);
@@ -187,6 +221,8 @@ export interface Sections {
   wentToZero: Observation[];
   suspicious: Array<Observation & { reasons: string[] }>;
   promoted: Observation[];
+  /** Tokens guardians asked the zoo to watch, with who asked. */
+  watched: Observation[];
   updatedAt: number;
 }
 
@@ -212,7 +248,8 @@ export function buildSections(night: string, obs: Observation[], now: number): S
     topVolume: [...obs].filter((o) => o.market).sort((a, b) => usd(b.market!.volume24hUsd) - usd(a.market!.volume24hUsd)).slice(0, 10),
     wentToZero: obs.filter((o) => o.market && (usd(o.market.priceChange24h) <= -90 || (o.market.liquidityUsd !== null && o.market.liquidityUsd < 100))).slice(0, 10),
     suspicious,
-    promoted: obs.filter((o) => o.source === "dex-profile").slice(0, 10),
+    promoted: obs.filter((o) => o.source === "dex-profile" && !o.watchedBy?.length).slice(0, 10),
+    watched: obs.filter((o) => o.watchedBy?.length).slice(0, 100),
     updatedAt: now,
   };
 }
@@ -249,6 +286,11 @@ export function renderBrief(s: Sections, review: string): string {
     "## Freshly promoted on DexScreener",
     table(s.promoted),
     "",
+    "## Guardian watch",
+    s.watched?.length
+      ? s.watched.map((o) => `- **${o.symbol}** \`${o.mint}\` — vol ${money(o.market?.volume24hUsd)}, liq ${money(o.market?.liquidityUsd)}, 24h ${pct(o.market?.priceChange24h)} · watched by ${(o.watchedBy ?? []).map((a) => `${a.slice(0, 4)}…${a.slice(-4)}`).join(", ")}`).join("\n")
+      : "_No tokens on guardian watch yet._",
+    "",
     "_Data: pump.fun, DexScreener. Observations, not financial advice._",
   ].join("\n");
 }
@@ -268,7 +310,14 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         if (Object.keys(store).length >= 1000 && !store[item.mint]) break;
         const prev = store[item.mint];
         store[item.mint] = prev
-          ? { ...prev, ...item, symbol: item.symbol !== "?" ? item.symbol : prev.symbol, name: item.name || prev.name, source: prev.source }
+          ? {
+              ...prev,
+              ...item,
+              symbol: item.symbol !== "?" ? item.symbol : prev.symbol,
+              name: item.name || prev.name,
+              source: prev.source,
+              watchedBy: [...new Set([...(prev.watchedBy ?? []), ...(item.watchedBy ?? [])])],
+            }
           : item;
       }
       await ctx.state.set(key, store);
