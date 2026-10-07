@@ -95,7 +95,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                 <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-4">
                   {[
                     [data.wakes, "wake-ups"],
-                    [data.feedSpent.toFixed(1), "feed spent"],
+                    [data.cycles, "cycles run"],
                     [`${data.signalsAccepted}/${data.signalsAccepted + data.signalsRejected}`, "signals accepted"],
                     [data.signalsReceived, "signals received"],
                     [data.artifacts, "artifacts"],

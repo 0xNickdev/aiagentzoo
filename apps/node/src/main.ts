@@ -26,8 +26,10 @@ if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
 
 // v1 feed runs on internal credits, granted to the keeper on every boot.
 // Settlement moves to the on-chain program once the token is live.
-const ledger = new FeedLedger();
-ledger.deposit(config.keeper, config.feedGrant, "boot-grant");
+// Free by default: no feed, no stake. Per-session budgets and visitor limits still cap the cost.
+// ZOO_FEED_MODE=credits switches on the v1 internal ledger; on-chain settlement lives in onchain/.
+const ledger = config.feedMode === "credits" ? new FeedLedger() : undefined;
+ledger?.deposit(config.keeper, config.feedGrant, "boot-grant");
 
 const briefsDir = join(config.dataDir, "briefs");
 mkdirSync(briefsDir, { recursive: true });
@@ -52,7 +54,7 @@ const enclosure = new Enclosure({
   }),
 });
 
-await enclosure.lockStake();
+if (ledger) await enclosure.lockStake();
 enclosure.start();
 
 const visitorAgents = enclosure

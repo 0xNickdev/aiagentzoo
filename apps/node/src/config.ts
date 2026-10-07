@@ -15,6 +15,8 @@ export interface NodeConfig {
   keeper: string;
   operator: string;
   feedGrant: number;
+  /** "free" (default): no feed or stake, budgets still apply. "credits": v1 internal feed ledger. */
+  feedMode: "free" | "credits";
   adminToken: string | undefined;
   briefAt: string;
   scanEveryMs: number;
@@ -71,6 +73,7 @@ export function loadConfig(): NodeConfig {
     keeper: process.env.ZOO_KEEPER ?? `keeper:${id}`,
     operator: process.env.ZOO_OPERATOR ?? `operator:${id}`,
     feedGrant: Number(process.env.ZOO_FEED_GRANT ?? 10_000),
+    feedMode: process.env.ZOO_FEED_MODE === "credits" ? "credits" : "free",
     adminToken: process.env.ZOO_ADMIN_TOKEN || undefined,
     briefAt: process.env.ZOO_BRIEF_AT ?? "07:00",
     scanEveryMs: Number(process.env.ZOO_SCAN_EVERY_MS ?? 10 * 60_000),

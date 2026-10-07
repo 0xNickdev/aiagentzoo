@@ -32,7 +32,8 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ZOO_ADMIN_TOKEN` | unset | enables warden routes |
 | `ZOO_BRIEF_AT` | `07:00` | UTC publish time |
 | `ZOO_SCAN_EVERY_MS` | `600000` | sentinel cadence |
-| `ZOO_FEED_GRANT` | `10000` | v1 internal credits granted at boot |
+| `ZOO_FEED_MODE` | `free` | `free`: no feed or stake, budgets and visitor limits still apply. `credits`: v1 internal feed ledger |
+| `ZOO_FEED_GRANT` | `10000` | credits granted at boot in `credits` mode |
 | `ZOO_CORS_ORIGIN` | `*` | for the public read routes |
 | `ANTHROPIC_API_KEY` | unset | lets builders and archivists think with Claude |
 | `ZOO_MODEL` | `claude-opus-5-5` | |

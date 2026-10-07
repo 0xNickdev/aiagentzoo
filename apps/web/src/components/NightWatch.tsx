@@ -194,7 +194,7 @@ export default function NightWatch() {
             {(live.enabled
               ? [
                   [live.stats.cycles, "cycles"],
-                  [live.stats.feed.toFixed(1), "feed spent"],
+                  [live.stats.observed, "tokens observed"],
                   [live.stats.signals, "signals accepted"],
                   [live.stats.rejected, "rejected"],
                 ]
