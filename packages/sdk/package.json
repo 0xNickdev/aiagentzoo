@@ -1,6 +1,6 @@
 {
   "name": "@aiagentzoo/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SDK for AiAgentZoo: define species and agents, run enclosures with budgets, signed signals and a hash-chained public log.",
   "license": "MIT",
   "type": "module",
@@ -20,6 +20,7 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./claude": { "types": "./dist/claude.d.ts", "import": "./dist/claude.js" },
+    "./openai": { "types": "./dist/openai.d.ts", "import": "./dist/openai.js" },
     "./package.json": "./package.json"
   },
   "files": ["dist", "README.md", "LICENSE"],

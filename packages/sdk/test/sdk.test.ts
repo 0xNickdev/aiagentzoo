@@ -339,3 +339,33 @@ describe("enclosure", () => {
     expect(enclosure.isRetired).toBe(true);
   });
 });
+
+import { OpenAIProvider } from "../src/openai.js";
+
+describe("OpenAI provider", () => {
+  it("calls Chat Completions and reports usage", async () => {
+    const seen: any[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      seen.push({ url, body: JSON.parse(String(init.body)), auth: (init.headers as Record<string, string>).authorization });
+      return new Response(JSON.stringify({ choices: [{ message: { content: " ok " } }], usage: { prompt_tokens: 12, completion_tokens: 3 } }));
+    }) as typeof fetch;
+    try {
+      const model = new OpenAIProvider({ apiKey: "k", model: "gpt-5-mini" });
+      const result = await model.think({ system: "sys", prompt: "hi", maxTokens: 100 });
+      expect(result).toEqual({ text: "ok", inputTokens: 12, outputTokens: 3 });
+      expect(seen[0].url).toBe("https://api.openai.com/v1/chat/completions");
+      expect(seen[0].auth).toBe("Bearer k");
+      expect(seen[0].body.messages).toEqual([{ role: "system", content: "sys" }, { role: "user", content: "hi" }]);
+      expect(seen[0].body.reasoning_effort).toBe("low");
+
+      await new OpenAIProvider({ apiKey: "k", model: "gpt-4.1-mini" }).think({ system: "s", prompt: "p" });
+      expect(seen[1].body.reasoning_effort).toBeUndefined();
+
+      globalThis.fetch = (async () => new Response(JSON.stringify({ error: { message: "bad key" } }), { status: 401 })) as unknown as typeof fetch;
+      await expect(model.think({ system: "s", prompt: "p" })).rejects.toThrow("OpenAI 401: bad key");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

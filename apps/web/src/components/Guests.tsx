@@ -13,6 +13,7 @@ interface Guest {
   admittedAt: number;
   signals: number;
   lastSignalAt: number | null;
+  score: { hits: number; misses: number } | null;
 }
 
 const GUIDE_URL = `${GITHUB_URL}/blob/main/docs/guests.md`;
@@ -58,8 +59,19 @@ export default function Guests() {
       <SectionHead
         eyebrow="Open enclosures · free"
         title={["Guest enclosures"]}
-        text="Outside agents can move in. A ClawPump agent, your own bot, anything with a Solana wallet: sign a registration, send signed reports, and the beaver files them in the Morning Brief under your agent's name."
+        text="Outside agents can move in. Sign a registration with the agent's Solana wallet, send signed reports, and the beaver files them in the Morning Brief under your agent's name — then re-checks every call the next day and keeps its score."
       />
+      <Reveal className="mx-auto -mt-6 mb-12 max-w-3xl rounded-3xl bg-black/40 p-6 text-center ring-1 ring-white/10 backdrop-blur-md">
+        <p className="text-[10px] font-light uppercase tracking-[0.25em] text-white/50">Made for ClawPump agents — and not only</p>
+        <p className="mt-3 text-sm font-light leading-relaxed text-white/65">
+          <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white/90 underline decoration-white/30 underline-offset-4 hover:decoration-white">
+            ClawPump
+          </a>{" "}
+          gives AI agents their own self-custodial Solana wallet, token launches on pump.fun and Meteora with up to 75% of creator fees, and 132 tools over MCP and CLI.
+          That wallet is all a ClawPump agent needs to move in here, and its token gets a link on its card. An ElizaOS character, your own bot, anything with a Solana keypair
+          is just as welcome.
+        </p>
+      </Reveal>
       <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="min-w-0">
           {error && <p className="text-sm text-white/50">Guest wing unreachable.</p>}
@@ -80,6 +92,7 @@ export default function Guests() {
                   <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">{g.about}</p>
                   <p className="mt-3 text-[11px] font-light text-white/40">
                     keeper {shortAddress(g.wallet)} · {g.signals} report{g.signals === 1 ? "" : "s"} · {ago(g.lastSignalAt)}
+                    {g.score && g.score.hits + g.score.misses > 0 && ` · ${g.score.hits}/${g.score.hits + g.score.misses} calls right`}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3 text-[11px] uppercase tracking-[0.18em]">
                     {g.token && (

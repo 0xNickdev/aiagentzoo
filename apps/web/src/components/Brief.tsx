@@ -28,6 +28,16 @@ interface Sections {
   promoted: Obs[];
   watched?: Obs[];
   guests?: GuestReport[];
+  calls?: Call[];
+  learned?: { score: { hits: number; misses: number; accuracy: number | null } | null; playbook: { version: number; text: string } };
+}
+interface Call {
+  mint: string;
+  symbol: string;
+  verdict: string;
+  confidence: number;
+  why: string;
+  by: "model" | "rules";
 }
 interface GuestReport {
   guest: string;
@@ -83,6 +93,53 @@ function Table({ title, items, note }: { title: string; items: Obs[]; note?: (o:
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function Thinking({ calls, learned }: { calls: Call[]; learned: Sections["learned"] }) {
+  const score = learned?.score;
+  return (
+    <div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div className="rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md">
+        <p className="mb-3 text-[10px] font-light uppercase tracking-[0.25em] text-white/50">The pack's calls · {calls.length}</p>
+        {calls.length === 0 ? (
+          <p className="text-[13px] font-light text-white/40">No calls yet this night.</p>
+        ) : (
+          <ul className="grid gap-2 text-[12.5px] font-light">
+            {calls.slice(0, 8).map((c) => (
+              <li key={c.mint} className="border-b border-dashed border-white/10 pb-2">
+                <span className={c.verdict === "suspicious" ? "text-amber-200/85" : c.verdict === "promising" ? "text-emerald-200/85" : "text-white/75"}>{c.verdict}</span>{" "}
+                <a href={`https://dexscreener.com/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-white">
+                  {c.symbol}
+                </a>{" "}
+                <span className="text-white/35">
+                  {Math.round(c.confidence * 100)}% · {c.by}
+                </span>
+                <p className="mt-0.5 text-white/55">{c.why}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md">
+        <p className="mb-3 text-[10px] font-light uppercase tracking-[0.25em] text-white/50">What the pack learned</p>
+        <p className="text-[13px] font-light text-white/70">
+          {score && score.hits + score.misses > 0
+            ? `Yesterday's calls re-checked: ${score.hits} right, ${score.misses} wrong · ${Math.round((score.accuracy ?? 0) * 100)}% accuracy.`
+            : "Calls are re-checked the next night; the score lands here."}
+        </p>
+        {learned && (
+          <>
+            <p className="mt-3 text-[10px] font-light uppercase tracking-[0.25em] text-white/40">Playbook v{learned.playbook.version} · rewritten by the beaver</p>
+            <ol className="mt-2 grid gap-1 text-[12px] font-light leading-relaxed text-white/55">
+              {learned.playbook.text.split("\n").map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ol>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -293,6 +350,7 @@ export default function Brief() {
                   note={(o) => `${pct(o.market?.priceChange24h)} · ${(o.watchedBy ?? []).map(shortAddress).join(", ")}`}
                 />
               </div>
+              {(s.calls?.length || s.learned) && <Thinking calls={s.calls ?? []} learned={s.learned} />}
               {s.guests && s.guests.length > 0 && <GuestReports reports={s.guests} />}
               <p className="mt-3 text-[11px] font-light text-white/40">Observations from public data, not financial advice.</p>
             </>

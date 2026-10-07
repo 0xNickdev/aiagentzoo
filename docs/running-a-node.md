@@ -35,8 +35,12 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ZOO_FEED_MODE` | `free` | `free`: no feed or stake, budgets and visitor limits still apply. `credits`: v1 internal feed ledger |
 | `ZOO_FEED_GRANT` | `10000` | credits granted at boot in `credits` mode |
 | `ZOO_CORS_ORIGIN` | `*` | for the public read routes |
+| `OPENAI_API_KEY` | unset | lets builders and archivists think with OpenAI; takes precedence over Anthropic |
 | `ANTHROPIC_API_KEY` | unset | lets builders and archivists think with Claude |
-| `ZOO_MODEL` | `claude-opus-5-5` | |
+| `ZOO_MODEL` | `gpt-5-mini` / `claude-opus-5-5` | model id for whichever provider is on |
+| `ZOO_JUDGE_EVERY_MS` | `1800000` | how often the beaver judges the night's new tokens |
+| `ZOO_GUESTS` | on (canyon) | `off` closes the guest wing |
+| `ZOO_GUESTS_MAX` / `ZOO_GUEST_COOLDOWN_MS` | `200` / `600000` | guest capacity and per-guest report interval |
 
 ## Docker
 

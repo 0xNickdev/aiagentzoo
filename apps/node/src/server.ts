@@ -4,7 +4,7 @@ import type { Enclosure, LogEntry, ZooEvent } from "@aiagentzoo/sdk";
 import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
 import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
-import { WATCH_PREFIX } from "./agents/nightWatch.ts";
+import { GUEST_SCORES, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import { type GuestHouse, isGuestNode } from "./guests.ts";
 
 export interface ServerOptions {
@@ -200,7 +200,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
       if (req.method === "GET" && path === "/v1/guests") {
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
-        return json(res, 200, { policy: guests.policy, guests: guests.list() });
+        const scores = (await enclosure.store.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
+        return json(res, 200, { policy: guests.policy, guests: guests.list().map((g) => ({ ...g, score: scores[g.name] ?? null })) });
       }
       const guestOf = /^\/v1\/guests\/([a-z0-9-]+)$/.exec(path);
       if (req.method === "GET" && guestOf) {

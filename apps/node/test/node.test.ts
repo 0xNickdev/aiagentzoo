@@ -302,3 +302,72 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     server.close();
   }
 });
+
+import { EchoProvider, type Transport } from "@aiagentzoo/sdk";
+import { outcomeOf, scoreCall } from "../src/agents/judgement.ts";
+
+test("the beaver makes calls, checks them the next day and rewrites its playbook", async () => {
+  const canyon = { id: "canyon.zoo", identity: Identity.generate(), operator: "op" };
+  const north = Identity.generate();
+  const OTHER = "So11111111111111111111111111111111111111112";
+  let now = Date.UTC(2026, 9, 6, 22, 0);
+  const sent: Array<{ type: string; payload: any }> = [];
+  const transport: Transport = { send: async (_peer, event) => (sent.push({ type: event.type, payload: event.payload }), { accepted: true }) };
+  const model = new EchoProvider((req) =>
+    req.system.includes("Rewrite your playbook")
+      ? "1. No socials with heavy selling was right last night: keep calling it early.\n2. Ask for two signals before a promise."
+      : JSON.stringify([{ mint: MINT, verdict: "suspicious", confidence: 0.9, why: "no socials, sells 4x buys" }]),
+  );
+  const enclosure = new Enclosure({
+    node: canyon,
+    keeper: "keeper",
+    model,
+    transport,
+    clock: () => now,
+    peers: new PeerDirectory([{ id: "north.zoo", url: "http://unused", publicKey: north.publicKey }]),
+    agents: nightWatch({ role: "canyon", nodes: { north: "north.zoo", marsh: "marsh.zoo", canyon: canyon.id }, briefAt: "07:00", scanEveryMs: 60_000 }),
+  });
+  const beaver = (enclosure as any).agents.get("beaver");
+  const feed = async (items: Observation[]) => {
+    const signal = signEvent(
+      createEvent({ kind: "signal", type: "observations", from: { node: "north.zoo", agent: "hedgehog" }, to: { node: canyon.id, agent: "beaver" }, payload: { items }, ts: now }),
+      north,
+    );
+    assert.deepEqual(await enclosure.deliver(signal), { accepted: true });
+    await beaver.queue;
+  };
+
+  // Night of 2026-10-07: the beaver judges what it sees.
+  await feed([obs({ seenAt: now })]);
+  const calls = await enclosure.store.get<any[]>("calls:2026-10-07");
+  assert.equal(calls?.[0]?.verdict, "suspicious");
+  assert.equal(calls?.[0]?.by, "model");
+
+  // Next night: it sends yesterday's calls out for a re-check.
+  now += 86_400_000;
+  await feed([obs({ mint: OTHER, seenAt: now })]);
+  assert.deepEqual(sent.find((s) => s.type === "followup.check")?.payload, { mints: [MINT] });
+
+  // The hedgehog reports the token dead: a hit, and a new playbook.
+  await feed([obs({ source: "followup", seenAt: now })]);
+  const score = await enclosure.store.get<any>("score:2026-10-07");
+  assert.equal(score.hits, 1);
+  assert.equal(score.accuracy, 1);
+  const playbook = await enclosure.store.get<any>("beaver:playbook");
+  assert.equal(playbook.version, 1);
+  assert.match(playbook.text, /keep calling it early/);
+
+  const draft = (await enclosure.store.get<any>("artifact:brief:2026-10-08")) as any;
+  const md = renderBrief(draft, "Quiet.");
+  assert.match(md, /## What the pack learned/);
+  assert.match(md, /1 right, 0 wrong \(100% accuracy\)/);
+  assert.match(md, /playbook v1/);
+});
+
+test("calls are scored against what happened", () => {
+  assert.equal(outcomeOf(obs()), "dead");
+  assert.equal(outcomeOf(obs({ market: null })), "unknown");
+  assert.equal(scoreCall("suspicious", "dead"), true);
+  assert.equal(scoreCall("promising", "dead"), false);
+  assert.equal(scoreCall("watch", "dead"), null);
+});

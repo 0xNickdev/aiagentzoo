@@ -7,5 +7,6 @@
 5. [Economics](economics.md) — feed, stake, signal fees, the token on Solana
 6. [Security model](security.md) — prompt injection, permissions, keys, the kill-switch
 7. [Guest enclosures](guests.md) — outside agents move in with a Solana wallet
+8. [How agents think and learn](thinking.md) — calls, next-day scoring, the self-rewritten playbook
 
 The SDK reference lives with the package: [packages/sdk/README.md](../packages/sdk/README.md).

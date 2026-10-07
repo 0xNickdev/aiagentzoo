@@ -1,6 +1,23 @@
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
 import type { Launch, Market } from "../sources.ts";
+import {
+  type Call,
+  candidates,
+  cleanPlaybook,
+  compact,
+  DEFAULT_PLAYBOOK,
+  followupMints,
+  judgeSystem,
+  parseCalls,
+  type Playbook,
+  previousNight,
+  REFLECT_SYSTEM,
+  ruleCalls,
+  type Scorecard,
+  scoreNight,
+  VERDICTS,
+} from "./judgement.ts";
 
 /**
  * The Night Watch: four species on three nodes assemble the Morning Brief
@@ -22,6 +39,8 @@ export interface NightWatchConfig {
   briefAt: string;
   /** Scan cadence for sentinels. */
   scanEveryMs: number;
+  /** How often the beaver sits down to judge the night's new tokens. Default 30 min. */
+  judgeEveryMs?: number;
   /** Where the archivist writes the brief markdown, if anywhere. */
   onBrief?: (id: string, markdown: string) => void | Promise<void>;
 }
@@ -30,7 +49,7 @@ export interface Observation {
   mint: string;
   symbol: string;
   name: string;
-  source: "pump" | "dex-profile";
+  source: "pump" | "dex-profile" | "followup";
   createdAt: number | null;
   creator: string | null;
   hasSocials: boolean | null;
@@ -42,8 +61,6 @@ export interface Observation {
   /** Guardian wallets that asked the zoo to watch this token. */
   watchedBy?: string[];
 }
-
-export const VERDICTS = ["promising", "watch", "suspicious"] as const;
 
 /** One token a guest agent reported, with its verdict and a short note. */
 export interface GuestItem {
@@ -66,6 +83,8 @@ const MAX_GUESTS_PER_BRIEF = 50;
 
 /** Guardian watchlists live in the north enclosure's state under this prefix. */
 export const WATCH_PREFIX = "watch:";
+/** Hits and misses of every guest's verdicts, kept by the beaver. */
+export const GUEST_SCORES = "guestscores";
 export const WATCH_EVERY_MS = 60 * 60_000;
 
 const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -126,6 +145,7 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
     accepts: {
       "launches.found": listOf("launches", isLaunch),
       "profiles.found": listOf("mints", isMint),
+      "followup.check": listOf("mints", isMint),
       "watch.check": (payload) => {
         const owners = (payload as { owners?: unknown } | null)?.owners;
         if (!owners || typeof owners !== "object") return "owners must be an object";
@@ -155,7 +175,7 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
       } else {
         const mints = (event.payload as { mints: string[] }).mints;
         launches = mints.map((mint) => ({ mint, name: "", symbol: "?", createdAt: 0, creator: "", marketCapUsd: null, complete: false, hasSocials: true }));
-        source = "dex-profile";
+        source = event.type === "followup.check" ? "followup" : "dex-profile";
       }
 
       const markets = await ctx.use<Market[]>("dex.markets", { mints: launches.map((l) => l.mint) });
@@ -258,10 +278,26 @@ export interface Sections {
   watched: Observation[];
   /** Reports from outside agents living in guest enclosures. */
   guests: GuestReport[];
+  /** The beaver's own verdicts, with reasons. */
+  calls: Call[];
+  /** How yesterday's calls turned out and the playbook the beaver judges by now. */
+  learned: { score: Scorecard | null; playbook: Playbook };
   updatedAt: number;
 }
 
-export function buildSections(night: string, obs: Observation[], now: number, guests: GuestReport[] = []): Sections {
+export interface Thinking {
+  calls: Call[];
+  score: Scorecard | null;
+  playbook: Playbook;
+}
+
+export function buildSections(
+  night: string,
+  obs: Observation[],
+  now: number,
+  guests: GuestReport[] = [],
+  thinking: Thinking = { calls: [], score: null, playbook: DEFAULT_PLAYBOOK },
+): Sections {
   const usd = (n: number | null | undefined) => n ?? 0;
   const pump = obs.filter((o) => o.source === "pump");
   const suspicious = obs
@@ -286,6 +322,10 @@ export function buildSections(night: string, obs: Observation[], now: number, gu
     promoted: obs.filter((o) => o.source === "dex-profile" && !o.watchedBy?.length).slice(0, 10),
     watched: obs.filter((o) => o.watchedBy?.length).slice(0, 100),
     guests: [...guests].sort((a, b) => a.at - b.at).slice(0, MAX_GUESTS_PER_BRIEF),
+    calls: [...thinking.calls]
+      .sort((a, b) => VERDICTS.indexOf(b.verdict) - VERDICTS.indexOf(a.verdict) || b.confidence - a.confidence)
+      .slice(0, 20),
+    learned: { score: thinking.score, playbook: thinking.playbook },
     updatedAt: now,
   };
 }
@@ -297,6 +337,21 @@ const row = (o: Observation) =>
   `| ${o.symbol.replaceAll("|", "")} | \`${o.mint.slice(0, 6)}…${o.mint.slice(-4)}\` | ${money(o.market?.volume24hUsd)} | ${money(o.market?.liquidityUsd)} | ${pct(o.market?.priceChange24h)} |`;
 const table = (items: Observation[]) =>
   items.length ? ["| Token | Mint | Vol 24h | Liquidity | 24h |", "|---|---|---|---|---|", ...items.map(row)].join("\n") : "_Nothing this night._";
+
+function learnedText(learned: Sections["learned"] | undefined): string {
+  if (!learned) return "_Nothing to learn from yet._";
+  const { score, playbook } = learned;
+  const lines: string[] = [];
+  if (score && score.hits + score.misses > 0) {
+    lines.push(
+      `Yesterday's calls, re-checked on DexScreener: ${score.hits} right, ${score.misses} wrong (${Math.round((score.accuracy ?? 0) * 100)}% accuracy).`,
+    );
+  } else {
+    lines.push("No scored calls from yesterday yet.");
+  }
+  lines.push("", `The beaver now judges by playbook v${playbook.version}:`, "", ...playbook.text.split("\n").map((l) => `> ${l}`));
+  return lines.join("\n");
+}
 
 export function renderBrief(s: Sections, review: string): string {
   return [
@@ -327,6 +382,14 @@ export function renderBrief(s: Sections, review: string): string {
       ? s.watched.map((o) => `- **${o.symbol}** \`${o.mint}\` — vol ${money(o.market?.volume24hUsd)}, liq ${money(o.market?.liquidityUsd)}, 24h ${pct(o.market?.priceChange24h)} · watched by ${(o.watchedBy ?? []).map((a) => `${a.slice(0, 4)}…${a.slice(-4)}`).join(", ")}`).join("\n")
       : "_No tokens on guardian watch yet._",
     "",
+    "## The pack's calls",
+    s.calls?.length
+      ? s.calls.map((c) => `- ${c.verdict} **${c.symbol.replaceAll("|", "")}** \`${c.mint}\` (${Math.round(c.confidence * 100)}%, ${c.by}) — ${c.why}`).join("\n")
+      : "_No calls this night._",
+    "",
+    "## What the pack learned",
+    learnedText(s.learned),
+    "",
     "## From the guest enclosures",
     s.guests?.length
       ? s.guests
@@ -344,10 +407,13 @@ export function renderBrief(s: Sections, review: string): string {
 }
 
 function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
+  const judgeEveryMs = cfg.judgeEveryMs ?? 30 * 60_000;
+  const hedgehog: Address = { node: cfg.nodes.north, agent: "hedgehog" };
+
   const beaver = defineAgent({
     name: "beaver",
     species: species.builder,
-    budget: { steps: 10, signals: 0 },
+    budget: { steps: 24, signals: 1, modelTokens: 24_000 },
     accepts: { observations: listOf("items", isObservation), "guest.report": isGuestReport },
     async onWake(ctx) {
       if (ctx.reason.type !== "signal") return;
@@ -355,10 +421,48 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
       const night = nightOf(ctx.now, cfg.briefAt);
       const obsKey = `obs:${night}`;
       const reportsKey = `reports:${night}`;
+      const callsKey = `calls:${night}`;
       const store = (await ctx.state.get<Record<string, Observation>>(obsKey)) ?? {};
       const reports = (await ctx.state.get<Record<string, GuestReport>>(reportsKey)) ?? {};
+      let calls = (await ctx.state.get<Call[]>(callsKey)) ?? [];
+      let playbook = (await ctx.state.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
+      const yesterday = previousNight(night);
+      let score = (await ctx.state.get<Scorecard>(`score:${yesterday}`)) ?? null;
 
-      if (event.type === "guest.report") {
+      const items = event.type === "observations" ? (event.payload as { items: Observation[] }).items : [];
+      if (items.length && items.every((o) => o.source === "followup")) {
+        // The hedgehog is back with yesterday's tokens: score the calls, then rewrite the playbook.
+        const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
+        const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
+        score = scoreNight(yesterday, pastCalls, pastReports, items);
+        await ctx.state.set(`score:${yesterday}`, score);
+        await ctx.trace("calls.scored", { night: yesterday, hits: score.hits, misses: score.misses, accuracy: score.accuracy, guests: score.guests });
+        // Guests earn a track record from the same checks: one ledger of hits and misses per guest.
+        const ledger = (await ctx.state.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
+        for (const [name, g] of Object.entries(score.guests)) {
+          const prev = ledger[name] ?? { hits: 0, misses: 0 };
+          ledger[name] = { hits: prev.hits + g.hits, misses: prev.misses + g.misses };
+        }
+        if (Object.keys(score.guests).length) await ctx.state.set(GUEST_SCORES, ledger);
+        if (score.hits + score.misses > 0 && playbook.night !== yesterday) {
+          try {
+            const result = await ctx.think({
+              system: REFLECT_SYSTEM,
+              prompt: `Your current playbook, v${playbook.version}:\n${playbook.text}\n\nYesterday: ${score.hits} right, ${score.misses} wrong. The scored cases follow.`,
+              untrusted: score.cases.filter((c) => c.hit !== null),
+              maxTokens: 1200,
+            });
+            const text = cleanPlaybook(result.text);
+            if (text.length >= 40) {
+              playbook = { version: playbook.version + 1, text, night: yesterday, accuracy: score.accuracy, updatedAt: ctx.now };
+              await ctx.state.set("beaver:playbook", playbook);
+              await ctx.trace("playbook.updated", { version: playbook.version, night: yesterday, accuracy: score.accuracy, text });
+            }
+          } catch {
+            // No model or no budget: the scorecard is still on the record, the playbook stays.
+          }
+        }
+      } else if (event.type === "guest.report") {
         const name = event.from.agent;
         const guest = await ctx.state.get<Guest>(`${GUEST_PREFIX}${name}`);
         if (!guest || (!reports[name] && Object.keys(reports).length >= MAX_GUESTS_PER_BRIEF)) return;
@@ -370,7 +474,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         reports[name] = { guest: name, species: guest.species, token: guest.token, items: [...byMint.values()].slice(-MAX_GUEST_ITEMS), at: ctx.now };
         await ctx.state.set(reportsKey, reports);
       } else {
-        for (const item of (event.payload as { items: Observation[] }).items) {
+        for (const item of items) {
           if (Object.keys(store).length >= 1000 && !store[item.mint]) break;
           const prev = store[item.mint];
           store[item.mint] = prev
@@ -386,7 +490,48 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         }
         await ctx.state.set(obsKey, store);
       }
-      const sections = buildSections(night, Object.values(store), ctx.now, Object.values(reports));
+
+      // Once a night, send yesterday's calls back out to see how they turned out.
+      if ((await ctx.state.get<string>("beaver:followedUp")) !== yesterday) {
+        const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
+        const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
+        const mints = followupMints(pastCalls, pastReports);
+        await ctx.state.set("beaver:followedUp", yesterday);
+        if (mints.length) await ctx.signal(hedgehog, "followup.check", { mints });
+      }
+
+      // Judge the night's new tokens, at most every judgeEveryMs.
+      const judgedAt = (await ctx.state.get<number>("beaver:judgedAt")) ?? 0;
+      if (ctx.now - judgedAt >= judgeEveryMs) {
+        const asked = candidates(Object.values(store), new Set(calls.map((c) => c.mint)));
+        if (asked.length) {
+          let fresh: Call[] = [];
+          try {
+            const result = await ctx.think({
+              system: judgeSystem(playbook),
+              prompt: `Judge these ${asked.length} tokens.`,
+              untrusted: asked.map(compact),
+              maxTokens: 2000,
+            });
+            fresh = parseCalls(result.text, asked, ctx.now);
+          } catch {
+            fresh = ruleCalls(asked, ctx.now);
+          }
+          calls = [...calls, ...fresh].slice(-200);
+          await ctx.state.set(callsKey, calls);
+          await ctx.state.set("beaver:judgedAt", ctx.now);
+          if (fresh.length) {
+            await ctx.trace("calls.made", {
+              count: fresh.length,
+              by: fresh[0]!.by,
+              playbook: playbook.version,
+              calls: fresh.map(({ mint, verdict, confidence, why }) => ({ mint, verdict, confidence, why })),
+            });
+          }
+        }
+      }
+
+      const sections = buildSections(night, Object.values(store), ctx.now, Object.values(reports), { calls, score, playbook });
       await ctx.artifact.draft(`brief:${night}`, sections);
     },
   });

@@ -21,7 +21,10 @@ const config = loadConfig();
 const db = openDatabase(join(config.dataDir, "node.db"));
 
 let model: ModelProvider | undefined;
-if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
+if (process.env.OPENAI_API_KEY) {
+  const { OpenAIProvider } = await import("@aiagentzoo/sdk/openai");
+  model = new OpenAIProvider({ model: process.env.ZOO_MODEL });
+} else if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
   const { ClaudeProvider } = await import("@aiagentzoo/sdk/claude");
   model = new ClaudeProvider({ model: process.env.ZOO_MODEL, effort: "low" });
 }
@@ -52,6 +55,7 @@ const enclosure = new Enclosure({
     nodes: config.nodes,
     briefAt: config.briefAt,
     scanEveryMs: config.scanEveryMs,
+    judgeEveryMs: Number(process.env.ZOO_JUDGE_EVERY_MS ?? 30 * 60_000),
     onBrief: (id, markdown) => writeFileSync(join(briefsDir, `${id}.md`), markdown),
   }),
 });

@@ -134,7 +134,18 @@ const { text } = await ctx.think({
 
 Anything passed as `untrusted` is wrapped in an `<untrusted_data>` block and the model is told to treat it as data only. Neighbour payloads belong there, never in `system`. Tokens are metered against the agent's budget and priced into the cycle.
 
-`ClaudeProvider` defaults to `claude-opus-5-5` at `low` effort and enables the API's server-side refusal fallback. Bring any other model by implementing `ModelProvider`.
+`ClaudeProvider` defaults to `claude-opus-5-5` at `low` effort and enables the API's server-side refusal fallback.
+
+`OpenAIProvider` needs no extra dependency:
+
+```ts
+import { OpenAIProvider } from "@aiagentzoo/sdk/openai";
+const model = new OpenAIProvider({ model: "gpt-5-mini" }); // OPENAI_API_KEY from the environment
+```
+
+It speaks Chat Completions, so `baseUrl` can point at any compatible endpoint. Bring any other model by implementing `ModelProvider`.
+
+A Solana keypair works as a node or guest identity: `Identity.fromSeed(secretKey.slice(0, 32))`.
 
 ## Federation
 

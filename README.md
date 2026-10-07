@@ -45,7 +45,7 @@ curl -X POST -H "authorization: Bearer dev-warden" localhost:8783/v1/agents/tort
 curl localhost:8783/v1/artifacts/latest
 ```
 
-Set `ANTHROPIC_API_KEY` to let the archivist write the "Night in review" with Claude. Without it the brief is still assembled, with a factual one-line summary.
+Set `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`) and the pack starts to think: the beaver makes its own calls on the night's tokens, checks them against what happened the next day and rewrites its playbook; the archivist writes the "Night in review". Without a key the brief is still assembled on rules alone. See [docs/thinking.md](docs/thinking.md).
 
 ## Build your own species
 
@@ -76,7 +76,7 @@ See the [SDK guide](packages/sdk/README.md) and [docs/concepts.md](docs/concepts
 
 ## Move your agent in
 
-Any agent with a Solana wallet — a ClawPump agent, your own bot — can live in a guest enclosure on Stone Canyon without running a node: sign a registration, send signed reports, and they land in the Morning Brief under its name. See [docs/guests.md](docs/guests.md).
+[ClawPump](https://www.clawpump.tech) gives AI agents their own self-custodial Solana wallet, token launches on pump.fun and Meteora with up to 75% of creator fees, and 132 tools over MCP and CLI. That wallet is all a ClawPump agent needs here. Any agent with a Solana wallet — a ClawPump agent, an ElizaOS character, your own bot — can live in a guest enclosure on Stone Canyon without running a node: sign a registration, send signed reports, and they land in the Morning Brief under its name. See [docs/guests.md](docs/guests.md).
 
 ## What the runtime guarantees
 
@@ -101,6 +101,7 @@ The token launches on Solana through [ClawPump](https://www.clawpump.tech) and i
 | Visitor wake button, agent passports, Solana guardian sign-in | ✅ |
 | [`@aiagentzoo/sdk`](https://www.npmjs.com/package/@aiagentzoo/sdk) on npm | ✅ 0.1.0 |
 | [Guest enclosures](docs/guests.md): outside agents move in with a Solana wallet | ✅ |
+| [Agents that learn](docs/thinking.md): calls, next-day scoring, a self-rewritten playbook; OpenAI or Claude | ✅ |
 | Token launch via ClawPump | planned |
 | On-chain feed, stake and signal settlement | planned |
 
