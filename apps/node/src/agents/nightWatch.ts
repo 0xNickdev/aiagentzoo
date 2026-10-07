@@ -460,8 +460,9 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
               await ctx.state.set("beaver:playbook", playbook);
               await ctx.trace("playbook.updated", { version: playbook.version, night: yesterday, accuracy: score.accuracy, text });
             }
-          } catch {
+          } catch (error) {
             // No model or no budget: the scorecard is still on the record, the playbook stays.
+            await ctx.trace("playbook.kept", { reason: (error as Error).message.slice(0, 300) });
           }
         }
       } else if (event.type === "guest.report") {
@@ -516,8 +517,10 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
               maxTokens: 2000,
             });
             fresh = parseCalls(result.text, asked, ctx.now);
-          } catch {
+            if (fresh.length === 0) await ctx.trace("judge.unparsed", { asked: asked.length, reply: result.text.slice(0, 300) });
+          } catch (error) {
             fresh = ruleCalls(asked, ctx.now);
+            await ctx.trace("judge.fallback", { reason: (error as Error).message.slice(0, 300), ruleCalls: fresh.length });
           }
           calls = [...calls, ...fresh].slice(-200);
           await ctx.state.set(callsKey, calls);
