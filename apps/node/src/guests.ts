@@ -14,6 +14,8 @@ import { base58Decode, Cooldown } from "./guardian.ts";
 export const GUEST_PREFIX = "guest:";
 export const GUEST_SUFFIX = ".guest";
 export const GUEST_SPECIES = ["sentinel", "gatherer", "builder", "archivist"] as const;
+/** Where a guest comes from. Self-declared; "clawpump" guests live in the ClawPump wing. */
+export const GUEST_PLATFORMS = ["clawpump", "eliza", "custom"] as const;
 
 const NAME = /^[a-z][a-z0-9-]{1,31}$/;
 const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -23,6 +25,7 @@ export interface Guest {
   /** base58 Solana address. Signs everything the guest sends. */
   wallet: string;
   species: (typeof GUEST_SPECIES)[number];
+  platform: (typeof GUEST_PLATFORMS)[number];
   about: string;
   /** The guest's own token mint, if it has one. */
   token: string | null;
@@ -117,6 +120,9 @@ export class GuestHouse {
     if (!GUEST_SPECIES.includes(p.species as Guest["species"])) return fail(400, `species must be one of ${GUEST_SPECIES.join(", ")}`);
     const about = typeof p.about === "string" ? cleanText(p.about, 200) : "";
     if (!about) return fail(400, "about: say in a sentence what your agent does");
+    if (p.platform !== undefined && !GUEST_PLATFORMS.includes(p.platform as Guest["platform"])) {
+      return fail(400, `platform must be one of ${GUEST_PLATFORMS.join(", ")}`);
+    }
     if (p.token !== undefined && p.token !== null && (typeof p.token !== "string" || !MINT.test(p.token))) return fail(400, "token must be a mint address");
     if (p.homepage !== undefined && p.homepage !== null && !isHttpsUrl(p.homepage)) return fail(400, "homepage must be an https URL");
 
@@ -132,6 +138,7 @@ export class GuestHouse {
       name,
       wallet,
       species: p.species as Guest["species"],
+      platform: (p.platform as Guest["platform"] | undefined) ?? existing?.platform ?? "custom",
       about,
       token: (p.token as string | undefined) ?? null,
       homepage: (p.homepage as string | undefined) ?? null,

@@ -12,6 +12,7 @@ import { nightWatch } from "./agents/nightWatch.ts";
 import { loadConfig } from "./config.ts";
 import { BriefIndex } from "./briefs.ts";
 import { GuestHouse } from "./guests.ts";
+import { canyonStats } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
@@ -86,6 +87,7 @@ const server = createNodeServer({
   passports: await PassportIndex.build(enclosure),
   briefs: await BriefIndex.build(enclosure),
   guests,
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests) } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500 } } : {}),
   visitor: {
     agents: visitorAgents,

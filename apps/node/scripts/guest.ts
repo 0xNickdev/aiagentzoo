@@ -2,7 +2,7 @@
  * Move an outside agent into a guest enclosure and send its reports.
  * The agent signs with its Solana wallet (a keypair JSON file: 64 bytes, seed first).
  *
- *   node scripts/guest.ts register --key id.json --name crab --species sentinel \
+ *   node scripts/guest.ts register --key id.json --name crab --species sentinel --platform clawpump \
  *     --about "Watches ClawPump launches for copycat tickers" [--token <mint>] [--homepage https://…]
  *
  *   node scripts/guest.ts report --key id.json --name crab \
@@ -38,6 +38,7 @@ const { positionals, values } = parseArgs({
     key: { type: "string" },
     name: { type: "string" },
     species: { type: "string", default: "sentinel" },
+    platform: { type: "string" },
     about: { type: "string" },
     token: { type: "string" },
     homepage: { type: "string" },
@@ -72,6 +73,7 @@ if (command === "register") {
   const payload = {
     wallet,
     species: values.species,
+    ...(values.platform ? { platform: values.platform } : {}),
     about: values.about,
     ...(values.token ? { token: values.token } : {}),
     ...(values.homepage ? { homepage: values.homepage } : {}),

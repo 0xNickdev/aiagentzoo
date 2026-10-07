@@ -105,7 +105,7 @@ export default function NightWatch() {
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="Map of enclosures with moving agents" />
 
           <div className="absolute left-4 top-4 flex items-center gap-2 sm:left-6 sm:top-6">
-            <span className="font-garamond mr-2 text-3xl tracking-tight text-white sm:text-4xl">{snap?.clock ?? "22:00"}</span>
+            <span className="font-display mr-2 text-3xl text-white sm:text-4xl">{snap?.clock ?? "22:00"}</span>
             {!live.enabled && (<>
             <button type="button" onClick={togglePause} className="liquid-glass rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
               {paused ? "Resume" : "Pause"}
@@ -164,7 +164,7 @@ export default function NightWatch() {
               <span>Artifact</span>
               <span className={status === "building" ? "text-white/70" : "text-white"}>{STATUS_LABEL[status]}</span>
             </div>
-            <h3 className="font-garamond mt-3 text-3xl uppercase tracking-tight">Morning Brief</h3>
+            <h3 className="font-display mt-3 text-3xl">Morning Brief</h3>
             <div className="mt-4 h-px w-full bg-white/10">
               <div className="h-px bg-white transition-[width] duration-700" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
@@ -206,7 +206,7 @@ export default function NightWatch() {
                 ]
             ).map(([value, label]) => (
               <div key={label}>
-                <b className="font-garamond block text-3xl font-normal leading-none">{value}</b>
+                <b className="font-display block text-3xl font-normal leading-none">{value}</b>
                 <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{label}</span>
               </div>
             ))}

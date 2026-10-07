@@ -70,7 +70,7 @@ export function NetworkPulse() {
     <div className="mt-10 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/10 sm:grid-cols-4">
       {stats.map(([value, label]) => (
         <div key={label} className="bg-black/45 px-4 py-5 backdrop-blur-md">
-          <b className="font-garamond block text-3xl font-normal leading-none text-white">{value}</b>
+          <b className="font-display block text-3xl font-normal leading-none text-white">{value}</b>
           <span className="mt-2 block text-[10px] font-light uppercase tracking-[0.2em] text-white/55">{label}</span>
         </div>
       ))}

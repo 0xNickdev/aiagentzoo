@@ -75,6 +75,7 @@ export interface GuestItem {
 export interface GuestReport {
   guest: string;
   species: string;
+  platform?: string;
   token: string | null;
   items: GuestItem[];
   at: number;
@@ -397,7 +398,7 @@ export function renderBrief(s: Sections, review: string): string {
       ? s.guests
           .map((g) =>
             [
-              `**${g.guest}** (${g.species}${g.token ? `, token \`${g.token}\`` : ""})`,
+              `**${g.guest}** (${g.platform === "clawpump" ? "ClawPump wing, " : ""}${g.species}${g.token ? `, token \`${g.token}\`` : ""})`,
               ...g.items.map((i) => `- ${i.verdict} \`${i.mint}\`${i.note ? ` — ${i.note}` : ""}`),
             ].join("\n"),
           )
@@ -474,7 +475,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
           byMint.delete(item.mint);
           byMint.set(item.mint, { mint: item.mint, verdict: item.verdict, note: cleanText(item.note ?? "", 200) });
         }
-        reports[name] = { guest: name, species: guest.species, token: guest.token, items: [...byMint.values()].slice(-MAX_GUEST_ITEMS), at: ctx.now };
+        reports[name] = { guest: name, species: guest.species, platform: guest.platform ?? "custom", token: guest.token, items: [...byMint.values()].slice(-MAX_GUEST_ITEMS), at: ctx.now };
         await ctx.state.set(reportsKey, reports);
       } else {
         for (const item of items) {

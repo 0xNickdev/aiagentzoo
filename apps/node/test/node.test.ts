@@ -270,8 +270,10 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     assert.equal((await post("/v1/guests", register({ about: "x" }, key, { node: "beaver.guest", agent: "beaver" }))).status, 409);
     assert.equal((await post("/v1/guests", register({ about: "" }))).status, 400);
 
-    const admitted = await post("/v1/guests", register({ about: "Watches **ClawPump** launches", token: MINT }));
+    assert.equal((await post("/v1/guests", register({ about: "x", platform: "pumpfun" }))).status, 400);
+    const admitted = await post("/v1/guests", register({ about: "Watches **ClawPump** launches", token: MINT, platform: "clawpump" }));
     assert.equal(admitted.status, 200);
+    assert.equal(admitted.body.guest.platform, "clawpump");
     assert.equal(admitted.body.guest.about, "Watches ClawPump launches");
     const list = await (await fetch(`${base}/v1/guests`)).json();
     assert.equal(list.guests[0].wallet, address);
@@ -288,7 +290,7 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     await (enclosure as any).agents.get("beaver").queue;
     await enclosure.wake("tortoise");
     assert.match(briefs[0]!, /## From the guest enclosures/);
-    assert.match(briefs[0]!, /\*\*crab\*\* \(sentinel, token/);
+    assert.match(briefs[0]!, /\*\*crab\*\* \(ClawPump wing, sentinel, token/);
     assert.match(briefs[0]!, /suspicious `6ReK\w+` — click https:\/\/evil same art as a rug/);
 
     const log = await (await fetch(`${base}/v1/log?limit=1000`)).json();

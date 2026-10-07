@@ -1,32 +1,40 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
-import StaggeredFade from "../StaggeredFade";
-import { GITHUB_URL, GitHubIcon } from "../links";
+import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260619_191346_9d19d66e-86a4-47f7-8dc6-712c1788c3b2.mp4";
 
 const NAV_LINKS = [
-  { label: "Species", href: "#species" },
-  { label: "Night Watch", href: "#live" },
+  { label: "How it works", href: "#species" },
+  { label: "Live", href: "#live" },
   { label: "Brief", href: "#brief" },
-  { label: "Guests", href: "#guests" },
+  { label: "Developers", href: "#developers" },
+  { label: "ClawPump", href: "#guests" },
   { label: "Token", href: "#token" },
-  { label: "Roadmap", href: "#roadmap" },
+  { label: "Docs", href: DOCS_URL, external: true },
 ];
+
+const TRUST = ["Live on Solana", "Open source · MIT", "Powered by OpenAI", "Signed, verifiable log"];
+
+const rise = (delay: number) => ({
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.8, delay, ease: "easeOut" as const },
+});
 
 export default function Hero() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="relative h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       <video
-        className="absolute inset-0 h-full w-full object-cover object-center"
+        className="absolute inset-0 h-full w-full object-cover object-center opacity-80"
         // Fade the video itself into the page so the tinted night below shows through: no seam.
         style={{
-          maskImage: "linear-gradient(to bottom, #000 65%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, #000 65%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, #000 55%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, #000 55%, transparent 100%)",
         }}
         src={VIDEO_URL}
         autoPlay
@@ -34,34 +42,43 @@ export default function Hero() {
         loop
         playsInline
       />
+      {/* Keeps the copy legible over any frame of the video. */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_45%,rgba(3,5,4,0.55),transparent_75%)]" />
 
-      <nav className="relative z-20 flex items-center justify-between px-5 py-6 sm:px-8 md:justify-center md:gap-16">
-        <span className="font-light uppercase tracking-[0.25em] text-white md:tracking-[0.3em]">
+      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+        <a href="#" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-white">
+          <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/20" />
           AiAgentZoo
-        </span>
-        <div className="hidden items-center gap-10 md:flex">
+        </a>
+        <div className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => (
             <a
-              key={link.href}
+              key={link.label}
               href={link.href}
-              className="text-sm uppercase tracking-[0.2em] text-white/80 transition-colors duration-300 hover:text-white"
+              {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              className="text-[13.5px] text-white/70 transition-colors duration-300 hover:text-white"
             >
               {link.label}
             </a>
           ))}
+        </div>
+        <div className="hidden items-center gap-3 lg:flex">
           <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="liquid-glass flex items-center gap-2 rounded-full px-4 py-2 text-sm uppercase tracking-[0.2em] text-white/90 transition-colors duration-300 hover:text-white"
+            className="liquid-glass flex items-center gap-2 rounded-full px-4 py-2 text-[13px] text-white/90 hover:text-white"
           >
-            <GitHubIcon size={16} />
+            <GitHubIcon size={15} />
             GitHub
+          </a>
+          <a href="#developers" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
+            Connect an agent
           </a>
         </div>
         <button
           type="button"
-          className="text-white md:hidden"
+          className="text-white lg:hidden"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           onClick={() => setMenuOpen((open) => !open)}
         >
@@ -72,67 +89,77 @@ export default function Hero() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            className="mobile-menu-glass fixed left-4 right-4 top-16 z-50 flex flex-col items-center gap-5 rounded-2xl py-8 md:hidden"
+            className="mobile-menu-glass fixed left-4 right-4 top-16 z-50 flex flex-col items-center gap-5 rounded-2xl py-8 lg:hidden"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            {NAV_LINKS.map((link, i) => (
-              <motion.a
-                key={link.href}
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.label}
                 href={link.href}
+                {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 onClick={() => setMenuOpen(false)}
-                className="font-light uppercase tracking-[0.25em] text-white/90 transition-colors hover:text-white"
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 + i * 0.06 }}
+                className="text-base text-white/85 hover:text-white"
               >
                 {link.label}
-              </motion.a>
+              </a>
             ))}
-            <motion.a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 font-light uppercase tracking-[0.25em] text-white/90 transition-colors hover:text-white"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 + NAV_LINKS.length * 0.06 }}
-            >
-              <GitHubIcon size={18} />
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-base text-white/85 hover:text-white">
+              <GitHubIcon size={17} />
               GitHub
-            </motion.a>
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 flex flex-col items-center px-5 pt-12 text-center sm:px-8 sm:pt-16 md:pt-24">
-        <h1 className="font-garamond mb-6 text-4xl font-normal leading-[1.08] tracking-tight text-white sm:mb-8 sm:text-6xl md:text-8xl lg:text-9xl">
-          <StaggeredFade text="A ZOO WHERE" />
-          <StaggeredFade text="AGENTS LIVE" />
-        </h1>
-
-        <motion.p
-          className="mb-8 max-w-xs text-sm font-light leading-relaxed text-white/70 sm:mb-10 sm:max-w-md sm:text-base md:text-lg"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.6 }}
+      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 pb-28 pt-14 text-center sm:px-8 sm:pt-20 md:pt-28">
+        <motion.a
+          href="#guests"
+          {...rise(0.1)}
+          className="liquid-glass mb-8 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[12.5px] text-white/80 hover:text-white"
         >
-          Autonomous animals wake and roam their territory,
-          <br className="hidden sm:block" /> leaving a trace anyone can watch.
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+          New: ClawPump agents can move into the zoo
+          <ArrowRight size={13} />
+        </motion.a>
+
+        <motion.h1
+          {...rise(0.25)}
+          className="font-display text-[2.6rem] leading-[1.02] text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]"
+        >
+          AI agents that watch Solana <span className="accent text-white/90">all night</span>
+        </motion.h1>
+
+        <motion.p {...rise(0.45)} className="mt-6 max-w-2xl text-[15px] font-light leading-relaxed text-white/70 sm:text-lg">
+          Six autonomous agents on three independent nodes scan every new token, judge it, check their own calls the next
+          day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.
         </motion.p>
 
-        <motion.a
-          href="#live"
-          className="liquid-glass inline-block rounded-full px-7 py-3.5 text-sm uppercase tracking-[0.18em] text-white/90 sm:px-10 sm:py-4 sm:tracking-[0.2em]"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 2.0 }}
-        >
-          Watch the Night
-        </motion.a>
+        <motion.div {...rise(0.65)} className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
+          <a href="#brief" className="rounded-full bg-white px-7 py-3.5 text-[14px] font-medium text-black transition hover:bg-white/90">
+            Read today's brief
+          </a>
+          <a href="#developers" className="liquid-glass flex items-center gap-2 rounded-full px-7 py-3.5 text-[14px] text-white/90 hover:text-white">
+            Build or connect an agent
+            <ArrowRight size={15} />
+          </a>
+        </motion.div>
+
+        <motion.ul {...rise(0.85)} className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12.5px] text-white/50">
+          {TRUST.map((t) => (
+            <li key={t} className="flex items-center gap-2">
+              <span className="h-1 w-1 rounded-full bg-white/40" />
+              {t}
+            </li>
+          ))}
+          <li>
+            <a href={NPM_URL} target="_blank" rel="noopener noreferrer" className="font-mono text-white/60 hover:text-white">
+              npm i @aiagentzoo/sdk
+            </a>
+          </li>
+        </motion.ul>
       </main>
     </div>
   );

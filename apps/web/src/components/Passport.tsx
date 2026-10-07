@@ -74,7 +74,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                 <p className="text-[11px] font-light uppercase tracking-[0.3em] text-white/50">
                   Passport · {data?.node ?? "…"}
                 </p>
-                <h3 className="font-garamond mt-2 text-5xl uppercase tracking-tight">{agent}</h3>
+                <h3 className="font-display mt-2 text-5xl">{agent}</h3>
                 <p className="mt-2 text-sm font-light text-white/60">
                   <span style={{ color }}>{species?.name ?? "…"}</span>
                   {data && (
@@ -104,7 +104,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                     [since(data.firstSeen), "first seen"],
                   ].map(([value, label]) => (
                     <div key={label}>
-                      <b className="font-garamond block text-3xl font-normal leading-none">{value}</b>
+                      <b className="font-display block text-3xl font-normal leading-none">{value}</b>
                       <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{label}</span>
                     </div>
                   ))}

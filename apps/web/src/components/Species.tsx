@@ -34,7 +34,7 @@ export default function Species() {
 
               <div className="mt-8 border-t border-white/10 pt-6">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-garamond text-3xl uppercase tracking-tight text-white">{s.name}</h3>
+                  <h3 className="font-display text-3xl text-white">{s.name}</h3>
                   <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{s.animal}</span>
                 </div>
                 <p className="mt-3 text-sm font-light leading-relaxed text-white/65">{s.role}</p>

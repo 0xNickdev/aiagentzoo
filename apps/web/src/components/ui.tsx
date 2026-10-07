@@ -21,9 +21,9 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
   return (
     <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
       <Reveal>
-        <p className="mb-6 text-xs font-light uppercase tracking-[0.3em] text-white/50">{eyebrow}</p>
+        <p className="font-mono mb-5 text-[12px] text-white/50">{eyebrow}</p>
       </Reveal>
-      <h2 className="font-garamond text-4xl font-normal uppercase leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl">
+      <h2 className="font-display text-4xl leading-[1.05] text-white sm:text-5xl md:text-6xl">
         {title.map((line) => (
           <StaggeredFade key={line} text={line} />
         ))}

@@ -60,8 +60,24 @@ body {
   overflow-x: hidden;
 }
 
-.font-garamond {
-  font-family: 'Garamond', 'Times New Roman', serif;
+/* Display type: a tight grotesque for headings, serif italics only for accents. */
+.font-display {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  text-transform: none;
+}
+
+.font-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.font-instrument em,
+.accent {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .mobile-menu-glass {

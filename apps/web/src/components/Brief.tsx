@@ -42,6 +42,7 @@ interface Call {
 interface GuestReport {
   guest: string;
   species: string;
+  platform?: string;
   token: string | null;
   items: Array<{ mint: string; verdict: string; note: string }>;
 }
@@ -154,7 +155,7 @@ function GuestReports({ reports }: { reports: GuestReport[] }) {
         {reports.map((r) => (
           <div key={r.guest} className="min-w-0">
             <p className="text-[13px] text-white/90">
-              {r.guest} <span className="text-white/40">· {r.species}</span>
+              {r.guest} <span className="text-white/40">· {r.platform === "clawpump" ? "ClawPump wing · " : ""}{r.species}</span>
             </p>
             <ul className="mt-1 grid gap-1 text-[12px] font-light text-white/60">
               {r.items.slice(0, 6).map((i) => (
@@ -213,7 +214,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
   return (
     <div className="liquid-glass rounded-3xl bg-black/40 p-6 backdrop-blur-md">
       <p className="text-[10px] font-light uppercase tracking-[0.25em] text-white/50">Guardian watch · free</p>
-      <h3 className="font-garamond mt-2 text-3xl uppercase tracking-tight">Watch my token</h3>
+      <h3 className="font-display mt-2 text-3xl">Watch my token</h3>
       <p className="mt-3 text-sm font-light leading-relaxed text-white/65">
         Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour — liquidity, volume, sharp moves — and
         they get your own section in the next Morning Brief.
@@ -313,7 +314,7 @@ export default function Brief() {
           {error && <p className="text-sm text-white/50">{error}</p>}
           {refs && refs.length === 0 && (
             <div className="rounded-3xl bg-black/45 p-8 text-center ring-1 ring-white/10 backdrop-blur-md">
-              <p className="font-garamond text-3xl uppercase">The first brief is being assembled</p>
+              <p className="font-display text-3xl">The first brief is being assembled</p>
               <p className="mt-3 text-sm font-light text-white/60">
                 The tortoise publishes it {nextAt ? `at ${new Date(nextAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}` : "at 07:00 UTC"}.
               </p>
@@ -324,7 +325,7 @@ export default function Brief() {
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-light uppercase tracking-[0.25em] text-white/50">Night of</p>
-                  <h3 className="font-garamond text-4xl uppercase tracking-tight">{s.night}</h3>
+                  <h3 className="font-display text-4xl">{s.night}</h3>
                   <p className="mt-1 text-sm font-light text-white/60">
                     {s.observed} tokens observed · {s.launches} fresh launches · sha256 {brief.ref.sha256.slice(0, 10)}…
                   </p>

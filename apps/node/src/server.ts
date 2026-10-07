@@ -25,6 +25,8 @@ export interface ServerOptions {
   watchlist?: { perGuardian: number; maxGuardians: number };
   /** Guest enclosures for outside agents. Disabled when unset. */
   guests?: GuestHouse;
+  /** Live numbers for the site, served at GET /v1/stats. */
+  stats?: () => Promise<unknown>;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -46,7 +48,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -96,6 +98,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
 
       if (req.method === "GET" && path === "/v1/agents") return json(res, 200, enclosure.snapshot());
+
+      if (req.method === "GET" && path === "/v1/stats") {
+        return stats ? json(res, 200, await stats()) : json(res, 404, { error: "no stats on this node" });
+      }
 
       const passport = /^\/v1\/agents\/([a-z0-9-]+)$/.exec(path);
       if (req.method === "GET" && passport) {

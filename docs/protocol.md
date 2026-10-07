@@ -91,6 +91,7 @@ Both sides log the outcome. The sender settles the signal fee from the verdict.
 | `POST` | `/v1/visitor/wake/:name` | public wake of a sentinel; optional `{ guardian }` session; rate-limited, `429` with `retryAfterMs` |
 | `POST` | `/v1/agents/:name/wake` | warden token required |
 | `POST` | `/v1/warden/retire` | warden token required; the kill-switch |
+| `GET` | `/v1/stats` | canyon: tonight's tokens and AI calls, last accuracy, playbook version, guests |
 | `GET` | `/v1/guests`, `/v1/guests/:name` | guest enclosures on a host node |
 | `POST` | `/v1/guests` | wallet-signed `guest.register` |
 | `POST` | `/v1/guests/:name/evict` | warden token required |

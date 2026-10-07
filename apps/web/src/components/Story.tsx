@@ -1,4 +1,4 @@
-import { CYCLE, DONTS, ROADMAP, TOKEN } from "../data";
+import { CYCLE, DONTS, NEXT, SHIPPED, TOKEN } from "../data";
 import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
@@ -11,8 +11,8 @@ export function Cycle() {
       <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] md:grid-cols-3">
         {CYCLE.map((c, i) => (
           <Reveal key={c.title} delay={i * 0.12} className="bg-[#030504]/85 p-8 backdrop-blur-sm sm:p-10">
-            <span className="font-garamond text-6xl text-white/20">0{i + 1}</span>
-            <h3 className="font-garamond mt-6 text-3xl uppercase tracking-tight">{c.title}</h3>
+            <span className="font-display text-6xl text-white/20">0{i + 1}</span>
+            <h3 className="font-display mt-6 text-3xl">{c.title}</h3>
             <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{c.text}</p>
           </Reveal>
         ))}
@@ -27,14 +27,14 @@ export function Token() {
       <SectionHead
         eyebrow="Token"
         title={["A budget and a stake", "in a living network"]}
-        text="Not “zoo money”. Without a token, an enclosure can be watched. With one, its animal can work."
+        text="Not “zoo money”. The network runs free at launch; the token becomes the budget for cycles and the stake for writing to the network once settlement moves on-chain."
       />
       <TokenAddress />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TOKEN.map((t, i) => (
           <Reveal key={t.title} delay={i * 0.1}>
             <div className="liquid-glass h-full rounded-3xl bg-black/45 p-8 backdrop-blur-md">
-              <h3 className="font-garamond text-3xl uppercase tracking-tight">{t.title}</h3>
+              <h3 className="font-display text-3xl">{t.title}</h3>
               <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{t.text}</p>
             </div>
           </Reveal>
@@ -58,18 +58,34 @@ export function Token() {
 export function Roadmap() {
   return (
     <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
-      <SectionHead eyebrow="Roadmap" title={["A living network first,", "the token second"]} />
-      <ol className="grid gap-10 md:grid-cols-3 md:gap-6">
-        {ROADMAP.map((r, i) => (
-          <Reveal key={r.title} delay={i * 0.12}>
-            <li className="border-t border-white/20 pt-6">
-              <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/50">{r.when}</span>
-              <h3 className="font-garamond mt-3 text-3xl uppercase tracking-tight">{r.title}</h3>
-              <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{r.text}</p>
-            </li>
-          </Reveal>
-        ))}
-      </ol>
+      <SectionHead eyebrow="Roadmap" title={["A living network first,", "the token second"]} text="Everything under Shipped runs in production today and can be checked against the live nodes." />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <Reveal className="rounded-3xl bg-black/45 p-6 ring-1 ring-white/10 backdrop-blur-md sm:p-8">
+          <p className="font-mono text-[11px] text-emerald-200/80">● Shipped · October 2026</p>
+          <ul className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            {SHIPPED.map((r) => (
+              <li key={r.title}>
+                <h3 className="font-display flex items-center gap-2 text-lg">
+                  <span className="text-emerald-200/80">✓</span>
+                  {r.title}
+                </h3>
+                <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{r.text}</p>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        <Reveal delay={0.1} className="rounded-3xl bg-black/30 p-6 ring-1 ring-white/10 backdrop-blur-md sm:p-8">
+          <p className="font-mono text-[11px] text-white/55">○ Next · Q4 2026</p>
+          <ul className="mt-5 grid gap-5">
+            {NEXT.map((r) => (
+              <li key={r.title}>
+                <h3 className="font-display text-lg">{r.title}</h3>
+                <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{r.text}</p>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </div>
     </Section>
   );
 }

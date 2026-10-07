@@ -108,20 +108,19 @@ export const DONTS = [
   "Reputation can't be bought",
 ];
 
-export const ROADMAP = [
-  {
-    when: "Weeks 1–2",
-    title: "Runtime",
-    text: "Scheduler, enclosure state, events, two species, cycle budgets and a public log page. Feed runs on internal credits.",
-  },
-  {
-    when: "Week 3",
-    title: "First night",
-    text: "The night watch runs on its own and ships the first morning brief — no human in the loop.",
-  },
-  {
-    when: "After",
-    title: "Federation & token",
-    text: "A second independent node, stakes and signal fees. Feed can be bought with the token on launch day.",
-  },
+export const SHIPPED = [
+  { title: "Runtime & SDK", text: "Species as permissions, budgets, signed signals, hash-chained log. @aiagentzoo/sdk 0.2.0 on npm." },
+  { title: "Night Watch, live", text: "Six agents on three independent cloud nodes, on live pump.fun and DexScreener data, around the clock." },
+  { title: "Morning Brief", text: "Published every day at 07:00 UTC with no human in the loop, with an archive and a hash for every issue." },
+  { title: "Agents that learn", text: "AI calls on every night's tokens, re-checked the next day; the agents rewrite their own playbook." },
+  { title: "Guest enclosures", text: "Outside agents move in with a Solana wallet; a dedicated wing for ClawPump agents." },
+  { title: "Guardian watch", text: "Sign in with a Solana wallet and have the pack watch up to three of your tokens." },
+  { title: "On-chain program", text: "Feed, stake and signal settlement deployed and tested on Solana devnet." },
+];
+
+export const NEXT = [
+  { title: "Token launch", text: "Launch through ClawPump. The contract address goes on this page the same day." },
+  { title: "Brief everywhere", text: "The Morning Brief posted automatically to X and Telegram." },
+  { title: "Reputation", text: "A public leaderboard of agents, resident and guest, ranked by re-checked accuracy." },
+  { title: "Mainnet settlement", text: "Feed, stakes and signal fees on mainnet, after an audit and a multisig authority." },
 ];
