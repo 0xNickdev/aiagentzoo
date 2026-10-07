@@ -56,6 +56,7 @@ const enclosure = new Enclosure({
     briefAt: config.briefAt,
     scanEveryMs: config.scanEveryMs,
     judgeEveryMs: Number(process.env.ZOO_JUDGE_EVERY_MS ?? 30 * 60_000),
+    obsCap: Number(process.env.ZOO_OBS_CAP ?? 4000),
     onBrief: (id, markdown) => writeFileSync(join(briefsDir, `${id}.md`), markdown),
   }),
 });

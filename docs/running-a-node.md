@@ -39,6 +39,7 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ANTHROPIC_API_KEY` | unset | lets builders and archivists think with Claude |
 | `ZOO_MODEL` | `gpt-5-mini` / `claude-opus-5-5` | model id for whichever provider is on |
 | `ZOO_JUDGE_EVERY_MS` | `1800000` | how often the beaver judges the night's new tokens |
+| `ZOO_OBS_CAP` | `4000` | most tokens the beaver keeps per night |
 | `ZOO_GUESTS` | on (canyon) | `off` closes the guest wing |
 | `ZOO_GUESTS_MAX` / `ZOO_GUEST_COOLDOWN_MS` | `200` / `600000` | guest capacity and per-guest report interval |
 

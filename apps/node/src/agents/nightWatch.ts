@@ -41,6 +41,8 @@ export interface NightWatchConfig {
   scanEveryMs: number;
   /** How often the beaver sits down to judge the night's new tokens. Default 30 min. */
   judgeEveryMs?: number;
+  /** Most tokens the beaver keeps per night. Default 4000. */
+  obsCap?: number;
   /** Where the archivist writes the brief markdown, if anywhere. */
   onBrief?: (id: string, markdown: string) => void | Promise<void>;
 }
@@ -475,7 +477,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         await ctx.state.set(reportsKey, reports);
       } else {
         for (const item of items) {
-          if (Object.keys(store).length >= 1000 && !store[item.mint]) break;
+          if (Object.keys(store).length >= (cfg.obsCap ?? 4000) && !store[item.mint]) break;
           const prev = store[item.mint];
           store[item.mint] = prev
             ? {
