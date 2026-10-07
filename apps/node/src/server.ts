@@ -30,6 +30,10 @@ export interface VisitorPolicy {
 }
 
 const MAX_BODY = 256 * 1024;
+/** Entries a fresh SSE subscriber receives before live updates. */
+const STREAM_REPLAY = 150;
+/** Open SSE connections per node; beyond this new subscribers get 503. */
+const MAX_STREAMS = 500;
 
 export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
@@ -124,13 +128,19 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
 
       if (req.method === "GET" && path === "/v1/stream") {
+        if (streams.size >= MAX_STREAMS) return json(res, 503, { error: "too many live subscribers, retry shortly" });
         res.writeHead(200, {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
           connection: "keep-alive",
           "x-accel-buffering": "no",
         });
-        const after = clampInt(String(req.headers["last-event-id"] ?? url.searchParams.get("after") ?? ""), 0, 0, Number.MAX_SAFE_INTEGER);
+        // Resume from Last-Event-ID / ?after when given; otherwise replay only the most recent entries.
+        const resume = req.headers["last-event-id"] ?? url.searchParams.get("after");
+        const head = (await enclosure.log.head())?.seq ?? 0;
+        const after = resume !== null && resume !== undefined
+          ? clampInt(String(resume), 0, 0, Number.MAX_SAFE_INTEGER)
+          : Math.max(0, head - STREAM_REPLAY);
         for (const entry of await enclosure.log.since(after, 1000)) {
           res.write(`id: ${entry.seq}\nevent: entry\ndata: ${JSON.stringify(entry)}\n\n`);
         }
@@ -183,9 +193,16 @@ async function latestArtifact(enclosure: Enclosure): Promise<LogEntry | undefine
   }
 }
 
+/**
+ * The caller's IP for rate limiting. Behind a proxy the client controls the
+ * left-most X-Forwarded-For values, so trust X-Real-IP or the right-most hop
+ * (added by our own proxy) instead.
+ */
 function clientIp(req: IncomingMessage): string {
-  const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
-  return forwarded || req.socket.remoteAddress || "unknown";
+  const real = String(req.headers["x-real-ip"] ?? "").trim();
+  if (real) return real;
+  const hops = String(req.headers["x-forwarded-for"] ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  return hops[hops.length - 1] || req.socket.remoteAddress || "unknown";
 }
 
 function authorized(req: IncomingMessage, token: string | undefined): boolean {
