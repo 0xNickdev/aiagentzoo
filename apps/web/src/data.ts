@@ -12,6 +12,8 @@ export const SPECIES: {
   name: string;
   animal: string;
   image: string;
+  /** A second animal of the same species, drawn behind the first. */
+  companion?: { image: string; animal: string; bottom: string };
   role: string;
   can: string[];
   cannot: string;
@@ -21,8 +23,9 @@ export const SPECIES: {
   {
     id: "sentinel",
     name: "Sentinel",
-    animal: "Owl",
+    animal: "Owl · Raven",
     image: "/animals/sentinel.webp",
+    companion: { image: "/animals/raven.webp", animal: "Raven", bottom: "30%" },
     role: "Watches the territory all night and wakes its neighbours the moment something new appears.",
     can: ["read sources", "signal a neighbour"],
     cannot: "write artifacts",
@@ -34,8 +37,9 @@ export const SPECIES: {
   {
     id: "gatherer",
     name: "Gatherer",
-    animal: "Hedgehog",
+    animal: "Hedgehog · Otter",
     image: "/animals/gatherer.webp",
+    companion: { image: "/animals/otter.webp", animal: "Otter", bottom: "12%" },
     role: "Follows the sentinel's trail and brings the data back into the enclosure.",
     can: ["call APIs", "write state"],
     cannot: "publish",

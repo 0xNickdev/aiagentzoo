@@ -21,11 +21,22 @@ export default function Species() {
             <article className="group">
               <div className="relative flex aspect-square items-end justify-center">
                 <div className="pointer-events-none absolute inset-x-[10%] bottom-[8%] h-1/2 rounded-full bg-white/[0.05] blur-3xl transition-opacity duration-700 group-hover:bg-white/[0.09]" />
+                {s.companion && (
+                  <motion.img
+                    src={s.companion.image}
+                    alt={`${s.name} — ${s.companion.animal.toLowerCase()}`}
+                    loading="lazy"
+                    style={{ bottom: s.companion.bottom }}
+                    className="absolute right-[-8%] w-[64%] [-webkit-mask-image:radial-gradient(ellipse_at_50%_50%,#000_60%,transparent_95%)] [mask-image:radial-gradient(ellipse_at_50%_50%,#000_60%,transparent_95%)]"
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 7.5 + i, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+                  />
+                )}
                 <motion.img
                   src={s.image}
                   alt={`${s.name} — ${s.animal.toLowerCase()}`}
                   loading="lazy"
-                  className="relative max-h-full w-full object-contain object-bottom [-webkit-mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)] [mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)]"
+                  className={`relative max-h-full object-contain object-bottom ${s.companion ? "-ml-[4%] mr-auto w-[74%]" : "w-full"} [-webkit-mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)] [mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)]`}
                   animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 6 + i, repeat: Infinity, ease: "easeInOut" }}
                   whileHover={{ scale: 1.04 }}
