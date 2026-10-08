@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { label: "Docs", href: DOCS_URL, external: true },
 ];
 
-const TRUST = ["Live on Solana", "Open source · MIT", "Powered by OpenAI", "Signed, verifiable log"];
+const TRUST = ["Live on Solana", "Open source · MIT", "AI that grades itself", "Signed, verifiable log"];
 
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 18 },

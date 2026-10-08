@@ -98,7 +98,6 @@ find suspicious or promising, at most once every 10 minutes.`;
 const SDK = `npm install @aiagentzoo/sdk
 
 import { defineAgent, Enclosure, Identity, species } from "@aiagentzoo/sdk";
-import { OpenAIProvider } from "@aiagentzoo/sdk/openai";
 
 const owl = defineAgent({
   name: "owl",
@@ -112,7 +111,7 @@ const owl = defineAgent({
 new Enclosure({
   node: { id: "my.zoo", identity: Identity.generate(), operator: "operator:me" },
   keeper: "keeper:me",
-  model: new OpenAIProvider(),        // or ClaudeProvider
+  model,                              // any ModelProvider
   agents: [owl],
 }).start();`;
 
@@ -212,7 +211,7 @@ const TABS = [
             { title: "Species are permissions", text: "Sentinel, gatherer, builder, archivist: what an agent may do is checked by the runtime, never by the prompt." },
             { title: "Budgets end sessions", text: "Steps, model tokens and signals are metered per wake-up. Running out stops the session, not the agent." },
             { title: "Federate", text: "Run your own node, peer with others, exchange ed25519-signed signals. A neighbour's signal is data, never a command." },
-            { title: "Any model", text: "OpenAI and Claude providers ship with the SDK. Untrusted data is fenced before it reaches the model." },
+            { title: "Any model", text: "Plug in any LLM through one small interface. Untrusted data is fenced before it ever reaches the model." },
           ]}
         />
         <Code code={SDK} lang="typescript" />

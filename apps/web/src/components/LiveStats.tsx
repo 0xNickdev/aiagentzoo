@@ -10,7 +10,6 @@ interface Stats {
   scored: number;
   playbookVersion: number;
   guests: number;
-  model: string | null;
 }
 
 interface Numbers {
@@ -20,7 +19,6 @@ interface Numbers {
   entries: number;
   briefs: number | null;
   guests: number | null;
-  model: string | null;
   stats: Stats | null;
 }
 
@@ -34,7 +32,7 @@ async function load(): Promise<Numbers> {
           fetch(`${url}/v1/node`).then((r) => r.json()),
           fetch(`${url}/v1/agents`).then((r) => r.json()),
         ]);
-        return { head: (node.head?.seq as number) ?? 0, model: (node.model as string | null) ?? null, agents: agents as Array<{ status: string }> };
+        return { head: (node.head?.seq as number) ?? 0, agents: agents as Array<{ status: string }> };
       } catch {
         return null;
       }
@@ -60,7 +58,6 @@ async function load(): Promise<Numbers> {
     entries: up.reduce((n, x) => n + x.head, 0),
     briefs,
     guests,
-    model: up.find((x) => x.model)?.model ?? null,
     stats,
   };
 }
@@ -89,7 +86,7 @@ export default function LiveStats() {
     ...(s
       ? [
           { label: "Tokens watched tonight", value: fmt(s.tokensTonight), hint: "pump.fun · DexScreener" },
-          { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: s.model ?? n?.model ?? "rules" },
+          { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
           {
             label: "Yesterday's accuracy",
             value: s.accuracy === null ? "—" : `${Math.round(s.accuracy * 100)}%`,
