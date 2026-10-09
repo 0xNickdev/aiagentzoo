@@ -1,15 +1,14 @@
 import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type LiveNumbers, useLiveNumbers } from "../LiveStats";
-import { SectionHead } from "../ui";
 import { type Milestone, MILESTONES } from "./milestones";
 import { SPOTS, VIDEO_SIZE } from "./spots";
 
-const VIDEO_DESKTOP = "/video/roadmap-1600.mp4";
-const VIDEO_MOBILE = "/video/roadmap-960.mp4";
+const VIDEO_DESKTOP = "/video/roadmap-1912.mp4";
+const VIDEO_MOBILE = "/video/roadmap-1280.mp4";
 const POSTER = "/video/roadmap-poster.webp";
 /** Horizontal focus of the crop on narrow screens: the path sits a little left of centre. */
 const FOCUS_X = 0.36;
-const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 12%, #000 86%, transparent 100%)";
+const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 8%, #000 88%, transparent 100%)";
 
 type Live = LiveNumbers | null;
 
@@ -286,28 +285,37 @@ export default function Roadmap() {
     },
     [cover],
   );
-  /** Crosshairs sit just above and right of each sphere, like a survey mark. */
-  const mark = (id: string) => {
-    const p = at(id);
-    return { x: p.x + p.r * 0.75, y: p.y - p.r * 0.95 };
-  };
+  /** Crosshairs sit on each sphere's centre. */
+  const mark = (id: string) => at(id);
 
   const shipped = MILESTONES.filter((m) => m.status === "shipped").length;
 
   return (
-    <section ref={section} id="roadmap" className="relative py-20 sm:py-24 md:py-28">
+    <section ref={section} id="roadmap" className="relative">
       <GlassFilter />
-      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHead
-          eyebrow="Roadmap"
-          title={["A living network first,", "the token second"]}
-          text={`${shipped} of ${MILESTONES.length} milestones are live in production and can be checked against the nodes. Each glowing sphere is one of them; hover one to see what it builds on and what it unlocks.`}
+      {/* On phones the heading sits above the scene; on wider screens it rests on the dark trees, top left. */}
+      <div className="relative z-20 px-5 pb-6 pt-20 sm:px-8 md:pointer-events-none md:absolute md:inset-x-0 md:top-0 md:pt-[12vh]">
+        {/* A soft shade behind the copy so it reads over the trees. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 hidden md:block"
+          style={{ background: "radial-gradient(60% 70% at 18% 30%, rgba(3,5,4,0.72), rgba(3,5,4,0) 70%)" }}
         />
+        <div className="relative mx-auto max-w-7xl">
+          <p className="font-mono text-[12px] text-white/55">Roadmap</p>
+          <h2 className="font-display mt-3 max-w-md text-4xl leading-[1.05] text-white md:text-5xl">
+            A living network first, <span className="accent">the token second</span>
+          </h2>
+          <p className="mt-4 max-w-sm text-[14px] font-light leading-relaxed text-white/65">
+            {shipped} of {MILESTONES.length} milestones run in production. Each glowing sphere is one; hover it to see what it builds on and what
+            it unlocks.
+          </p>
+        </div>
       </div>
 
       <div
         ref={stage}
-        className="relative -mt-6 h-[112vw] w-full overflow-hidden md:h-[min(56.5vw,92vh)]"
+        className="relative h-[112vw] w-full overflow-hidden md:h-[100svh]"
         onClick={(e) => {
           if (e.target === e.currentTarget) setPinned(null);
         }}
@@ -380,19 +388,27 @@ export default function Roadmap() {
                     className={`font-mono pointer-events-none absolute flex items-center gap-1.5 text-[10.5px] text-white transition-opacity duration-300 ${
                       dim ? "opacity-15" : isActive ? "opacity-100" : "opacity-60"
                     }`}
-                    style={{ left: k.x - 5, top: k.y - 5 }}
+                    style={{ left: k.x - 6, top: k.y - 6 }}
                   >
-                    <span className="relative block h-[10px] w-[10px]">
-                      <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/80" />
-                      <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/80" />
+                    <span className="relative block h-3 w-3 [filter:drop-shadow(0_0_1.5px_rgba(0,0,0,0.9))_drop-shadow(0_0_4px_rgba(0,0,0,0.6))]">
+                      <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/85" />
+                      <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/85" />
                     </span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className={`font-mono pointer-events-none absolute text-[10.5px] text-white transition-opacity duration-300 ${
+                      dim ? "opacity-15" : isActive ? "opacity-100" : "opacity-60"
+                    }`}
+                    style={{ left: k.x + p.r + 6, top: k.y - 7 }}
+                  >
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {/* Reading next to a linked milestone. */}
                   {related.has(m.id) && (
                     <span
                       className="font-mono pointer-events-none absolute whitespace-nowrap text-[11px] leading-tight text-white/90"
-                      style={{ left: k.x + 30, top: k.y - 6 }}
+                      style={{ left: k.x + p.r + 30, top: k.y - 7 }}
                     >
                       <Scramble text={m.metric(live)} />
                       <span className="block text-[10px] text-white/50">{m.title}</span>
