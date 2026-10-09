@@ -4,7 +4,7 @@ import { DOCS_URL, GITHUB_URL, NPM_URL } from "../links";
 import { Reveal, Section, SectionHead } from "./ui";
 
 const HOST = "https://canyon-production.up.railway.app";
-const SITE = "https://aiagentzoo.vercel.app";
+const SITE = "https://zooaiagency.com";
 const GUIDE = `${GITHUB_URL}/blob/main/docs/guests.md`;
 
 function Code({ code, lang }: { code: string; lang?: string }) {
