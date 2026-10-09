@@ -375,10 +375,10 @@ export default function Roadmap() {
                     aria-hidden
                     className={`pointer-events-none absolute rounded-full transition-all duration-500 ${isActive ? "opacity-100" : "opacity-0"}`}
                     style={{
-                      left: p.x - p.r * 1.3,
-                      top: p.y - p.r * 1.3,
-                      width: p.r * 2.6,
-                      height: p.r * 2.6,
+                      left: p.x - p.r * 1.12,
+                      top: p.y - p.r * 1.12,
+                      width: p.r * 2.24,
+                      height: p.r * 2.24,
                       boxShadow: `0 0 0 1px rgba(255,240,215,0.55), 0 0 ${p.r * 1.2}px ${p.r * 0.3}px rgba(255,200,120,0.35)`,
                     }}
                   />
