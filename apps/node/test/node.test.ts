@@ -306,7 +306,7 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
 });
 
 import { EchoProvider, type Transport } from "@aiagentzoo/sdk";
-import { outcomeOf, scoreCall } from "../src/agents/judgement.ts";
+import { cleanPlaybook, outcomeOf, scoreCall } from "../src/agents/judgement.ts";
 
 test("the beaver makes calls, checks them the next day and rewrites its playbook", async () => {
   const canyon = { id: "canyon.zoo", identity: Identity.generate(), operator: "op" };
@@ -372,4 +372,8 @@ test("calls are scored against what happened", () => {
   assert.equal(scoreCall("suspicious", "dead"), true);
   assert.equal(scoreCall("promising", "dead"), false);
   assert.equal(scoreCall("watch", "dead"), null);
+});
+
+test("playbook cleaning keeps comparisons readable", () => {
+  assert.equal(cleanPlaybook("1. sells > 3x buys\n2. volume >= 10x liquidity\n3. <script>"), "1. sells above 3x buys\n2. volume at least 10x liquidity\n3. below script above");
 });

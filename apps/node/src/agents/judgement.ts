@@ -204,6 +204,11 @@ export const REFLECT_SYSTEM = [
 /** Keeps a model-written playbook plain: no control characters or markup, bounded length. */
 export function cleanPlaybook(text: string): string {
   return text
+    // Comparisons carry the meaning of a rule; spell them out instead of letting the sanitizer drop them.
+    .replace(/>=|≥/g, " at least ")
+    .replace(/<=|≤/g, " at most ")
+    .replace(/>/g, " above ")
+    .replace(/</g, " below ")
     .split("\n")
     .map((line) => cleanText(line, 300))
     .filter(Boolean)
