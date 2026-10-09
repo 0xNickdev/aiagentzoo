@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { nodeOf } from "../zoo";
 
-interface Stats {
+export interface Stats {
   tokensTonight: number;
   callsTonight: number;
   modelCallsTonight: number;
@@ -12,7 +12,7 @@ interface Stats {
   guests: number;
 }
 
-interface Numbers {
+export interface LiveNumbers {
   nodesUp: number;
   agents: number;
   awake: number;
@@ -24,7 +24,7 @@ interface Numbers {
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-async function load(): Promise<Numbers> {
+async function load(): Promise<LiveNumbers> {
   const nodes = await Promise.all(
     NODE_URLS.map(async (url) => {
       try {
@@ -62,20 +62,37 @@ async function load(): Promise<Numbers> {
   };
 }
 
+// One poll for the whole page: every component that shows live numbers shares it.
+let latest: LiveNumbers | null = null;
+const subscribers = new Set<(n: LiveNumbers) => void>();
+let polling: ReturnType<typeof setInterval> | undefined;
+
+function startPolling() {
+  if (polling) return;
+  const tick = () =>
+    void load()
+      .then((n) => {
+        latest = n;
+        for (const fn of subscribers) fn(n);
+      })
+      .catch(() => undefined);
+  tick();
+  polling = setInterval(tick, 30_000);
+}
+
+export function useLiveNumbers(): LiveNumbers | null {
+  const [n, setN] = useState(latest);
+  useEffect(() => {
+    subscribers.add(setN);
+    startPolling();
+    return () => void subscribers.delete(setN);
+  }, []);
+  return n;
+}
+
 /** Live numbers from the nodes, right under the hero. */
 export default function LiveStats() {
-  const [n, setN] = useState<Numbers | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const tick = () => void load().then((x) => alive && setN(x)).catch(() => undefined);
-    tick();
-    const timer = setInterval(tick, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const n = useLiveNumbers();
 
   const s = n?.stats;
   const tiles: Array<{ label: string; value: string; hint?: string }> = [
