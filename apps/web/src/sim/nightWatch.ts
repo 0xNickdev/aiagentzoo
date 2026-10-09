@@ -630,7 +630,7 @@ export class NightWatch {
       if (!a.awake) {
         const zt = (t / 1600 + a.name.length) % 1;
         ctx.globalAlpha = 0.5 * (1 - zt);
-        ctx.font = "italic 400 12px Garamond, serif";
+        ctx.font = "400 11px 'Geist Mono', monospace";
         ctx.fillText("z", p.x + size * 0.4 + zt * 6, p.y - size * 0.35 - zt * 10);
       }
       ctx.globalAlpha = 1;
