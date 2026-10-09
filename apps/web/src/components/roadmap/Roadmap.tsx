@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLiveNumbers } from "../LiveStats";
-import { Reveal, Section, SectionHead } from "../ui";
+import { Section, SectionHead } from "../ui";
 import { MILESTONES } from "./milestones";
 
 // three.js is ~600 kB: it loads only when the roadmap scrolls into view.
@@ -44,6 +44,28 @@ function MilestoneList({ live, className = "" }: { live: ReturnType<typeof useLi
   );
 }
 
+/** Spells out the lines drawn in the scene. */
+function Relations({ m }: { m: (typeof MILESTONES)[number] }) {
+  const name = (id: string) => MILESTONES.find((x) => x.id === id)?.title ?? id;
+  const unlocks = MILESTONES.filter((x) => x.links.includes(m.id)).map((x) => x.title);
+  return (
+    <dl className="font-mono mt-3 grid gap-1 text-[10.5px] leading-relaxed text-white/50">
+      {m.links.length > 0 && (
+        <div>
+          <dt className="inline text-white/35">builds on </dt>
+          <dd className="inline text-white/70">{m.links.map(name).join(" · ")}</dd>
+        </div>
+      )}
+      {unlocks.length > 0 && (
+        <div>
+          <dt className="inline text-white/35">unlocks </dt>
+          <dd className="inline text-white/70">{unlocks.join(" · ")}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
 function MilestoneCard({ id, live }: { id: string; live: ReturnType<typeof useLiveNumbers> }) {
   const i = MILESTONES.findIndex((m) => m.id === id);
   const m = MILESTONES[i]!;
@@ -55,6 +77,7 @@ function MilestoneCard({ id, live }: { id: string; live: ReturnType<typeof useLi
       <p className="font-display mt-2 text-xl text-white">{m.title}</p>
       <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">{m.text}</p>
       <p className="font-mono mt-4 text-[12.5px] text-white">{m.metric(live)}</p>
+      <Relations m={m} />
       {m.proof && (
         <a
           href={m.proof.href}
@@ -69,17 +92,30 @@ function MilestoneCard({ id, live }: { id: string; live: ReturnType<typeof useLi
   );
 }
 
+export interface Stage {
+  /** Top of the interactive stage, in canvas pixels. */
+  top: number;
+  height: number;
+}
+
+/** The canvas bleeds past the section and melts into its neighbours, like the other backdrops. */
+const BLEED = "12vh";
+const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%)";
+
 export default function Roadmap() {
   const live = useLiveNumbers();
   const [active, setActive] = useState<{ id: string; pinned: boolean } | null>(null);
-  const box = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
+  const canvasBox = useRef<HTMLDivElement>(null);
+  const stageBox = useRef<HTMLDivElement>(null);
+  const [stage, setStage] = useState<Stage | null>(null);
   const [webgl] = useState(canRenderWebGL);
   const [seen, setSeen] = useState(false);
   const [visible, setVisible] = useState(false);
   const portrait = useMedia("(max-aspect-ratio: 1/1)");
 
   useEffect(() => {
-    const el = box.current;
+    const el = section.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -89,44 +125,70 @@ export default function Roadmap() {
       { rootMargin: "200px" },
     );
     io.observe(el);
-    return () => io.disconnect();
-  }, []);
+    // Where the stage sits inside the canvas, so the 3D frame lines up with it.
+    const measure = () => {
+      const c = canvasBox.current?.getBoundingClientRect();
+      const s = stageBox.current?.getBoundingClientRect();
+      if (c && s) setStage({ top: s.top - c.top, height: s.height });
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => {
+      io.disconnect();
+      ro.disconnect();
+    };
+  }, [webgl]);
 
   const shipped = MILESTONES.filter((m) => m.status === "shipped").length;
+  const head = (
+    <SectionHead
+      eyebrow="Roadmap"
+      title={["A living network first,", "the token second"]}
+      text={`${shipped} of ${MILESTONES.length} milestones are live in production and can be checked against the nodes. Hover a sphere to see what it builds on and what it unlocks.`}
+    />
+  );
+
+  if (!webgl) {
+    return (
+      <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
+        {head}
+        <MilestoneList live={live} />
+      </Section>
+    );
+  }
 
   return (
-    <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
-      <SectionHead
-        eyebrow="Roadmap"
-        title={["A living network first,", "the token second"]}
-        text={`${shipped} of ${MILESTONES.length} milestones are live in production and can be checked against the nodes. Hover a sphere to see what it builds on.`}
-      />
-      {webgl ? (
-        <Reveal>
-          <div ref={box} className="relative -mx-5 h-[760px] sm:-mx-8 md:h-[600px]">
-            {seen && (
-              <Suspense fallback={null}>
-                <RoadmapScene live={live} running={visible} portrait={portrait} onActive={setActive} />
-              </Suspense>
-            )}
-            <div
-              className={`absolute right-5 top-0 transition-all duration-300 sm:right-8 max-sm:left-5 max-sm:top-auto max-sm:bottom-10 ${
-                active ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
-              } ${active?.pinned ? "" : "pointer-events-none"}`}
-            >
-              {active && <MilestoneCard id={active.id} live={live} />}
-            </div>
-            <div className="font-mono pointer-events-none absolute bottom-3 left-5 flex gap-5 text-[10.5px] text-white/45 sm:left-8">
-              <span>● shipped</span>
-              <span>○ next</span>
-              <span className="hidden sm:inline">hover · click to pin</span>
-            </div>
+    <section ref={section} id="roadmap" className="relative px-5 py-20 sm:px-8 sm:py-24 md:py-28">
+      <div
+        ref={canvasBox}
+        className="absolute inset-x-0"
+        style={{ top: `-${BLEED}`, bottom: `-${BLEED}`, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+      >
+        {seen && stage && (
+          <Suspense fallback={null}>
+            <RoadmapScene live={live} running={visible} portrait={portrait} stage={stage} onActive={setActive} />
+          </Suspense>
+        )}
+      </div>
+      <div className="pointer-events-none relative z-10 mx-auto max-w-7xl">
+        {head}
+        <div ref={stageBox} className="relative h-[760px] md:h-[600px]">
+          <div
+            className={`absolute right-0 top-0 transition-all duration-300 max-sm:bottom-10 max-sm:left-0 max-sm:top-auto ${
+              active ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+            } ${active?.pinned ? "pointer-events-auto" : ""}`}
+          >
+            {active && <MilestoneCard id={active.id} live={live} />}
           </div>
-          <MilestoneList live={live} className="sr-only" />
-        </Reveal>
-      ) : (
-        <MilestoneList live={live} />
-      )}
-    </Section>
+          <div className="font-mono absolute bottom-3 left-0 flex gap-5 text-[10.5px] text-white/45">
+            <span>● shipped</span>
+            <span>○ next</span>
+            <span className="hidden sm:inline">hover · click to pin</span>
+          </div>
+        </div>
+      </div>
+      <MilestoneList live={live} className="sr-only" />
+    </section>
   );
 }
