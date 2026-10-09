@@ -1,39 +1,25 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useLiveNumbers } from "../LiveStats";
-import { Section, SectionHead } from "../ui";
-import { MILESTONES } from "./milestones";
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type LiveNumbers, useLiveNumbers } from "../LiveStats";
+import { SectionHead } from "../ui";
+import { type Milestone, MILESTONES } from "./milestones";
+import { SPOTS, VIDEO_SIZE } from "./spots";
 
-// three.js is ~600 kB: it loads only when the roadmap scrolls into view.
-const RoadmapScene = lazy(() => import("./RoadmapScene"));
+const VIDEO_DESKTOP = "/video/roadmap-1600.mp4";
+const VIDEO_MOBILE = "/video/roadmap-960.mp4";
+const POSTER = "/video/roadmap-poster.webp";
+/** Horizontal focus of the crop on narrow screens: the path sits a little left of centre. */
+const FOCUS_X = 0.36;
+const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 12%, #000 86%, transparent 100%)";
 
-function canRenderWebGL(): boolean {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl2") || canvas.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
+type Live = LiveNumbers | null;
 
-function useMedia(query: string): boolean {
-  const [match, setMatch] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const on = () => setMatch(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, [query]);
-  return match;
-}
-
-/** The plain list: shown without WebGL, and always available to screen readers. */
-function MilestoneList({ live, className = "" }: { live: ReturnType<typeof useLiveNumbers>; className?: string }) {
+/** The plain list, for screen readers and when the video cannot play. */
+function MilestoneList({ live, className = "" }: { live: Live; className?: string }) {
   return (
     <ol className={`grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 ${className}`}>
       {MILESTONES.map((m, i) => (
         <li key={m.id} className="rounded-2xl bg-black/40 p-5 ring-1 ring-white/10">
-          <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-emerald-200/80" : "text-white/45"}`}>
+          <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-amber-100/80" : "text-white/45"}`}>
             {String(i + 1).padStart(2, "0")} · {m.status === "shipped" ? "● shipped" : "○ next"} · {m.metric(live)}
           </p>
           <h3 className="font-display mt-2 text-lg">{m.title}</h3>
@@ -44,8 +30,7 @@ function MilestoneList({ live, className = "" }: { live: ReturnType<typeof useLi
   );
 }
 
-/** Spells out the lines drawn in the scene. */
-function Relations({ m }: { m: (typeof MILESTONES)[number] }) {
+function Relations({ m }: { m: Milestone }) {
   const name = (id: string) => MILESTONES.find((x) => x.id === id)?.title ?? id;
   const unlocks = MILESTONES.filter((x) => x.links.includes(m.id)).map((x) => x.title);
   return (
@@ -53,37 +38,185 @@ function Relations({ m }: { m: (typeof MILESTONES)[number] }) {
       {m.links.length > 0 && (
         <div>
           <dt className="inline text-white/35">builds on </dt>
-          <dd className="inline text-white/70">{m.links.map(name).join(" · ")}</dd>
+          <dd className="inline text-white/75">{m.links.map(name).join(" · ")}</dd>
         </div>
       )}
       {unlocks.length > 0 && (
         <div>
           <dt className="inline text-white/35">unlocks </dt>
-          <dd className="inline text-white/70">{unlocks.join(" · ")}</dd>
+          <dd className="inline text-white/75">{unlocks.join(" · ")}</dd>
         </div>
       )}
     </dl>
   );
 }
 
-function MilestoneCard({ id, live }: { id: string; live: ReturnType<typeof useLiveNumbers> }) {
-  const i = MILESTONES.findIndex((m) => m.id === id);
-  const m = MILESTONES[i]!;
+/** Characters roll before a reading settles, like an instrument. */
+function Scramble({ text }: { text: string }) {
+  const [shown, setShown] = useState(text);
+  useEffect(() => {
+    const glyphs = "0123456789#%+/·";
+    const total = 14;
+    let frame = 0;
+    const id = setInterval(() => {
+      frame += 1;
+      const settled = Math.floor((frame / total) * text.length);
+      setShown(
+        text
+          .split("")
+          .map((c, i) => (i < settled || c === " " ? c : glyphs[Math.floor(Math.random() * glyphs.length)]))
+          .join(""),
+      );
+      if (frame >= total) clearInterval(id);
+    }, 32);
+    return () => clearInterval(id);
+  }, [text]);
+  return <>{shown}</>;
+}
+
+/** How the video frame maps onto the stage under object-fit: cover. */
+interface Cover {
+  scale: number;
+  ox: number;
+  oy: number;
+  width: number;
+  height: number;
+}
+
+function useCover(stage: RefObject<HTMLDivElement | null>, focusX: number): Cover | null {
+  const [cover, setCover] = useState<Cover | null>(null);
+  useEffect(() => {
+    const el = stage.current;
+    if (!el) return;
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      const scale = Math.max(width / VIDEO_SIZE.w, height / VIDEO_SIZE.h);
+      setCover({
+        scale,
+        ox: (width - VIDEO_SIZE.w * scale) * focusX,
+        oy: (height - VIDEO_SIZE.h * scale) * 0.5,
+        width,
+        height,
+      });
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => ro.disconnect();
+  }, [stage, focusX]);
+  return cover;
+}
+
+/**
+ * A card that refracts the video behind it: a canvas redraws the visible
+ * frame under the card each animation frame, and an SVG displacement filter
+ * bends it with per-channel offsets for the rainbow edge.
+ */
+function GlassCard({
+  video,
+  stage,
+  cover,
+  children,
+  className = "",
+}: {
+  video: RefObject<HTMLVideoElement | null>;
+  stage: RefObject<HTMLDivElement | null>;
+  cover: Cover;
+  children: ReactNode;
+  className?: string;
+}) {
+  const card = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      const v = video.current;
+      const c = canvas.current;
+      const k = card.current;
+      const s = stage.current;
+      if (!v || !c || !k || !s || !v.videoWidth) return;
+      const sr = s.getBoundingClientRect();
+      const kr = k.getBoundingClientRect();
+      // The canvas spans the whole stage, shifted so its pixels line up with the video behind the card.
+      c.style.left = `${sr.left - kr.left}px`;
+      c.style.top = `${sr.top - kr.top}px`;
+      if (c.width !== Math.round(sr.width) || c.height !== Math.round(sr.height)) {
+        c.width = Math.round(sr.width);
+        c.height = Math.round(sr.height);
+        c.style.width = `${sr.width}px`;
+        c.style.height = `${sr.height}px`;
+      }
+      const ctx = c.getContext("2d");
+      try {
+        ctx?.drawImage(v, cover.ox, cover.oy, VIDEO_SIZE.w * cover.scale, VIDEO_SIZE.h * cover.scale);
+      } catch {
+        // Frame not decodable yet.
+      }
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, [video, stage, cover]);
+
   return (
-    <div className="w-full rounded-2xl bg-black/65 p-5 ring-1 ring-white/15 backdrop-blur-md sm:w-[300px]">
-      <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-emerald-200/85" : "text-white/50"}`}>
-        {String(i + 1).padStart(2, "0")} · {m.status === "shipped" ? "● shipped" : "○ next"}
+    <div ref={card} className={`relative overflow-hidden rounded-[28px] ${className}`}>
+      <canvas ref={canvas} aria-hidden className="pointer-events-none absolute" style={{ filter: "url(#roadmap-glass)" }} />
+      {/* Frost and a lit rim on top of the refraction, text above both. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[28px] bg-[rgba(8,12,14,0.42)]"
+        style={{ boxShadow: "inset 0 1.5px 2px rgba(255,255,255,0.28), inset 0 -1px 2px rgba(0,0,0,0.3)" }}
+      />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+function GlassFilter() {
+  return (
+    <svg width="0" height="0" aria-hidden className="absolute">
+      <defs>
+        <filter id="roadmap-glass" x="-30%" y="-30%" width="160%" height="160%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.015" numOctaves="3" result="noise" />
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 100 0" result="alpha" />
+          <feGaussianBlur in="alpha" stdDeviation="40" result="blurred" />
+          <feComponentTransfer in="blurred" result="edge">
+            <feFuncA type="linear" slope="-1.3" intercept="1" />
+          </feComponentTransfer>
+          <feComposite in="noise" in2="edge" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="bevel" />
+          <feDisplacementMap in="SourceGraphic" in2="bevel" scale="60" xChannelSelector="R" yChannelSelector="G" result="rd" />
+          <feColorMatrix in="rd" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feDisplacementMap in="SourceGraphic" in2="bevel" scale="52" xChannelSelector="R" yChannelSelector="G" result="gd" />
+          <feColorMatrix in="gd" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feDisplacementMap in="SourceGraphic" in2="bevel" scale="44" xChannelSelector="R" yChannelSelector="G" result="bd" />
+          <feColorMatrix in="bd" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feBlend in="r" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="b" mode="screen" />
+        </filter>
+      </defs>
+    </svg>
+  );
+}
+
+function MilestoneCard({ m, index, live }: { m: Milestone; index: number; live: Live }) {
+  return (
+    <div className="p-5">
+      <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-amber-100/85" : "text-white/50"}`}>
+        {String(index + 1).padStart(2, "0")} · {m.status === "shipped" ? "● shipped" : "○ next"}
       </p>
       <p className="font-display mt-2 text-xl text-white">{m.title}</p>
-      <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">{m.text}</p>
-      <p className="font-mono mt-4 text-[12.5px] text-white">{m.metric(live)}</p>
+      <p className="mt-2 text-[13px] font-light leading-relaxed text-white/70">{m.text}</p>
+      <p className="font-mono mt-4 text-[12.5px] text-white">
+        <Scramble text={m.metric(live)} />
+      </p>
       <Relations m={m} />
       {m.proof && (
         <a
           href={m.proof.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-mono mt-2 inline-block text-[11px] text-white/55 underline decoration-white/25 underline-offset-4 hover:text-white"
+          className="font-mono mt-3 inline-block text-[11px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white"
         >
           verify: {m.proof.label} ↗
         </a>
@@ -92,102 +225,198 @@ function MilestoneCard({ id, live }: { id: string; live: ReturnType<typeof useLi
   );
 }
 
-export interface Stage {
-  /** Top of the interactive stage, in canvas pixels. */
-  top: number;
-  height: number;
-}
-
-/** The canvas bleeds past the section and melts into its neighbours, like the other backdrops. */
-const BLEED = "12vh";
-const EDGE_FADE = "linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%)";
-
 export default function Roadmap() {
   const live = useLiveNumbers();
-  const [active, setActive] = useState<{ id: string; pinned: boolean } | null>(null);
   const section = useRef<HTMLElement>(null);
-  const canvasBox = useRef<HTMLDivElement>(null);
-  const stageBox = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState<Stage | null>(null);
-  const [webgl] = useState(canRenderWebGL);
-  const [seen, setSeen] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const portrait = useMedia("(max-aspect-ratio: 1/1)");
+  const stage = useRef<HTMLDivElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const [near, setNear] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const narrow = useMemo(() => window.matchMedia("(max-width: 767px)").matches, []);
+  const cover = useCover(stage, narrow ? FOCUS_X : 0.5);
+  const active = hovered ?? pinned;
+  const activeIndex = active ? MILESTONES.findIndex((m) => m.id === active) : -1;
+  const activeM = activeIndex >= 0 ? MILESTONES[activeIndex]! : null;
 
+  // The video loads only as the roadmap approaches, and pauses when it leaves.
   useEffect(() => {
     const el = section.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        setVisible(!!entry?.isIntersecting);
-        if (entry?.isIntersecting) setSeen(true);
+        const v = video.current;
+        if (entry?.isIntersecting) {
+          setNear(true);
+          if (v && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) void v.play().catch(() => undefined);
+        } else v?.pause();
       },
-      { rootMargin: "200px" },
+      { rootMargin: "300px" },
     );
     io.observe(el);
-    // Where the stage sits inside the canvas, so the 3D frame lines up with it.
-    const measure = () => {
-      const c = canvasBox.current?.getBoundingClientRect();
-      const s = stageBox.current?.getBoundingClientRect();
-      if (c && s) setStage({ top: s.top - c.top, height: s.height });
-    };
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    measure();
-    return () => {
-      io.disconnect();
-      ro.disconnect();
-    };
-  }, [webgl]);
+    return () => io.disconnect();
+  }, []);
+
+  const related = useMemo(() => {
+    if (!activeM) return new Set<string>();
+    return new Set([...activeM.links, ...MILESTONES.filter((m) => m.links.includes(activeM.id)).map((m) => m.id)]);
+  }, [activeM]);
+
+  const at = useCallback(
+    (id: string) => {
+      const s = SPOTS[id]!;
+      if (!cover) return { x: 0, y: 0, r: 0 };
+      return {
+        x: cover.ox + (s.x / 100) * VIDEO_SIZE.w * cover.scale,
+        y: cover.oy + (s.y / 100) * VIDEO_SIZE.h * cover.scale,
+        r: (s.r / 100) * VIDEO_SIZE.w * cover.scale,
+      };
+    },
+    [cover],
+  );
+  /** Crosshairs sit just above and right of each sphere, like a survey mark. */
+  const mark = (id: string) => {
+    const p = at(id);
+    return { x: p.x + p.r * 0.75, y: p.y - p.r * 0.95 };
+  };
 
   const shipped = MILESTONES.filter((m) => m.status === "shipped").length;
-  const head = (
-    <SectionHead
-      eyebrow="Roadmap"
-      title={["A living network first,", "the token second"]}
-      text={`${shipped} of ${MILESTONES.length} milestones are live in production and can be checked against the nodes. Hover a sphere to see what it builds on and what it unlocks.`}
-    />
-  );
-
-  if (!webgl) {
-    return (
-      <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
-        {head}
-        <MilestoneList live={live} />
-      </Section>
-    );
-  }
 
   return (
-    <section ref={section} id="roadmap" className="relative px-5 py-20 sm:px-8 sm:py-24 md:py-28">
-      <div
-        ref={canvasBox}
-        className="absolute inset-x-0"
-        style={{ top: `-${BLEED}`, bottom: `-${BLEED}`, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
-      >
-        {seen && stage && (
-          <Suspense fallback={null}>
-            <RoadmapScene live={live} running={visible} portrait={portrait} stage={stage} onActive={setActive} />
-          </Suspense>
-        )}
+    <section ref={section} id="roadmap" className="relative py-20 sm:py-24 md:py-28">
+      <GlassFilter />
+      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHead
+          eyebrow="Roadmap"
+          title={["A living network first,", "the token second"]}
+          text={`${shipped} of ${MILESTONES.length} milestones are live in production and can be checked against the nodes. Each glowing sphere is one of them; hover one to see what it builds on and what it unlocks.`}
+        />
       </div>
-      <div className="pointer-events-none relative z-10 mx-auto max-w-7xl">
-        {head}
-        <div ref={stageBox} className="relative h-[760px] md:h-[600px]">
-          <div
-            className={`absolute right-0 top-0 transition-all duration-300 max-sm:bottom-10 max-sm:left-0 max-sm:top-auto ${
-              active ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-            } ${active?.pinned ? "pointer-events-auto" : ""}`}
-          >
-            {active && <MilestoneCard id={active.id} live={live} />}
-          </div>
-          <div className="font-mono absolute bottom-3 left-0 flex gap-5 text-[10.5px] text-white/45">
-            <span>● shipped</span>
-            <span>○ next</span>
-            <span className="hidden sm:inline">hover · click to pin</span>
-          </div>
+
+      <div
+        ref={stage}
+        className="relative -mt-6 h-[112vw] w-full overflow-hidden md:h-[min(56.5vw,92vh)]"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setPinned(null);
+        }}
+      >
+        <div className="pointer-events-none absolute inset-0" style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}>
+          <video
+            ref={video}
+            className="h-full w-full object-cover"
+            style={{ objectPosition: `${(narrow ? FOCUS_X : 0.5) * 100}% 50%` }}
+            poster={POSTER}
+            muted
+            loop
+            playsInline
+            preload="none"
+            aria-hidden
+            src={near ? (narrow ? VIDEO_MOBILE : VIDEO_DESKTOP) : undefined}
+          />
+        </div>
+
+        {cover && (
+          <>
+            {/* Links to everything the active milestone builds on or unlocks. */}
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+              {activeM &&
+                [...related].map((id) => {
+                  const a = mark(activeM.id);
+                  const b = mark(id);
+                  const len = Math.hypot(b.x - a.x, b.y - a.y);
+                  return (
+                    <line
+                      key={`${activeM.id}-${id}`}
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke="rgba(255,246,230,0.75)"
+                      strokeWidth={1}
+                      strokeDasharray={len}
+                      strokeDashoffset={len}
+                      style={{ animation: "roadmap-draw 520ms cubic-bezier(.16,1,.3,1) forwards" }}
+                    />
+                  );
+                })}
+            </svg>
+
+            {MILESTONES.map((m, i) => {
+              const p = at(m.id);
+              const k = mark(m.id);
+              const isActive = active === m.id;
+              const dim = !!activeM && !isActive && !related.has(m.id);
+              const hit = Math.max(p.r * 1.35, 18);
+              return (
+                <div key={m.id}>
+                  {/* Glow ring on the active sphere. */}
+                  <span
+                    aria-hidden
+                    className={`pointer-events-none absolute rounded-full transition-all duration-500 ${isActive ? "opacity-100" : "opacity-0"}`}
+                    style={{
+                      left: p.x - p.r * 1.3,
+                      top: p.y - p.r * 1.3,
+                      width: p.r * 2.6,
+                      height: p.r * 2.6,
+                      boxShadow: `0 0 0 1px rgba(255,240,215,0.55), 0 0 ${p.r * 1.2}px ${p.r * 0.3}px rgba(255,200,120,0.35)`,
+                    }}
+                  />
+                  {/* Survey mark and index. */}
+                  <span
+                    aria-hidden
+                    className={`font-mono pointer-events-none absolute flex items-center gap-1.5 text-[10.5px] text-white transition-opacity duration-300 ${
+                      dim ? "opacity-15" : isActive ? "opacity-100" : "opacity-60"
+                    }`}
+                    style={{ left: k.x - 5, top: k.y - 5 }}
+                  >
+                    <span className="relative block h-[10px] w-[10px]">
+                      <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/80" />
+                      <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/80" />
+                    </span>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {/* Reading next to a linked milestone. */}
+                  {related.has(m.id) && (
+                    <span
+                      className="font-mono pointer-events-none absolute whitespace-nowrap text-[11px] leading-tight text-white/90"
+                      style={{ left: k.x + 30, top: k.y - 6 }}
+                    >
+                      <Scramble text={m.metric(live)} />
+                      <span className="block text-[10px] text-white/50">{m.title}</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`${String(i + 1).padStart(2, "0")} ${m.title}`}
+                    className="absolute rounded-full focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/70"
+                    style={{ left: p.x - hit, top: p.y - hit, width: hit * 2, height: hit * 2 }}
+                    onMouseEnter={() => setHovered(m.id)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setHovered(m.id)}
+                    onBlur={() => setHovered(null)}
+                    onClick={() => setPinned((s) => (s === m.id ? null : m.id))}
+                  />
+                </div>
+              );
+            })}
+
+            {activeM && (
+              <div className="pointer-events-none absolute bottom-6 left-4 right-4 sm:left-auto sm:right-8 sm:top-8 sm:bottom-auto sm:w-[320px]">
+                <GlassCard video={video} stage={stage} cover={cover} className={pinned === activeM.id && !hovered ? "pointer-events-auto" : ""}>
+                  <MilestoneCard m={activeM} index={activeIndex} live={live} />
+                </GlassCard>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="font-mono pointer-events-none absolute bottom-4 left-5 flex gap-5 text-[10.5px] text-white/50 sm:left-8">
+          <span>● shipped</span>
+          <span>○ next</span>
+          <span className="hidden sm:inline">hover · click to pin</span>
         </div>
       </div>
+
       <MilestoneList live={live} className="sr-only" />
     </section>
   );
