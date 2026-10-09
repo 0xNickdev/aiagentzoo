@@ -22,9 +22,9 @@ type Ambience = "fireflies" | "ripples" | "dust";
 interface Enclosure { id: string; name: string; node: string; cx: number; cy: number; r: number; seed: number; ambience: Ambience; tint: string; brightness: number; squash: number }
 
 const ENCLOSURES: Enclosure[] = [
-  { id: "north", name: "Northern Edge", node: "node-a.zoo", cx: 0.25, cy: 0.34, r: 0.2, seed: 1.3, ambience: "fireflies", tint: "214,232,170", brightness: 0.95, squash: 0.9 },
-  { id: "marsh", name: "Quiet Marsh", node: "node-b.zoo", cx: 0.76, cy: 0.3, r: 0.19, seed: 2.7, ambience: "ripples", tint: "170,214,220", brightness: 1, squash: 0.55 },
-  { id: "canyon", name: "Stone Canyon", node: "node-c.zoo", cx: 0.54, cy: 0.76, r: 0.19, seed: 4.1, ambience: "dust", tint: "236,214,180", brightness: 0.62, squash: 0.85 },
+  { id: "north", name: "Northern Edge", node: "north.zoo", cx: 0.25, cy: 0.41, r: 0.21, seed: 1.3, ambience: "fireflies", tint: "214,232,170", brightness: 0.95, squash: 0.9 },
+  { id: "marsh", name: "Quiet Marsh", node: "marsh.zoo", cx: 0.75, cy: 0.42, r: 0.2, seed: 2.7, ambience: "ripples", tint: "170,214,220", brightness: 1, squash: 0.55 },
+  { id: "canyon", name: "Stone Canyon", node: "canyon.zoo", cx: 0.52, cy: 0.78, r: 0.19, seed: 4.1, ambience: "dust", tint: "236,214,180", brightness: 0.62, squash: 0.85 },
 ];
 const encById = Object.fromEntries(ENCLOSURES.map((e) => [e.id, e]));
 
@@ -545,11 +545,11 @@ export class NightWatch {
       const g = geo(e);
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(255,255,255,0.88)";
-      ctx.font = `400 ${Math.max(15, g.r * 0.13)}px Garamond, 'Times New Roman', serif`;
-      ctx.fillText(e.name.toUpperCase(), g.x, g.y - g.r - 16);
-      ctx.fillStyle = "rgba(255,255,255,0.4)";
-      ctx.font = "300 10px Geist, sans-serif";
-      ctx.fillText(e.node.toUpperCase(), g.x, g.y - g.r - 2);
+      ctx.font = `500 ${Math.max(15, g.r * 0.12)}px Geist, sans-serif`;
+      ctx.fillText(e.name, g.x, g.y - g.r - 18);
+      ctx.fillStyle = "rgba(255,255,255,0.42)";
+      ctx.font = "400 10.5px 'Geist Mono', monospace";
+      ctx.fillText(e.node, g.x, g.y - g.r - 3);
     }
 
     // trails

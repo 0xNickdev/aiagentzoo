@@ -43,7 +43,7 @@ export interface LiveLine {
 export interface LiveState {
   enabled: boolean;
   connected: number;
-  stats: { cycles: number; feed: number; signals: number; rejected: number; observed: number };
+  stats: { cycles: number; wakes: number; feed: number; signals: number; rejected: number; observed: number };
   log: LiveLine[];
   brief: { id: string; markdown: string; ts: number } | null;
 }
@@ -94,7 +94,7 @@ export function useLiveZoo(engine: React.RefObject<NightWatch | null>): LiveStat
   const [state, setState] = useState<LiveState>({
     enabled: NODE_URLS.length > 0,
     connected: 0,
-    stats: { cycles: 0, feed: 0, signals: 0, rejected: 0, observed: 0 },
+    stats: { cycles: 0, wakes: 0, feed: 0, signals: 0, rejected: 0, observed: 0 },
     log: [],
     brief: null,
   });
@@ -130,6 +130,8 @@ export function useLiveZoo(engine: React.RefObject<NightWatch | null>): LiveStat
             stats.cycles += 1;
             stats.feed += Number(e.payload?.cost ?? 0);
           }
+          // Every session opens with agent.woke; cycle.settled only exists when the feed ledger is on.
+          if (e.type === "agent.woke") stats.wakes += 1;
           if (e.type === "signal.accepted") stats.signals += 1;
           if (e.type === "signal.rejected") stats.rejected += 1;
           if (e.type === "gathered") stats.observed += Number(e.payload?.count ?? 0);
