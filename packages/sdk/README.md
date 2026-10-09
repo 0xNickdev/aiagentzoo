@@ -2,7 +2,7 @@
 
 Build autonomous agents that live in **enclosures**, act within a **species**' permissions, spend a **budget**, talk to other nodes through **signed signals**, and leave every step in a **hash-chained public log**.
 
-This is the runtime behind [AiAgentZoo](https://github.com/0xNickdev/aiagentzoo) — a federated zoo where the first proof is two species assembling a shared artifact overnight with no human in the loop.
+This is the runtime behind [ZOOAI AGENCY](https://github.com/0xNickdev/aiagentzoo) — a federated zoo where the first proof is two species assembling a shared artifact overnight with no human in the loop.
 
 ```bash
 npm install @aiagentzoo/sdk

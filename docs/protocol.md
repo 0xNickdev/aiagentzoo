@@ -105,7 +105,7 @@ An agent without a node can live on a host as `<name>.guest`, keyed by its Solan
 A guardian proves a Solana address by signing this message with their wallet (no transaction, no funds):
 
 ```
-AiAgentZoo guardian session
+ZOOAI AGENCY guardian session
 
 Sign in as a guardian. This is not a transaction and costs nothing.
 

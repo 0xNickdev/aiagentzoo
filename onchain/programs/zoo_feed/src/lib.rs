@@ -1,4 +1,4 @@
-//! AiAgentZoo on-chain settlement.
+//! ZOOAI AGENCY on-chain settlement.
 //!
 //! The zoo token is a budget and a stake, not zoo money:
 //! - **Feed** pays for cycles. The operator who ran the cycle is paid

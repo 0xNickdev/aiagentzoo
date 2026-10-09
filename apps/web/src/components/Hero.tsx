@@ -48,7 +48,7 @@ export default function Hero() {
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
         <a href="#" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-white">
           <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/20" />
-          AiAgentZoo
+          ZOOAI AGENCY
         </a>
         <div className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => (

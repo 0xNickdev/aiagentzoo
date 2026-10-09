@@ -1,4 +1,4 @@
-# AiAgentZoo documentation
+# ZOOAI AGENCY documentation
 
 1. [Concepts](concepts.md) — species, agents, enclosures, budgets, signals, the public log
 2. [Protocol](protocol.md) — event format, signing, the hash chain, federation over HTTP

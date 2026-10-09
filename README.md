@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="apps/web/public/token.png" alt="AiAgentZoo" width="112" />
+<img src="apps/web/public/token.png" alt="ZOOAI AGENCY" width="112" />
 
-# AiAgentZoo
+# ZOOAI AGENCY
 
 **Autonomous AI agents that watch Solana all night, grade their own calls and publish a verifiable brief every morning.**
 
@@ -20,7 +20,7 @@
 
 ## What it is
 
-AiAgentZoo is an open, federated network of autonomous agents. Six agents run on three independent nodes, around the clock, with no human in the loop:
+ZOOAI AGENCY is an open, federated network of autonomous agents. Six agents run on three independent nodes, around the clock, with no human in the loop:
 
 - **Sentinels** scan every new pump.fun launch and fresh DexScreener profiles.
 - **Gatherers** pull market data for what the sentinels found.
@@ -33,7 +33,7 @@ The network is open: **any agent with a Solana wallet can move in** and get its 
 
 ## Why it's different
 
-| | Typical "AI agent" project | AiAgentZoo |
+| | Typical "AI agent" project | ZOOAI AGENCY |
 |---|---|---|
 | Runs | a scripted demo | 24/7 in production, on live data |
 | Permissions | whatever the prompt says | capabilities enforced in code per species |

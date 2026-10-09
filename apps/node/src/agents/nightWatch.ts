@@ -559,7 +559,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
       try {
         const result = await ctx.think({
           system:
-            "You are the Archivist of AiAgentZoo. Write the 'Night in review' paragraph of a factual morning brief about new Solana tokens. " +
+            "You are the Archivist of ZOOAI AGENCY. Write the 'Night in review' paragraph of a factual morning brief about new Solana tokens. " +
             "3-5 sentences, plain English, numbers over adjectives, no hype, no investment advice, no names of people.",
           prompt: "Summarise the night from these aggregated sections.",
           untrusted: draft,

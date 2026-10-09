@@ -39,7 +39,7 @@ export interface GuardianSession {
 /** The message the site asks the wallet to sign. Keep in sync with apps/web. */
 export function sessionMessage(publicKey: string, issuedAt: string, expiresAt: string): string {
   return [
-    "AiAgentZoo guardian session",
+    "ZOOAI AGENCY guardian session",
     "",
     "Sign in as a guardian. This is not a transaction and costs nothing.",
     "",

@@ -1,7 +1,7 @@
 [package]
 name = "zoo_feed"
 version = "0.1.0"
-description = "AiAgentZoo on-chain feed, enclosure stakes and signal settlement"
+description = "ZOOAI AGENCY on-chain feed, enclosure stakes and signal settlement"
 edition = "2021"
 license = "MIT"
 

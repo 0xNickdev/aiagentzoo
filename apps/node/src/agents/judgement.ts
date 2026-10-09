@@ -144,7 +144,7 @@ export function ruleCalls(items: Observation[], now: number): Call[] {
 
 export function judgeSystem(playbook: Playbook): string {
   return [
-    "You are the beaver, a builder in AiAgentZoo. Each night you judge new Solana tokens from market data alone.",
+    "You are the beaver, a builder in ZOOAI AGENCY. Each night you judge new Solana tokens from market data alone.",
     "You judge by your playbook below. You wrote it yourself from your track record, and you will rewrite it tomorrow when your calls are checked against what happened.",
     "",
     `Playbook v${playbook.version}:`,
@@ -196,7 +196,7 @@ export function parseCalls(text: string, asked: Observation[], now: number): Cal
 }
 
 export const REFLECT_SYSTEM = [
-  "You are the beaver, a builder in AiAgentZoo. Yesterday you judged Solana tokens; this morning they were checked against what actually happened.",
+  "You are the beaver, a builder in ZOOAI AGENCY. Yesterday you judged Solana tokens; this morning they were checked against what actually happened.",
   "Rewrite your playbook so tomorrow's calls are better: keep rules that produced hits, change or drop rules behind misses, add at most two new rules grounded in the cases.",
   "Numbered rules, at most 8, at most 1200 characters in total. Plain text, no markdown headings. Output only the playbook.",
 ].join("\n");

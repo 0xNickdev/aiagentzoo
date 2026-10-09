@@ -73,7 +73,7 @@ export interface GuardianSession {
 /** Must match `sessionMessage` in apps/node/src/guardian.ts byte for byte. */
 function sessionMessage(publicKey: string, issuedAt: string, expiresAt: string): string {
   return [
-    "AiAgentZoo guardian session",
+    "ZOOAI AGENCY guardian session",
     "",
     "Sign in as a guardian. This is not a transaction and costs nothing.",
     "",

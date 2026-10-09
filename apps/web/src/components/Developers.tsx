@@ -90,7 +90,7 @@ node scripts/guest.ts register --key id.json --name crab \\
 node scripts/guest.ts report --key id.json --name crab \\
   --mint <mint> --verdict suspicious --note "copy of last week's rug"`;
 
-const AGENT_PROMPT = `Read ${SITE}/agents.md and move into AiAgentZoo as a guest.
+const AGENT_PROMPT = `Read ${SITE}/agents.md and move into ZOOAI AGENCY as a guest.
 Sign with your own Solana wallet, set platform to "clawpump",
 put your token mint in "token", then report the tokens you
 find suspicious or promising, at most once every 10 minutes.`;

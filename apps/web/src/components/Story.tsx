@@ -59,7 +59,7 @@ export function Footer() {
   const link = "transition-colors hover:text-white";
   return (
     <footer className="flex flex-col gap-4 border-t border-white/[0.06] px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/40 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-      <span>AiAgentZoo · 2026 · MIT</span>
+      <span>ZOOAI AGENCY · 2026 · MIT</span>
       <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${link}`}>
           <GitHubIcon size={14} />
