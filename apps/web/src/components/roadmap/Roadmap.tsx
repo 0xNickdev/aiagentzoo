@@ -239,23 +239,35 @@ export default function Roadmap() {
   const activeIndex = active ? MILESTONES.findIndex((m) => m.id === active) : -1;
   const activeM = activeIndex >= 0 ? MILESTONES[activeIndex]! : null;
 
-  // The video loads only as the roadmap approaches, and pauses when it leaves.
+  // The video loads only as the roadmap approaches, plays while it is on screen and pauses when it leaves.
+  const [inView, setInView] = useState(false);
   useEffect(() => {
     const el = section.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        const v = video.current;
-        if (entry?.isIntersecting) {
-          setNear(true);
-          if (v && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) void v.play().catch(() => undefined);
-        } else v?.pause();
+        const on = !!entry?.isIntersecting;
+        setInView(on);
+        if (on) setNear(true);
       },
       { rootMargin: "300px" },
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  useEffect(() => {
+    const v = video.current;
+    if (!v || !near) return;
+    if (!inView || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      v.pause();
+      return;
+    }
+    // play() must come after the source is attached; retry once the data is there.
+    const play = () => void v.play().catch(() => undefined);
+    play();
+    v.addEventListener("canplay", play, { once: true });
+    return () => v.removeEventListener("canplay", play);
+  }, [near, inView]);
 
   const related = useMemo(() => {
     if (!activeM) return new Set<string>();
@@ -309,6 +321,7 @@ export default function Roadmap() {
             muted
             loop
             playsInline
+            autoPlay
             preload="none"
             aria-hidden
             src={near ? (narrow ? VIDEO_MOBILE : VIDEO_DESKTOP) : undefined}
