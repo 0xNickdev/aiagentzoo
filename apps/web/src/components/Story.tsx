@@ -1,4 +1,4 @@
-import { CYCLE, DONTS, NEXT, SHIPPED, TOKEN } from "../data";
+import { CYCLE, DONTS, TOKEN } from "../data";
 import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
@@ -51,41 +51,6 @@ export function Token() {
           ))}
         </ul>
       </Reveal>
-    </Section>
-  );
-}
-
-export function Roadmap() {
-  return (
-    <Section id="roadmap" backdrop={{ src: "/backdrops/roadmap.webp", tint: "120,145,175", glowAt: "50% 70%" }}>
-      <SectionHead eyebrow="Roadmap" title={["A living network first,", "the token second"]} text="Everything under Shipped runs in production today and can be checked against the live nodes." />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Reveal className="rounded-3xl bg-black/45 p-6 ring-1 ring-white/10 backdrop-blur-md sm:p-8">
-          <p className="font-mono text-[11px] text-emerald-200/80">● Shipped · October 2026</p>
-          <ul className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
-            {SHIPPED.map((r) => (
-              <li key={r.title}>
-                <h3 className="font-display flex items-center gap-2 text-lg">
-                  <span className="text-emerald-200/80">✓</span>
-                  {r.title}
-                </h3>
-                <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{r.text}</p>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-        <Reveal delay={0.1} className="rounded-3xl bg-black/30 p-6 ring-1 ring-white/10 backdrop-blur-md sm:p-8">
-          <p className="font-mono text-[11px] text-white/55">○ Next · Q4 2026</p>
-          <ul className="mt-5 grid gap-5">
-            {NEXT.map((r) => (
-              <li key={r.title}>
-                <h3 className="font-display text-lg">{r.title}</h3>
-                <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{r.text}</p>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-      </div>
     </Section>
   );
 }

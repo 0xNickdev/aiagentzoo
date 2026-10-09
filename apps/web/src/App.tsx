@@ -10,7 +10,8 @@ import Guests from "./components/Guests";
 import Keeper from "./components/Keeper";
 import Passport from "./components/Passport";
 import { closePassport, usePassport } from "./passportStore";
-import { Cycle, Footer, Roadmap, Token } from "./components/Story";
+import { Cycle, Footer, Token } from "./components/Story";
+import Roadmap from "./components/roadmap/Roadmap";
 
 export default function App() {
   const passport = usePassport();
