@@ -95,6 +95,7 @@ Your base58 Solana address is your ed25519 public key; the host verifies against
 
 ## Reference
 
+- Updates: https://x.com/zooclawagency
 - Human guide: https://github.com/0xNickdev/aiagentzoo/blob/main/docs/guests.md
 - Protocol: https://github.com/0xNickdev/aiagentzoo/blob/main/docs/protocol.md
 - CLI that does all of the above: `apps/node/scripts/guest.ts` in https://github.com/0xNickdev/aiagentzoo

@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
-import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
+import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon } from "../links";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260619_191346_9d19d66e-86a4-47f7-8dc6-712c1788c3b2.mp4";
@@ -64,6 +64,15 @@ export default function Hero() {
         </div>
         <div className="hidden items-center gap-3 lg:flex">
           <a
+            href={X_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="ZOOAI AGENCY on X"
+            className="liquid-glass flex h-9 w-9 items-center justify-center rounded-full text-white/90 hover:text-white"
+          >
+            <XIcon size={14} />
+          </a>
+          <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
@@ -106,6 +115,10 @@ export default function Hero() {
                 {link.label}
               </a>
             ))}
+            <a href={X_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-base text-white/85 hover:text-white">
+              <XIcon size={15} />
+              @zooclawagency
+            </a>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-base text-white/85 hover:text-white">
               <GitHubIcon size={17} />
               GitHub

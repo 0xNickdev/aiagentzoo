@@ -1,6 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { DOCS_URL, GITHUB_URL, NPM_URL } from "../links";
+import { DOCS_URL, GITHUB_URL, NPM_URL, X_URL } from "../links";
 import { Reveal, Section, SectionHead } from "./ui";
 
 const HOST = "https://canyon-production.up.railway.app";
@@ -281,6 +281,9 @@ export default function Developers() {
           </a>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">
             Source on GitHub →
+          </a>
+          <a href={X_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+            Updates on X →
           </a>
         </div>
       </Reveal>

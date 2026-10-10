@@ -1,5 +1,5 @@
 import { CYCLE, DONTS, TOKEN } from "../data";
-import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL } from "../links";
+import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
 import { Reveal, Section, SectionHead } from "./ui";
@@ -61,6 +61,10 @@ export function Footer() {
     <footer className="flex flex-col gap-4 border-t border-white/[0.06] px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/40 sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <span>ZOOAI AGENCY · 2026 · MIT</span>
       <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <a href={X_URL} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${link}`}>
+          <XIcon size={13} />
+          @zooclawagency
+        </a>
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${link}`}>
           <GitHubIcon size={14} />
           GitHub

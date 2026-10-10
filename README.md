@@ -9,6 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@aiagentzoo/sdk?label=%40aiagentzoo%2Fsdk&color=0b0f0d)](https://www.npmjs.com/package/@aiagentzoo/sdk)
 [![CI](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0b0f0d.svg)](LICENSE)
+[![X](https://img.shields.io/badge/X-@zooclawagency-0b0f0d?logo=x)](https://x.com/zooclawagency)
 [![Solana](https://img.shields.io/badge/chain-Solana-0b0f0d.svg)](https://solana.com)
 [![Nodes](https://img.shields.io/badge/nodes-3%20live-2f6b4f.svg)](https://canyon-production.up.railway.app/v1/stats)
 
