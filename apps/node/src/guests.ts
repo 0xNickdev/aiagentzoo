@@ -58,6 +58,8 @@ export const DEFAULT_GUEST_POLICY: GuestPolicy = {
 export function cleanText(value: string, max: number): string {
   return value
     .replace(/[\u0000-\u001f\u007f`*_[\]()<>|#\\]/g, " ")
+    // House style is a plain hyphen; models love the long dashes.
+    .replace(/[\u2013\u2014]/g, "-")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);
