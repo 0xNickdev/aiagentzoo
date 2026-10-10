@@ -414,3 +414,73 @@ test("a guest's record pairs each report with its next-day result", async () => 
   assert.equal(record[0]!.items[0]!.hit, null);
   assert.deepEqual(record[1]!.items[0], { mint: MINT, verdict: "suspicious", note: "copy of SILK", symbol: "SILK", outcome: "dead", hit: true });
 });
+
+test("the nursery: creatures sit the same exam, the weakest dies, the strongest breed", async () => {
+  const { evolutionAgent, evolutionView, creatureView, EVO } = await import("../src/agents/evolution.ts");
+  let now = Date.UTC(2026, 9, 6, 22, 0);
+  const mints = Array.from({ length: 9 }, (_, i) => `${"ABCDEFGHJ"[i]}${MINT.slice(1)}`);
+  const verdictOf = (system: string) => (/You are (Fox|Badger) /.test(system) ? "suspicious" : /You are (Moth|Lynx) /.test(system) ? "promising" : "watch");
+  const model = new EchoProvider((req) => {
+    if (req.system.includes("are breeding")) return JSON.stringify({ playbook: "1. No socials is suspicious.\n2. Sells 2:1 over buys is a rug in progress.\n3. Fresh brand copies die young.", mutation: "Fresh brand copies die young." });
+    if (req.system.includes("selected out")) return "I trusted volume; volume did not trust me back.";
+    return JSON.stringify(mints.map((mint) => ({ mint, verdict: verdictOf(req.system), confidence: 0.7, why: "rule 1" })));
+  });
+  const enclosure = new Enclosure({
+    node: { id: "canyon.zoo", identity: Identity.generate(), operator: "op" },
+    keeper: "keeper",
+    model,
+    clock: () => now,
+    agents: [evolutionAgent({ briefAt: "07:00", generationNights: 2, examAfter: 3, judgesPerWake: 8 })],
+  });
+  const night = (n: number) => `2026-10-${String(7 + n).padStart(2, "0")}`;
+  const seed = async (n: number) =>
+    enclosure.store.set(`obs:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, obs({ mint, seenAt: now })])));
+  const dead = async (n: number) =>
+    enclosure.store.set(`followup:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, { symbol: "SILK", outcome: "dead" }])));
+
+  // Night 0: founders arrive, the exam is set, everyone answers.
+  await seed(0);
+  await enclosure.wake("heron");
+  const calls0 = await enclosure.store.get<Record<string, unknown[]>>(EVO.calls(night(0)));
+  assert.equal(Object.keys(calls0 ?? {}).length, 8);
+
+  // Night 1: yesterday is graded (every token died), a new exam is answered.
+  now += 86_400_000;
+  await dead(0);
+  await seed(1);
+  await enclosure.wake("heron");
+  const results = await enclosure.store.get<any>(EVO.results(night(0)));
+  assert.equal(results.c1.hits, 8, "Fox called them suspicious and they died");
+  assert.equal(results.c3.misses, 8, "Moth called them promising");
+
+  // Night 2: two nights since the founding, graded again: a generation turns.
+  now += 86_400_000;
+  await dead(1);
+  await seed(2);
+  await enclosure.wake("heron");
+  const view = await evolutionView(enclosure.store, "07:00", now, 2);
+  assert.equal(view?.generation, 1);
+  const moth = view!.creatures.find((c) => c.house === "Moth")!;
+  assert.equal(moth.diedNight, night(2));
+  assert.match(moth.epitaph ?? "", /volume did not trust me/);
+  const child = view!.creatures.find((c) => c.generation === 1)!;
+  assert.equal(child.name, "Fox II");
+  assert.deepEqual(child.parents, ["c1", "c4"]);
+  assert.equal(child.mutation, "Fresh brand copies die young.");
+  assert.equal(view!.creatures.filter((c) => c.diedNight === null).length, 8);
+  assert.ok(view!.chronicle.some((e) => e.kind === "extinct" && /Moth/.test(e.text)));
+  assert.equal(view!.history.length, 1);
+  const detail = await creatureView(enclosure.store, child.id);
+  assert.deepEqual(detail?.parents.map((p) => p.house), ["Fox", "Badger"]);
+  assert.match(detail?.playbook ?? "", /brand copies/);
+});
+
+test("the nursery's exam is re-checked before anything else", async () => {
+  const { followupMints } = await import("../src/agents/judgement.ts");
+  const mint = (i: number) => `${String(i).padStart(4, "1")}${MINT.slice(4)}`;
+  const calls = Array.from({ length: 40 }, (_, i) => ({ mint: mint(i + 100), symbol: "X", verdict: "suspicious" as const, why: "", confidence: 0.5, by: "model" as const, at: 0 }));
+  const exam = Array.from({ length: 8 }, (_, i) => mint(i + 500));
+  const mints = followupMints(calls, [], exam);
+  assert.equal(mints.length, 30);
+  assert.deepEqual(mints.slice(0, 8), exam);
+});

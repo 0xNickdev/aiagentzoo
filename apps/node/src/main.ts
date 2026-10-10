@@ -87,7 +87,7 @@ const server = createNodeServer({
   passports: await PassportIndex.build(enclosure),
   briefs: await BriefIndex.build(enclosure),
   guests,
-  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests) } : {}),
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500 } } : {}),
   visitor: {
     agents: visitorAgents,

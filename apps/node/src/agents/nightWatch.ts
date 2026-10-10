@@ -9,6 +9,7 @@ import {
   DEFAULT_PLAYBOOK,
   followupMints,
   judgeSystem,
+  outcomeOf,
   parseCalls,
   type Playbook,
   previousNight,
@@ -18,6 +19,7 @@ import {
   scoreNight,
   VERDICTS,
 } from "./judgement.ts";
+import { EVO, type EvolutionConfig, type Exam, evolutionAgent, FOLLOWUP, type Followup } from "./evolution.ts";
 
 /**
  * The Night Watch: four species on three nodes assemble the Morning Brief
@@ -45,6 +47,8 @@ export interface NightWatchConfig {
   obsCap?: number;
   /** Where the archivist writes the brief markdown, if anywhere. */
   onBrief?: (id: string, markdown: string) => void | Promise<void>;
+  /** The nursery on the canyon: its pacing, or false to leave it out. */
+  evolution?: false | Omit<EvolutionConfig, "briefAt">;
 }
 
 export interface Observation {
@@ -464,6 +468,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
         score = scoreNight(yesterday, pastCalls, pastReports, items);
         await ctx.state.set(`score:${yesterday}`, score);
+        // Keep what the re-check found, so others who judged these tokens (the nursery) can be scored too.
+        await ctx.state.set(FOLLOWUP(yesterday), Object.fromEntries(items.map((o) => [o.mint, { symbol: o.symbol, outcome: outcomeOf(o) }])) satisfies Followup);
         await ctx.trace("calls.scored", { night: yesterday, hits: score.hits, misses: score.misses, accuracy: score.accuracy, guests: score.guests });
         // Guests earn a track record from the same checks: one ledger of hits and misses per guest.
         const ledger = (await ctx.state.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
@@ -524,7 +530,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
       if ((await ctx.state.get<string>("beaver:followedUp")) !== yesterday) {
         const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
         const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
-        const mints = followupMints(pastCalls, pastReports);
+        const exam = (await ctx.state.get<Exam>(EVO.exam(yesterday)))?.tokens.map((t) => t.mint) ?? [];
+        const mints = followupMints(pastCalls, pastReports, exam);
         await ctx.state.set("beaver:followedUp", yesterday);
         if (mints.length) await ctx.signal(hedgehog, "followup.check", { mints });
       }
@@ -599,7 +606,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
       await cfg.onBrief?.(`morning-brief-${night}`, markdown);
     },
   });
-  return [beaver, tortoise];
+  // The nursery lives on the canyon too: it needs the night's observations and the beaver's re-checks.
+  return cfg.evolution === false ? [beaver, tortoise] : [beaver, tortoise, evolutionAgent({ briefAt: cfg.briefAt, ...cfg.evolution })];
 }
 
 export function nightWatch(cfg: NightWatchConfig): AgentDefinition[] {

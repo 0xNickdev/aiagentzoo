@@ -5,6 +5,7 @@ import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
 import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
+import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { type GuestHouse, isGuestNode } from "./guests.ts";
 
 export interface ServerOptions {
@@ -27,6 +28,8 @@ export interface ServerOptions {
   guests?: GuestHouse;
   /** Live numbers for the site, served at GET /v1/stats. */
   stats?: () => Promise<unknown>;
+  /** The nursery, served at GET /v1/evolution on the node that keeps it. */
+  evolution?: { briefAt: string };
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -48,7 +51,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -208,6 +211,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
         const scores = (await enclosure.store.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
         return json(res, 200, { policy: guests.policy, guests: guests.list().map((g) => ({ ...g, score: scores[g.name] ?? null })) });
+      }
+      if (req.method === "GET" && path === "/v1/evolution") {
+        if (!evolution) return json(res, 404, { error: "no nursery on this node" });
+        const view = await evolutionView(enclosure.store, evolution.briefAt);
+        return view ? json(res, 200, view) : json(res, 404, { error: "no nursery on this node" });
+      }
+      const creatureOf = /^\/v1\/evolution\/(c\d{1,6})$/.exec(path);
+      if (req.method === "GET" && creatureOf) {
+        const view = await creatureView(enclosure.store, creatureOf[1]!);
+        return view ? json(res, 200, view) : json(res, 404, { error: "no such creature" });
       }
       const reportsOf = /^\/v1\/guests\/([a-z0-9-]+)\/reports$/.exec(path);
       if (req.method === "GET" && reportsOf) {

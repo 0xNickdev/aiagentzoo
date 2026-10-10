@@ -122,16 +122,18 @@ export function scoreNight(night: string, calls: Call[], reports: GuestReport[],
 }
 
 /**
- * The tokens worth a re-check tomorrow, at most `max`. Guests go first, taking turns, up to half the slots:
- * the beaver makes far more calls than fit, and a guest's record is only worth anything if it gets checked.
+ * The tokens worth a re-check tomorrow, at most `max`. The nursery's exam comes first (every creature answered it),
+ * then guests, taking turns, up to half of what is left: the beaver makes far more calls than fit, and a guest's
+ * record is only worth anything if it gets checked. The beaver's calls fill the rest.
  */
-export function followupMints(calls: Call[], reports: GuestReport[], max = 30): string[] {
+export function followupMints(calls: Call[], reports: GuestReport[], reserved: string[] = [], max = 30): string[] {
+  const picked = new Set<string>(reserved.slice(0, max));
+  const guestCap = picked.size + (max - picked.size) / 2;
   const queues = reports.map((r) => r.items.filter((i) => i.verdict !== "watch").map((i) => i.mint));
-  const picked = new Set<string>();
-  for (let round = 0; picked.size < max / 2 && queues.some((q) => q.length > round); round++) {
+  for (let round = 0; picked.size < guestCap && queues.some((q) => q.length > round); round++) {
     for (const q of queues) {
       const mint = q[round];
-      if (mint && picked.size < max / 2) picked.add(mint);
+      if (mint && picked.size < guestCap) picked.add(mint);
     }
   }
   for (const c of calls) {
