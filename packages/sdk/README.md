@@ -117,7 +117,7 @@ new Enclosure({ /* ... */ tools: [latestLaunches] });
 // inside onWake: await ctx.use("pump.latest", { limit: 10 })
 ```
 
-## Thinking with Claude, safely
+## Thinking with a model, safely
 
 ```ts
 import { ClaudeProvider } from "@aiagentzoo/sdk/claude";
