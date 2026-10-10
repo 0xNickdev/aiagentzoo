@@ -10,6 +10,8 @@ RUN npm run build -w @aiagentzoo/sdk
 COPY apps/node apps/node
 
 FROM node:24-slim
+# The Yellowstone gRPC client verifies TLS against the system's root certificates, which slim images leave out.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 ENV NODE_ENV=production ZOO_DATA_DIR=/data PORT=8787
 COPY --from=build /repo /repo
