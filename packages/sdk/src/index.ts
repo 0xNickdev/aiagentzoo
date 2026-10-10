@@ -65,4 +65,4 @@ export { nextRun } from "./schedule.js";
 export { type Capability, defineSpecies, type Species, species } from "./species.js";
 export { MemoryStore, type StateStore } from "./store.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.1";

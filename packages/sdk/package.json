@@ -1,11 +1,11 @@
 {
   "name": "@aiagentzoo/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "SDK for ZOOAI AGENCY: define species and agents, run enclosures with budgets, signed signals and a hash-chained public log.",
   "license": "MIT",
   "type": "module",
   "author": "ZOOAI AGENCY",
-  "homepage": "https://github.com/0xNickdev/aiagentzoo#readme",
+  "homepage": "https://zooaiagency.com/docs/sdk",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/0xNickdev/aiagentzoo.git",
