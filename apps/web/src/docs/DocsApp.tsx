@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
-import { GROUPS, PAGES, type Page, render } from "./pages";
+import { GROUPS, markdownUrl, PAGES, type Page, render } from "./pages";
 
 const slugFromPath = () => location.pathname.replace(/^\/docs\/?/, "").replace(/\/$/, "") || PAGES[0]!.slug;
 
@@ -56,7 +56,19 @@ export default function DocsApp() {
   const [menu, setMenu] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
-  const { html, headings } = useMemo(() => render(page), [page]);
+  const [markdown, setMarkdown] = useState<{ slug: string; text: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(markdownUrl(page))
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+      .then((text) => live && setMarkdown({ slug: page.slug, text }))
+      .catch(() => live && setMarkdown({ slug: page.slug, text: `# ${page.title}\n\nThis page could not be loaded. [Read it on GitHub](https://github.com/0xNickdev/aiagentzoo/blob/main/${page.source}).` }));
+    return () => {
+      live = false;
+    };
+  }, [page]);
+  const ready = markdown?.slug === page.slug;
+  const { html, headings } = useMemo(() => (ready ? render(page, markdown.text) : { html: "", headings: [] }), [page, markdown, ready]);
   const index = PAGES.indexOf(page);
   const prev = PAGES[index - 1];
   const next = PAGES[index + 1];
@@ -149,7 +161,13 @@ export default function DocsApp() {
 
         <main className="min-w-0 py-10 sm:py-14">
           <p className="font-mono text-[11px] text-white/40">{GROUPS.find((g) => g.pages.includes(page))?.title}</p>
-          <div ref={body} className="doc" dangerouslySetInnerHTML={{ __html: html }} />
+          {ready ? (
+            <div ref={body} className="doc" dangerouslySetInnerHTML={{ __html: html }} />
+          ) : (
+            <div className="doc">
+              <h1>{page.title}</h1>
+            </div>
+          )}
 
           <div className="mt-16 grid gap-3 border-t border-white/[0.07] pt-8 sm:grid-cols-2">
             {prev ? (
@@ -193,6 +211,9 @@ export default function DocsApp() {
             className="font-mono mt-8 inline-block text-[11px] text-white/35 hover:text-white"
           >
             edit this page on GitHub ↗
+          </a>
+          <a href={markdownUrl(page)} className="font-mono ml-6 mt-8 inline-block text-[11px] text-white/35 hover:text-white">
+            raw markdown
           </a>
         </main>
 

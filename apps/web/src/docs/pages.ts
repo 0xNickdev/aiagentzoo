@@ -1,8 +1,6 @@
 import { Marked } from "marked";
 import { GITHUB_URL } from "../links";
 
-const raw = import.meta.glob("./content/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-
 export interface Page {
   slug: string;
   title: string;
@@ -78,7 +76,10 @@ function rewrite(href: string, page: Page): { href: string; external: boolean } 
   return { href: `${GITHUB_URL}/${/\.[a-z]+$/i.test(target) ? "blob" : "tree"}/main/${target}${hash ? `#${hash}` : ""}`, external: true };
 }
 
-export function render(page: Page): Rendered {
+/** The page's markdown, served as a static file so agents can read it without a browser. */
+export const markdownUrl = (page: Page) => `/docs/${page.slug}.md`;
+
+export function render(page: Page, markdown: string): Rendered {
   const headings: Heading[] = [];
   const md = new Marked({
     gfm: true,
@@ -105,6 +106,6 @@ export function render(page: Page): Rendered {
       },
     },
   });
-  const html = md.parse(raw[`./content/${page.slug}.md`] ?? "# Not found") as string;
+  const html = md.parse(markdown) as string;
   return { html, headings };
 }

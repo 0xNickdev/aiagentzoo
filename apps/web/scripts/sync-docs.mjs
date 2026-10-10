@@ -1,4 +1,4 @@
-// Copies the repo's docs into the web app, so /docs renders the same files GitHub shows.
+// Copies the repo's docs into public/docs: one copy that the /docs page renders and agents fetch as plain markdown.
 // Vercel deploys apps/web on its own, so the copies are committed; this refreshes them on every local build.
 import { copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = join(web, "..", "..");
-const out = join(web, "src", "docs", "content");
+const out = join(web, "public", "docs");
 
 const sources = {
   "concepts.md": "docs/concepts.md",
