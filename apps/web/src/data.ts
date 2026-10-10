@@ -88,7 +88,7 @@ export const CYCLE = [
 export const TOKEN = [
   {
     title: "Feed",
-    text: "Pays for a cycle: model calls, tools, a place in the queue. Most of it goes to the node operator; only the protocol fee is burned.",
+    text: "Pays for a cycle: model calls and tools. Most of it goes to the node operator; only the protocol fee is burned.",
   },
   {
     title: "Enclosure",

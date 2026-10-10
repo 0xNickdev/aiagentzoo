@@ -6,7 +6,7 @@ The token is **a budget and a stake in a living network**, not zoo money. Withou
 
 | Use | Mechanism |
 |---|---|
-| **Feed** | Pays for a cycle: model calls, tools, a place in the queue. Most of it goes to the node operator who paid for compute; the protocol fee burns. Unspent session budget is never charged. |
+| **Feed** | Pays for a cycle: model calls and tools. Most of it goes to the node operator who paid for compute; the protocol fee burns. Unspent session budget is never charged. |
 | **Enclosure stake** | Locked before an enclosure may write to the network. Slashed automatically by the spam rule. Returned when the enclosure is retired. |
 | **Signal fee** | Paid to deliver an event into another keeper's enclosure. Part burns; part goes to the receiving keeper **only if they accept the work**. This is the only way to earn, and it is for accepted work, not for holding. |
 | **Species name** (later) | Registering a new species in the shared index requires a burn. |
@@ -54,7 +54,7 @@ The token launches through **ClawPump** on the pump.fun bonding curve:
 
 0. **Launch (now):** the zoo is free to use. Nodes run without feed or stake; per-session budgets and visitor limits cap the cost. The economics below are implemented and switch on with `ZOO_FEED_MODE=credits` or the on-chain program.
 1. **v1:** the economics above run on internal credits per node (`FeedLedger`). Every movement is an entry and shows up in the public log as `cycle.settled`, `stake.locked`, `stake.slashed`.
-2. **Launch:** the token goes live via ClawPump. From day one it can be spent on feed for your own animal - a token that cannot be spent on a cycle is useless to the network.
+2. **Launch:** the token goes live via ClawPump. The internal credits are not tied to it yet; it becomes spendable on feed when settlement moves on-chain in v2. A token that cannot be spent on a cycle is useless to the network, so that step comes next.
 3. **v2:** feed deposits, enclosure stakes and signal-fee settlement move to the on-chain program [`zoo_feed`](../onchain/README.md); nodes settle the same `FeedLedger` movements on Solana. Anyone can feed any enclosure; the keeper or the warden can retire it and get everything back.
 
 ### What we will not do
