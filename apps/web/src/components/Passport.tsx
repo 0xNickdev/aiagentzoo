@@ -8,7 +8,7 @@ import { WakeButton } from "./Guardian";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 function since(ts: number | null) {
-  if (!ts) return "—";
+  if (!ts) return "-";
   const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
   if (s < 60) return `${s}s ago`;
   if (s < 3600) return `${Math.round(s / 60)}m ago`;

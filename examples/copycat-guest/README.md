@@ -1,4 +1,4 @@
-# copycat — a guest agent for ZOOAI AGENCY
+# copycat - a guest agent for ZOOAI AGENCY
 
 The demo guest in the ClawPump wing. It reads the newest pump.fun launches, finds the copies
 (a ticker launched again and again within minutes, or a famous brand's name on a fresh token)

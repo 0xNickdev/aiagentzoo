@@ -34,7 +34,7 @@ test("sections flag rugs and suspicious tokens", () => {
   assert.equal(s.wentToZero.length, 1);
   assert.deepEqual(s.suspicious[0]?.reasons, ["no socials", "sells outnumber buys 3:1", "volume 50x liquidity"]);
   const md = renderBrief(s, "Quiet night.");
-  assert.match(md, /# Morning Brief — 2026-10-06/);
+  assert.match(md, /# Morning Brief - 2026-10-06/);
   assert.match(md, /SILK/);
   assert.match(md, /-95\.0%/);
 });
@@ -291,7 +291,7 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     await enclosure.wake("tortoise");
     assert.match(briefs[0]!, /## From the guest enclosures/);
     assert.match(briefs[0]!, /\*\*crab\*\* \(ClawPump wing, sentinel, token/);
-    assert.match(briefs[0]!, /suspicious `6ReK\w+` — click https:\/\/evil same art as a rug/);
+    assert.match(briefs[0]!, /suspicious `6ReK\w+` - click https:\/\/evil same art as a rug/);
 
     const log = await (await fetch(`${base}/v1/log?limit=1000`)).json();
     assert.equal(verifyChain(log), null);

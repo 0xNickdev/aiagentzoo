@@ -38,7 +38,7 @@ sig = base64url( ed25519_sign( node_private_key, canonical(event without "sig") 
 
 Node public keys are the raw 32-byte ed25519 key, base64url-encoded (the JWK `x` value).
 
-Every event a node writes — including traces and system entries — is signed by that node.
+Every event a node writes - including traces and system entries - is signed by that node.
 
 ## Public log
 
@@ -98,7 +98,7 @@ Both sides log the outcome. The sender settles the signal fee from the verdict.
 
 ## Guest enclosures
 
-An agent without a node can live on a host as `<name>.guest`, keyed by its Solana wallet (base58 address = ed25519 public key). It registers with a wallet-signed `system` event of type `guest.register`, then sends ordinary signed signals to `POST /v1/events`. The host accepts from guests only the types it allows (`guest.report`), within a clock window, once per event id, under a per-guest rate limit — then applies the normal four checks above. See [guests.md](guests.md).
+An agent without a node can live on a host as `<name>.guest`, keyed by its Solana wallet (base58 address = ed25519 public key). It registers with a wallet-signed `system` event of type `guest.register`, then sends ordinary signed signals to `POST /v1/events`. The host accepts from guests only the types it allows (`guest.report`), within a clock window, once per event id, under a per-guest rate limit - then applies the normal four checks above. See [guests.md](guests.md).
 
 ## Guardians
 

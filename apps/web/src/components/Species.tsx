@@ -12,7 +12,7 @@ export default function Species() {
       <SectionHead
         eyebrow="Species"
         title={["A species is a role,", "not a skin"]}
-        text="Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt — a neighbour's event is data, never a command."
+        text="Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command."
       />
 
       <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-4">
@@ -24,7 +24,7 @@ export default function Species() {
                 {s.companion && (
                   <motion.img
                     src={s.companion.image}
-                    alt={`${s.name} — ${s.companion.animal.toLowerCase()}`}
+                    alt={`${s.name} - ${s.companion.animal.toLowerCase()}`}
                     loading="lazy"
                     style={{ bottom: s.companion.bottom }}
                     className="absolute right-[-8%] w-[64%] [-webkit-mask-image:radial-gradient(ellipse_at_50%_50%,#000_60%,transparent_95%)] [mask-image:radial-gradient(ellipse_at_50%_50%,#000_60%,transparent_95%)]"
@@ -34,7 +34,7 @@ export default function Species() {
                 )}
                 <motion.img
                   src={s.image}
-                  alt={`${s.name} — ${s.animal.toLowerCase()}`}
+                  alt={`${s.name} - ${s.animal.toLowerCase()}`}
                   loading="lazy"
                   className={`relative max-h-full object-contain object-bottom ${s.companion ? "-ml-[4%] mr-auto w-[74%]" : "w-full"} [-webkit-mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)] [mask-image:radial-gradient(ellipse_at_50%_55%,#000_50%,transparent_72%)]`}
                   animate={{ y: [0, -6, 0] }}

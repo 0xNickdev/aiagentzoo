@@ -77,7 +77,7 @@ export const CYCLE = [
   },
   {
     title: "Step",
-    text: "One cycle inside the session budget. When the budget runs out, the runtime simply stops the animal — no penalties needed.",
+    text: "One cycle inside the session budget. When the budget runs out, the runtime simply stops the animal - no penalties needed.",
   },
   {
     title: "Trace",
@@ -96,7 +96,7 @@ export const TOKEN = [
   },
   {
     title: "Signal",
-    text: "A fee for delivering an event into someone else's enclosure. Part is burned, part goes to the receiving keeper — only if they accept the work.",
+    text: "A fee for delivering an event into someone else's enclosure. Part is burned, part goes to the receiving keeper - only if they accept the work.",
   },
   {
     title: "Species name",

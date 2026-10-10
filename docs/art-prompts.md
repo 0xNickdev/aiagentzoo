@@ -32,11 +32,11 @@ subject in lower two thirds, empty dark negative space above
 
 ---
 
-## 1. Дозорный — сова
+## 1. Дозорный - сова
 
 ```
 A great grey owl perched on a twisted moss-covered driftwood branch, head turned three-quarters,
-wide alert eyes glowing faint amber — the only warm color in the frame — scanning the darkness.
+wide alert eyes glowing faint amber - the only warm color in the frame - scanning the darkness.
 A perfectly clear glass sphere rests on the branch beside it, reflecting the owl's face in miniature.
 Feathers catch a thin silver rim light. Pitch-black void background, low-key studio lighting,
 single soft rim light from upper left, muted desaturated palette, cinematic macro photography,
@@ -44,7 +44,7 @@ single soft rim light from upper left, muted desaturated palette, cinematic macr
 vertical 4:5, subject in lower two thirds, empty dark negative space above.
 ```
 
-## 2. Сборщик — ёж
+## 2. Сборщик - ёж
 
 ```
 A small hedgehog walking along a gnarled moss-covered driftwood log, carrying tiny clear glass beads
@@ -56,11 +56,11 @@ single soft rim light from upper left, muted desaturated palette, cinematic macr
 vertical 4:5, subject in lower two thirds, empty dark negative space above.
 ```
 
-## 3. Строитель — бобр
+## 3. Строитель - бобр
 
 ```
 A beaver sitting on a moss-covered driftwood stump, carefully placing a thin peeled twig into
-a small precise geometric lattice structure it is building — clean angles, almost architectural.
+a small precise geometric lattice structure it is building - clean angles, almost architectural.
 A perfectly clear glass sphere is half embedded in the twig structure like a cornerstone.
 Wet fur with a thin silver rim light. Pitch-black void background, low-key studio lighting,
 single soft rim light from upper left, muted desaturated palette, cinematic macro photography,
@@ -68,7 +68,7 @@ single soft rim light from upper left, muted desaturated palette, cinematic macr
 vertical 4:5, subject in lower two thirds, empty dark negative space above.
 ```
 
-## 4. Архивариус — черепаха
+## 4. Архивариус - черепаха
 
 ```
 An ancient tortoise resting on a gnarled moss-covered driftwood root, its weathered shell
@@ -105,7 +105,7 @@ editorial nature documentary, vertical 4:5, subject in lower two thirds, empty d
 
 Общая часть уже вставлена в каждый промпт. Центр делаем спокойным и тёмным, потому что по нему ходят агенты и поверх идут подписи.
 
-### Northern Edge — лесная опушка
+### Northern Edge - лесная опушка
 ```
 Strict top-down aerial view of a small circular patch of night forest edge floating in a pitch-black void,
 the edges dissolve softly into pure black. Dark mossy forest floor, scattered ferns, fallen gnarled branches,
@@ -114,7 +114,7 @@ Calm uncluttered center, details concentrated toward the rim. Photorealistic min
 macro tilt-shift, high detail, no horizon, no sky, square 1:1.
 ```
 
-### Quiet Marsh — болото
+### Quiet Marsh - болото
 ```
 Strict top-down aerial view of a small circular marsh floating in a pitch-black void,
 the edges dissolve softly into pure black. Still black water pools with a faint reflection of the moon,
@@ -124,7 +124,7 @@ details concentrated toward the rim. Photorealistic miniature diorama, macro til
 high detail, no horizon, no sky, square 1:1.
 ```
 
-### Stone Canyon — каньон
+### Stone Canyon - каньон
 ```
 Strict top-down aerial view of a small circular stone canyon floating in a pitch-black void,
 the edges dissolve softly into pure black. Layered weathered sandstone ridges, a dry winding riverbed
@@ -195,7 +195,7 @@ muted desaturated palette, photorealistic macro, square 1:1
 
 # Фоны секций и широкие полосы
 
-Задача — убрать «голую черноту», сохранив кино-эстетику видео: ночь, мох, коряги, стеклянные сферы, лунный свет. Тона — глубокий мох, сине-серый, тёплый янтарь, **не чистый чёрный**.
+Задача - убрать «голую черноту», сохранив кино-эстетику видео: ночь, мох, коряги, стеклянные сферы, лунный свет. Тона - глубокий мох, сине-серый, тёплый янтарь, **не чистый чёрный**.
 
 Сайт сам растворяет края картинок в странице и затемняет центр под текстом, так что края кадра могут быть насыщенными.
 
@@ -215,7 +215,7 @@ muted desaturated palette, photorealistic macro, square 1:1
 pure black background, flat black, text, letters, logo, watermark, UI, frame, border, people, buildings, cartoon, illustration, anime, 3d render look, plastic, oversaturated, neon, HDR halos, lens flare spam, harsh daylight, blurry, low detail, jpeg artifacts
 ```
 
-## 1. species-base — ночная поляна (16:9)
+## 1. species-base - ночная поляна (16:9)
 ```
 Wide cinematic establishing shot of an ancient forest clearing at night, eye-level, 35mm lens.
 Gnarled moss-covered driftwood and fallen logs frame the left and right thirds; carpets of deep green moss,
@@ -227,7 +227,7 @@ The central third is calm, softer and darker for text overlay. Photorealistic, e
 fine natural texture, high dynamic range in the shadows, 16:9.
 ```
 
-## 2. species-reveal — тот же кадр, «скрытая жизнь» (16:9)
+## 2. species-reveal - тот же кадр, «скрытая жизнь» (16:9)
 **Генерировать с картинкой №1 как референсом (image-to-image, сила изменения ~0.45–0.55), чтобы композиция совпала до пикселя:** эффект строится на том, что под курсором «проявляется» второй слой.
 ```
 Exactly the same forest clearing, same camera, same composition and same objects as the reference image,
@@ -239,7 +239,7 @@ restrained, no neon, no fantasy creatures, deep moss-green and slate-blue palett
 central third calmer for text overlay, 16:9.
 ```
 
-## 3. watch — долина с тремя вольерами (16:9)
+## 3. watch - долина с тремя вольерами (16:9)
 ```
 High aerial view at night of a misty forested valley, looking down at a 60-degree angle.
 Three distinct clearings far apart: on the left a mossy forest edge, top right a still marsh with black water
@@ -249,7 +249,7 @@ and blue-grey moonlight, a faint warm glow in each clearing. Calm, vast, cinemat
 low-contrast centre for UI overlay, photorealistic aerial cinematography, 16:9.
 ```
 
-## 4. cycle — следы на мху (16:9)
+## 4. cycle - следы на мху (16:9)
 ```
 Macro photograph at blue hour of wet emerald moss on an old log. A trail of tiny animal footprints pressed
 into the moss leads from the left edge toward a single perfectly clear glass sphere on the right third,
@@ -259,7 +259,7 @@ Deep moss-green and slate-blue palette, one soft warm highlight inside the spher
 calm darker centre for text, ultra-detailed macro, 100mm macro lens, photorealistic, 16:9.
 ```
 
-## 5. token — сферы с янтарным светом (16:9)
+## 5. token - сферы с янтарным светом (16:9)
 ```
 Close cinematic still life in a mossy stone niche at night: seven perfectly clear glass spheres of different sizes
 resting on velvet moss and weathered stone, each filled with a different amount of warm amber light like stored energy,
@@ -269,7 +269,7 @@ slate-blue shadows, never pure black, calm darker centre for text overlay, shall
 photorealistic, luxurious and restrained, 16:9.
 ```
 
-## 6. roadmap — тропа перед рассветом (16:9)
+## 6. roadmap - тропа перед рассветом (16:9)
 ```
 A narrow winding path through an old forest just before dawn, eye-level, receding into soft fog.
 Along the path, at regular intervals, glass spheres sit on moss-covered stones, each with a faint inner glow,
@@ -278,7 +278,7 @@ turning from deep blue to the first hint of pale gold. Atmospheric perspective, 
 palette warming toward the horizon, never pure black, calm centre for text, photorealistic, cinematic, 35mm, 16:9.
 ```
 
-## 7. strip-nightfall — панорама сумерек (21:9)
+## 7. strip-nightfall - панорама сумерек (21:9)
 ```
 Ultra-wide panoramic shot of a forest canopy at nightfall seen from a ridge: layers of treetops fading into mist,
 the sky a deep gradient from dusky indigo at the top to soft slate-blue near the horizon, a pale moon half-hidden
@@ -287,7 +287,7 @@ Calm, vast, quiet, slow. Deep indigo, slate-blue and moss-green palette, never p
 canopy, horizon slightly below centre, empty calm centre for a headline, photorealistic landscape photography, 21:9.
 ```
 
-## 8. strip-spheres — ряд сфер на коряге (21:9)
+## 8. strip-spheres - ряд сфер на коряге (21:9)
 ```
 Ultra-wide macro panorama along a long moss-covered fallen log at night: a row of perfectly clear glass spheres
 of slightly different sizes resting on the moss, receding into soft focus toward both edges. Each sphere holds

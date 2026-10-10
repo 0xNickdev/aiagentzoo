@@ -56,7 +56,7 @@ export function WakeButton({ agent }: { agent: string }) {
     setState({ text: "Waking…" });
     const result = await wakeAgent(agent, session);
     if (result.ok) {
-      setState({ text: `Woken ${result.by.startsWith("guardian") ? "by you, guardian" : "by you"} — watch the log.`, until: Date.now() + 60_000 });
+      setState({ text: `Woken ${result.by.startsWith("guardian") ? "by you, guardian" : "by you"} - watch the log.`, until: Date.now() + 60_000 });
     } else {
       setState({ text: result.error, until: result.retryAfterMs ? Date.now() + result.retryAfterMs : undefined });
     }

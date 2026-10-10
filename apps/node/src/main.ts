@@ -99,8 +99,8 @@ const server = createNodeServer({
 
 server.listen(config.port, () => {
   console.log(
-    `[${config.id}] ${config.name} listening on :${config.port} — key ${config.identity.publicKey.slice(0, 12)}… — ` +
-      `${config.peers.length} peer(s) — model ${model?.id ?? "none"}`,
+    `[${config.id}] ${config.name} listening on :${config.port} - key ${config.identity.publicKey.slice(0, 12)}… - ` +
+      `${config.peers.length} peer(s) - model ${model?.id ?? "none"}`,
   );
 });
 

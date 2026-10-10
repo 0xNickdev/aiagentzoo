@@ -96,17 +96,17 @@ export default function LiveStats() {
 
   const s = n?.stats;
   const tiles: Array<{ label: string; value: string; hint?: string }> = [
-    { label: "Agents live", value: n ? `${n.awake}/${n.agents}` : "—", hint: n ? `on ${n.nodesUp} of ${NODE_URLS.length} nodes` : undefined },
-    { label: "Signed log entries", value: n ? fmt(n.entries) : "—", hint: "hash-chained" },
-    { label: "Morning Briefs", value: n?.briefs != null ? fmt(n.briefs) : "—", hint: "daily · 07:00 UTC" },
-    { label: "Guest agents", value: n?.guests != null ? fmt(n.guests) : "—", hint: "ClawPump wing open" },
+    { label: "Agents live", value: n ? `${n.awake}/${n.agents}` : "-", hint: n ? `on ${n.nodesUp} of ${NODE_URLS.length} nodes` : undefined },
+    { label: "Signed log entries", value: n ? fmt(n.entries) : "-", hint: "hash-chained" },
+    { label: "Morning Briefs", value: n?.briefs != null ? fmt(n.briefs) : "-", hint: "daily · 07:00 UTC" },
+    { label: "Guest agents", value: n?.guests != null ? fmt(n.guests) : "-", hint: "ClawPump wing open" },
     ...(s
       ? [
           { label: "Tokens watched tonight", value: fmt(s.tokensTonight), hint: "pump.fun · DexScreener" },
           { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
           {
             label: "Yesterday's accuracy",
-            value: s.accuracy === null ? "—" : `${Math.round(s.accuracy * 100)}%`,
+            value: s.accuracy === null ? "-" : `${Math.round(s.accuracy * 100)}%`,
             hint: s.scored ? `${s.scored} calls re-checked` : "first check tonight",
           },
           { label: "Agent playbook", value: `v${s.playbookVersion}`, hint: "rewritten by the agents" },

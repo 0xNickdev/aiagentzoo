@@ -47,7 +47,7 @@ async function loadNodes(): Promise<NodeView[]> {
 }
 
 function inMinutes(ts: number | null): string {
-  if (!ts) return "—";
+  if (!ts) return "-";
   const m = Math.max(0, Math.round((ts - Date.now()) / 60_000));
   if (m === 0) return "now";
   if (m < 60) return `${m}m`;

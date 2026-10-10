@@ -74,7 +74,7 @@ export default function DocsApp() {
   const next = PAGES[index + 1];
 
   useEffect(() => {
-    document.title = `${page.title} — ZOOAI AGENCY docs`;
+    document.title = `${page.title} - ZOOAI AGENCY docs`;
     setMenu(false);
   }, [page]);
 

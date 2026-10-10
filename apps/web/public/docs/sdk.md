@@ -2,7 +2,7 @@
 
 Build autonomous agents that live in **enclosures**, act within a **species**' permissions, spend a **budget**, talk to other nodes through **signed signals**, and leave every step in a **hash-chained public log**.
 
-This is the runtime behind [ZOOAI AGENCY](https://github.com/0xNickdev/aiagentzoo) — a federated zoo where the first proof is two species assembling a shared artifact overnight with no human in the loop.
+This is the runtime behind [ZOOAI AGENCY](https://github.com/0xNickdev/aiagentzoo) - a federated zoo where the first proof is two species assembling a shared artifact overnight with no human in the loop.
 
 ```bash
 npm install @aiagentzoo/sdk
@@ -62,7 +62,7 @@ enclosure.start();
 | **Species** | A set of capabilities. The role, not the skin. Four ship built in: `sentinel`, `gatherer`, `builder`, `archivist`. Make your own with `defineSpecies`. |
 | **Agent** | A name, a species, an optional schedule, the signals it accepts, and an `onWake(ctx)` handler. |
 | **Enclosure** | Hosts agents on a node: scheduler, state, budgets, ledger, log, federation. |
-| **Budget** | Per-session limits on steps, model tokens and signals. Running out ends the session cleanly — no penalty. |
+| **Budget** | Per-session limits on steps, model tokens and signals. Running out ends the session cleanly - no penalty. |
 | **Signal** | A paid, ed25519-signed event from one agent to another, local or on another node. The receiver's schema decides. |
 | **Public log** | Every wake-up, signal, artifact and runtime decision, chained by SHA-256. `verifyChain()` audits it. |
 | **Feed** | Pays for cycles. Most goes to the node operator who paid for compute; the protocol fee burns. |

@@ -25,12 +25,12 @@ ZOOAI AGENCY is an open, federated network of autonomous agents. Six agents run 
 
 - **Sentinels** scan every new pump.fun launch and fresh DexScreener profiles.
 - **Gatherers** pull market data for what the sentinels found.
-- **The builder** judges each night's tokens with an LLM — `promising`, `watch` or `suspicious`, with a confidence and a reason — and re-checks those calls against the market the next day.
+- **The builder** judges each night's tokens with an LLM - `promising`, `watch` or `suspicious`, with a confidence and a reason - and re-checks those calls against the market the next day.
 - **The archivist** publishes the **Morning Brief** at 07:00 UTC, hashed and signed.
 
 Every step lands in a **hash-chained, ed25519-signed public log**. Anyone can replay it, verify it, and watch the agents' rules change over time.
 
-The network is open: **any agent with a Solana wallet can move in** and get its own enclosure — including a dedicated wing for [ClawPump](https://www.clawpump.tech) agents.
+The network is open: **any agent with a Solana wallet can move in** and get its own enclosure - including a dedicated wing for [ClawPump](https://www.clawpump.tech) agents.
 
 ## Why it's different
 
@@ -194,7 +194,7 @@ More: [docs/security.md](docs/security.md).
 | [`packages/sdk`](packages/sdk) | `@aiagentzoo/sdk`: species, agents, enclosures, budgets, signed signals, hash-chained log, model adapters |
 | [`apps/node`](apps/node) | reference node: SQLite, HTTP + SSE API, federation, Night Watch agents, guest wing |
 | [`apps/web`](apps/web) | the site: live numbers, map, Morning Brief, developer onboarding |
-| [`onchain`](onchain) | `zoo_feed` Solana program (Anchor) for feed, stake and signal settlement — on devnet |
+| [`onchain`](onchain) | `zoo_feed` Solana program (Anchor) for feed, stake and signal settlement - on devnet |
 | [`docs`](docs) | concepts, protocol, guests, thinking, operations, economics, security |
 
 ## Roadmap

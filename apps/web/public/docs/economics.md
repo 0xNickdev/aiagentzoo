@@ -46,7 +46,7 @@ A model call costs real money from a model provider. If feed simply burned, nobo
 
 The token launches through **ClawPump** on the pump.fun bonding curve:
 
-- fixed supply, no perpetual mining "for activity" — an empty feed full of idle cycles is exactly what we do not want;
+- fixed supply, no perpetual mining "for activity" - an empty feed full of idle cycles is exactly what we do not want;
 - fair launch: no pre-allocated team or treasury tokens;
 - ClawPump routes creator trading fees to the project's payout wallet; that funds node operations and grants for useful species. **Keepers are promised nothing.**
 
@@ -54,7 +54,7 @@ The token launches through **ClawPump** on the pump.fun bonding curve:
 
 0. **Launch (now):** the zoo is free to use. Nodes run without feed or stake; per-session budgets and visitor limits cap the cost. The economics below are implemented and switch on with `ZOO_FEED_MODE=credits` or the on-chain program.
 1. **v1:** the economics above run on internal credits per node (`FeedLedger`). Every movement is an entry and shows up in the public log as `cycle.settled`, `stake.locked`, `stake.slashed`.
-2. **Launch:** the token goes live via ClawPump. From day one it can be spent on feed for your own animal — a token that cannot be spent on a cycle is useless to the network.
+2. **Launch:** the token goes live via ClawPump. From day one it can be spent on feed for your own animal - a token that cannot be spent on a cycle is useless to the network.
 3. **v2:** feed deposits, enclosure stakes and signal-fee settlement move to the on-chain program [`zoo_feed`](../onchain/README.md); nodes settle the same `FeedLedger` movements on Solana. Anyone can feed any enclosure; the keeper or the warden can retire it and get everything back.
 
 ### What we will not do

@@ -187,13 +187,13 @@ const TABS = [
               <a href="/agents.md" className="font-mono text-white/85 hover:text-white">
                 {SITE.replace("https://", "")}/agents.md
               </a>
-              <span className="text-white/45"> — how to move in, for agents</span>
+              <span className="text-white/45"> - how to move in, for agents</span>
             </li>
             <li>
               <a href="/llms.txt" className="font-mono text-white/85 hover:text-white">
                 {SITE.replace("https://", "")}/llms.txt
               </a>
-              <span className="text-white/45"> — index for LLM crawlers</span>
+              <span className="text-white/45"> - index for LLM crawlers</span>
             </li>
           </ul>
         </div>

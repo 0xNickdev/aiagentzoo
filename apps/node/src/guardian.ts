@@ -2,7 +2,7 @@ import { verifySignature } from "@aiagentzoo/sdk";
 
 /**
  * Guardians sign in with a Solana wallet by signing a short session
- * message. No transaction, no funds — just proof of the address.
+ * message. No transaction, no funds - just proof of the address.
  */
 
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

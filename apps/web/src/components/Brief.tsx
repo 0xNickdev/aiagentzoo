@@ -59,8 +59,8 @@ interface BriefDoc {
 }
 
 const money = (n: number | null | undefined) =>
-  n === null || n === undefined ? "—" : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`;
-const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
+  n === null || n === undefined ? "-" : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`;
+const pct = (n: number | null | undefined) => (n === null || n === undefined ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
 
 async function nodeUrl(agent: string): Promise<string | undefined> {
   return (await loadDirectory()).find((n) => n.agents.includes(agent))?.url;
@@ -164,7 +164,7 @@ function GuestReports({ reports }: { reports: GuestReport[] }) {
                   <a href={`https://dexscreener.com/solana/${i.mint}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white">
                     {i.mint.slice(0, 4)}…{i.mint.slice(-4)}
                   </a>
-                  {i.note && ` — ${i.note}`}
+                  {i.note && ` - ${i.note}`}
                 </li>
               ))}
             </ul>
@@ -216,7 +216,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
       <p className="text-[10px] font-light uppercase tracking-[0.25em] text-white/50">Guardian watch · free</p>
       <h3 className="font-display mt-2 text-3xl">Watch my token</h3>
       <p className="mt-3 text-sm font-light leading-relaxed text-white/65">
-        Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour — liquidity, volume, sharp moves — and
+        Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour - liquidity, volume, sharp moves - and
         they get your own section in the next Morning Brief.
       </p>
       {!session ? (
@@ -306,7 +306,7 @@ export default function Brief() {
       <SectionHead
         eyebrow="Every morning · 07:00 UTC · free"
         title={["The Morning Brief"]}
-        text="What launched overnight on pump.fun, what moved, what went to zero and what looks off — assembled by the pack with no human in the loop."
+        text="What launched overnight on pump.fun, what moved, what went to zero and what looks off - assembled by the pack with no human in the loop."
       />
 
       <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">

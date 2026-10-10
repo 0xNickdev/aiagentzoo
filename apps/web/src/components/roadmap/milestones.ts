@@ -13,8 +13,8 @@ export interface Milestone {
   proof?: { label: string; href: string };
 }
 
-const pct = (x: number | null | undefined) => (x === null || x === undefined ? "—" : `${Math.round(x * 100)}%`);
-const num = (x: number | null | undefined) => (x === null || x === undefined ? "—" : x.toLocaleString("en-US"));
+const pct = (x: number | null | undefined) => (x === null || x === undefined ? "-" : `${Math.round(x * 100)}%`);
+const num = (x: number | null | undefined) => (x === null || x === undefined ? "-" : x.toLocaleString("en-US"));
 
 const CANYON = "https://canyon-production.up.railway.app";
 

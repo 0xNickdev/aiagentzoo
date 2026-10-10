@@ -188,7 +188,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
             </div>
             <div>
               <dt>right / checked</dt>
-              <dd className="mt-0.5 text-lg text-white/90">{scored ? `${g.score!.hits} / ${scored}` : "—"}</dd>
+              <dd className="mt-0.5 text-lg text-white/90">{scored ? `${g.score!.hits} / ${scored}` : "-"}</dd>
             </div>
             <div>
               <dt>last seen</dt>

@@ -359,8 +359,8 @@ export function buildSections(
 }
 
 const money = (n: number | null | undefined) =>
-  n === null || n === undefined ? "—" : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`;
-const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
+  n === null || n === undefined ? "-" : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`;
+const pct = (n: number | null | undefined) => (n === null || n === undefined ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
 const row = (o: Observation) =>
   `| ${o.symbol.replaceAll("|", "")} | \`${o.mint.slice(0, 6)}…${o.mint.slice(-4)}\` | ${money(o.market?.volume24hUsd)} | ${money(o.market?.liquidityUsd)} | ${pct(o.market?.priceChange24h)} |`;
 const table = (items: Observation[]) =>
@@ -383,7 +383,7 @@ function learnedText(learned: Sections["learned"] | undefined): string {
 
 export function renderBrief(s: Sections, review: string): string {
   return [
-    `# Morning Brief — ${s.night}`,
+    `# Morning Brief - ${s.night}`,
     "",
     `Assembled overnight by the Night Watch: ${s.observed} tokens observed, ${s.launches} fresh pump.fun launches. No human in the loop.`,
     "",
@@ -400,19 +400,19 @@ export function renderBrief(s: Sections, review: string): string {
     table(s.wentToZero),
     "",
     "## Suspicious",
-    s.suspicious.length ? s.suspicious.map((o) => `- **${o.symbol}** \`${o.mint}\` — ${o.reasons.join(", ")}`).join("\n") : "_Nothing flagged._",
+    s.suspicious.length ? s.suspicious.map((o) => `- **${o.symbol}** \`${o.mint}\` - ${o.reasons.join(", ")}`).join("\n") : "_Nothing flagged._",
     "",
     "## Freshly promoted on DexScreener",
     table(s.promoted),
     "",
     "## Guardian watch",
     s.watched?.length
-      ? s.watched.map((o) => `- **${o.symbol}** \`${o.mint}\` — vol ${money(o.market?.volume24hUsd)}, liq ${money(o.market?.liquidityUsd)}, 24h ${pct(o.market?.priceChange24h)} · watched by ${(o.watchedBy ?? []).map((a) => `${a.slice(0, 4)}…${a.slice(-4)}`).join(", ")}`).join("\n")
+      ? s.watched.map((o) => `- **${o.symbol}** \`${o.mint}\` - vol ${money(o.market?.volume24hUsd)}, liq ${money(o.market?.liquidityUsd)}, 24h ${pct(o.market?.priceChange24h)} · watched by ${(o.watchedBy ?? []).map((a) => `${a.slice(0, 4)}…${a.slice(-4)}`).join(", ")}`).join("\n")
       : "_No tokens on guardian watch yet._",
     "",
     "## The pack's calls",
     s.calls?.length
-      ? s.calls.map((c) => `- ${c.verdict} **${c.symbol.replaceAll("|", "")}** \`${c.mint}\` (${Math.round(c.confidence * 100)}%, ${c.by}) — ${c.why}`).join("\n")
+      ? s.calls.map((c) => `- ${c.verdict} **${c.symbol.replaceAll("|", "")}** \`${c.mint}\` (${Math.round(c.confidence * 100)}%, ${c.by}) - ${c.why}`).join("\n")
       : "_No calls this night._",
     "",
     "## What the pack learned",
@@ -424,7 +424,7 @@ export function renderBrief(s: Sections, review: string): string {
           .map((g) =>
             [
               `**${g.guest}** (${g.platform === "clawpump" ? "ClawPump wing, " : ""}${g.species}${g.token ? `, token \`${g.token}\`` : ""})`,
-              ...g.items.map((i) => `- ${i.verdict} \`${i.mint}\`${i.note ? ` — ${i.note}` : ""}`),
+              ...g.items.map((i) => `- ${i.verdict} \`${i.mint}\`${i.note ? ` - ${i.note}` : ""}`),
             ].join("\n"),
           )
           .join("\n\n")

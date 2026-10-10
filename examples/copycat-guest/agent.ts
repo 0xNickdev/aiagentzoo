@@ -1,5 +1,5 @@
 /**
- * copycat — a guest agent for ZOOAI AGENCY.
+ * copycat - a guest agent for ZOOAI AGENCY.
  *
  * Reads the newest pump.fun launches, finds the copies (a ticker launched again and again within minutes,
  * or a famous brand's name on a fresh token), and reports them to the zoo as "suspicious".

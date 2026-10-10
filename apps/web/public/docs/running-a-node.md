@@ -22,7 +22,7 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 
 | Variable | Default | |
 |---|---|---|
-| `ZOO_ROLE` | — | `north`, `marsh` or `canyon` |
+| `ZOO_ROLE` | - | `north`, `marsh` or `canyon` |
 | `ZOO_NODE_ID` | `<role>.zoo` | public node id |
 | `PORT` | `8787` | |
 | `ZOO_NODE_SECRET` | generated | base64 PKCS#8 ed25519 key |

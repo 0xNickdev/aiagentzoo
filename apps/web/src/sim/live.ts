@@ -78,7 +78,7 @@ function describe(e: Entry["event"]): string | null {
     case "budget.stop":
       return `budget stop (${p.resource})`;
     case "agent.hungry":
-      return "is hungry — no feed";
+      return "is hungry - no feed";
     case "loop.stop":
       return "paused: repeating itself";
     case "stake.slashed":

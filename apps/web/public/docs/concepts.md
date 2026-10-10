@@ -19,9 +19,9 @@ An agent is a name, a species, an optional schedule, the signal types it accepts
 
 Wake reasons:
 
-- `schedule` — `{ every: ms }` or `{ dailyAt: "HH:MM", utcOffsetMinutes? }`
-- `signal` — a validated signal from another agent; the event is on `ctx.reason.event`
-- `manual` — the warden woke it
+- `schedule` - `{ every: ms }` or `{ dailyAt: "HH:MM", utcOffsetMinutes? }`
+- `signal` - a validated signal from another agent; the event is on `ctx.reason.event`
+- `manual` - the warden woke it
 
 ## Enclosure
 

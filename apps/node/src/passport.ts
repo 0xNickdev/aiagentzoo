@@ -52,7 +52,7 @@ function summarize(entry: LogEntry): string {
 
 /**
  * Per-agent statistics derived from the public log. Rebuilt from the full
- * log at boot, then kept current by subscribing to new entries — so a
+ * log at boot, then kept current by subscribing to new entries - so a
  * passport is always a pure function of what anyone can audit.
  */
 export class PassportIndex {
