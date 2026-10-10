@@ -14,3 +14,10 @@ html, body { overflow-x: clip; }
 .tree-node:focus { outline: none; }
 
 .tree-scroll { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+
+/* The next birth breathes, and its threads drift, so the empty side of the tree reads as waiting, not missing. */
+@keyframes ghost-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes ghost-flow { to { stroke-dashoffset: -32; } }
+.ghost-node { animation: ghost-breathe 3.2s ease-in-out infinite; }
+.ghost-thread { animation: ghost-flow 2.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ghost-node, .ghost-thread { animation: none; } }

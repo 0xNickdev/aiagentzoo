@@ -224,7 +224,18 @@ function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => v
           </p>
         </motion.div>
         <motion.div {...rise(0.15)} className="mt-12 rounded-3xl bg-black/35 p-4 ring-1 ring-white/10 backdrop-blur-sm sm:p-6">
-          <Tree creatures={data.creatures} onOpen={onOpen} />
+          <Tree
+            creatures={data.creatures}
+            onOpen={onOpen}
+            next={{
+              on: dayOf(data.night, Math.max(0, data.nextGenerationInNights - 1)),
+              parents: data.creatures
+                .filter((c) => !c.diedNight && c.window.hits + c.window.misses >= 3)
+                .sort((a, b) => b.fitness - a.fitness || b.window.hits - a.window.hits)
+                .slice(0, 2)
+                .map((c) => c.id),
+            }}
+          />
         </motion.div>
       </div>
     </section>
