@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 import { GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
-import { type ChronicleEntry, type Creature, type Nursery, pad, pct, portrait, useNursery } from "./data";
+import { type ChronicleEntry, type Creature, dayOf, type Nursery, pad, pct, portrait, useNursery } from "./data";
 import Sheet from "./Sheet";
 import Tree from "./Tree";
 
@@ -239,12 +239,26 @@ const KIND_MARK: Record<ChronicleEntry["kind"], { label: string; tone: string }>
   extinct: { label: "EXTINCT", tone: "text-rose-200/60" },
 };
 
-function Chart({ history }: { history: Nursery["history"] }) {
+function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; nextTurn: string; curveOn: string }) {
   const points = history.filter((h) => h.accuracy !== null);
   if (points.length < 2) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-white/12 text-center text-[13px] text-white/45">
-        The curve starts after the second turn.
+      <div className="flex items-center gap-5 py-2">
+        <svg viewBox="0 0 120 48" className="h-12 w-28 shrink-0" aria-hidden>
+          <path d="M2 40 C 30 38, 40 30, 60 26 S 100 12, 118 6" fill="none" className="stroke-white/15" strokeDasharray="3 4" strokeWidth={1.5} />
+          {points.length === 1 && <circle cx={2} cy={40} r={3} className="fill-amber-100" />}
+        </svg>
+        <p className="text-[13.5px] font-light leading-relaxed text-white/55">
+          {points.length === 0 ? (
+            <>
+              The first point lands with the first turn on <span className="text-white/85">{nextTurn}</span>; the curve appears on <span className="text-white/85">{curveOn}</span>.
+            </>
+          ) : (
+            <>
+              One point so far. The curve appears with the next turn on <span className="text-white/85">{nextTurn}</span>.
+            </>
+          )}
+        </p>
       </div>
     );
   }
@@ -271,6 +285,69 @@ function Chart({ history }: { history: Nursery["history"] }) {
   );
 }
 
+function Tonight({ data }: { data: Nursery }) {
+  const byId = new Map(data.creatures.map((c) => [c.id, c]));
+  const split = data.exam?.tonight ?? {};
+  const answered = Object.entries(split);
+  const alive = data.creatures.filter((c) => !c.diedNight).length;
+  const turnDay = dayOf(data.night, Math.max(0, data.nextGenerationInNights - 1));
+  return (
+    <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <motion.div {...rise(0.05)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
+        <p className="font-mono flex items-center gap-2 text-[10.5px] tracking-[0.14em] text-white/45">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> TONIGHT · {answered.length}/{alive} ANSWERED
+        </p>
+        {answered.length === 0 ? (
+          <p className="mt-3 text-[13.5px] font-light text-white/55">
+            {data.exam ? "The exam is set. The first answers arrive with the heron's next wake." : "The exam is set once enough fresh tokens have been seen tonight."}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {answered.map(([id, v]) => {
+              const c = byId.get(id);
+              const total = v.suspicious + v.watch + v.promising || 1;
+              return (
+                <li key={id} className="flex items-center gap-3 text-[12.5px]">
+                  {c && <img src={portrait(c.house)} alt="" className="h-6 w-6 rounded-full" />}
+                  <span className="w-20 truncate text-white/80">{c?.name ?? id}</span>
+                  <span className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]" title={`${v.suspicious} suspicious, ${v.watch} watch, ${v.promising} promising`}>
+                    <span className="bg-rose-200/70" style={{ width: `${(v.suspicious / total) * 100}%` }} />
+                    <span className="bg-white/30" style={{ width: `${(v.watch / total) * 100}%` }} />
+                    <span className="bg-emerald-200/70" style={{ width: `${(v.promising / total) * 100}%` }} />
+                  </span>
+                  <span className="font-mono w-16 text-right text-[10.5px] text-white/45">
+                    {v.suspicious}·{v.watch}·{v.promising}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {answered.length > 0 && (
+          <p className="font-mono mt-3 text-[10px] text-white/30">
+            <span className="text-rose-200/70">suspicious</span> · watch · <span className="text-emerald-200/70">promising</span>
+          </p>
+        )}
+      </motion.div>
+      <motion.div {...rise(0.1)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
+        <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/45">COMING UP</p>
+        <ol className="mt-3 space-y-3 text-[13.5px] font-light leading-relaxed">
+          <li>
+            <span className="font-mono block text-[10.5px] text-white/40">{dayOf(data.night)} · AFTER 07:00 UTC</span>
+            <span className="text-white/80">Tonight's exam is graded by what actually happened to the tokens.</span>
+          </li>
+          <li>
+            <span className="font-mono block text-[10.5px] text-white/40">
+              {turnDay} · TURN {pad(data.generation + 1)}
+            </span>
+            <span className="text-white/80">The weakest dies and leaves an epitaph. The two best breed; the child carries one mutation.</span>
+          </li>
+        </ol>
+      </motion.div>
+    </div>
+  );
+}
+
 function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void }) {
   const events = data.chronicle.filter((e) => e.kind !== "scored").slice(0, 14);
   const graded = data.chronicle.filter((e) => e.kind === "scored").slice(0, 3);
@@ -281,6 +358,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">SIGNED ON THE PUBLIC LOG</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">The chronicle</h2>
         </motion.div>
+        <Tonight data={data} />
         <ol className="mt-10 border-l border-white/[0.08]">
           {[...events, ...graded].sort((a, b) => b.at - a.at).map((e, i) => (
             <motion.li key={`${e.at}-${i}`} {...rise(0.03 * i)} className="relative pb-7 pl-6">
@@ -307,7 +385,11 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           </p>
         </motion.div>
         <motion.div {...rise(0.2)} className="mt-8 rounded-3xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
-          <Chart history={data.history} />
+          <Chart
+            history={data.history}
+            nextTurn={dayOf(data.night, Math.max(0, data.nextGenerationInNights - 1))}
+            curveOn={dayOf(data.night, Math.max(0, data.nextGenerationInNights - 1) + 3)}
+          />
         </motion.div>
         <motion.div {...rise(0.3)} className="mt-8 rounded-3xl bg-white/[0.02] p-6 ring-1 ring-white/[0.08]">
           <p className="font-mono text-[11px] tracking-[0.14em] text-white/40">THE RULES OF THE NURSERY</p>

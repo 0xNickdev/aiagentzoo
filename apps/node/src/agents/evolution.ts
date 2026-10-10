@@ -495,7 +495,15 @@ export async function evolutionView(store: StateStore, briefAt: string, now = Da
   if (!pop) return null;
   const night = nightOf(now, briefAt);
   const exam = await store.get<Exam>(EVO.exam(night));
-  const answered = Object.keys((await store.get<Record<string, Call[]>>(EVO.calls(night))) ?? {});
+  const calls = (await store.get<Record<string, Call[]>>(EVO.calls(night))) ?? {};
+  const answered = Object.keys(calls);
+  // How each creature split tonight's exam, so the page shows the night as it happens.
+  const tonight = Object.fromEntries(
+    Object.entries(calls).map(([id, cs]) => [
+      id,
+      { suspicious: cs.filter((c) => c.verdict === "suspicious").length, watch: cs.filter((c) => c.verdict === "watch").length, promising: cs.filter((c) => c.verdict === "promising").length },
+    ]),
+  );
   const since = pop.lastGenerationNight ? nightsBetween(pop.lastGenerationNight, night) : 0;
   return {
     night,
@@ -504,7 +512,7 @@ export async function evolutionView(store: StateStore, briefAt: string, now = Da
     creatures: Object.values(pop.creatures).map(({ playbook: _p, ...c }) => ({ ...c, accuracy: accuracy(c.lifetime), fitness: fitness(c.window) })),
     chronicle: ((await store.get<ChronicleEntry[]>(EVO.chronicle)) ?? []).slice(-120).reverse(),
     history: (await store.get<GenerationRecord[]>(EVO.history)) ?? [],
-    exam: exam ? { night, tokens: exam.tokens.map((t) => ({ mint: t.mint, symbol: t.symbol })), answered } : null,
+    exam: exam ? { night, tokens: exam.tokens.map((t) => ({ mint: t.mint, symbol: t.symbol })), answered, tonight } : null,
   };
 }
 

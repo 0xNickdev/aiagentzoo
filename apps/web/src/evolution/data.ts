@@ -39,7 +39,12 @@ export interface Nursery {
   creatures: Creature[];
   chronicle: ChronicleEntry[];
   history: Array<{ generation: number; night: string; accuracy: number | null; best: string | null }>;
-  exam: { night: string; tokens: Array<{ mint: string; symbol: string }>; answered: string[] } | null;
+  exam: {
+    night: string;
+    tokens: Array<{ mint: string; symbol: string }>;
+    answered: string[];
+    tonight?: Record<string, { suspicious: number; watch: number; promising: number }>;
+  } | null;
 }
 
 export interface Case {
@@ -107,3 +112,7 @@ export async function loadCreature(id: string): Promise<CreatureDetail> {
 export const portrait = (house: string) => `/evolution/${house.toLowerCase()}.webp`;
 export const pct = (n: number | null) => (n === null ? "-" : `${Math.round(n * 100)}%`);
 export const pad = (n: number) => String(n).padStart(2, "0");
+
+/** A night id plus some days, as a short date: "Oct 13". */
+export const dayOf = (night: string, plus = 0) =>
+  new Date(Date.parse(`${night}T00:00:00Z`) + plus * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
