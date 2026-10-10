@@ -597,7 +597,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
           untrusted: draft,
           maxTokens: 600,
         });
-        if (result.text) review = result.text;
+        if (result.text) review = result.text.replace(/[\u2013\u2014]/g, "-");
       } catch {
         // No model configured or budget exhausted: the factual one-liner stands.
       }
