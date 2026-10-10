@@ -4,7 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-docs.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/sync-docs.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b"
@@ -13,6 +15,7 @@
     "@vercel/analytics": "^2.0.1",
     "framer-motion": "^14.0.0",
     "lucide-react": "^1.52.0",
+    "marked": "^18.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

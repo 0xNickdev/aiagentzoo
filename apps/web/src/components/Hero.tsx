@@ -13,7 +13,7 @@ const NAV_LINKS = [
   { label: "Developers", href: "#developers" },
   { label: "ClawPump", href: "#guests" },
   { label: "Token", href: "#token" },
-  { label: "Docs", href: DOCS_URL, external: true },
+  { label: "Docs", href: DOCS_URL },
 ];
 
 const TRUST = ["Live on Solana", "Open source · MIT", "AI that grades itself", "Signed, verifiable log"];
@@ -55,7 +55,6 @@ export default function Hero() {
             <a
               key={link.label}
               href={link.href}
-              {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="text-[13.5px] text-white/70 transition-colors duration-300 hover:text-white"
             >
               {link.label}
@@ -108,7 +107,6 @@ export default function Hero() {
               <a
                 key={link.label}
                 href={link.href}
-                {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 onClick={() => setMenuOpen(false)}
                 className="text-base text-white/85 hover:text-white"
               >

@@ -1,0 +1,116 @@
+
+/* overflow: hidden on html/body would break the sticky header and sidebars; clip hides overflow without making a scroll container. */
+html, body { overflow-x: clip; }
+/* Long-form type for the docs: same family as the site, quiet and readable. */
+.doc {
+  max-width: 46rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15.5px;
+  font-weight: 300;
+  line-height: 1.75;
+}
+.doc > * + * { margin-top: 1.1em; }
+.doc h1 {
+  margin-top: 0.4rem;
+  color: #fff;
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+.doc h1 + * { margin-top: 1.4rem; }
+.doc h2, .doc h3, .doc h4 {
+  scroll-margin-top: 6rem;
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.doc h2 { margin-top: 3rem; padding-top: 1.6rem; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 1.6rem; line-height: 1.2; }
+.doc h3 { margin-top: 2.2rem; font-size: 1.2rem; }
+.doc h4 { margin-top: 1.8rem; font-size: 1rem; }
+.doc h2 + *, .doc h3 + *, .doc h4 + * { margin-top: 0.8em; }
+.doc .anchor { color: inherit; text-decoration: none; }
+.doc .anchor:hover::after { content: " #"; color: rgba(243, 183, 102, 0.7); }
+.doc strong { color: #fff; font-weight: 500; }
+.doc a:not(.anchor) {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(243, 183, 102, 0.45);
+  text-underline-offset: 4px;
+}
+.doc a:not(.anchor):hover { text-decoration-color: rgba(243, 183, 102, 0.95); }
+.doc ul, .doc ol { padding-left: 1.3rem; }
+.doc ul { list-style: none; }
+.doc ul > li { position: relative; }
+.doc ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 0.78em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(243, 183, 102, 0.6);
+}
+.doc ol { list-style: decimal; }
+.doc ol > li::marker { color: rgba(255, 255, 255, 0.4); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.85em; }
+.doc li + li { margin-top: 0.4em; }
+.doc :not(pre) > code {
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffe7c2;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.86em;
+  font-weight: 400;
+}
+.doc pre {
+  position: relative;
+  overflow-x: auto;
+  padding: 1.1rem 1.25rem;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.85);
+}
+.doc pre .copy {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.doc pre:hover .copy, .doc pre .copy:focus-visible { opacity: 1; }
+.doc pre .copy:hover { color: #fff; }
+.doc .table {
+  overflow-x: auto;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.doc table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.doc th {
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+}
+.doc td { padding: 0.65rem 0.9rem; border-top: 1px solid rgba(255, 255, 255, 0.06); vertical-align: top; }
+.doc blockquote {
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  border-left: 2px solid rgba(243, 183, 102, 0.5);
+  color: rgba(255, 255, 255, 0.6);
+}
+.doc hr { border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 2.5rem 0; }
+.doc img { max-width: 100%; border-radius: 12px; }

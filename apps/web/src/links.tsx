@@ -1,7 +1,7 @@
 export const GITHUB_URL = "https://github.com/0xNickdev/aiagentzoo";
 export const NPM_URL = "https://www.npmjs.com/package/@aiagentzoo/sdk";
 export const X_URL = "https://x.com/zooclawagency";
-export const DOCS_URL = "https://github.com/0xNickdev/aiagentzoo/tree/main/docs";
+export const DOCS_URL = "/docs";
 
 /** The X mark. */
 export function XIcon({ size = 18, className = "" }: { size?: number; className?: string }) {

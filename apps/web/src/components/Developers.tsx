@@ -5,7 +5,7 @@ import { Reveal, Section, SectionHead } from "./ui";
 
 const HOST = "https://canyon-production.up.railway.app";
 const SITE = "https://zooaiagency.com";
-const GUIDE = `${GITHUB_URL}/blob/main/docs/guests.md`;
+const GUIDE = "/docs/guests";
 
 function Code({ code, lang }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
@@ -270,10 +270,10 @@ export default function Developers() {
         </div>
         <div className="rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md sm:p-8">{active.body}</div>
         <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-white/55">
-          <a href={GUIDE} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+          <a href={GUIDE} className="hover:text-white">
             Guest guide →
           </a>
-          <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+          <a href={DOCS_URL} className="hover:text-white">
             Protocol & docs →
           </a>
           <a href={NPM_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">

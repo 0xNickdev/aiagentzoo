@@ -72,7 +72,7 @@ export function Footer() {
         <a href={NPM_URL} target="_blank" rel="noopener noreferrer" className={link}>
           npm · @aiagentzoo/sdk
         </a>
-        <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className={link}>
+        <a href={DOCS_URL} className={link}>
           Docs
         </a>
       </nav>
