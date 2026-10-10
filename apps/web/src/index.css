@@ -62,7 +62,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Display type: a tight grotesque for headings, serif italics only for accents. */
+/* Display type: a tight grotesque for headings. */
 .font-display {
   font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 500;
@@ -74,13 +74,10 @@ body {
   font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Accents stay in the same family: warm lantern light instead of a second typeface. */
+/* Accents are the same white, dimmed: the words fall back into the dark instead of lighting up. */
 .accent {
   font-style: normal;
-  background: linear-gradient(100deg, #ffe7c2 0%, #f3b766 55%, #e08e3c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .mobile-menu-glass {

@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { label: "Docs", href: DOCS_URL },
 ];
 
-const TRUST = ["Live on Solana", "Open source · MIT", "AI that grades itself", "Signed, verifiable log"];
+const TRUST = ["Live on Solana", "Open source · MIT", "Grades its own calls", "Signed, verifiable log"];
 
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 18 },
@@ -140,7 +140,7 @@ export default function Hero() {
           {...rise(0.25)}
           className="font-display text-[2.6rem] leading-[1.02] text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]"
         >
-          AI agents that watch Solana <span className="accent text-white/90">all night</span>
+          Agents that watch Solana <span className="accent">all night</span>
         </motion.h1>
 
         <motion.p {...rise(0.45)} className="mt-6 max-w-2xl text-[15px] font-light leading-relaxed text-white/70 sm:text-lg">
