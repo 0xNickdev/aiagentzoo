@@ -48,6 +48,16 @@ export interface Scorecard {
   cases: Case[];
   /** The same scoring applied to every guest's verdicts. */
   guests: Record<string, { hits: number; misses: number }>;
+  /** Each guest verdict with how its token turned out, so a guest's record can be read call by call. */
+  guestCases?: Record<string, GuestCase[]>;
+}
+
+export interface GuestCase {
+  mint: string;
+  symbol: string;
+  verdict: Verdict;
+  outcome: Outcome;
+  hit: boolean | null;
 }
 
 export interface Playbook {
@@ -96,24 +106,39 @@ export function scoreNight(night: string, calls: Call[], reports: GuestReport[],
   const hits = cases.filter((c) => c.hit === true).length;
   const misses = cases.filter((c) => c.hit === false).length;
   const guests: Scorecard["guests"] = {};
+  const guestCases: Record<string, GuestCase[]> = {};
   for (const r of reports) {
     const g = (guests[r.guest] = { hits: 0, misses: 0 });
-    for (const i of r.items) {
-      const hit = scoreCall(i.verdict, outcomeOf(now.get(i.mint)));
+    guestCases[r.guest] = r.items.map((i) => {
+      const seen = now.get(i.mint);
+      const outcome = outcomeOf(seen);
+      const hit = scoreCall(i.verdict, outcome);
       if (hit === true) g.hits += 1;
       if (hit === false) g.misses += 1;
-    }
+      return { mint: i.mint, symbol: seen?.symbol ?? "?", verdict: i.verdict, outcome, hit };
+    });
   }
-  return { night, checked: followups.length, hits, misses, accuracy: hits + misses ? hits / (hits + misses) : null, cases, guests };
+  return { night, checked: followups.length, hits, misses, accuracy: hits + misses ? hits / (hits + misses) : null, cases, guests, guestCases };
 }
 
-/** The tokens worth a re-check tomorrow: every scored call and guest verdict, at most `max`. */
+/**
+ * The tokens worth a re-check tomorrow, at most `max`. Guests go first, taking turns, up to half the slots:
+ * the beaver makes far more calls than fit, and a guest's record is only worth anything if it gets checked.
+ */
 export function followupMints(calls: Call[], reports: GuestReport[], max = 30): string[] {
-  const mints = [
-    ...calls.filter((c) => c.verdict !== "watch").map((c) => c.mint),
-    ...reports.flatMap((r) => r.items.filter((i) => i.verdict !== "watch").map((i) => i.mint)),
-  ];
-  return [...new Set(mints)].slice(0, max);
+  const queues = reports.map((r) => r.items.filter((i) => i.verdict !== "watch").map((i) => i.mint));
+  const picked = new Set<string>();
+  for (let round = 0; picked.size < max / 2 && queues.some((q) => q.length > round); round++) {
+    for (const q of queues) {
+      const mint = q[round];
+      if (mint && picked.size < max / 2) picked.add(mint);
+    }
+  }
+  for (const c of calls) {
+    if (picked.size >= max) break;
+    if (c.verdict !== "watch") picked.add(c.mint);
+  }
+  return [...picked];
 }
 
 /** Rule flags, the beaver's fallback when it has no model, and a hint when it does. */

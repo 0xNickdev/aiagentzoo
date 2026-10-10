@@ -1,4 +1,4 @@
-import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species } from "@aiagentzoo/sdk";
+import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
 import type { Launch, Market } from "../sources.ts";
 import {
@@ -122,6 +122,31 @@ const isGuestReport: SignalValidator = (payload, event) => {
   });
   return ok ? true : `each item needs a mint, a verdict (${VERDICTS.join(", ")}) and an optional note up to 280 chars`;
 };
+
+export interface GuestNight {
+  night: string;
+  items: Array<GuestItem & { symbol: string | null; outcome: string | null; hit: boolean | null }>;
+}
+
+/** A guest's reports over the last `nights` nights, newest first, each with its next-day result once it is in. */
+export async function guestRecord(store: StateStore, guest: string, nights = 7): Promise<GuestNight[]> {
+  const keys = (await store.keys("reports:")).sort().reverse().slice(0, nights);
+  const out: GuestNight[] = [];
+  for (const key of keys) {
+    const night = key.slice("reports:".length);
+    const report = (await store.get<Record<string, GuestReport>>(key))?.[guest];
+    if (!report) continue;
+    const scored = new Map(((await store.get<Scorecard>(`score:${night}`))?.guestCases?.[guest] ?? []).map((c) => [c.mint, c]));
+    out.push({
+      night,
+      items: [...report.items].reverse().map((i) => {
+        const c = scored.get(i.mint);
+        return { ...i, symbol: c && c.symbol !== "?" ? c.symbol : null, outcome: c?.outcome ?? null, hit: c?.hit ?? null };
+      }),
+    });
+  }
+  return out;
+}
 
 /** The id of the night a timestamp belongs to: the date of the next brief. */
 export function nightOf(ts: number, briefAt: string): string {

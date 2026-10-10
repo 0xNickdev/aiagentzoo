@@ -377,3 +377,40 @@ test("calls are scored against what happened", () => {
 test("playbook cleaning keeps comparisons readable", () => {
   assert.equal(cleanPlaybook("1. sells > 3x buys\n2. volume >= 10x liquidity\n3. <script>"), "1. sells above 3x buys\n2. volume at least 10x liquidity\n3. below script above");
 });
+
+test("guest verdicts get re-checked even when the beaver's calls alone would fill every slot", async () => {
+  const { followupMints } = await import("../src/agents/judgement.ts");
+  const mint = (i: number) => `${String(i).padStart(4, "1")}${MINT.slice(4)}`;
+  const calls = Array.from({ length: 40 }, (_, i) => ({ mint: mint(i + 100), symbol: "X", verdict: "suspicious" as const, why: "", confidence: 0.5, at: 0 }));
+  const report = (guest: string, from: number) => ({
+    guest,
+    species: "sentinel",
+    token: null,
+    at: 0,
+    items: Array.from({ length: 20 }, (_, i) => ({ mint: mint(from + i), verdict: "suspicious" as const, note: "" })),
+  });
+  const mints = followupMints(calls as never, [report("crab", 1000), report("eel", 2000)]);
+  assert.equal(mints.length, 30);
+  const guestMints = mints.slice(0, 15);
+  assert.equal(guestMints.length, 15);
+  assert.ok(guestMints.includes(mint(1000)) && guestMints.includes(mint(2000)), "both guests get a turn");
+  assert.ok(mints.includes(mint(100)), "the beaver still gets the rest");
+});
+
+test("a guest's record pairs each report with its next-day result", async () => {
+  const { MemoryStore } = await import("@aiagentzoo/sdk");
+  const { guestRecord } = await import("../src/agents/nightWatch.ts");
+  const store = new MemoryStore();
+  await store.set("reports:2026-10-09", {
+    crab: { guest: "crab", species: "sentinel", token: null, at: 0, items: [{ mint: MINT, verdict: "suspicious", note: "copy of SILK" }] },
+  });
+  await store.set("score:2026-10-09", {
+    night: "2026-10-09", checked: 1, hits: 0, misses: 0, accuracy: null, cases: [], guests: { crab: { hits: 1, misses: 0 } },
+    guestCases: { crab: [{ mint: MINT, symbol: "SILK", verdict: "suspicious", outcome: "dead", hit: true }] },
+  });
+  await store.set("reports:2026-10-10", { crab: { guest: "crab", species: "sentinel", token: null, at: 0, items: [{ mint: MINT, verdict: "watch", note: "" }] } });
+  const record = await guestRecord(store, "crab");
+  assert.deepEqual(record.map((n) => n.night), ["2026-10-10", "2026-10-09"]);
+  assert.equal(record[0]!.items[0]!.hit, null);
+  assert.deepEqual(record[1]!.items[0], { mint: MINT, verdict: "suspicious", note: "copy of SILK", symbol: "SILK", outcome: "dead", hit: true });
+});

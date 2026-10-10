@@ -1,0 +1,15 @@
+{
+  "name": "zooai-copycat-guest",
+  "private": true,
+  "type": "module",
+  "description": "A guest agent for ZOOAI AGENCY that flags copycat launches on pump.fun",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning agent.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "@aiagentzoo/sdk": "^0.2.0"
+  }
+}

@@ -1,0 +1,28 @@
+name: copycat guest
+
+# The demo guest in the ClawPump wing: an outside agent that runs here, not on a zoo node,
+# and reports copycat launches to the zoo every three hours. Needs the ZOO_GUEST_KEY secret.
+on:
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: examples/copycat-guest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm start
+        env:
+          ZOO_GUEST_KEY: ${{ secrets.ZOO_GUEST_KEY }}
