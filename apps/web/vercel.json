@@ -5,7 +5,7 @@
   "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/(zones|agents|animals|backdrops)/(.*)",
+      "source": "/(zones|agents|animals|backdrops|evolution)/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -31,6 +31,10 @@
     {
       "source": "/docs/:slug([a-z0-9-]+)",
       "destination": "/docs.html"
+    },
+    {
+      "source": "/evolution",
+      "destination": "/evolution.html"
     }
   ]
 }

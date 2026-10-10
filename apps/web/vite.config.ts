@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       // The docs are their own page: no video, no map, just text.
-      input: { main: "index.html", docs: "docs.html" },
+      input: { main: "index.html", docs: "docs.html", evolution: "evolution.html" },
     },
   },
 });

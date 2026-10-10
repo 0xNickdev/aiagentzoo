@@ -1,0 +1,16 @@
+/* overflow: hidden on html/body (from the main stylesheet) would break sticky and fixed layers here. */
+html, body { overflow-x: clip; }
+
+/* The greenhouse breathes: a slow push-in, so the still never feels frozen. */
+@keyframes drift {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+}
+.hero-drift { animation: drift 40s ease-in-out infinite alternate; transform-origin: 60% 40%; }
+@media (prefers-reduced-motion: reduce) { .hero-drift { animation: none; } }
+
+.tree-node circle:first-child { transition: stroke 0.3s; }
+.tree-node:hover circle:first-child, .tree-node:focus-visible circle:first-child { stroke: rgba(253, 230, 138, 0.7); }
+.tree-node:focus { outline: none; }
+
+.tree-scroll { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }

@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { label: "Developers", href: "#developers" },
   { label: "ClawPump", href: "#guests" },
   { label: "Token", href: "#token" },
+  { label: "Evolution", href: "/evolution" },
   { label: "Docs", href: DOCS_URL },
 ];
 

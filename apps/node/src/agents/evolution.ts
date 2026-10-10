@@ -178,6 +178,9 @@ const FOUNDERS: Array<Pick<Creature, "name" | "temperament" | "playbook">> = [
   },
 ];
 
+/** A creature's founding trait: the first part of its temperament, without the article. */
+const trait = (c: Creature) => c.temperament.split(" × ")[0]!.replace(/^the /, "");
+
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 const roman = (n: number) => ROMAN[n] ?? String(n);
 
@@ -309,7 +312,8 @@ export function turnGeneration(
     house: a.house,
     generation,
     parents: [a.id, b.id],
-    temperament: `${a.temperament.replace(/^the /, "")} × ${b.temperament.replace(/^the /, "")}`,
+    // Two traits at most, one from each parent's founding line, so names stay readable after many generations.
+    temperament: `${trait(a)} × ${trait(b)}`,
     playbook: child.playbook,
     mutation: child.mutation,
     bornNight: night,
