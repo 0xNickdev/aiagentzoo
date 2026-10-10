@@ -136,7 +136,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
   const scored = (c: Creature) => c.window.hits + c.window.misses;
   const contenders = ranked.filter((c) => scored(c) >= 3);
   const breeding = new Set(contenders.slice(0, 2).map((c) => c.id));
-  const atRisk = contenders.length >= 3 ? contenders.at(-1)!.id : null;
+  const atRisk = contenders.length >= 3 ? contenders[contenders.length - 1]!.id : null;
   const answered = new Set(data.exam?.answered ?? []);
 
   return (
