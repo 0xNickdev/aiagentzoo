@@ -57,8 +57,11 @@ async function latest(pages = 4): Promise<Coin[]> {
         out.push(...((await res.json()) as Coin[]));
         break;
       }
-      // pump.fun rate-limits bursts; back off and try again a few times.
-      if (res.status !== 429 || attempt === 4) throw new Error(`pump.fun responded ${res.status}`);
+      // pump.fun rate-limits bursts; back off and try again a few times, then make do with the pages we have.
+      if (res.status !== 429 || attempt === 4) {
+        if (out.length) return out;
+        throw new Error(`pump.fun responded ${res.status}`);
+      }
       await sleep(attempt * 5_000);
     }
     await sleep(1_500);
