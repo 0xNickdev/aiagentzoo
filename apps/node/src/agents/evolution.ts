@@ -1,6 +1,6 @@
 import { type AgentDefinition, defineAgent, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText } from "../guests.ts";
-import { type Call, candidates, cleanPlaybook, compact, type Outcome, parseCalls, previousNight, scoreCall } from "./judgement.ts";
+import { type Call, candidates, CHAIN_NOTE, cleanPlaybook, compact, type Outcome, parseCalls, previousNight, scoreCall } from "./judgement.ts";
 import { nightOf, type Observation } from "./nightWatch.ts";
 
 /**
@@ -340,6 +340,7 @@ export function creatureSystem(c: Creature): string {
     c.playbook,
     "",
     "For every token decide: promising (likely still alive with real liquidity tomorrow), suspicious (likely dead or rugged by tomorrow), or watch (not enough evidence).",
+    CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 120 chars, naming the rule you applied}.',
   ].join("\n");
 }

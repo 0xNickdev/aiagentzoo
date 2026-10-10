@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@aiagentzoo/sdk": "*",
-    "@anthropic-ai/sdk": "*"
+    "@anthropic-ai/sdk": "*",
+    "@triton-one/yellowstone-grpc": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

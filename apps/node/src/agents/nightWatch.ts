@@ -1,6 +1,7 @@
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
 import type { Launch, Market } from "../sources.ts";
+import type { ChainFacts } from "../chain/pump.ts";
 import {
   type Call,
   candidates,
@@ -66,6 +67,8 @@ export interface Observation {
   scout: string;
   /** Guardian wallets that asked the zoo to watch this token. */
   watchedBy?: string[];
+  /** The on-chain trading picture, when the north node streams pump.fun. */
+  chain?: ChainFacts;
 }
 
 /** One token a guest agent reported, with its verdict and a short note. */
@@ -212,6 +215,13 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
 
       const markets = await ctx.use<Market[]>("dex.markets", { mints: launches.map((l) => l.mint) });
       const byMint = new Map(markets.map((m) => [m.mint, m]));
+      // Fresh chain facts where this node streams pump.fun; otherwise whatever the sentinel attached.
+      let chain: Record<string, ChainFacts> = {};
+      try {
+        chain = await ctx.use<Record<string, ChainFacts>>("chain.facts", { mints: launches.map((l) => l.mint) });
+      } catch {
+        // No stream here, or the tool is unavailable: the launches keep their own snapshot.
+      }
       const observations: Observation[] = launches.map((l) => {
         const market = byMint.get(l.mint);
         return {
@@ -228,6 +238,7 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
           seenAt: ctx.now,
           scout: event.from.agent,
           ...(watchedBy[l.mint] ? { watchedBy: watchedBy[l.mint] } : {}),
+          ...(chain[l.mint] ?? l.chain ? { chain: chain[l.mint] ?? l.chain } : {}),
         };
       });
       await ctx.trace("gathered", { count: observations.length, withMarket: markets.length, from: event.from.agent });

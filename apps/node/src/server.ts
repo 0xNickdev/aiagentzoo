@@ -6,6 +6,7 @@ import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
+import { tape } from "./chain/pump.ts";
 import { type GuestHouse, isGuestNode } from "./guests.ts";
 
 export interface ServerOptions {
@@ -211,6 +212,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
         const scores = (await enclosure.store.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
         return json(res, 200, { policy: guests.policy, guests: guests.list().map((g) => ({ ...g, score: scores[g.name] ?? null })) });
+      }
+      if (req.method === "GET" && path === "/v1/chain") {
+        return json(res, 200, tape.status());
       }
       if (req.method === "GET" && path === "/v1/evolution") {
         if (!evolution) return json(res, 404, { error: "no nursery on this node" });

@@ -16,6 +16,7 @@ import { canyonStats } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
+import { startPumpStream, tape } from "./chain/pump.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 
 const config = loadConfig();
@@ -65,6 +66,12 @@ const enclosure = new Enclosure({
 if (ledger) await enclosure.lockStake();
 enclosure.start();
 
+// The north node reads pump.fun straight from Solana when a Yellowstone stream is configured.
+const stopStream =
+  config.role === "north" && process.env.SHYFT_GRPC_TOKEN
+    ? await startPumpStream(tape, { url: process.env.SHYFT_GRPC_URL ?? "https://grpc.eu.shyft.to", token: process.env.SHYFT_GRPC_TOKEN, log: (m) => console.log(`[${config.id}] ${m}`) })
+    : null;
+
 const visitorAgents = enclosure
   .snapshot()
   .filter((a) => a.species === "sentinel")
@@ -113,6 +120,7 @@ enclosure.log.subscribe((entry) => {
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     enclosure.stop();
+    stopStream?.();
     server.close(() => {
       db.close();
       process.exit(0);

@@ -151,6 +151,10 @@ export function ruleFlags(o: Observation): string[] {
   if (o.hasSocials === false) reasons.push("no socials");
   if (m && m.sells24h > 0 && m.sells24h > m.buys24h * 3) reasons.push("sells outnumber buys 3:1");
   if (m && usd(m.liquidityUsd) > 0 && usd(m.volume24hUsd) > usd(m.liquidityUsd) * 50) reasons.push("volume 50x liquidity");
+  // Read straight from the chain: the creator dumping their own bag, and wallets that launch all day.
+  const c = o.chain;
+  if (c && c.creatorSold !== null && c.creatorSold >= 0.5) reasons.push(`creator sold ${Math.round(c.creatorSold * 100)}% of their bag`);
+  if (c && c.creatorLaunches24h >= 5) reasons.push(`creator launched ${c.creatorLaunches24h} tokens today`);
   return reasons;
 }
 
@@ -169,6 +173,10 @@ export function ruleCalls(items: Observation[], now: number): Call[] {
   });
 }
 
+/** How to read the on-chain facts, for every judge that sees them. */
+export const CHAIN_NOTE =
+  "Some tokens carry `chain`: facts read from Solana itself. creatorSold is the share of the creator's own bought tokens they already sold (0..1), creatorLaunches24h counts the creator's launches today, buys/sells/buyers count trades on the bonding curve, curveSol is the SOL still in it.";
+
 export function judgeSystem(playbook: Playbook): string {
   return [
     "You are the beaver, a builder in ZOOAI AGENCY. Each night you judge new Solana tokens from market data alone.",
@@ -178,6 +186,7 @@ export function judgeSystem(playbook: Playbook): string {
     playbook.text,
     "",
     "For every token decide: promising (likely still alive with real liquidity tomorrow), suspicious (likely dead or rugged by tomorrow), or watch (not enough evidence).",
+    CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 140 chars}.',
     "Facts and numbers, no hype, no investment advice.",
   ].join("\n");
@@ -195,6 +204,7 @@ export function compact(o: Observation) {
     marketCapUsd: o.marketCapUsd,
     market: m ? { liq: m.liquidityUsd, vol24h: m.volume24hUsd, change24h: m.priceChange24h, buys24h: m.buys24h, sells24h: m.sells24h, dex: m.dex } : null,
     flags: ruleFlags(o),
+    chain: o.chain ?? null,
   };
 }
 

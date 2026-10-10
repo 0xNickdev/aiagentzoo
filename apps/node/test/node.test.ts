@@ -484,3 +484,47 @@ test("the nursery's exam is re-checked before anything else", async () => {
   assert.equal(mints.length, 30);
   assert.deepEqual(mints.slice(0, 8), exam);
 });
+
+test("the pump.fun tape decodes launches and trades from logs and spots a creator dumping", async () => {
+  const { parsePumpLogs, PumpTape, fromBase58 } = await import("../src/chain/pump.ts");
+  const { ruleFlags } = await import("../src/agents/judgement.ts");
+  const key = (s: string) => fromBase58(s);
+  const CREATOR = "So11111111111111111111111111111111111111112";
+  const BUYER = "11111111111111111111111111111111";
+  const str = (s: string) => {
+    const b = Buffer.from(s);
+    const len = Buffer.alloc(4);
+    len.writeUInt32LE(b.length);
+    return Buffer.concat([len, b]);
+  };
+  const u64 = (n: bigint) => {
+    const b = Buffer.alloc(8);
+    b.writeBigUInt64LE(n);
+    return b;
+  };
+  const line = (disc: number[], body: Buffer) => `Program data: ${Buffer.concat([Buffer.from(disc), body]).toString("base64")}`;
+  const create = line([27, 114, 169, 77, 222, 235, 99, 118], Buffer.concat([str("silk road"), str("SILK"), str("ipfs://x"), key(MINT), key(BUYER), key(CREATOR)]));
+  const trade = (user: string, isBuy: boolean, tokens: bigint) =>
+    line(
+      [189, 219, 127, 211, 78, 230, 97, 238],
+      Buffer.concat([key(MINT), u64(500_000_000n), u64(tokens * 1_000_000n), Buffer.from([isBuy ? 1 : 0]), key(user), u64(1_791_600_000n), u64(0n), u64(0n), u64(12_000_000_000n)]),
+    );
+
+  const events = parsePumpLogs(["Program log: Instruction: Create", create, trade(CREATOR, true, 1000n), "garbage", trade(BUYER, true, 50n), trade(CREATOR, false, 800n)]);
+  assert.deepEqual(events.map((e) => e.kind), ["create", "trade", "trade", "trade"]);
+  assert.equal((events[0] as any).symbol, "SILK");
+  assert.equal((events[0] as any).creator, CREATOR);
+
+  const tape = new PumpTape();
+  tape.connected = true;
+  const now = 1_791_600_000_000;
+  for (const e of events) tape.apply(e, now);
+  const f = tape.facts(MINT, now)!;
+  assert.equal(f.buys, 2);
+  assert.equal(f.sells, 1);
+  assert.equal(f.creatorSold, 0.8);
+  assert.equal(f.curveSol, 12);
+  assert.equal(tape.launches(5)[0]!.symbol, "SILK");
+  assert.ok(tape.live(now));
+  assert.ok(ruleFlags(obs({ chain: f, hasSocials: true })).includes("creator sold 80% of their bag"));
+});

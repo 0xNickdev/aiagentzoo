@@ -1,4 +1,5 @@
 import { defineTool } from "@aiagentzoo/sdk";
+import { type ChainFacts, tape } from "./chain/pump.ts";
 
 /** A token launch as reported by pump.fun. */
 export interface Launch {
@@ -9,7 +10,10 @@ export interface Launch {
   creator: string;
   marketCapUsd: number | null;
   complete: boolean;
-  hasSocials: boolean;
+  /** null when unknown: launches read from the chain carry no socials. */
+  hasSocials: boolean | null;
+  /** What the chain showed when the launch was picked up, when a stream is configured. */
+  chain?: ChainFacts;
 }
 
 /** Market data from DexScreener for one token. */
@@ -56,11 +60,21 @@ export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
   description: "Latest token launches on pump.fun",
   async run(input, { signal }) {
     const limit = Math.min(Math.max(input?.limit ?? 50, 1), 50);
-    const coins = await getJson<PumpCoin[]>(
-      `${PUMP_API}/coins?offset=0&limit=${limit}&sort=created_timestamp&order=DESC&includeNsfw=false`,
-      signal,
-    );
-    return coins.map(toLaunch);
+    // The HTTP API knows the socials; the chain stream knows the trading. Use both when both are up,
+    // and the chain alone when pump.fun rate-limits us.
+    try {
+      const coins = await getJson<PumpCoin[]>(
+        `${PUMP_API}/coins?offset=0&limit=${limit}&sort=created_timestamp&order=DESC&includeNsfw=false`,
+        signal,
+      );
+      return coins.map((c) => {
+        const chain = tape.facts(c.mint);
+        return chain ? { ...toLaunch(c), chain } : toLaunch(c);
+      });
+    } catch (error) {
+      if (tape.live()) return tape.launches(limit);
+      throw error;
+    }
   },
 });
 
@@ -135,4 +149,19 @@ function toLaunch(c: PumpCoin): Launch {
   };
 }
 
-export const allTools = [pumpLatest, dexMarkets, dexNewProfiles];
+/** Fresh chain facts for tokens the stream has seen; empty on nodes without a stream. */
+export const chainFacts = defineTool<{ mints: string[] }, Record<string, ChainFacts>>({
+  name: "chain.facts",
+  capability: "sources:read",
+  description: "On-chain trading picture of fresh pump.fun tokens: buys, sells, creator selling, serial launches",
+  async run({ mints }) {
+    const out: Record<string, ChainFacts> = {};
+    for (const mint of mints.slice(0, 30)) {
+      const f = tape.facts(mint);
+      if (f) out[mint] = f;
+    }
+    return out;
+  },
+});
+
+export const allTools = [pumpLatest, dexMarkets, dexNewProfiles, chainFacts];
