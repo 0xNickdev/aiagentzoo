@@ -98,7 +98,7 @@ export function copycats(coins: Coin[], max: number): Item[] {
     items.push({
       mint: copy.mint,
       verdict: "suspicious",
-      note: `$${copy.symbol}: launched ${group.length} times in ${spanMin} min, this is copy #${group.length}`,
+      note: `$${copy.symbol}: launched ${group.length} times in ${spanMin} min, this is the latest copy`,
     });
   }
   return items.slice(0, max);
