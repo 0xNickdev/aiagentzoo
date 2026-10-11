@@ -67,6 +67,8 @@ interface Door {
   title: string;
   line: string;
   image: string;
+  /** Where the subject sits, so the crop keeps it above the copy. */
+  focus: string;
   stats: Array<[string, string]>;
   cta: string;
   live?: boolean;
@@ -80,7 +82,8 @@ export default function Doors() {
       eyebrow: "LIVE",
       title: "The Night Watch",
       line: "Three nodes, six agents and the chain itself, as it happens.",
-      image: "/backdrops/watch.webp",
+      image: "/doors/live.webp",
+      focus: "50% 24%",
       live: n?.chainLive,
       stats: [
         ["launches read from the chain", fmt(n?.launchesSeen)],
@@ -93,7 +96,8 @@ export default function Doors() {
       eyebrow: "MORNING BRIEF",
       title: "What they found",
       line: "Every morning at 07:00 UTC: launches, rugs, graduations and the pack's calls, signed.",
-      image: "/backdrops/cycle.webp",
+      image: "/doors/brief.webp",
+      focus: "50% 64%",
       stats: [
         ["calls made tonight", fmt(n?.callsTonight)],
         ["right when re-checked", n?.accuracy === null || n?.accuracy === undefined ? "-" : `${Math.round(n.accuracy * 100)}%`],
@@ -105,7 +109,8 @@ export default function Doors() {
       eyebrow: "THE NURSERY",
       title: "Who survives",
       line: "Eight judges that never learn. Every three nights the weakest dies and the best breed.",
-      image: "/evolution/nursery-1280.webp",
+      image: "/doors/nursery.webp",
+      focus: "50% 64%",
       stats: [
         ["alive · fallen", n?.alive === null || n?.alive === undefined ? "-" : `${n.alive} · ${n.fallen}`],
         ["next turn", n?.nextTurnIn === null || n?.nextTurnIn === undefined ? "-" : n.nextTurnIn === 0 ? "tonight" : `in ${n.nextTurnIn} night${n.nextTurnIn === 1 ? "" : "s"}`],
@@ -141,37 +146,38 @@ export default function Doors() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.9, delay: 0.08 * i, ease: [0.22, 1, 0.36, 1] }}
-            className="group relative flex min-h-[460px] flex-col overflow-hidden rounded-3xl ring-1 ring-white/10 transition hover:ring-white/25"
+            className="group relative flex flex-col overflow-hidden rounded-3xl bg-[#050706] ring-1 ring-white/10 transition hover:ring-white/25"
           >
-            <img
-              src={d.image}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-[1.2s] ease-out group-hover:scale-[1.06] group-hover:opacity-75"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.2)_0%,rgba(3,5,4,0.55)_45%,rgba(3,5,4,0.95)_100%)]" />
-            <div className="relative flex flex-1 flex-col p-7">
-              <p className="font-mono flex items-center gap-2 text-[10.5px] tracking-[0.18em] text-white/60">
+            <div className="relative h-[300px] overflow-hidden sm:h-[360px]">
+              <img
+                src={d.image}
+                alt=""
+                loading="lazy"
+                style={{ objectPosition: d.focus }}
+                className="absolute inset-0 h-full w-full object-cover opacity-85 transition duration-[1.2s] ease-out group-hover:scale-[1.05] group-hover:opacity-100"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.55)_0%,rgba(3,5,4,0)_28%,rgba(3,5,4,0)_70%,#050706_100%)]" />
+              <p className="font-mono absolute left-7 top-6 flex items-center gap-2 text-[10.5px] tracking-[0.18em] text-white/75">
                 {d.live !== undefined && (
                   <span className={`h-1.5 w-1.5 rounded-full ${d.live ? "animate-pulse bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" : "bg-white/30"}`} />
                 )}
                 {d.eyebrow}
               </p>
-              <div className="mt-auto">
-                <h3 className="font-display text-4xl">{d.title}</h3>
-                <p className="mt-3 max-w-xs text-[14px] font-light leading-relaxed text-white/65">{d.line}</p>
-                <dl className="font-mono mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
-                  {d.stats.map(([k, v]) => (
-                    <div key={k}>
-                      <dd className="text-xl text-white">{v}</dd>
-                      <dt className="mt-1 text-[10px] tracking-[0.06em] text-white/45">{k}</dt>
-                    </div>
-                  ))}
-                </dl>
-                <span className="mt-6 inline-flex items-center gap-2 text-[13.5px] text-white/80 transition group-hover:gap-3 group-hover:text-white">
-                  {d.cta} <ArrowRight size={14} />
-                </span>
-              </div>
+            </div>
+            <div className="relative flex flex-1 flex-col px-7 pb-7 pt-2">
+              <h3 className="font-display text-4xl">{d.title}</h3>
+              <p className="mt-3 max-w-xs text-[14px] font-light leading-relaxed text-white/60">{d.line}</p>
+              <dl className="font-mono mt-auto grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
+                {d.stats.map(([k, v]) => (
+                  <div key={k}>
+                    <dd className="text-xl text-white">{v}</dd>
+                    <dt className="mt-1 text-[10px] tracking-[0.06em] text-white/45">{k}</dt>
+                  </div>
+                ))}
+              </dl>
+              <span className="mt-6 inline-flex items-center gap-2 text-[13.5px] text-white/80 transition group-hover:gap-3 group-hover:text-white">
+                {d.cta} <ArrowRight size={14} />
+              </span>
             </div>
           </motion.a>
         ))}
