@@ -35,6 +35,18 @@
     {
       "source": "/evolution",
       "destination": "/evolution.html"
+    },
+    {
+      "source": "/live",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/brief",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agents",
+      "destination": "/index.html"
     }
   ]
 }

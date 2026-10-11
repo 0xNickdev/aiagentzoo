@@ -202,7 +202,7 @@ export default function NightWatch() {
               ))}
             </ol>
             {live.brief && (
-              <a href="#brief" className="font-mono mt-3 inline-block text-[11px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white">
+              <a href="/brief" className="font-mono mt-3 inline-block text-[11px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white">
                 read {live.brief.id} →
               </a>
             )}
