@@ -339,8 +339,8 @@ test("the beaver makes calls, checks them the next day and rewrites its playbook
     await beaver.queue;
   };
 
-  // Night of 2026-10-07: the beaver judges what it sees.
-  await feed([obs({ seenAt: now })]);
+  // Night of 2026-10-07: the beaver judges what it sees, while the token still trades.
+  await feed([obs({ seenAt: now, market: { priceUsd: 0.001, liquidityUsd: 5000, volume24hUsd: 9000, priceChange24h: -20, buys24h: 10, sells24h: 40, dex: "pumpswap", url: null } })]);
   const calls = await enclosure.store.get<any[]>("calls:2026-10-07");
   assert.equal(calls?.[0]?.verdict, "suspicious");
   assert.equal(calls?.[0]?.by, "model");
@@ -419,11 +419,20 @@ test("the nursery: creatures sit the same exam, the weakest dies, the strongest 
   const { evolutionAgent, evolutionView, creatureView, EVO } = await import("../src/agents/evolution.ts");
   let now = Date.UTC(2026, 9, 6, 22, 0);
   const mints = Array.from({ length: 9 }, (_, i) => `${"ABCDEFGHJ"[i]}${MINT.slice(1)}`);
-  const verdictOf = (system: string) => (/You are (Fox|Badger) /.test(system) ? "suspicious" : /You are (Moth|Lynx) /.test(system) ? "promising" : "watch");
+  // Six tokens die each night, the rest live; the exam draws eight of the nine.
+  const dies = new Set(mints.slice(0, 6));
+  const verdictOf = (system: string, mint: string) =>
+    /You are Badger /.test(system) ? (dies.has(mint) ? "suspicious" : "promising") // tells them apart
+    : /You are Fox /.test(system) ? "suspicious" // calls everything dead
+    : /You are (Moth|Lynx) /.test(system) ? "promising" // calls everything alive
+    : "watch"; // never commits
+  let replies = 0;
   const model = new EchoProvider((req) => {
     if (req.system.includes("are breeding")) return JSON.stringify({ playbook: "1. No socials is suspicious.\n2. Sells 2:1 over buys is a rug in progress.\n3. Fresh brand copies die young.", mutation: "Fresh brand copies die young." });
-    if (req.system.includes("selected out")) return "I trusted volume; volume did not trust me back.";
-    return JSON.stringify(mints.map((mint) => ({ mint, verdict: verdictOf(req.system), confidence: 0.7, why: "rule 1" })));
+    if (req.system.includes("selected out")) return "I waited for certainty; the market did not.";
+    // The very first answer is garbage: that creature must sit the exam again, not be counted as answered.
+    if (replies++ === 0) return "I refuse to answer in JSON.";
+    return JSON.stringify(mints.map((mint) => ({ mint, verdict: verdictOf(req.system, mint), confidence: 0.7, why: "rule 1" })));
   });
   const enclosure = new Enclosure({
     node: { id: "canyon.zoo", identity: Identity.generate(), operator: "op" },
@@ -433,46 +442,91 @@ test("the nursery: creatures sit the same exam, the weakest dies, the strongest 
     agents: [evolutionAgent({ briefAt: "07:00", generationNights: 2, examAfter: 3, judgesPerWake: 8 })],
   });
   const night = (n: number) => `2026-10-${String(7 + n).padStart(2, "0")}`;
+  const alive = { priceUsd: 0.01, liquidityUsd: 20_000, volume24hUsd: 50_000, priceChange24h: 10, buys24h: 100, sells24h: 50, dex: "pumpswap", url: null };
   const seed = async (n: number) =>
-    enclosure.store.set(`obs:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, obs({ mint, seenAt: now })])));
-  const dead = async (n: number) =>
-    enclosure.store.set(`followup:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, { symbol: "SILK", outcome: "dead" }])));
+    enclosure.store.set(`obs:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, obs({ mint, seenAt: now, market: alive })])));
+  const grade = async (n: number) =>
+    enclosure.store.set(`followup:${night(n)}`, Object.fromEntries(mints.map((mint) => [mint, { symbol: "SILK", outcome: dies.has(mint) ? "dead" : "alive" }])));
 
-  // Night 0: founders arrive, the exam is set, everyone answers.
   await seed(0);
   await enclosure.wake("heron");
-  const calls0 = await enclosure.store.get<Record<string, unknown[]>>(EVO.calls(night(0)));
-  assert.equal(Object.keys(calls0 ?? {}).length, 8);
+  let calls = await enclosure.store.get<Record<string, unknown[]>>(EVO.calls(night(0)));
+  assert.equal(Object.keys(calls ?? {}).length, 7, "the garbled answer does not count");
+  await enclosure.wake("heron");
+  calls = await enclosure.store.get<Record<string, unknown[]>>(EVO.calls(night(0)));
+  assert.equal(Object.keys(calls ?? {}).length, 8, "it sits the exam again");
 
-  // Night 1: yesterday is graded (every token died), a new exam is answered.
   now += 86_400_000;
-  await dead(0);
+  await grade(0);
   await seed(1);
   await enclosure.wake("heron");
-  const results = await enclosure.store.get<any>(EVO.results(night(0)));
-  assert.equal(results.c1.hits, 8, "Fox called them suspicious and they died");
-  assert.equal(results.c3.misses, 8, "Moth called them promising");
-
-  // Night 2: two nights since the founding, graded again: a generation turns.
   now += 86_400_000;
-  await dead(1);
+  await grade(1);
   await seed(2);
   await enclosure.wake("heron");
+
   const view = await evolutionView(enclosure.store, "07:00", now, 2);
   assert.equal(view?.generation, 1);
-  const moth = view!.creatures.find((c) => c.house === "Moth")!;
-  assert.equal(moth.diedNight, night(2));
-  assert.match(moth.epitaph ?? "", /volume did not trust me/);
+  const by = (house: string) => view!.creatures.find((c) => c.house === house && c.generation === 0)!;
+  // Telling them apart beats calling everything dead, which beats calling everything alive, which beats abstaining.
+  // After the turn the living start a fresh window; lifetime keeps the record.
+  assert.ok(by("Badger").lifetimeSkill! > 0.99, "telling them apart is perfect here");
+  assert.ok(Math.abs(by("Fox").lifetimeSkill! - 0.5) < 0.01, "everything-suspicious scores one half");
+  assert.ok(Math.abs(by("Moth").lifetimeSkill! - 0.5) < 0.01, "everything-promising scores one half");
+  assert.equal(by("Wren").lifetimeSkill, 0, "never committing scores nothing");
+  const dead = view!.creatures.filter((c) => c.diedNight);
+  assert.equal(dead.length, 1);
+  assert.ok(["Wren", "Stoat", "Newt", "Crane"].includes(dead[0]!.house), "an abstainer dies first");
+  assert.ok(dead[0]!.starving, "and it died starving");
+  assert.match(dead[0]!.epitaph ?? "", /certainty/);
+  assert.ok(view!.chronicle.some((e) => e.kind === "death" && /starvation/.test(e.text)));
   const child = view!.creatures.find((c) => c.generation === 1)!;
-  assert.equal(child.name, "Fox II");
-  assert.deepEqual(child.parents, ["c1", "c4"]);
-  assert.equal(child.mutation, "Fresh brand copies die young.");
+  assert.equal(child.name, "Badger II");
+  assert.deepEqual(child.parents![0], "c4", "the best breeds");
   assert.equal(view!.creatures.filter((c) => c.diedNight === null).length, 8);
-  assert.ok(view!.chronicle.some((e) => e.kind === "extinct" && /Moth/.test(e.text)));
   assert.equal(view!.history.length, 1);
   const detail = await creatureView(enclosure.store, child.id);
-  assert.deepEqual(detail?.parents.map((p) => p.house), ["Fox", "Badger"]);
-  assert.match(detail?.playbook ?? "", /brand copies/);
+  assert.equal(detail?.parents[0]?.house, "Badger");
+});
+
+test("balanced accuracy cannot be gamed by calling everything suspicious", async () => {
+  const { balance } = await import("../src/agents/judgement.ts");
+  const outcomes = ["dead", "dead", "dead", "dead", "dead", "dead", "dead", "dead", "alive", "alive"] as const;
+  const allSuspicious = balance(outcomes.map((outcome) => ({ verdict: "suspicious" as const, outcome })));
+  const perfect = balance(outcomes.map((outcome) => ({ verdict: outcome === "dead" ? ("suspicious" as const) : ("promising" as const), outcome })));
+  const coward = balance(outcomes.map((outcome) => ({ verdict: "watch" as const, outcome })));
+  assert.equal(allSuspicious.skill, 0.5);
+  assert.equal(perfect.skill, 1);
+  assert.equal(coward.skill, 0);
+});
+
+test("nursery helpers: a fair, repeatable exam draw and names that never repeat", async () => {
+  const { sample, turnGeneration, foundPopulation } = await import("../src/agents/evolution.ts");
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  assert.deepEqual(sample(items, 8, "2026-10-11"), sample(items, 8, "2026-10-11"));
+  assert.notDeepEqual(sample(items, 8, "2026-10-11"), sample(items, 8, "2026-10-12"));
+  assert.equal(new Set(sample(items, 8, "x")).size, 8);
+  let pop = foundPopulation("2026-10-07");
+  const fox = pop.creatures.c1!;
+  const badger = pop.creatures.c4!;
+  for (const dies of ["c8", "c7"]) {
+    pop = turnGeneration(pop, "2026-10-10", { dies: pop.creatures[dies]!, parents: [fox, badger] }, { playbook: "1. x", mutation: null }, "bye").pop;
+  }
+  const names = Object.values(pop.creatures).map((c) => c.name);
+  assert.equal(new Set(names).size, names.length);
+  assert.ok(names.includes("Fox II") && names.includes("Fox III"));
+});
+
+test("a call on a token that was already dead is not scored, for the beaver and for guests", async () => {
+  const { markAlready, scoreNight } = await import("../src/agents/judgement.ts");
+  const deadNow = obs({ market: { priceUsd: 0, liquidityUsd: 20, volume24hUsd: 10, priceChange24h: -99, buys24h: 0, sells24h: 9, dex: "pumpswap", url: null } });
+  const calls = markAlready([{ mint: MINT, symbol: "SILK", verdict: "suspicious" as const, confidence: 0.9, why: "", by: "model" as const, at: 0 }], [deadNow]);
+  assert.equal(calls[0]!.already, true);
+  const report = { guest: "crab", species: "sentinel", token: null, at: 0, items: [{ mint: MINT, verdict: "suspicious" as const, note: "", already: true }] };
+  const score = scoreNight("2026-10-07", calls, [report], [deadNow]);
+  assert.equal(score.hits + score.misses, 0);
+  assert.equal(score.guests.crab!.hits + score.guests.crab!.misses, 0);
+  assert.equal(score.guests.crab!.dead, 0, "an already-dead token is not a fair case either");
 });
 
 test("the nursery's exam is re-checked before anything else", async () => {

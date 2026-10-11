@@ -4,6 +4,11 @@ import { nodeOf } from "../zoo";
 export interface Tally {
   hits: number;
   misses: number;
+  dead: number;
+  deadRight: number;
+  alive: number;
+  aliveRight: number;
+  watched: number;
 }
 
 export interface Creature {
@@ -20,7 +25,12 @@ export interface Creature {
   lifetime: Tally;
   window: Tally;
   accuracy: number | null;
+  /** Balanced accuracy since the last turn, and over the whole life. */
+  skill: number | null;
+  lifetimeSkill: number | null;
   fitness: number;
+  graded: number;
+  starving: boolean;
 }
 
 export interface ChronicleEntry {
@@ -36,6 +46,8 @@ export interface Nursery {
   night: string;
   generation: number;
   nextGenerationInNights: number;
+  /** What selection would do if the turn came now, computed by the node itself. */
+  preview: { dies: string; parents: string[] } | null;
   creatures: Creature[];
   chronicle: ChronicleEntry[];
   history: Array<{ generation: number; night: string; accuracy: number | null; best: string | null }>;
@@ -56,7 +68,7 @@ export interface Case {
   hit: boolean | null;
 }
 
-export interface CreatureDetail extends Omit<Creature, "parents" | "fitness"> {
+export interface CreatureDetail extends Omit<Creature, "parents" | "fitness" | "graded"> {
   playbook: string;
   parents: Array<{ id: string; name: string; house: string; playbook: string }>;
   children: Array<{ id: string; name: string }>;

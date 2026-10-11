@@ -24,6 +24,8 @@ export interface Call {
   /** "model" when the beaver thought it through, "rules" when no model was at hand. */
   by: "model" | "rules";
   at: number;
+  /** The token was already dead when the call was made: calling it suspicious proves nothing, so it is not scored. */
+  already?: boolean;
 }
 
 export type Outcome = "dead" | "alive" | "unknown";
@@ -34,6 +36,7 @@ export interface Case {
   verdict: Verdict;
   why: string;
   outcome: Outcome;
+  already?: boolean;
   /** null when the call cannot be scored: a "watch", or no market to judge by. */
   hit: boolean | null;
 }
@@ -45,11 +48,41 @@ export interface Scorecard {
   misses: number;
   /** hits / (hits + misses), or null when nothing could be scored. */
   accuracy: number | null;
+  /** Balanced accuracy: the mean of "called the dead suspicious" and "called the living promising". Base rates cannot inflate it. */
+  skill?: number | null;
   cases: Case[];
   /** The same scoring applied to every guest's verdicts. */
-  guests: Record<string, { hits: number; misses: number }>;
+  guests: Record<string, GuestTally>;
   /** Each guest verdict with how its token turned out, so a guest's record can be read call by call. */
   guestCases?: Record<string, GuestCase[]>;
+}
+
+export interface GuestTally {
+  hits: number;
+  misses: number;
+  dead?: number;
+  deadRight?: number;
+  alive?: number;
+  aliveRight?: number;
+}
+
+/** Outcome counts over graded, fair cases (a "watch" counts as not called), and the balanced accuracy they give. */
+export function balance(cases: Array<{ verdict: Verdict; outcome: Outcome; already?: boolean }>) {
+  const fair = cases.filter((c) => c.outcome !== "unknown" && !c.already);
+  const dead = fair.filter((c) => c.outcome === "dead");
+  const alive = fair.filter((c) => c.outcome === "alive");
+  const counts = {
+    dead: dead.length,
+    deadRight: dead.filter((c) => c.verdict === "suspicious").length,
+    alive: alive.length,
+    aliveRight: alive.filter((c) => c.verdict === "promising").length,
+  };
+  return { ...counts, skill: skillOf(counts) };
+}
+
+export function skillOf(t: { dead?: number; deadRight?: number; alive?: number; aliveRight?: number }): number | null {
+  const parts = [t.dead ? (t.deadRight ?? 0) / t.dead : null, t.alive ? (t.aliveRight ?? 0) / t.alive : null].filter((v): v is number => v !== null);
+  return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
 }
 
 export interface GuestCase {
@@ -58,6 +91,7 @@ export interface GuestCase {
   verdict: Verdict;
   outcome: Outcome;
   hit: boolean | null;
+  already?: boolean;
 }
 
 export interface Playbook {
@@ -101,24 +135,37 @@ export function scoreNight(night: string, calls: Call[], reports: GuestReport[],
   const now = new Map(followups.map((o) => [o.mint, o]));
   const cases: Case[] = calls.map((c) => {
     const outcome = outcomeOf(now.get(c.mint));
-    return { mint: c.mint, symbol: c.symbol, verdict: c.verdict, why: c.why, outcome, hit: scoreCall(c.verdict, outcome) };
+    return { mint: c.mint, symbol: c.symbol, verdict: c.verdict, why: c.why, outcome, already: c.already === true, hit: c.already ? null : scoreCall(c.verdict, outcome) };
   });
   const hits = cases.filter((c) => c.hit === true).length;
   const misses = cases.filter((c) => c.hit === false).length;
   const guests: Scorecard["guests"] = {};
   const guestCases: Record<string, GuestCase[]> = {};
   for (const r of reports) {
-    const g = (guests[r.guest] = { hits: 0, misses: 0 });
+    const g: GuestTally = (guests[r.guest] = { hits: 0, misses: 0 });
     guestCases[r.guest] = r.items.map((i) => {
       const seen = now.get(i.mint);
       const outcome = outcomeOf(seen);
-      const hit = scoreCall(i.verdict, outcome);
+      // A token that was already dead when the guest reported it cannot earn a hit.
+      const hit = i.already ? null : scoreCall(i.verdict, outcome);
       if (hit === true) g.hits += 1;
       if (hit === false) g.misses += 1;
-      return { mint: i.mint, symbol: seen?.symbol ?? "?", verdict: i.verdict, outcome, hit };
+      return { mint: i.mint, symbol: seen?.symbol ?? "?", verdict: i.verdict, outcome, hit, already: i.already === true };
     });
+    const { skill: _s, ...counts } = balance(guestCases[r.guest]!);
+    Object.assign(g, counts);
   }
-  return { night, checked: followups.length, hits, misses, accuracy: hits + misses ? hits / (hits + misses) : null, cases, guests, guestCases };
+  return {
+    night,
+    checked: followups.length,
+    hits,
+    misses,
+    accuracy: hits + misses ? hits / (hits + misses) : null,
+    skill: balance(cases).skill,
+    cases,
+    guests,
+    guestCases,
+  };
 }
 
 /**
@@ -129,7 +176,7 @@ export function scoreNight(night: string, calls: Call[], reports: GuestReport[],
 export function followupMints(calls: Call[], reports: GuestReport[], reserved: string[] = [], max = 30): string[] {
   const picked = new Set<string>(reserved.slice(0, max));
   const guestCap = picked.size + (max - picked.size) / 2;
-  const queues = reports.map((r) => r.items.filter((i) => i.verdict !== "watch").map((i) => i.mint));
+  const queues = reports.map((r) => r.items.filter((i) => i.verdict !== "watch" && !i.already).map((i) => i.mint));
   for (let round = 0; picked.size < guestCap && queues.some((q) => q.length > round); round++) {
     for (const q of queues) {
       const mint = q[round];
@@ -138,7 +185,7 @@ export function followupMints(calls: Call[], reports: GuestReport[], reserved: s
   }
   for (const c of calls) {
     if (picked.size >= max) break;
-    if (c.verdict !== "watch") picked.add(c.mint);
+    if (c.verdict !== "watch" && !c.already) picked.add(c.mint);
   }
   return [...picked];
 }
@@ -160,7 +207,8 @@ export function ruleFlags(o: Observation): string[] {
 
 /** Up to `max` tokens the beaver has not judged yet, the most telling first. */
 export function candidates(obs: Observation[], judged: Set<string>, max = 15): Observation[] {
-  const fresh = obs.filter((o) => !judged.has(o.mint) && o.source !== "followup");
+  // Tokens already dead teach nothing: a suspicious call on them is free and is not scored anyway.
+  const fresh = obs.filter((o) => !judged.has(o.mint) && o.source !== "followup" && outcomeOf(o) !== "dead");
   const weight = (o: Observation) => ruleFlags(o).length * 10 + (o.complete ? 5 : 0) + Math.log10(1 + (o.market?.volume24hUsd ?? 0));
   return fresh.sort((a, b) => weight(b) - weight(a)).slice(0, max);
 }
@@ -209,6 +257,12 @@ export function compact(o: Observation) {
 }
 
 /** Parses the model's verdicts, keeping only well-formed calls on tokens it was asked about. */
+/** Marks calls on tokens that were already dead when judged, from the observations the judge saw. */
+export function markAlready(calls: Call[], asked: Observation[]): Call[] {
+  const dead = new Set(asked.filter((o) => outcomeOf(o) === "dead").map((o) => o.mint));
+  return calls.map((c) => (dead.has(c.mint) ? { ...c, already: true } : c));
+}
+
 export function parseCalls(text: string, asked: Observation[], now: number): Call[] {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");

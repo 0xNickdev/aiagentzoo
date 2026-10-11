@@ -18,6 +18,8 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
       callsTonight: calls.length,
       modelCallsTonight: calls.filter((c) => c.by === "model").length,
       accuracy: score?.accuracy ?? null,
+      // Balanced accuracy: calling everything suspicious cannot inflate it. Null on scorecards from before it existed.
+      skill: score?.skill ?? null,
       scored: score ? score.hits + score.misses : 0,
       playbookVersion: playbook?.version ?? 0,
       guests: all.length,

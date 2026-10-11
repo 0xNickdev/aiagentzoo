@@ -109,13 +109,12 @@ function Bar({ value, tone }: { value: number; tone: string }) {
 
 function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void }) {
   const ranked = useMemo(
-    () => data.creatures.filter((c) => !c.diedNight).sort((a, b) => b.fitness - a.fitness || b.window.hits - a.window.hits),
+    () => data.creatures.filter((c) => !c.diedNight).sort((a, b) => b.fitness - a.fitness || a.window.watched - b.window.watched),
     [data.creatures],
   );
-  const scored = (c: Creature) => c.window.hits + c.window.misses;
-  const contenders = ranked.filter((c) => scored(c) >= 3);
-  const breeding = new Set(contenders.slice(0, 2).map((c) => c.id));
-  const atRisk = contenders.length >= 3 ? contenders[contenders.length - 1]!.id : null;
+  // Standings come from the node, from the same selection the heron runs at the turn.
+  const breeding = new Set(data.preview?.parents ?? []);
+  const atRisk = data.preview?.dies ?? null;
   const answered = new Set(data.exam?.answered ?? []);
 
   return (
@@ -126,7 +125,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">The living</h2>
         </motion.div>
         <motion.p {...rise(0.1)} className="max-w-sm text-[14px] font-light leading-relaxed text-white/55">
-          Ranked by how often they were right since the last turn. The two at the top breed next; the one at the bottom will not see it.
+          Ranked by how well they tell the dead from the living since the last turn. The two at the top breed next; the one at the bottom will not see it. Answering "watch" counts as a miss.
         </motion.p>
       </div>
 
@@ -142,7 +141,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
 
       <div className="mt-8 grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] sm:grid-cols-2 lg:grid-cols-4">
         {ranked.map((c, i) => {
-          const tag = breeding.has(c.id) ? "BREEDS NEXT" : c.id === atRisk ? "AT RISK" : null;
+          const tag = breeding.has(c.id) ? "BREEDS NEXT" : c.id === atRisk ? (c.starving ? "STARVING" : "AT RISK") : c.starving ? "STARVING" : null;
           return (
             <motion.button
               key={c.id}
@@ -154,7 +153,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
               <div className="flex items-start justify-between">
                 <span className="font-mono text-[11px] text-white/35">{pad(i + 1)}</span>
                 {tag && (
-                  <span className={`font-mono text-[10px] tracking-[0.14em] ${tag === "AT RISK" ? "text-rose-200/80" : "text-amber-200/85"}`}>{tag}</span>
+                  <span className={`font-mono text-[10px] tracking-[0.14em] ${tag === "BREEDS NEXT" ? "text-amber-200/85" : "text-rose-200/80"}`}>{tag}</span>
                 )}
               </div>
               <div className="relative mx-auto mt-4 h-32 w-32">
@@ -171,12 +170,12 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
               <div className="mt-5">
                 <div className="font-mono mb-2 flex justify-between text-[10.5px] text-white/40">
                   <span>SINCE LAST TURN</span>
-                  <span className="text-white/75">{scored(c) ? `${c.window.hits}/${scored(c)}` : "no grades yet"}</span>
+                  <span className="text-white/75">{c.graded ? `${pct(c.skill)} · ${c.graded} graded` : "no grades yet"}</span>
                 </div>
-                <Bar value={scored(c) ? c.window.hits / scored(c) : 0} tone={c.id === atRisk ? "bg-rose-200/70" : breeding.has(c.id) ? "bg-amber-200/80" : "bg-white/60"} />
+                <Bar value={c.skill ?? 0} tone={c.id === atRisk || c.starving ? "bg-rose-200/70" : breeding.has(c.id) ? "bg-amber-200/80" : "bg-white/60"} />
               </div>
               <p className="font-mono mt-4 text-[10.5px] text-white/35">
-                lifetime {pct(c.accuracy)} · gen {c.generation}
+                lifetime {pct(c.lifetimeSkill)} · gen {c.generation}
                 {c.mutation ? " · mutant" : ""}
               </p>
             </motion.button>
@@ -208,11 +207,7 @@ function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => v
             onOpen={onOpen}
             next={{
               on: dayOf(data.night, Math.max(0, data.nextGenerationInNights - 1)),
-              parents: data.creatures
-                .filter((c) => !c.diedNight && c.window.hits + c.window.misses >= 3)
-                .sort((a, b) => b.fitness - a.fitness || b.window.hits - a.window.hits)
-                .slice(0, 2)
-                .map((c) => c.id),
+              parents: data.preview?.parents ?? [],
             }}
           />
         </motion.div>
@@ -368,7 +363,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
       </div>
       <div>
         <motion.div {...rise(0.1)}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">MEAN ACCURACY PER TURN</p>
+          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">MEAN BALANCED ACCURACY PER TURN</p>
           <h3 className="font-display mt-3 text-3xl">Is it working?</h3>
           <p className="mt-3 text-[14px] font-light leading-relaxed text-white/55">
             If selection does its job, the nursery should be right a little more often after every turn. This is the only chart that matters here.
@@ -386,9 +381,10 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           <ol className="mt-4 space-y-2.5 text-[13.5px] font-light leading-relaxed text-white/70">
             <li>1. A playbook is fixed for life. Creatures never rewrite their own rules.</li>
             <li>2. Every night all of them answer the same exam of fresh tokens.</li>
-            <li>3. A day later each answer is graded by what actually happened.</li>
-            <li>4. Every three nights comes a turn: the weakest dies and the two strongest breed.</li>
-            <li>5. A child inherits a mix of both playbooks and exactly one mutation.</li>
+            <li>3. A day later each answer is graded by what actually happened. "Watch" counts as a miss.</li>
+            <li>4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.</li>
+            <li>5. Every three nights comes a turn: the weakest dies and the two strongest breed.</li>
+            <li>6. A child inherits a mix of both playbooks and exactly one mutation.</li>
           </ol>
         </motion.div>
       </div>

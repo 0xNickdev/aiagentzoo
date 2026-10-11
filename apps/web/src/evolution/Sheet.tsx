@@ -116,9 +116,9 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
 
                 <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] text-white/40">
                   {[
-                    ["lifetime", pct(c.accuracy)],
-                    ["right", `${c.lifetime.hits} / ${c.lifetime.hits + c.lifetime.misses}`],
-                    ["since last turn", `${c.window.hits} / ${c.window.hits + c.window.misses}`],
+                    ["lifetime", pct(c.lifetimeSkill)],
+                    ["since last turn", pct(c.skill)],
+                    ["dead · living called", `${c.lifetime.deadRight}/${c.lifetime.dead} · ${c.lifetime.aliveRight}/${c.lifetime.alive}`],
                   ].map(([k, v]) => (
                     <div key={k} className="bg-[#070908] px-4 py-3">
                       <dt className="tracking-[0.1em]">{k!.toUpperCase()}</dt>

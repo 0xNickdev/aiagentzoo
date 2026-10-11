@@ -9,7 +9,9 @@ import {
   compact,
   DEFAULT_PLAYBOOK,
   followupMints,
+  type GuestTally,
   judgeSystem,
+  markAlready,
   outcomeOf,
   parseCalls,
   type Playbook,
@@ -76,6 +78,8 @@ export interface GuestItem {
   mint: string;
   verdict: (typeof VERDICTS)[number];
   note: string;
+  /** The zoo had already seen this token dead when the report arrived. */
+  already?: boolean;
 }
 
 /** What a guest reported over one night. */
@@ -483,10 +487,11 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         await ctx.state.set(FOLLOWUP(yesterday), Object.fromEntries(items.map((o) => [o.mint, { symbol: o.symbol, outcome: outcomeOf(o) }])) satisfies Followup);
         await ctx.trace("calls.scored", { night: yesterday, hits: score.hits, misses: score.misses, accuracy: score.accuracy, guests: score.guests });
         // Guests earn a track record from the same checks: one ledger of hits and misses per guest.
-        const ledger = (await ctx.state.get<Record<string, { hits: number; misses: number }>>(GUEST_SCORES)) ?? {};
+        const ledger = (await ctx.state.get<Record<string, GuestTally>>(GUEST_SCORES)) ?? {};
         for (const [name, g] of Object.entries(score.guests)) {
           const prev = ledger[name] ?? { hits: 0, misses: 0 };
-          ledger[name] = { hits: prev.hits + g.hits, misses: prev.misses + g.misses };
+          const sum = (k: keyof GuestTally) => (prev[k] ?? 0) + (g[k] ?? 0);
+          ledger[name] = { hits: sum("hits"), misses: sum("misses"), dead: sum("dead"), deadRight: sum("deadRight"), alive: sum("alive"), aliveRight: sum("aliveRight") };
         }
         if (Object.keys(score.guests).length) await ctx.state.set(GUEST_SCORES, ledger);
         if (score.hits + score.misses > 0 && playbook.night !== yesterday) {
@@ -515,7 +520,13 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const byMint = new Map((reports[name]?.items ?? []).map((i) => [i.mint, i]));
         for (const item of (event.payload as { items: GuestItem[] }).items) {
           byMint.delete(item.mint);
-          byMint.set(item.mint, { mint: item.mint, verdict: item.verdict, note: cleanText(item.note ?? "", 200) });
+          const seen = store[item.mint];
+          byMint.set(item.mint, {
+            mint: item.mint,
+            verdict: item.verdict,
+            note: cleanText(item.note ?? "", 200),
+            ...(seen && outcomeOf(seen) === "dead" ? { already: true } : {}),
+          });
         }
         reports[name] = { guest: name, species: guest.species, platform: guest.platform ?? "custom", token: guest.token, items: [...byMint.values()].slice(-MAX_GUEST_ITEMS), at: ctx.now };
         await ctx.state.set(reportsKey, reports);
@@ -560,10 +571,10 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
               untrusted: asked.map(compact),
               maxTokens: 2000,
             });
-            fresh = parseCalls(result.text, asked, ctx.now);
+            fresh = markAlready(parseCalls(result.text, asked, ctx.now), asked);
             if (fresh.length === 0) await ctx.trace("judge.unparsed", { asked: asked.length, reply: result.text.slice(0, 300) });
           } catch (error) {
-            fresh = ruleCalls(asked, ctx.now);
+            fresh = markAlready(ruleCalls(asked, ctx.now), asked);
             await ctx.trace("judge.fallback", { reason: (error as Error).message.slice(0, 300), ruleCalls: fresh.length });
           }
           calls = [...calls, ...fresh].slice(-200);

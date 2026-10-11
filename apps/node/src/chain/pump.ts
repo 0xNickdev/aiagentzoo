@@ -156,7 +156,7 @@ export interface ChainFacts {
   ageMin: number;
   buys: number;
   sells: number;
-  /** Distinct wallets that bought, capped at 500. */
+  /** Distinct wallets that bought, capped at 100 to bound memory across tens of thousands of tokens. */
   buyers: number;
   solIn: number;
   solOut: number;
@@ -245,7 +245,7 @@ export class PumpTape {
     if (ev.isBuy) {
       t.buys += 1;
       t.solIn += ev.sol;
-      if (t.buyers.size < 500) t.buyers.add(ev.user);
+      if (t.buyers.size < 100) t.buyers.add(ev.user);
       if (ev.user === t.creator) t.devBought += ev.tokens;
     } else {
       t.sells += 1;

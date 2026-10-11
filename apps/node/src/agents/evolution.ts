@@ -1,6 +1,6 @@
 import { type AgentDefinition, defineAgent, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText } from "../guests.ts";
-import { type Call, candidates, CHAIN_NOTE, cleanPlaybook, compact, type Outcome, parseCalls, previousNight, scoreCall } from "./judgement.ts";
+import { type Call, CHAIN_NOTE, cleanPlaybook, compact, type Outcome, outcomeOf, parseCalls, previousNight, scoreCall } from "./judgement.ts";
 import { nightOf, type Observation } from "./nightWatch.ts";
 
 /**
@@ -27,14 +27,36 @@ export interface Creature {
   diedNight: string | null;
   epitaph: string | null;
   lifetime: Tally;
-  /** Hits and misses since the last generation turned: what selection looks at. */
+  /** The same counts since the last turn: what selection looks at. */
   window: Tally;
 }
 
+/**
+ * How a creature did on graded tokens. `hits`/`misses` count scored verdicts the usual way (a "watch" is neither);
+ * the outcome counts drive selection: of the tokens that died, how many it called suspicious, and of those that
+ * survived, how many it called promising. A "watch" counts against both, and so does saying the same thing about
+ * everything, because most fresh tokens die.
+ */
 export interface Tally {
   hits: number;
   misses: number;
+  dead?: number;
+  deadRight?: number;
+  alive?: number;
+  aliveRight?: number;
+  /** Answers of "watch" on tokens whose outcome was known. */
+  watched?: number;
 }
+
+const zero = (): Required<Tally> => ({ hits: 0, misses: 0, dead: 0, deadRight: 0, alive: 0, aliveRight: 0, watched: 0 });
+const full = (t: Tally): Required<Tally> => ({ ...zero(), ...t });
+const add = (a: Tally, b: Tally): Required<Tally> => {
+  const x = full(a);
+  const y = full(b);
+  return { hits: x.hits + y.hits, misses: x.misses + y.misses, dead: x.dead + y.dead, deadRight: x.deadRight + y.deadRight, alive: x.alive + y.alive, aliveRight: x.aliveRight + y.aliveRight, watched: x.watched + y.watched };
+};
+/** Tokens with a known outcome this creature answered on. */
+export const graded = (t: Tally) => full(t).dead + full(t).alive;
 
 export interface Population {
   generation: number;
@@ -92,8 +114,10 @@ export type Followup = Record<string, { symbol: string; outcome: Outcome }>;
 export const POPULATION_SIZE = 8;
 export const EXAM_SIZE = 8;
 const CHRONICLE_MAX = 300;
-/** A creature needs this many scored answers in a generation before it can be chosen to die or to breed. */
-const MIN_SCORED = 3;
+/** A creature needs this many graded answers since the last turn before selection can choose it. */
+const MIN_GRADED = 6;
+/** Answering "watch" on more than this share of graded tokens marks a creature as starving. */
+const STARVING_SHARE = 0.6;
 
 const FOUNDERS: Array<Pick<Creature, "name" | "temperament" | "playbook">> = [
   {
@@ -181,8 +205,12 @@ const FOUNDERS: Array<Pick<Creature, "name" | "temperament" | "playbook">> = [
 /** A creature's founding trait: the first part of its temperament, without the article. */
 const trait = (c: Creature) => c.temperament.split(" × ")[0]!.replace(/^the /, "");
 
-const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
-const roman = (n: number) => ROMAN[n] ?? String(n);
+function roman(n: number): string {
+  const table: Array<[number, string]> = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+  let out = "";
+  for (const [v, s] of table) for (; n >= v; n -= v) out += s;
+  return out;
+}
 
 export function foundPopulation(night: string): Population {
   const creatures: Record<string, Creature> = {};
@@ -200,8 +228,8 @@ export function foundPopulation(night: string): Population {
       bornNight: night,
       diedNight: null,
       epitaph: null,
-      lifetime: { hits: 0, misses: 0 },
-      window: { hits: 0, misses: 0 },
+      lifetime: zero(),
+      window: zero(),
     };
   });
   return { generation: 0, lastGenerationNight: night, nextId: FOUNDERS.length + 1, creatures };
@@ -209,9 +237,24 @@ export function foundPopulation(night: string): Population {
 
 export const living = (p: Population) => Object.values(p.creatures).filter((c) => c.diedNight === null);
 
-/** Accuracy with a gentle prior, so one lucky answer does not crown a creature. */
-export const fitness = (t: Tally) => (t.hits + 1) / (t.hits + t.misses + 2);
+/**
+ * Balanced accuracy with a gentle prior: the mean of "called the dead suspicious" and "called the living promising".
+ * Calling everything suspicious scores about one half however many tokens die; only telling them apart scores high.
+ */
+export const fitness = (t: Tally) => {
+  const x = full(t);
+  return ((x.deadRight + 0.5) / (x.dead + 1) + (x.aliveRight + 0.5) / (x.alive + 1)) / 2;
+};
+/** Plain accuracy of scored verdicts, for display. */
 export const accuracy = (t: Tally) => (t.hits + t.misses ? t.hits / (t.hits + t.misses) : null);
+/** Balanced accuracy without the prior, or null before anything is graded. */
+export const skill = (t: Tally) => {
+  const x = full(t);
+  if (!x.dead && !x.alive) return null;
+  const parts = [x.dead ? x.deadRight / x.dead : null, x.alive ? x.aliveRight / x.alive : null].filter((v): v is number => v !== null);
+  return parts.reduce((a, b) => a + b, 0) / parts.length;
+};
+export const starving = (t: Tally) => graded(t) >= MIN_GRADED && full(t).watched / graded(t) > STARVING_SHARE;
 
 /** Scores every creature's answers from one night against the re-check, and adds them to its tallies. */
 export function scorePopulation(pop: Population, calls: Record<string, Call[]>, followup: Followup): { pop: Population; results: NightResults } {
@@ -225,25 +268,51 @@ export function scorePopulation(pop: Population, calls: Record<string, Call[]>, 
       const outcome = seen?.outcome ?? "unknown";
       return { mint: a.mint, symbol: seen?.symbol && seen.symbol !== "?" ? seen.symbol : a.symbol, verdict: a.verdict, why: a.why, outcome, hit: scoreCall(a.verdict, outcome) };
     });
-    const hits = cases.filter((x) => x.hit === true).length;
-    const misses = cases.filter((x) => x.hit === false).length;
-    results[id] = { hits, misses, cases };
-    next.creatures[id] = {
-      ...c,
-      lifetime: { hits: c.lifetime.hits + hits, misses: c.lifetime.misses + misses },
-      window: { hits: c.window.hits + hits, misses: c.window.misses + misses },
+    const known = cases.filter((x) => x.outcome !== "unknown");
+    const night: Required<Tally> = {
+      hits: cases.filter((x) => x.hit === true).length,
+      misses: cases.filter((x) => x.hit === false).length,
+      dead: known.filter((x) => x.outcome === "dead").length,
+      deadRight: known.filter((x) => x.outcome === "dead" && x.verdict === "suspicious").length,
+      alive: known.filter((x) => x.outcome === "alive").length,
+      aliveRight: known.filter((x) => x.outcome === "alive" && x.verdict === "promising").length,
+      watched: known.filter((x) => x.verdict === "watch").length,
     };
+    results[id] = { ...night, cases };
+    next.creatures[id] = { ...c, lifetime: add(c.lifetime, night), window: add(c.window, night) };
   }
   return { pop: next, results };
 }
 
-/** Who dies and who breeds this generation, or null when selection has too little to go on. */
+/** Who dies and who breeds this turn, or null when selection has too little to go on. */
 export function selection(pop: Population): { dies: Creature; parents: [Creature, Creature] } | null {
   const ranked = living(pop)
-    .filter((c) => c.window.hits + c.window.misses >= MIN_SCORED)
-    .sort((a, b) => fitness(b.window) - fitness(a.window) || b.window.hits - a.window.hits || a.id.localeCompare(b.id));
+    .filter((c) => graded(c.window) >= MIN_GRADED)
+    .sort(
+      (a, b) =>
+        fitness(b.window) - fitness(a.window) ||
+        // Between equals, the one that abstained more ranks lower, then the elder.
+        full(a.window).watched - full(b.window).watched ||
+        a.id.localeCompare(b.id, undefined, { numeric: true }),
+    );
   if (ranked.length < 3) return null;
-  return { dies: ranked.at(-1)!, parents: [ranked[0]!, ranked[1]!] };
+  return { dies: ranked[ranked.length - 1]!, parents: [ranked[0]!, ranked[1]!] };
+}
+
+/** A seeded shuffle, so the night's exam is a fair random draw that anyone can recompute from the night id. */
+export function sample<T>(items: T[], n: number, seed: string): T[] {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rand = () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out.slice(0, n);
 }
 
 export const nightsBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
@@ -296,7 +365,7 @@ export function turnGeneration(
   epitaph: string,
 ): { pop: Population; born: Creature; record: GenerationRecord } {
   const alive = living(pop);
-  const mean = alive.map((c) => accuracy(c.window)).filter((a): a is number => a !== null);
+  const mean = alive.map((c) => skill(c.window)).filter((a): a is number => a !== null);
   const record: GenerationRecord = {
     generation: pop.generation,
     night,
@@ -306,9 +375,11 @@ export function turnGeneration(
   const [a, b] = chosen.parents;
   const generation = Math.max(a.generation, b.generation) + 1;
   const id = `c${pop.nextId}`;
+  // Names count the house's members ever born, so two children of one house never share a name.
+  const nth = Object.values(pop.creatures).filter((c) => c.house === a.house).length + 1;
   const born: Creature = {
     id,
-    name: `${a.house} ${roman(generation + 1)}`,
+    name: `${a.house} ${roman(nth)}`,
     house: a.house,
     generation,
     parents: [a.id, b.id],
@@ -319,13 +390,13 @@ export function turnGeneration(
     bornNight: night,
     diedNight: null,
     epitaph: null,
-    lifetime: { hits: 0, misses: 0 },
-    window: { hits: 0, misses: 0 },
+    lifetime: zero(),
+    window: zero(),
   };
   const creatures: Record<string, Creature> = {};
   for (const c of Object.values(pop.creatures)) {
     if (c.id === chosen.dies.id) creatures[c.id] = { ...c, diedNight: night, epitaph };
-    else creatures[c.id] = c.diedNight === null ? { ...c, window: { hits: 0, misses: 0 } } : c;
+    else creatures[c.id] = c.diedNight === null ? { ...c, window: zero() } : c;
   }
   creatures[id] = born;
   return { pop: { generation: pop.generation + 1, lastGenerationNight: night, nextId: pop.nextId + 1, creatures }, born, record };
@@ -403,16 +474,18 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
 
       // 2. Every few nights, a generation turns.
       const since = pop.lastGenerationNight ? nightsBetween(pop.lastGenerationNight, night) : generationNights;
-      // Only once yesterday's answers are graded, so selection never runs on half a night.
-      const graded = Boolean(await ctx.state.get<NightResults>(EVO.results(yesterday))) || !(await ctx.state.get<Exam>(EVO.exam(yesterday)));
-      const chosen = since >= generationNights && graded ? selection(pop) : null;
+      // Only once yesterday's answers are graded, so selection never runs on half a night;
+      // a night late, the turn goes ahead anyway rather than stall on a missing re-check.
+      const ready =
+        Boolean(await ctx.state.get<NightResults>(EVO.results(yesterday))) || !(await ctx.state.get<Exam>(EVO.exam(yesterday))) || since > generationNights;
+      const chosen = since >= generationNights && ready ? selection(pop) : null;
       if (chosen) {
         const [a, b] = chosen.parents;
         let child: { playbook: string; mutation: string | null } = { playbook: interleave(a.playbook, b.playbook), mutation: null };
         try {
           const result = await ctx.think({
             system: BREED_SYSTEM,
-            prompt: `Parent A, ${a.name}, right ${a.window.hits} of ${a.window.hits + a.window.misses}. Parent B, ${b.name}, right ${b.window.hits} of ${b.window.hits + b.window.misses}. Their playbooks follow.`,
+            prompt: `Parent A, ${a.name}, balanced accuracy ${Math.round((skill(a.window) ?? 0) * 100)}% over ${graded(a.window)} graded tokens. Parent B, ${b.name}, ${Math.round((skill(b.window) ?? 0) * 100)}% over ${graded(b.window)}. Their playbooks follow.`,
             untrusted: { parentA: a.playbook, parentB: b.playbook },
             maxTokens: 900,
           });
@@ -421,11 +494,12 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
           await ctx.trace("evo.breed.fallback", { reason: (error as Error).message.slice(0, 200) });
         }
         const d = chosen.dies;
-        let epitaph = `My rules were right ${d.window.hits} times and wrong ${d.window.misses}. The nursery keeps the better ones.`;
+        const dSkill = Math.round((skill(d.window) ?? 0) * 100);
+        let epitaph = `My rules told the dead from the living ${dSkill}% of the time. The nursery keeps the better ones.`;
         try {
           const result = await ctx.think({
             system: EPITAPH_SYSTEM,
-            prompt: `You are ${d.name}, ${d.temperament}. Right ${d.window.hits}, wrong ${d.window.misses} this generation. Your playbook follows.`,
+            prompt: `You are ${d.name}, ${d.temperament}. Balanced accuracy ${dSkill}% since the last turn${starving(d.window) ? ", mostly by refusing to commit" : ""}. Your playbook follows.`,
             untrusted: { playbook: d.playbook },
             maxTokens: 120,
           });
@@ -438,7 +512,13 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         pop = turned.pop;
         const history = (await ctx.state.get<GenerationRecord[]>(EVO.history)) ?? [];
         await ctx.state.set(EVO.history, [...history, turned.record].slice(-200));
-        note({ night, generation: pop.generation, kind: "death", text: `${d.name} dies after being right ${d.window.hits} of ${d.window.hits + d.window.misses}. "${epitaph}"`, ids: [d.id] });
+        note({
+          night,
+          generation: pop.generation,
+          kind: "death",
+          text: `${d.name} dies${starving(d.window) ? " of starvation, answering watch on most tokens," : ""} at ${dSkill}% balanced accuracy. "${epitaph}"`,
+          ids: [d.id],
+        });
         note({
           night,
           generation: pop.generation,
@@ -457,10 +537,11 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
       let exam = await ctx.state.get<Exam>(EVO.exam(night));
       if (!exam) {
         const obs = Object.values((await ctx.state.get<Record<string, Observation>>(`obs:${night}`)) ?? {});
-        // Only tokens with a market can be scored tomorrow.
-        const scorable = obs.filter((o) => o.market);
+        // A fair draw: tokens with a market (so tomorrow can grade them) that are not already dead,
+        // picked at random with the night as the seed, not the ones the rules already flag.
+        const scorable = obs.filter((o) => o.market && outcomeOf(o) !== "dead" && o.source !== "followup");
         if (scorable.length >= examAfter) {
-          exam = { night, tokens: candidates(scorable, new Set(), EXAM_SIZE).map(compact) };
+          exam = { night, tokens: sample(scorable.sort((x, y) => x.mint.localeCompare(y.mint)), EXAM_SIZE, night).map(compact) };
           await ctx.state.set(EVO.exam(night), exam);
           await ctx.trace("evo.exam", { night, mints: exam.tokens.map((t) => t.mint) });
         }
@@ -474,8 +555,14 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         for (const c of waiting) {
           try {
             const result = await ctx.think({ system: creatureSystem(c), prompt: `Judge these ${exam.tokens.length} tokens.`, untrusted: exam.tokens, maxTokens: 1500 });
-            answers[c.id] = parseCalls(result.text, asked, ctx.now);
-            await ctx.trace("evo.answered", { id: c.id, name: c.name, calls: answers[c.id]!.map(({ mint, verdict, why }) => ({ mint, verdict, why })) });
+            const parsed = parseCalls(result.text, asked, ctx.now);
+            if (parsed.length === 0) {
+              // An unreadable answer is not an answer: the creature sits the exam again on the next wake.
+              await ctx.trace("evo.answer.unparsed", { id: c.id, reply: result.text.slice(0, 200) });
+              continue;
+            }
+            answers[c.id] = parsed;
+            await ctx.trace("evo.answered", { id: c.id, name: c.name, calls: parsed.map(({ mint, verdict, why }) => ({ mint, verdict, why })) });
           } catch (error) {
             await ctx.trace("evo.answer.skipped", { id: c.id, reason: (error as Error).message.slice(0, 200) });
             break;
@@ -506,11 +593,24 @@ export async function evolutionView(store: StateStore, briefAt: string, now = Da
     ]),
   );
   const since = pop.lastGenerationNight ? nightsBetween(pop.lastGenerationNight, night) : 0;
+  // The same selection the heron will run, so "breeds next" and "at risk" on the page are never a guess.
+  const preview = selection(pop);
   return {
     night,
     generation: pop.generation,
     nextGenerationInNights: Math.max(0, generationNights - since),
-    creatures: Object.values(pop.creatures).map(({ playbook: _p, ...c }) => ({ ...c, accuracy: accuracy(c.lifetime), fitness: fitness(c.window) })),
+    preview: preview ? { dies: preview.dies.id, parents: preview.parents.map((p) => p.id) } : null,
+    creatures: Object.values(pop.creatures).map(({ playbook: _p, ...c }) => ({
+      ...c,
+      lifetime: full(c.lifetime),
+      window: full(c.window),
+      accuracy: accuracy(c.lifetime),
+      skill: skill(c.window),
+      lifetimeSkill: skill(c.lifetime),
+      fitness: fitness(c.window),
+      graded: graded(c.window),
+      starving: starving(c.window),
+    })),
     chronicle: ((await store.get<ChronicleEntry[]>(EVO.chronicle)) ?? []).slice(-120).reverse(),
     history: (await store.get<GenerationRecord[]>(EVO.history)) ?? [],
     exam: exam ? { night, tokens: exam.tokens.map((t) => ({ mint: t.mint, symbol: t.symbol })), answered, tonight } : null,
@@ -535,7 +635,12 @@ export async function creatureView(store: StateStore, id: string, nights = 7) {
   const children = Object.values(pop.creatures).filter((x) => x.parents?.includes(id)).map((x) => ({ id: x.id, name: x.name }));
   return {
     ...c,
+    lifetime: full(c.lifetime),
+    window: full(c.window),
     accuracy: accuracy(c.lifetime),
+    skill: skill(c.window),
+    lifetimeSkill: skill(c.lifetime),
+    starving: starving(c.window),
     parents: parents.map((p) => ({ id: p.id, name: p.name, house: p.house, playbook: p.playbook })),
     children,
     record,
