@@ -29,7 +29,7 @@ interface Sections {
   watched?: Obs[];
   guests?: GuestReport[];
   calls?: Call[];
-  learned?: { score: { hits: number; misses: number; accuracy: number | null } | null; playbook: { version: number; text: string } };
+  learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null } | null; playbook: { version: number; text: string } };
 }
 interface Call {
   mint: string;
@@ -210,11 +210,20 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">WHAT THE PACK LEARNED</p>
-      {scored > 0 ? (
+      {scored > 0 && score!.skill !== undefined && score!.skill !== null ? (
         <>
-          <p className="font-display mt-4 text-5xl">{Math.round((score!.accuracy ?? 0) * 100)}%</p>
+          <p className="font-display mt-4 text-5xl">{Math.round(score!.skill * 100)}%</p>
           <p className="mt-2 text-[13.5px] font-light text-white/60">
-            of yesterday's calls were right when re-checked: {score!.hits} right, {score!.misses} wrong.
+            balanced accuracy on yesterday's calls: half for calling the dead, half for calling the living. By the plain count, {score!.hits} right and{" "}
+            {score!.misses} wrong.
+          </p>
+        </>
+      ) : scored > 0 ? (
+        <>
+          <p className="font-display mt-4 text-5xl text-white/50">-</p>
+          <p className="mt-2 text-[13.5px] font-light text-white/55">
+            This night was scored before balanced accuracy. By the plain count, {score!.hits} right and {score!.misses} wrong, which most fresh tokens dying makes
+            easy.
           </p>
         </>
       ) : (
@@ -424,7 +433,7 @@ export default function Brief() {
         ["GRADUATED", String(s.graduated.length)],
         ["WENT TO ZERO", String(s.wentToZero.length)],
         ["FLAGGED", String(s.suspicious.length)],
-        ["RIGHT WHEN CHECKED", scored ? `${Math.round((s.learned!.score!.accuracy ?? 0) * 100)}%` : "-"],
+        ["BALANCED ACCURACY", s.learned?.score?.skill !== undefined && s.learned?.score?.skill !== null ? `${Math.round(s.learned.score.skill * 100)}%` : "-"],
       ]
     : [];
 

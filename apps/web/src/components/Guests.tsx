@@ -17,7 +17,7 @@ interface Guest {
   admittedAt: number;
   signals: number;
   lastSignalAt: number | null;
-  score: { hits: number; misses: number } | null;
+  score: { hits: number; misses: number; skill?: number | null } | null;
 }
 
 interface RecordItem {
@@ -107,8 +107,10 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
           <dd className="mt-0.5 text-[13px] text-white/85">{g.signals}</dd>
         </div>
         <div>
-          <dt>track record</dt>
-          <dd className="mt-0.5 text-[13px] text-white/85">{scored ? `${g.score!.hits}/${scored}` : "first check tomorrow"}</dd>
+          <dt>balanced accuracy</dt>
+          <dd className="mt-0.5 text-[13px] text-white/85">
+            {g.score?.skill !== undefined && g.score?.skill !== null ? `${Math.round(g.score.skill * 100)}%` : scored ? "after the next check" : "first check tomorrow"}
+          </dd>
         </div>
         <div>
           <dt>last seen</dt>
@@ -187,8 +189,11 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
               <dd className="mt-0.5 text-lg text-white/90">{g.signals}</dd>
             </div>
             <div>
-              <dt>right / checked</dt>
-              <dd className="mt-0.5 text-lg text-white/90">{scored ? `${g.score!.hits} / ${scored}` : "-"}</dd>
+              <dt>balanced · plain</dt>
+              <dd className="mt-0.5 text-lg text-white/90">
+                {g.score?.skill !== undefined && g.score?.skill !== null ? `${Math.round(g.score.skill * 100)}%` : "-"}
+                <span className="text-white/40">{scored ? ` · ${g.score!.hits}/${scored}` : ""}</span>
+              </dd>
             </div>
             <div>
               <dt>last seen</dt>

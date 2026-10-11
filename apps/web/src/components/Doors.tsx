@@ -44,7 +44,7 @@ function useDoorNumbers(): Numbers | null {
         chainLive: Boolean(chain?.live),
         tokensTonight: stats?.tokensTonight ?? null,
         callsTonight: stats?.callsTonight ?? null,
-        accuracy: stats?.accuracy ?? null,
+        accuracy: stats?.skill ?? null,
         turn: evo?.generation ?? null,
         alive: evo ? creatures.filter((c) => !c.diedNight).length : null,
         fallen: evo ? creatures.filter((c) => c.diedNight).length : null,
@@ -100,7 +100,7 @@ export default function Doors() {
       focus: "50% 64%",
       stats: [
         ["calls made tonight", fmt(n?.callsTonight)],
-        ["right when re-checked", n?.accuracy === null || n?.accuracy === undefined ? "-" : `${Math.round(n.accuracy * 100)}%`],
+        ["balanced accuracy", n?.accuracy === null || n?.accuracy === undefined ? "-" : `${Math.round(n.accuracy * 100)}%`],
       ],
       cta: "Read today's brief",
     },

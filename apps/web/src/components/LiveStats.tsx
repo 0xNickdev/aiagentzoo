@@ -7,6 +7,8 @@ export interface Stats {
   callsTonight: number;
   modelCallsTonight: number;
   accuracy: number | null;
+  /** Balanced accuracy: base rates cannot inflate it. */
+  skill?: number | null;
   scored: number;
   playbookVersion: number;
   guests: number;
@@ -105,9 +107,9 @@ export default function LiveStats() {
           { label: "Tokens watched tonight", value: fmt(s.tokensTonight), hint: "pump.fun · DexScreener" },
           { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
           {
-            label: "Yesterday's accuracy",
-            value: s.accuracy === null ? "-" : `${Math.round(s.accuracy * 100)}%`,
-            hint: s.scored ? `${s.scored} calls re-checked` : "first check tonight",
+            label: "Balanced accuracy",
+            value: s.skill === null || s.skill === undefined ? "-" : `${Math.round(s.skill * 100)}%`,
+            hint: s.skill === null || s.skill === undefined ? "first score after the next re-check" : `${s.scored} calls re-checked`,
           },
           { label: "Agent playbook", value: `v${s.playbookVersion}`, hint: "rewritten by the agents" },
         ]
