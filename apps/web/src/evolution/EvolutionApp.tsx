@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
-import { GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
+import { GITHUB_URL } from "../links";
+import SiteNav from "../components/SiteNav";
 import { type ChronicleEntry, type Creature, dayOf, type Nursery, pad, pct, portrait, useNursery } from "./data";
 import Sheet from "./Sheet";
 import Tree from "./Tree";
@@ -15,31 +16,9 @@ const rise = (delay = 0) => ({
 
 function Header() {
   return (
-    <header className="absolute inset-x-0 top-0 z-30">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <div className="flex items-center gap-3">
-          <a href="/" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-white">
-            <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/20" />
-            ZOOAI AGENCY
-          </a>
-          <span className="font-mono rounded-full px-2.5 py-0.5 text-[11px] text-white/60 ring-1 ring-white/15">evolution</span>
-        </div>
-        <nav className="flex items-center gap-2">
-          <a href="/docs" className="hidden px-3 text-[13.5px] text-white/60 hover:text-white sm:block">
-            Docs
-          </a>
-          <a href="/" className="hidden px-3 text-[13.5px] text-white/60 hover:text-white sm:block">
-            Back to the zoo
-          </a>
-          <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="ZOOAI AGENCY on X" className="ml-2 rounded-full p-2 text-white/70 ring-1 ring-white/15 hover:text-white">
-            <XIcon size={13} />
-          </a>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="Source on GitHub" className="rounded-full p-2 text-white/70 ring-1 ring-white/15 hover:text-white">
-            <GitHubIcon size={14} />
-          </a>
-        </nav>
-      </div>
-    </header>
+    <div className="absolute inset-x-0 top-0 z-30">
+      <SiteNav overlay active="/evolution" />
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
+import { GITHUB_URL } from "../links";
+import SiteNav from "../components/SiteNav";
 import { GROUPS, markdownUrl, PAGES, type Page, render } from "./pages";
 
 const slugFromPath = () => location.pathname.replace(/^\/docs\/?/, "").replace(/\/$/, "") || PAGES[0]!.slug;
@@ -123,39 +124,21 @@ export default function DocsApp() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#030504]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-          <div className="flex items-center gap-3">
-            <a href="/" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-white">
-              <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/20" />
-              ZOOAI AGENCY
-            </a>
-            <span className="font-mono rounded-full px-2.5 py-0.5 text-[11px] text-white/55 ring-1 ring-white/15">docs</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <a href="/" className="hidden text-[13.5px] text-white/60 hover:text-white sm:block">
-              Back to the zoo
-            </a>
-            <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="ZOOAI AGENCY on X" className="ml-3 rounded-full p-2 text-white/70 ring-1 ring-white/15 hover:text-white">
-              <XIcon size={13} />
-            </a>
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="Source on GitHub" className="rounded-full p-2 text-white/70 ring-1 ring-white/15 hover:text-white">
-              <GitHubIcon size={14} />
-            </a>
-            <button type="button" onClick={() => setMenu((m) => !m)} aria-label={menu ? "Close menu" : "Open menu"} className="ml-1 p-2 text-white lg:hidden">
-              {menu ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
-        </div>
+      <SiteNav active="/docs" />
+      <div className="sticky top-[61px] z-30 border-b border-white/[0.07] bg-[#030504]/85 backdrop-blur-xl sm:top-[77px] lg:hidden">
+        <button type="button" onClick={() => setMenu((m) => !m)} className="font-mono flex w-full items-center justify-between px-5 py-3 text-[11px] tracking-[0.12em] text-white/60 sm:px-8">
+          <span>CONTENTS · {page.title.toUpperCase()}</span>
+          {menu ? <X size={15} /> : <Menu size={15} />}
+        </button>
         {menu && (
-          <div className="max-h-[70vh] overflow-y-auto border-t border-white/[0.07] px-5 py-6 lg:hidden">
+          <div className="max-h-[65vh] overflow-y-auto border-t border-white/[0.07] px-5 py-6 sm:px-8">
             <Nav page={page} go={go} />
           </div>
         )}
-      </header>
+      </div>
 
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-10 px-5 sm:px-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] overflow-y-auto py-10 lg:block">
+        <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-10 lg:block">
           <Nav page={page} go={go} />
         </aside>
 
@@ -217,7 +200,7 @@ export default function DocsApp() {
           </a>
         </main>
 
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] overflow-y-auto py-14 xl:block">
+        <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-14 xl:block">
           {headings.length > 1 && (
             <>
               <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">On this page</p>

@@ -13,9 +13,11 @@ export const NAV_LINKS = [
 ];
 
 /** The site header: over the hero video on the home page, a sticky bar everywhere else. */
-export default function SiteNav({ overlay = false }: { overlay?: boolean }) {
+/** `active` marks the current page on documents outside the app router (/docs, /evolution). */
+export default function SiteNav({ overlay = false, active }: { overlay?: boolean; active?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const route = useRoute();
+  const appRoute = useRoute();
+  const route = active ?? appRoute;
 
   return (
     <header className={overlay ? "relative z-20" : "sticky top-0 z-40 border-b border-white/[0.07] bg-[#030504]/75 backdrop-blur-xl"}>
