@@ -442,8 +442,10 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
       const night = nightOf(ctx.now, cfg.briefAt);
       const yesterday = previousNight(night);
       const chronicle = (await ctx.state.get<ChronicleEntry[]>(EVO.chronicle)) ?? [];
+      const chronicleBefore = chronicle.length;
       const note = (entry: Omit<ChronicleEntry, "at">) => chronicle.push({ ...entry, at: ctx.now });
-      let pop = await ctx.state.get<Population>(EVO.population);
+      const stored = await ctx.state.get<Population>(EVO.population);
+      let pop = stored;
 
       if (!pop) {
         pop = foundPopulation(night);
@@ -451,25 +453,32 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         await ctx.trace("evo.founded", { creatures: living(pop).map(({ id, name, temperament }) => ({ id, name, temperament })) });
       }
 
-      // 1. Yesterday's answers, scored against the hedgehog's re-check.
-      const followup = await ctx.state.get<Followup>(FOLLOWUP(yesterday));
-      if (followup && !(await ctx.state.get<NightResults>(EVO.results(yesterday)))) {
-        const calls = (await ctx.state.get<Record<string, Call[]>>(EVO.calls(yesterday))) ?? {};
+      // 1. Every past night with answers and a re-check but no grades yet, oldest first: yesterday as a rule,
+      // and any night missed while the heron was down.
+      const ungraded: string[] = [];
+      for (const key of (await ctx.state.keys("evo:calls:")).sort()) {
+        const n = key.slice("evo:calls:".length);
+        if (n >= night || (await ctx.state.get<NightResults>(EVO.results(n)))) continue;
+        if (await ctx.state.get<Followup>(FOLLOWUP(n))) ungraded.push(n);
+      }
+      for (const gradedNight of ungraded) {
+        const followup = (await ctx.state.get<Followup>(FOLLOWUP(gradedNight)))!;
+        const calls = (await ctx.state.get<Record<string, Call[]>>(EVO.calls(gradedNight))) ?? {};
         const scored = scorePopulation(pop, calls, followup);
         pop = scored.pop;
-        await ctx.state.set(EVO.results(yesterday), scored.results);
+        await ctx.state.set(EVO.results(gradedNight), scored.results);
         const tally = Object.values(scored.results).reduce((t, r) => ({ hits: t.hits + r.hits, misses: t.misses + r.misses }), { hits: 0, misses: 0 });
         const best = Object.entries(scored.results).sort(([, x], [, y]) => y.hits - x.hits || x.misses - y.misses)[0];
         if (tally.hits + tally.misses > 0) {
           note({
-            night: yesterday,
+            night: gradedNight,
             generation: pop.generation,
             kind: "scored",
             text: `The night's exam is graded: ${tally.hits} right, ${tally.misses} wrong across the nursery.${best && best[1].hits ? ` Best: ${pop.creatures[best[0]]?.name} with ${best[1].hits}.` : ""}`,
             ids: best ? [best[0]] : [],
           });
         }
-        await ctx.trace("evo.scored", { night: yesterday, ...tally, results: Object.fromEntries(Object.entries(scored.results).map(([id, r]) => [id, { hits: r.hits, misses: r.misses }])) });
+        await ctx.trace("evo.scored", { night: gradedNight, ...tally, results: Object.fromEntries(Object.entries(scored.results).map(([id, r]) => [id, { hits: r.hits, misses: r.misses }])) });
       }
 
       // 2. Every few nights, a generation turns.
@@ -571,8 +580,10 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         if (waiting.length) await ctx.state.set(EVO.calls(night), answers);
       }
 
-      await ctx.state.set(EVO.population, pop);
-      await ctx.state.set(EVO.chronicle, chronicle.slice(-CHRONICLE_MAX));
+      // Write only what changed: a quiet wake must leave no output, or the runtime reads the repeats as a loop
+      // and pauses the heron (it did, on 2026-10-11).
+      if (!stored || JSON.stringify(stored) !== JSON.stringify(pop)) await ctx.state.set(EVO.population, pop);
+      if (chronicle.length !== chronicleBefore) await ctx.state.set(EVO.chronicle, chronicle.slice(-CHRONICLE_MAX));
     },
   });
 }

@@ -278,7 +278,7 @@ function northAgents(cfg: NightWatchConfig): AgentDefinition[] {
       const latest = await ctx.use<Launch[]>("pump.latest", { limit: 50 });
       const fresh = latest.filter((l) => l.createdAt > cursor).slice(0, MAX_BATCH);
       if (fresh.length === 0) {
-        await ctx.trace("scan", { fresh: 0 });
+        // Nothing new: leave no output, so quiet scans are not mistaken for a loop.
         return;
       }
       await ctx.state.set("raven:cursor", Math.max(...fresh.map((l) => l.createdAt)));
@@ -302,7 +302,7 @@ function marshAgents(cfg: NightWatchConfig): AgentDefinition[] {
       const seen = new Set((await ctx.state.get<string[]>("owl:seen")) ?? []);
       const mints = (await ctx.use<string[]>("dex.profiles")).filter((m) => isMint(m) && !seen.has(m)).slice(0, MAX_BATCH);
       if (mints.length === 0) {
-        await ctx.trace("scan", { fresh: 0 });
+        // Nothing new: leave no output, so quiet scans are not mistaken for a loop.
         return;
       }
       await ctx.state.set("owl:seen", [...seen, ...mints].slice(-500));

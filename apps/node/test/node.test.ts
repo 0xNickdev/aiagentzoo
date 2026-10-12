@@ -582,3 +582,18 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   assert.ok(tape.live(now));
   assert.ok(ruleFlags(obs({ chain: f, hasSocials: true })).includes("creator sold 80% of their bag"));
 });
+
+test("a quiet heron is not mistaken for a loop", async () => {
+  const { evolutionAgent } = await import("../src/agents/evolution.ts");
+  const now = Date.UTC(2026, 9, 6, 22, 0);
+  const enclosure = new Enclosure({
+    node: { id: "canyon.zoo", identity: Identity.generate(), operator: "op" },
+    keeper: "keeper",
+    model: new EchoProvider(() => "[]"),
+    clock: () => now,
+    agents: [evolutionAgent({ briefAt: "07:00", examAfter: 1000 })],
+  });
+  for (let i = 0; i < 8; i++) await enclosure.wake("heron");
+  const heron = enclosure.snapshot().find((a) => a.name === "heron");
+  assert.notEqual(heron?.status, "paused");
+});
