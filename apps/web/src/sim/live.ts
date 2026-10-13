@@ -90,6 +90,32 @@ function describe(e: Entry["event"]): string | null {
   }
 }
 
+/** The line an animal shows over its head for a real event, if the event is worth one. */
+function noteFor(e: { type: string; kind: string; from: { agent: string }; payload?: any }): [string, string] | null {
+  const p = e.payload ?? {};
+  const n = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  switch (e.type) {
+    case "launches.found":
+      return [e.from.agent, `+${n(p.launches)} launches`];
+    case "profiles.found":
+      return [e.from.agent, `+${n(p.mints)} promoted`];
+    case "gathered":
+      return [e.from.agent, `${Number(p.count ?? 0)} tokens gathered`];
+    case "calls.made":
+      return [e.from.agent, `${Number(p.count ?? 0)} calls`];
+    case "calls.scored":
+      return [e.from.agent, `re-checked: ${Number(p.hits ?? 0)} right`];
+    case "playbook.updated":
+      return [e.from.agent, `playbook v${Number(p.version ?? 0)}`];
+    case "artifact.published":
+      return [e.from.agent, "brief published"];
+    case "followup.check":
+      return [e.from.agent, `re-check ${n(p.mints)}`];
+    default:
+      return null;
+  }
+}
+
 export function useLiveZoo(engine: React.RefObject<NightWatch | null>): LiveState {
   const [state, setState] = useState<LiveState>({
     enabled: NODE_URLS.length > 0,
@@ -123,6 +149,10 @@ export function useLiveZoo(engine: React.RefObject<NightWatch | null>): LiveStat
         const fresh = Date.now() - e.ts < ANIMATE_WINDOW_MS;
         if (fresh && e.type === "agent.woke") engine.current?.liveWake(e.from.agent);
         if (fresh && e.kind === "signal" && e.to) engine.current?.liveSignal(e.from.agent, e.to.agent);
+        if (fresh) {
+          const note = noteFor(e);
+          if (note) engine.current?.liveNote(note[0], note[1]);
+        }
 
         setState((s) => {
           const stats = { ...s.stats };

@@ -126,6 +126,8 @@ export class NightWatch {
     })),
   );
   private ripples: Ripple[] = [];
+  /** Short lines that rise over an animal when a node reports what it just did. */
+  private notes: Array<{ animal: string; text: string; age: number }> = [];
 
   constructor(
     private onLog: (entry: LogEntry | "reset") => void,
@@ -282,6 +284,14 @@ export class NightWatch {
     if (a) this.wake(a, { type: "live" });
   }
 
+  /** A real step, shown as a short line rising over the animal that took it, with a ring at its feet. */
+  liveNote(name: string, text: string) {
+    const a = this.animals.find((x) => x.sprite === name);
+    if (!a) return;
+    this.notes = [...this.notes.filter((n) => n.animal !== name), { animal: name, text, age: 0 }].slice(-8);
+    this.ripples.push({ enc: a.enc, x: a.ox, y: a.oy, age: 0, tint: SPECIES_COLOR[a.species] });
+  }
+
   /** Animate a real signal reported by a node. */
   liveSignal(from: string, to: string, accepted = true) {
     const a = this.animals.find((x) => x.sprite === from);
@@ -338,6 +348,8 @@ export class NightWatch {
       }
     }
     for (const r of this.ripples) r.age += dt;
+    for (const n of this.notes) n.age += dt;
+    this.notes = this.notes.filter((n) => n.age < 4.5);
     this.ripples = this.ripples.filter((r) => r.age < 2.6);
   }
 
@@ -515,6 +527,30 @@ export class NightWatch {
       ctx.ellipse(g.x + r.x * g.r, g.y + r.y * g.r * re.squash, 4 + k * g.r * 0.18, (4 + k * g.r * 0.18) * 0.55, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
+
+    // what the animals just did, read from the nodes
+    ctx.font = '400 11px "Geist Mono", ui-monospace, monospace';
+    ctx.textAlign = "center";
+    for (const n of this.notes) {
+      const a = this.animals.find((x) => x.sprite === n.animal);
+      if (!a) continue;
+      const ne = encById[a.enc];
+      const g = geo(ne);
+      const x = g.x + a.ox * g.r;
+      const y = g.y + a.oy * g.r * ne.squash - 30 - n.age * 6;
+      const fade = n.age < 0.3 ? n.age / 0.3 : n.age > 3.5 ? Math.max(0, (4.5 - n.age) / 1) : 1;
+      const w = ctx.measureText(n.text).width + 14;
+      ctx.globalAlpha = fade * 0.85;
+      ctx.fillStyle = "rgba(3,5,4,0.75)";
+      ctx.beginPath();
+      ctx.roundRect(x - w / 2, y - 13, w, 19, 9.5);
+      ctx.fill();
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = SPECIES_COLOR[a.species];
+      ctx.fillText(n.text, x, y);
+    }
+    ctx.textAlign = "start";
     ctx.globalAlpha = 1;
 
     // ambient motes: fireflies, marsh lights, canyon dust
