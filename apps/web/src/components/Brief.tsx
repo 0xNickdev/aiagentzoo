@@ -1,4 +1,6 @@
+import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import NightCard, { type NightCardData } from "./NightCard";
 import { loadDirectory, shortAddress, useGuardian } from "../zoo";
 import { GuardianButton } from "./Guardian";
 import { Reveal, Section } from "./ui";
@@ -423,6 +425,37 @@ export default function Brief() {
     a.click();
   };
 
+  const [card, setCard] = useState<NightCardData | null>(null);
+  const closeCard = useCallback(() => setCard(null), []);
+  const openCard = async () => {
+    if (!brief) return;
+    const sec = brief.sections;
+    const tell = sec.suspicious.find((o) => (o.reasons ?? []).some((r) => r.startsWith("creator"))) ?? sec.suspicious[0];
+    let nursery: string | null = null;
+    try {
+      const url = await nodeUrl("heron");
+      const evo = url ? await (await fetch(`${url}/v1/evolution`)).json() : null;
+      const next = new Date(Date.parse(`${sec.night}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+      const events = ((evo?.chronicle ?? []) as Array<{ kind: string; night: string; text: string }>).filter(
+        (e) => (e.night === sec.night || e.night === next) && (e.kind === "death" || e.kind === "birth"),
+      );
+      const death = events.find((e) => e.kind === "death");
+      const birth = events.find((e) => e.kind === "birth");
+      if (death || birth) nursery = clean([death?.text.split(" at ")[0], birth?.text.split(". Mutation")[0]].filter(Boolean).join(". ") + ".");
+    } catch {
+      // The nursery line is optional.
+    }
+    setCard({
+      night: sec.night,
+      observed: sec.observed,
+      launches: sec.launches,
+      graduated: sec.graduated.length,
+      wentToZero: sec.wentToZero.length,
+      highlight: tell ? clean(`$${tell.symbol}: ${(tell.reasons ?? []).join(", ")}.`) : null,
+      nursery,
+      skill: sec.learned?.score?.skill ?? null,
+    });
+  };
   const s = brief?.sections;
   const review = brief ? reviewOf(brief.markdown) : null;
   const scored = s?.learned?.score ? s.learned.score.hits + s.learned.score.misses : 0;
@@ -498,6 +531,9 @@ export default function Brief() {
                 sha256 {brief.ref.sha256.slice(0, 16)}…
               </p>
               <div className="flex gap-2">
+                <button type="button" onClick={() => void openCard()} className="rounded-full bg-white px-4 py-2 text-[12px] font-medium text-black hover:bg-white/90">
+                  Night card
+                </button>
                 <button type="button" onClick={share} className="liquid-glass rounded-full px-4 py-2 text-[12px] text-white/85 hover:text-white">
                   Copy link
                 </button>
@@ -531,6 +567,7 @@ export default function Brief() {
       <div className="mt-16">
         <WatchPanel brief={brief} />
       </div>
+      <AnimatePresence>{card && <NightCard key={card.night} data={card} onClose={closeCard} />}</AnimatePresence>
     </Section>
   );
 }
