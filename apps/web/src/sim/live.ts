@@ -213,9 +213,20 @@ export interface ChainPulse {
   recent: PulseEvent[];
 }
 
-const PULSE_EVERY_MS = 2_000;
+const POLL_MS = 3_000;
+/** One loud moment on the map at a time, so each can be read. */
+const LOUD_EVERY_MS = 4_500;
+/** Launches are a background stream; past this pace they blur. */
+const LAUNCH_EVERY_MS = 1_200;
+/** The per-minute counter moves this often, not on every poll. */
+const COUNTER_EVERY_MS = 10_000;
+/** Rarer moments first: a graduate or a big buy beats the fiftieth dump. */
+const PRIORITY: Record<PulseEvent["kind"], number> = { graduated: 4, whale: 3, dump: 2, serial: 1, launch: 0 };
 
-/** Polls north's pump.fun tape and flies each moment onto the map, spread over the poll interval. */
+/**
+ * Polls north's pump.fun tape and plays it back at a readable pace: launches as a thin stream,
+ * loud moments one by one from a short queue, the rarest first and the stale dropped.
+ */
 export function useChainPulse(engine: React.RefObject<NightWatch | null>): ChainPulse {
   const [state, setState] = useState<ChainPulse>({ live: false, perMinute: null, recent: [] });
 
@@ -224,7 +235,10 @@ export function useChainPulse(engine: React.RefObject<NightWatch | null>): Chain
     if (!north) return;
     let after = -1;
     let stopped = false;
-    const timers = new Set<number>();
+    let loud: PulseEvent[] = [];
+    let launches = 0;
+    let counterAt = 0;
+
     const poll = async () => {
       if (document.hidden) return;
       try {
@@ -232,29 +246,43 @@ export function useChainPulse(engine: React.RefObject<NightWatch | null>): Chain
         if (!r.ok) return;
         const body = (await r.json()) as { live: boolean; perMinute: ChainPulse["perMinute"]; events: PulseEvent[] };
         if (stopped) return;
-        // The first read only sets the cursor and replays the last few, so the map doesn't open with a flood.
-        const events = after < 0 ? body.events.slice(-4) : body.events;
+        const first = after < 0;
         if (body.events.length) after = body.events[body.events.length - 1]!.seq;
-        else if (after < 0) after = 0;
-        events.forEach((e, i) => {
-          const id = window.setTimeout(() => {
-            timers.delete(id);
-            engine.current?.livePulse(e);
-            if (e.kind !== "launch") setState((s) => ({ ...s, recent: [e, ...s.recent].slice(0, 4) }));
-          }, (i / Math.max(1, events.length)) * PULSE_EVERY_MS);
-          timers.add(id);
-        });
-        setState((s) => ({ ...s, live: body.live, perMinute: body.perMinute }));
+        else if (first) after = 0;
+        // The first read only sets the cursor and keeps the newest loud moments.
+        const fresh = body.events.filter((e) => e.kind !== "launch");
+        loud = [...loud, ...(first ? fresh.slice(-2) : fresh)]
+          .sort((a, b) => PRIORITY[b.kind] - PRIORITY[a.kind] || b.seq - a.seq)
+          .slice(0, 6);
+        launches = Math.min(launches + body.events.length - fresh.length, 4);
+        const now = Date.now();
+        if (now - counterAt >= COUNTER_EVERY_MS || first) {
+          counterAt = now;
+          setState((s) => ({ ...s, live: body.live, perMinute: body.perMinute }));
+        }
       } catch {
         /* the next poll tries again */
       }
     };
+
+    const playLoud = () => {
+      if (document.hidden) return;
+      const e = loud.shift();
+      if (!e) return;
+      engine.current?.livePulse(e);
+      setState((s) => ({ ...s, recent: [e, ...s.recent].slice(0, 3) }));
+    };
+    const playLaunch = () => {
+      if (document.hidden || launches <= 0) return;
+      launches -= 1;
+      engine.current?.livePulse({ seq: 0, at: Date.now(), kind: "launch", mint: "", symbol: "", text: "" });
+    };
+
     poll();
-    const every = window.setInterval(poll, PULSE_EVERY_MS);
+    const timers = [window.setInterval(poll, POLL_MS), window.setInterval(playLoud, LOUD_EVERY_MS), window.setInterval(playLaunch, LAUNCH_EVERY_MS)];
     return () => {
       stopped = true;
-      clearInterval(every);
-      timers.forEach((id) => clearTimeout(id));
+      timers.forEach((id) => clearInterval(id));
     };
   }, [engine]);
 

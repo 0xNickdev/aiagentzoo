@@ -353,7 +353,7 @@ export class NightWatch {
     const by = (name: string) => this.animals.find((x) => x.sprite === name)!;
     const raven = by("raven");
     // Launches come every second or so; past a dozen in flight the counter tells the scale better.
-    if (e.kind === "launch" && this.sparks.length > 12) return;
+    if (e.kind === "launch" && this.sparks.length > 5) return;
     const edge = (): [number, number] => (Math.random() < 0.6 ? [rand(-0.02, 0.45), -0.03] : [-0.03, rand(0, 0.7)]);
     const [sx, sy] = edge();
     const tag = `$${e.symbol}`;
@@ -389,8 +389,8 @@ export class NightWatch {
       return;
     }
     this.bursts.push({ animal: a, color, age: 0, big: s.kind === "dump" });
-    if (s.label) this.flares = [...this.flares, { animal: a, text: s.label, color, age: 0 }].slice(-4);
-    if (s.kind === "dump") this.alarm = 1;
+    if (s.label) this.flares = [...this.flares, { animal: a, text: s.label, color, age: 0 }].slice(-2);
+    if (s.kind === "dump") this.alarm = 0.6;
     if (!a.moving) this.newTarget(a);
   }
 
@@ -399,7 +399,7 @@ export class NightWatch {
     // Between real events the animals still move about their enclosures.
     this.idleIn -= dt;
     if (this.idleIn <= 0) {
-      this.idleIn = rand(1.5, 4);
+      this.idleIn = rand(3, 6);
       const a = pick(this.animals.filter((x) => !x.moving));
       if (a) this.wake(a, { type: "live" });
     }
@@ -409,7 +409,7 @@ export class NightWatch {
     for (const b of this.bursts) b.age += dt;
     this.bursts = this.bursts.filter((b) => b.age < 1.6);
     for (const f of this.flares) f.age += dt;
-    this.flares = this.flares.filter((f) => f.age < 6);
+    this.flares = this.flares.filter((f) => f.age < 5);
     for (const [a, age] of this.caught) {
       if (age > 0.5) this.caught.delete(a);
       else this.caught.set(a, age + dt);
@@ -845,7 +845,7 @@ export class NightWatch {
       const row = stack.get(f.animal) ?? 0;
       stack.set(f.animal, row + 1);
       const p = pos(f.animal);
-      const fade = f.age < 0.25 ? f.age / 0.25 : f.age > 5 ? Math.max(0, 6 - f.age) : 1;
+      const fade = f.age < 0.25 ? f.age / 0.25 : f.age > 4 ? Math.max(0, 5 - f.age) : 1;
       const tw = ctx.measureText(f.text).width;
       const bw = tw + 30;
       const x = Math.min(Math.max(8, p.x - bw / 2), w - bw - 8);
