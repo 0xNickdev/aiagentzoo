@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   Enclosure,
@@ -67,6 +67,15 @@ if (ledger) await enclosure.lockStake();
 enclosure.start();
 
 // The north node reads pump.fun straight from Solana when a Yellowstone stream is configured.
+// Loud chain moments outlive a restart, so anything a post names can still be checked.
+const momentsFile = join(config.dataDir, "chain-moments.json");
+if (config.role === "north") {
+  if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
+  setInterval(() => {
+    writeFileSync(`${momentsFile}.tmp`, tape.dump());
+    renameSync(`${momentsFile}.tmp`, momentsFile);
+  }, 60_000).unref();
+}
 const stopStream =
   config.role === "north" && process.env.SHYFT_GRPC_TOKEN
     ? await startPumpStream(tape, { url: process.env.SHYFT_GRPC_URL ?? "https://grpc.eu.shyft.to", token: process.env.SHYFT_GRPC_TOKEN, log: (m) => console.log(`[${config.id}] ${m}`) })

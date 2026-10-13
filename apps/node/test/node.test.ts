@@ -591,6 +591,16 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "dump").length, 1);
   assert.deepEqual(tape.perMinute(now), { launches: 1, trades: 4 });
   assert.deepEqual(tape.perMinute(now + 61_000), { launches: 0, trades: 0 });
+
+  // Loud moments carry the transaction, can be searched by ticker, and survive a restart.
+  tape.apply(events[3]!, now, "SIGxyz");
+  const [moment] = tape.momentsMatching({ symbol: "$silk" }, now);
+  assert.equal(moment!.kind, "dump");
+  assert.equal(moment!.creator, CREATOR);
+  const reborn = new PumpTape();
+  reborn.restore(tape.dump(now), now);
+  assert.equal(reborn.momentsMatching({ mint: MINT }, now).length, 1);
+  assert.equal(reborn.momentsMatching({ mint: MINT }, now + 49 * 3_600_000).length, 0);
 });
 
 test("a quiet heron is not mistaken for a loop", async () => {

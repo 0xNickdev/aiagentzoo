@@ -203,9 +203,16 @@ export interface PulseEvent {
   mint: string;
   symbol: string;
   text: string;
+  /** The Solana transaction that shows it: the creator's sell, the big buy, the launch. Check it on any explorer. */
+  tx?: string;
+  /** Who launched the token. */
+  creator?: string;
 }
 
 const PULSE_KEEP = 300;
+/** Loud moments are kept two days, so a post that names one can still be checked. */
+const MOMENTS_KEEP_MS = 48 * 3_600_000;
+const MOMENTS_MAX = 50_000;
 
 const ordinal = (n: number) => {
   const tens = n % 100;
@@ -229,13 +236,50 @@ export class PumpTape {
   seen = { launches: 0, trades: 0 };
   private pulse: PulseEvent[] = [];
   private pulseSeq = 0;
+  /** Every loud moment (not plain launches) of the last two days, oldest first. */
+  private moments: PulseEvent[] = [];
   /** Per-second counts over the last minute, a ring indexed by second. */
   private readonly seconds = Array.from({ length: 60 }, () => ({ sec: -1, launches: 0, trades: 0 }));
 
-  private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string }, text: string): void {
+  private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string; creator: string }, text: string, tx?: string): void {
     const symbol = t.symbol.replace(/\s+/g, " ").trim().slice(0, 16) || "?";
-    this.pulse.push({ seq: ++this.pulseSeq, at, kind, mint: t.mint, symbol, text });
+    const e: PulseEvent = { seq: ++this.pulseSeq, at, kind, mint: t.mint, symbol, text, creator: t.creator, ...(tx ? { tx } : {}) };
+    this.pulse.push(e);
     if (this.pulse.length > PULSE_KEEP) this.pulse.splice(0, this.pulse.length - PULSE_KEEP);
+    if (kind !== "launch") {
+      this.moments.push(e);
+      if (this.moments.length > MOMENTS_MAX) this.moments.splice(0, this.moments.length - MOMENTS_MAX);
+    }
+  }
+
+  /** Loud moments of the last two days, newest first, optionally by ticker, mint or kind. */
+  momentsMatching(q: { symbol?: string; mint?: string; kind?: string; limit?: number }, now = Date.now()): PulseEvent[] {
+    const sym = q.symbol?.replace(/^\$/, "").toLowerCase();
+    const out: PulseEvent[] = [];
+    for (let i = this.moments.length - 1; i >= 0 && out.length < (q.limit ?? 200); i--) {
+      const e = this.moments[i]!;
+      if (now - e.at > MOMENTS_KEEP_MS) break;
+      if (sym && e.symbol.replace(/^\$/, "").toLowerCase() !== sym) continue;
+      if (q.mint && e.mint !== q.mint) continue;
+      if (q.kind && e.kind !== q.kind) continue;
+      out.push(e);
+    }
+    return out;
+  }
+
+  /** What survives a restart: the loud moments and the sequence they were numbered in. */
+  dump(now = Date.now()): string {
+    return JSON.stringify({ pulseSeq: this.pulseSeq, moments: this.moments.filter((e) => now - e.at <= MOMENTS_KEEP_MS) });
+  }
+
+  restore(json: string, now = Date.now()): void {
+    try {
+      const saved = JSON.parse(json) as { pulseSeq?: number; moments?: PulseEvent[] };
+      this.pulseSeq = Math.max(this.pulseSeq, Number(saved.pulseSeq) || 0);
+      this.moments = (saved.moments ?? []).filter((e) => e && now - e.at <= MOMENTS_KEEP_MS);
+    } catch {
+      /* a broken file starts the record afresh */
+    }
   }
 
   private count(now: number, field: "launches" | "trades"): void {
@@ -274,7 +318,7 @@ export class PumpTape {
     return this.connected && now - this.lastEventAt < 120_000;
   }
 
-  apply(ev: PumpEvent, now = Date.now()): void {
+  apply(ev: PumpEvent, now = Date.now(), tx?: string): void {
     this.lastEventAt = now;
     if (ev.kind === "create") {
       if (this.tokens.has(ev.mint)) return;
@@ -304,8 +348,8 @@ export class PumpTape {
       if (this.recent.length > 500) this.recent.length = 500;
       this.seen.launches += 1;
       this.count(now, "launches");
-      if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`);
-      else this.emit(now, "launch", ev, "new launch");
+      if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`, tx);
+      else this.emit(now, "launch", ev, "new launch", tx);
       if (this.tokens.size > MAX_TRACKED) this.prune(now);
       return;
     }
@@ -313,7 +357,7 @@ export class PumpTape {
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
     if (ev.kind === "complete") {
-      if (!t.graduated) this.emit(now, "graduated", t, "graduated");
+      if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
       t.graduated = true;
       return;
     }
@@ -329,7 +373,7 @@ export class PumpTape {
         b.buys += 1;
       } else if (t.buyers.size < 100) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
       if (ev.user === t.creator) t.devBought += ev.tokens;
-      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`);
+      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`, tx);
     } else {
       t.sells += 1;
       t.solOut += ev.sol;
@@ -339,7 +383,7 @@ export class PumpTape {
           t.dumped = true;
           const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
           const min = Math.max(0, Math.round((ev.ts - t.createdAt) / 60_000));
-          this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`);
+          this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
         }
       }
     }
@@ -448,7 +492,7 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
         const stream = await client.subscribe();
         current = stream;
         await new Promise<void>((resolve, reject) => {
-          stream.on("data", (update: { transaction?: { transaction?: { meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
+          stream.on("data", (update: { transaction?: { transaction?: { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
             const logs = update.transaction?.transaction?.meta?.logMessages;
             if (!logs) return;
             if (!t.connected) {
@@ -456,7 +500,9 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
               delay = 1_000;
               log("[chain] pump.fun stream live");
             }
-            for (const ev of parsePumpLogs(logs)) t.apply(ev);
+            const sig = update.transaction?.transaction?.signature;
+            const tx = sig && sig.length ? base58(sig) : undefined;
+            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx);
           });
           stream.on("error", reject);
           stream.on("end", resolve);

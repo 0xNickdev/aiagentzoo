@@ -223,6 +223,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/chain") {
         return json(res, 200, tape.status());
       }
+      if (req.method === "GET" && path === "/v1/chain/moments") {
+        const q = url.searchParams;
+        const pick = (k: string) => (q.get(k) ?? "").trim().slice(0, 64) || undefined;
+        return json(res, 200, {
+          keptHours: 48,
+          moments: tape.momentsMatching({ symbol: pick("symbol"), mint: pick("mint"), kind: pick("kind"), limit: clampInt(q.get("limit"), 100, 1, 500) }),
+        });
+      }
       if (req.method === "GET" && path === "/v1/chain/pulse") {
         const after = clampInt(url.searchParams.get("after"), 0, 0, Number.MAX_SAFE_INTEGER);
         const now = Date.now();
