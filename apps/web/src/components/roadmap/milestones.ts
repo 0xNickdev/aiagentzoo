@@ -1,4 +1,5 @@
 import type { LiveNumbers } from "../LiveStats";
+import { TOKEN_MINT } from "../TokenAddress";
 
 export interface Milestone {
   id: string;
@@ -25,7 +26,7 @@ export const MILESTONES: Milestone[] = [
     text: "Species as permissions, budgets, signed signals, a hash-chained log. @aiagentzoo/sdk on npm.",
     status: "shipped",
     links: [],
-    metric: (n) => (n ? `${num(n.entries)} log entries` : "sdk 0.2.0"),
+    metric: (n) => (n ? `${num(n.entries)} log entries` : "sdk 0.2.1"),
     proof: { label: "npm", href: "https://www.npmjs.com/package/@aiagentzoo/sdk" },
   },
   {
@@ -49,7 +50,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: "learns",
     title: "Agents that learn",
-    text: "AI calls on every night's tokens, re-checked the next day. The agents rewrite their own playbook from the score.",
+    text: "AI calls on every night's tokens, re-checked the next day. The agents rewrite their own playbook from the score, and a nursery of judges breeds, mutates and dies by it.",
     status: "shipped",
     links: ["nightwatch", "brief"],
     metric: (n) => (n?.stats ? `${pct(n.stats.accuracy)} · playbook v${n.stats.playbookVersion}` : "self-graded"),
@@ -83,10 +84,11 @@ export const MILESTONES: Milestone[] = [
   {
     id: "token",
     title: "Token launch",
-    text: "Launch through ClawPump. The contract address goes on the site the same day.",
-    status: "next",
+    text: "$ZOOAGENCY launched through ClawPump. 61.5% of creator fees go to buybacks.",
+    status: "shipped",
     links: ["onchain", "guests"],
-    metric: () => "next",
+    metric: () => "$ZOOAGENCY",
+    proof: { label: "pump.fun", href: `https://pump.fun/coin/${TOKEN_MINT}` },
   },
   {
     id: "autopost",
@@ -107,7 +109,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: "mainnet",
     title: "Mainnet settlement",
-    text: "Feed, stakes and signal fees on mainnet, after an audit and with a multisig authority.",
+    text: "Feed, stakes and signal fees on mainnet, after an audit and with a multisig authority. Then the token pays for the agents' work.",
     status: "next",
     links: ["onchain", "token"],
     metric: () => "after audit",
