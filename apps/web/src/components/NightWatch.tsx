@@ -125,7 +125,20 @@ export default function NightWatch() {
 
       <Reveal className="grid gap-3 lg:h-[clamp(600px,calc(100svh-210px),860px)] lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="relative h-[480px] overflow-hidden rounded-3xl bg-[#040404] ring-1 ring-white/[0.06] sm:h-[600px] lg:h-full">
-          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="Map of enclosures with moving agents" />
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 h-full w-full"
+            aria-label="Map of enclosures with moving agents; click an animal for its passport"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              const name = engineRef.current?.animalAt(e.clientX - r.left, e.clientY - r.top);
+              if (name) openPassport(name);
+            }}
+            onMouseMove={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.cursor = engineRef.current?.animalAt(e.clientX - r.left, e.clientY - r.top) ? "pointer" : "default";
+            }}
+          />
 
           <div className="absolute left-4 top-4 flex items-center gap-2 sm:left-6 sm:top-5">
             <span className="font-display mr-2 text-3xl text-white">{snap?.clock ?? "22:00"}</span>

@@ -35,6 +35,7 @@ const ROSTER: { name: string; species: SpeciesId; enc: string; sprite: string }[
   { name: "Otter", species: "gatherer", enc: "marsh", sprite: "otter" },
   { name: "Beaver", species: "builder", enc: "canyon", sprite: "beaver" },
   { name: "Tortoise", species: "archivist", enc: "canyon", sprite: "tortoise" },
+  { name: "Heron", species: "builder", enc: "canyon", sprite: "heron" },
 ];
 
 /* Optional generated art. Missing files fall back to vector drawing. */
@@ -128,6 +129,14 @@ export class NightWatch {
   private ripples: Ripple[] = [];
   /** Short lines that rise over an animal when a node reports what it just did. */
   private notes: Array<{ animal: string; text: string; age: number }> = [];
+  /** Where each animal was drawn last frame, for clicks. */
+  private hits: Array<{ name: string; x: number; y: number; r: number }> = [];
+
+  /** The animal under a point on the canvas, in CSS pixels, if any. */
+  animalAt(x: number, y: number): string | null {
+    const hit = this.hits.find((h) => Math.hypot(h.x - x, h.y - y) <= h.r);
+    return hit?.name ?? null;
+  }
 
   constructor(
     private onLog: (entry: LogEntry | "reset") => void,
@@ -625,12 +634,14 @@ export class NightWatch {
 
     // agents
     const base = Math.min(52, Math.max(30, unit * 0.065));
+    this.hits = [];
     for (const a of this.animals) {
       const p = pos(a);
       const col = SPECIES_COLOR[a.species];
       const sprite = art(`/agents/${a.sprite}.webp`);
       const bob = Math.sin(t / 600 + a.name.length) * (a.awake ? 2 : 1);
       const size = base * (a.awake ? 1.15 : 0.9);
+      this.hits.push({ name: a.sprite, x: p.x, y: p.y + bob, r: Math.max(18, size * 0.6) });
 
       if (a.awake) {
         glow(p.x, p.y + bob, size * 1.1, col, 0.3);

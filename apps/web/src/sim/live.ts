@@ -111,6 +111,16 @@ function noteFor(e: { type: string; kind: string; from: { agent: string }; paylo
       return [e.from.agent, "brief published"];
     case "followup.check":
       return [e.from.agent, `re-check ${n(p.mints)}`];
+    case "evo.exam":
+      return [e.from.agent, `exam set: ${n(p.mints)} tokens`];
+    case "evo.answered":
+      return [e.from.agent, `${String(p.name ?? "a creature")} answered`];
+    case "evo.scored":
+      return [e.from.agent, `exam graded: ${Number(p.hits ?? 0)} right`];
+    case "evo.death":
+      return [e.from.agent, `${String(p.name ?? "a creature")} died`];
+    case "evo.birth":
+      return [e.from.agent, `${String(p.name ?? "a creature")} born`];
     default:
       return null;
   }
