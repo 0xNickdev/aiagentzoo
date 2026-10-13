@@ -351,9 +351,19 @@ export function parseChild(text: string): { playbook: string; mutation: string }
   if (start < 0 || end <= start) return null;
   try {
     const raw = JSON.parse(text.slice(start, end + 1)) as { playbook?: unknown; mutation?: unknown };
-    const playbook = typeof raw.playbook === "string" ? cleanPlaybook(raw.playbook).slice(0, 1000) : "";
+    let playbook = typeof raw.playbook === "string" ? cleanPlaybook(raw.playbook).slice(0, 1000) : "";
     const mutation = typeof raw.mutation === "string" ? cleanText(raw.mutation, 200) : "";
-    return playbook.length >= 40 && mutation ? { playbook, mutation } : null;
+    if (playbook.length < 40 || !mutation) return null;
+    // The mutation must be in the DNA, not only in the announcement: models sometimes leave it out.
+    const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9$%]+/).filter((w) => w.length > 2));
+    const m = words(mutation);
+    const lines = playbook.split("\n").filter(Boolean);
+    const present = lines.some((l) => {
+      const w = words(l);
+      return [...m].filter((x) => w.has(x)).length / Math.max(1, m.size) >= 0.6;
+    });
+    if (!present) playbook = [...lines, `${lines.length + 1}. ${mutation}`].join("\n");
+    return { playbook, mutation };
   } catch {
     return null;
   }

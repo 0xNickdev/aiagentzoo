@@ -621,3 +621,11 @@ test("strangers arrive every third turn and mutations can see the parents' mista
   assert.equal(wrong[0]!.parent, "c1");
   assert.equal((wrong[0]!.token as { symbol: string }).symbol, "SILK");
 });
+
+test("a mutation the model announced but left out of the playbook is written into the DNA", async () => {
+  const { parseChild } = await import("../src/agents/evolution.ts");
+  const child = parseChild(JSON.stringify({ playbook: "1. No socials is suspicious.\n2. Sells 2:1 over buys is a rug.", mutation: "Five buyers bringing in over 70% of SOL is suspicious." }));
+  assert.match(child!.playbook, /3\. Five buyers bringing in over 70% of SOL is suspicious\./);
+  const kept = parseChild(JSON.stringify({ playbook: "1. No socials is suspicious.\n2. Five buyers bringing over 70% of the SOL in is suspicious.", mutation: "Five buyers bringing in over 70% of SOL is suspicious." }));
+  assert.equal(kept!.playbook.split("\n").length, 2, "not added twice");
+});

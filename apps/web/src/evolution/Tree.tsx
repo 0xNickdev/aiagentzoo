@@ -118,7 +118,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
               {next!.on.toUpperCase()} · NEXT BIRTH
             </text>
             <text x={ghost.x} y={ghost.y + NODE / 2 + 31} textAnchor="middle" className="fill-white/40 font-mono text-[9.5px]">
-              {ghost.from.length === 2 ? `if it were today: ${ghost.from[0]!.c.name} × ${ghost.from[1]!.c.name}` : "parents: the two best after the first grades"}
+              {ghost.from.length === 2 ? `if it were today: ${ghost.from[0]!.c.name} × ${ghost.from[1]!.c.name}` : "parents: the two best after tonight's grades"}
             </text>
           </g>
         )}
