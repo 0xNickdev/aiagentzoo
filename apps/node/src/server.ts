@@ -223,6 +223,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/chain") {
         return json(res, 200, tape.status());
       }
+      if (req.method === "GET" && path === "/v1/chain/pulse") {
+        const after = clampInt(url.searchParams.get("after"), 0, 0, Number.MAX_SAFE_INTEGER);
+        const now = Date.now();
+        return json(res, 200, { live: tape.live(now), perMinute: tape.perMinute(now), events: tape.pulseAfter(after) });
+      }
       if (req.method === "GET" && path === "/v1/evolution") {
         if (!evolution) return json(res, 404, { error: "no nursery on this node" });
         const view = await evolutionView(enclosure.store, evolution.briefAt);

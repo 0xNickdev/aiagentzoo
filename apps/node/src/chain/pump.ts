@@ -191,7 +191,23 @@ interface Tracked {
   devBought: number;
   devSold: number;
   graduated: boolean;
+  /** The creator has sold half of what they bought; announced once. */
+  dumped: boolean;
 }
+
+/** A moment on the tape worth showing as it happens: the live map flashes on these. */
+export interface PulseEvent {
+  seq: number;
+  at: number;
+  kind: "launch" | "serial" | "dump" | "graduated" | "whale";
+  mint: string;
+  symbol: string;
+  text: string;
+}
+
+const PULSE_KEEP = 300;
+/** A single buy this big stands out on a fresh pump.fun token. */
+const WHALE_SOL = 10;
 
 const KEEP_MS = 48 * 3_600_000;
 const DAY_MS = 24 * 3_600_000;
@@ -205,6 +221,47 @@ export class PumpTape {
   connected = false;
   lastEventAt = 0;
   seen = { launches: 0, trades: 0 };
+  private pulse: PulseEvent[] = [];
+  private pulseSeq = 0;
+  /** Per-second counts over the last minute, a ring indexed by second. */
+  private readonly seconds = Array.from({ length: 60 }, () => ({ sec: -1, launches: 0, trades: 0 }));
+
+  private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string }, text: string): void {
+    const symbol = t.symbol.replace(/\s+/g, " ").trim().slice(0, 16) || "?";
+    this.pulse.push({ seq: ++this.pulseSeq, at, kind, mint: t.mint, symbol, text });
+    if (this.pulse.length > PULSE_KEEP) this.pulse.splice(0, this.pulse.length - PULSE_KEEP);
+  }
+
+  private count(now: number, field: "launches" | "trades"): void {
+    const sec = Math.floor(now / 1000);
+    const b = this.seconds[sec % 60]!;
+    if (b.sec !== sec) {
+      b.sec = sec;
+      b.launches = 0;
+      b.trades = 0;
+    }
+    b[field] += 1;
+  }
+
+  /** Launches and trades seen in the last 60 seconds. */
+  perMinute(now = Date.now()) {
+    const sec = Math.floor(now / 1000);
+    let launches = 0;
+    let trades = 0;
+    for (const b of this.seconds) {
+      if (sec - b.sec < 60) {
+        launches += b.launches;
+        trades += b.trades;
+      }
+    }
+    return { launches, trades };
+  }
+
+  /** Tape moments after a sequence number, oldest first. */
+  pulseAfter(after: number, limit = 80): PulseEvent[] {
+    const out = this.pulse.filter((e) => e.seq > after);
+    return out.slice(-limit);
+  }
 
   /** True while the stream is delivering; the agents only trust the tape then. */
   live(now = Date.now()): boolean {
@@ -232,6 +289,7 @@ export class PumpTape {
         devBought: 0,
         devSold: 0,
         graduated: false,
+        dumped: false,
       });
       const times = (this.launchesBy.get(ev.creator) ?? []).filter((t) => now - t < DAY_MS);
       times.push(createdAt);
@@ -239,6 +297,9 @@ export class PumpTape {
       this.recent.unshift(ev.mint);
       if (this.recent.length > 500) this.recent.length = 500;
       this.seen.launches += 1;
+      this.count(now, "launches");
+      if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${times.length}th launch today`);
+      else this.emit(now, "launch", ev, "new launch");
       if (this.tokens.size > MAX_TRACKED) this.prune(now);
       return;
     }
@@ -246,10 +307,12 @@ export class PumpTape {
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
     if (ev.kind === "complete") {
+      if (!t.graduated) this.emit(now, "graduated", t, "graduated");
       t.graduated = true;
       return;
     }
     this.seen.trades += 1;
+    this.count(now, "trades");
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     if (ev.isBuy) {
       t.buys += 1;
@@ -260,10 +323,19 @@ export class PumpTape {
         b.buys += 1;
       } else if (t.buyers.size < 100) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
       if (ev.user === t.creator) t.devBought += ev.tokens;
+      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`);
     } else {
       t.sells += 1;
       t.solOut += ev.sol;
-      if (ev.user === t.creator) t.devSold += ev.tokens;
+      if (ev.user === t.creator) {
+        t.devSold += ev.tokens;
+        if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
+          t.dumped = true;
+          const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
+          const min = Math.max(0, Math.round((ev.ts - t.createdAt) / 60_000));
+          this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`);
+        }
+      }
     }
     if (ev.curveSol !== null) t.curveSol = ev.curveSol;
   }
@@ -331,7 +403,14 @@ export class PumpTape {
   }
 
   status(now = Date.now()) {
-    return { live: this.live(now), connected: this.connected, lastEventAt: this.lastEventAt || null, tracked: this.tokens.size, seen: this.seen };
+    return {
+      live: this.live(now),
+      connected: this.connected,
+      lastEventAt: this.lastEventAt || null,
+      tracked: this.tokens.size,
+      seen: this.seen,
+      perMinute: this.perMinute(now),
+    };
   }
 }
 

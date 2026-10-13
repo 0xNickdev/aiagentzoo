@@ -581,6 +581,16 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   assert.equal(tape.launches(5)[0]!.symbol, "SILK");
   assert.ok(tape.live(now));
   assert.ok(ruleFlags(obs({ chain: f, hasSocials: true })).includes("creator sold 80% of their bag"));
+
+  // The pulse the live map reads: the launch, then the dump, announced once.
+  const pulse = tape.pulseAfter(0);
+  assert.deepEqual(pulse.map((e) => e.kind), ["launch", "dump"]);
+  assert.equal(pulse[1]!.text, "creator sold 80% after 0 min");
+  assert.equal(tape.pulseAfter(pulse[0]!.seq).length, 1);
+  tape.apply(events[3]!, now);
+  assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "dump").length, 1);
+  assert.deepEqual(tape.perMinute(now), { launches: 1, trades: 4 });
+  assert.deepEqual(tape.perMinute(now + 61_000), { launches: 0, trades: 0 });
 });
 
 test("a quiet heron is not mistaken for a loop", async () => {
