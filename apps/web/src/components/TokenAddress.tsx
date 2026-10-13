@@ -1,8 +1,35 @@
 import { useState } from "react";
 
-/** Set VITE_TOKEN_MINT in the deployment once the token is live; until then nothing renders. */
-export const TOKEN_MINT: string = (import.meta.env.VITE_TOKEN_MINT ?? "").trim();
+/** The live token; VITE_TOKEN_MINT can override it per deployment. */
+export const TOKEN_MINT: string = (import.meta.env.VITE_TOKEN_MINT ?? "").trim() || "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
 const TOKEN_SYMBOL: string = (import.meta.env.VITE_TOKEN_SYMBOL ?? "").trim();
+
+/** The contract address as a small pill: click to copy. */
+export function CAPill({ className = "" }: { className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(TOKEN_MINT);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard blocked: the address stays selectable.
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      title="Copy the contract address"
+      className={`liquid-glass font-mono inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[11.5px] text-white/80 transition hover:text-white ${className}`}
+    >
+      <span className="text-white/45">CA</span>
+      <span className="truncate sm:hidden">{TOKEN_MINT.slice(0, 6)}…{TOKEN_MINT.slice(-6)}</span>
+      <span className="hidden sm:inline">{TOKEN_MINT}</span>
+      <span className={copied ? "text-emerald-300" : "text-white/45"}>{copied ? "copied" : "copy"}</span>
+    </button>
+  );
+}
 
 export function TokenAddress() {
   const [copied, setCopied] = useState(false);

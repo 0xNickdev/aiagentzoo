@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { NPM_URL } from "../links";
 import SiteNav from "./SiteNav";
+import { CAPill } from "./TokenAddress";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260619_191346_9d19d66e-86a4-47f7-8dc6-712c1788c3b2.mp4";
@@ -36,6 +37,9 @@ export default function Hero() {
       <SiteNav overlay />
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 pb-28 pt-14 text-center sm:px-8 sm:pt-20 md:pt-28">
+        <motion.div {...rise(0.05)} className="mb-3 max-w-full">
+          <CAPill />
+        </motion.div>
         <motion.a
           href="/agents#guests"
           {...rise(0.1)}
