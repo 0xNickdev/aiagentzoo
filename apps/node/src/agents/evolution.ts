@@ -1,6 +1,6 @@
 import { type AgentDefinition, defineAgent, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText } from "../guests.ts";
-import { type Call, CHAIN_NOTE, cleanPlaybook, compact, type Outcome, outcomeOf, parseCalls, previousNight, scoreCall } from "./judgement.ts";
+import { type Call, CHAIN_NOTE, cleanPlaybook, compact, DEFAULT_PLAYBOOK, EXAM_FIELDS, type Outcome, outcomeOf, parseCalls, type Playbook, previousNight, scoreCall } from "./judgement.ts";
 import { nightOf, type Observation } from "./nightWatch.ts";
 
 /**
@@ -23,6 +23,8 @@ export interface Creature {
   playbook: string;
   /** The one rule that is new in this creature, null for founders. */
   mutation: string | null;
+  /** Where an immigrant came from; absent for those born in the nursery. */
+  origin?: string;
   bornNight: string;
   diedNight: string | null;
   epitaph: string | null;
@@ -68,7 +70,7 @@ export interface Population {
 export interface ChronicleEntry {
   night: string;
   generation: number;
-  kind: "founded" | "scored" | "death" | "birth" | "extinct";
+  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival";
   text: string;
   ids: string[];
   at: number;
@@ -332,8 +334,9 @@ export function interleave(a: string, b: string): string {
 
 export const BREED_SYSTEM = [
   "You are the heron, keeper of the nursery in ZOOAI AGENCY. Two judges of new Solana tokens are breeding.",
-  "Each parent's playbook is its DNA: the rules it judges by. You get both playbooks and how often each parent was right.",
-  "Write the child's playbook: inherit the rules most likely behind the parents' hits, drop rules that contradict each other, then add exactly ONE mutation: a new or changed rule neither parent has, plausible and testable on market data.",
+  "Each parent's playbook is its DNA: the rules it judges by. You get both playbooks, how well each parent told dead tokens from living ones, and the cases the parents got wrong.",
+  "Write the child's playbook: inherit the rules most likely behind the parents' hits, drop rules that contradict each other, then add exactly ONE mutation: a new or changed rule neither parent has, aimed at the parents' mistakes.",
+  `Every rule, the mutation above all, may only use fields the judges actually see: ${EXAM_FIELDS}. A rule about anything else (holders, wallets age, websites, sentiment) cannot be applied and is not allowed.`,
   'Answer with JSON only: {"playbook": "numbered rules, at most 6, at most 900 characters", "mutation": "the mutated rule, one sentence"}.',
 ].join("\n");
 
@@ -357,13 +360,18 @@ export function parseChild(text: string): { playbook: string; mutation: string }
 }
 
 /** Applies one turn of selection: the death, the birth, a fresh window for everyone alive. */
+export type Newcomer =
+  | { kind: "child"; playbook: string; mutation: string | null }
+  | { kind: "immigrant"; house: string; temperament: string; playbook: string; origin: string };
+
 export function turnGeneration(
   pop: Population,
   night: string,
   chosen: { dies: Creature; parents: [Creature, Creature] },
-  child: { playbook: string; mutation: string | null },
+  newcomer: Newcomer | { playbook: string; mutation: string | null },
   epitaph: string,
 ): { pop: Population; born: Creature; record: GenerationRecord } {
+  const child: Newcomer = "kind" in newcomer ? newcomer : { kind: "child", ...newcomer };
   const alive = living(pop);
   const mean = alive.map((c) => skill(c.window)).filter((a): a is number => a !== null);
   const record: GenerationRecord = {
@@ -373,20 +381,23 @@ export function turnGeneration(
     best: chosen.parents[0].id,
   };
   const [a, b] = chosen.parents;
-  const generation = Math.max(a.generation, b.generation) + 1;
+  const immigrant = child.kind === "immigrant" ? child : null;
+  const house = immigrant ? immigrant.house : a.house;
+  const generation = immigrant ? 0 : Math.max(a.generation, b.generation) + 1;
   const id = `c${pop.nextId}`;
   // Names count the house's members ever born, so two children of one house never share a name.
-  const nth = Object.values(pop.creatures).filter((c) => c.house === a.house).length + 1;
+  const nth = Object.values(pop.creatures).filter((c) => c.house === house).length + 1;
   const born: Creature = {
     id,
-    name: `${a.house} ${roman(nth)}`,
-    house: a.house,
+    name: `${house} ${roman(nth)}`,
+    house,
     generation,
-    parents: [a.id, b.id],
+    parents: immigrant ? null : [a.id, b.id],
     // Two traits at most, one from each parent's founding line, so names stay readable after many generations.
-    temperament: `${trait(a)} × ${trait(b)}`,
+    temperament: immigrant ? immigrant.temperament : `${trait(a)} × ${trait(b)}`,
     playbook: child.playbook,
-    mutation: child.mutation,
+    mutation: child.kind === "child" ? child.mutation : null,
+    ...(immigrant ? { origin: immigrant.origin } : {}),
     bornNight: night,
     diedNight: null,
     epitaph: null,
@@ -414,6 +425,94 @@ export function creatureSystem(c: Creature): string {
     CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 120 chars, naming the rule you applied}.',
   ].join("\n");
+}
+
+type Reader = { get<T>(key: string): Promise<T | undefined>; keys(prefix?: string): Promise<string[]> };
+
+/** The parents' wrong answers since the last turn, with each token as the judges saw it: what a mutation should fix. */
+export async function mistakes(state: Reader, ids: string[], since: string, max = 6) {
+  const out: Array<{ parent: string; verdict: string; outcome: string; why: string; token: unknown }> = [];
+  for (const key of (await state.keys("evo:results:")).sort()) {
+    const n = key.slice("evo:results:".length);
+    if (n < since) continue;
+    const results = await state.get<NightResults>(key);
+    const tokens = new Map(((await state.get<Exam>(EVO.exam(n)))?.tokens ?? []).map((t) => [t.mint, t]));
+    for (const id of ids) {
+      for (const c of results?.[id]?.cases ?? []) {
+        const right = (c.verdict === "suspicious" && c.outcome === "dead") || (c.verdict === "promising" && c.outcome === "alive");
+        if (c.outcome !== "unknown" && !right) out.push({ parent: id, verdict: c.verdict, outcome: c.outcome, why: c.why, token: tokens.get(c.mint) ?? { mint: c.mint, symbol: c.symbol } });
+      }
+    }
+  }
+  return out.slice(-max);
+}
+
+/** Every third turn a stranger arrives instead of a child, so the nursery does not collapse into one bloodline. */
+export const IMMIGRATION_EVERY = 3;
+
+const WILD: Array<{ house: string; temperament: string; playbook: string }> = [
+  {
+    house: "Owl",
+    temperament: "the night auditor",
+    playbook: [
+      "1. Five buyers bringing in over 70% of the SOL is a propped-up token: suspicious.",
+      "2. A creator who sold over half their own bag is suspicious.",
+      "3. Fewer than 20 trades in the first 15 minutes means nobody came: suspicious.",
+      "4. Five or more repeat buyers and liquidity above $5k is real interest: promising.",
+    ].join("\n"),
+  },
+  {
+    house: "Raven",
+    temperament: "the momentum reader",
+    playbook: [
+      "1. More than 100 trades in the first 15 minutes with buys outnumbering sells is momentum: promising.",
+      "2. A token whose sells outnumber buys 2:1 after its first hour is fading: suspicious.",
+      "3. A creator launching five or more tokens today is farming launches: suspicious.",
+      "4. Graduated with SOL still flowing into the curve deserves a promising call.",
+    ].join("\n"),
+  },
+];
+
+/** Picks the next stranger: the beaver's own playbook, the best guest's style, or a wild line, in turn. */
+async function immigrantFor(
+  ctx: { state: Reader; think: (r: { system: string; prompt: string; untrusted: unknown; maxTokens: number }) => Promise<{ text: string }> },
+  pop: Population,
+): Promise<Extract<Newcomer, { kind: "immigrant" }>> {
+  const arrived = Object.values(pop.creatures).filter((c) => c.origin).length;
+  const wild = WILD[Math.floor(arrived / 3) % WILD.length]!;
+  const asWild = { kind: "immigrant" as const, ...wild, origin: "the wild" };
+  if (arrived % 3 === 0) {
+    const pb = (await ctx.state.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
+    return { kind: "immigrant", house: "Beaver", temperament: "the beaver's apprentice", playbook: cleanPlaybook(pb.text).slice(0, 1000), origin: `the beaver's playbook v${pb.version}` };
+  }
+  if (arrived % 3 === 1) {
+    // The best guest by balanced accuracy lends its style: its calls are rewritten as rules.
+    const scores = (await ctx.state.get<Record<string, { dead?: number; deadRight?: number; alive?: number; aliveRight?: number }>>("guestscores")) ?? {};
+    const best = Object.entries(scores)
+      .map(([name, t]) => ({ name, skill: ((t.deadRight ?? 0) / Math.max(1, t.dead ?? 0) + (t.aliveRight ?? 0) / Math.max(1, t.alive ?? 0)) / 2, n: (t.dead ?? 0) + (t.alive ?? 0) }))
+      .filter((g) => g.n >= 3)
+      .sort((x, y) => y.skill - x.skill)[0];
+    if (!best) return asWild;
+    const notes: string[] = [];
+    for (const key of (await ctx.state.keys("reports:")).sort().reverse().slice(0, 3)) {
+      const rep = (await ctx.state.get<Record<string, { items: Array<{ verdict: string; note: string }> }>>(key))?.[best.name];
+      for (const i of rep?.items ?? []) notes.push(`${i.verdict}: ${i.note}`);
+    }
+    try {
+      const result = await ctx.think({
+        system: `You are the heron of ZOOAI AGENCY. Turn an outside agent's calls into a playbook of at most 4 numbered rules that would produce them. Rules may only use these fields: ${EXAM_FIELDS}. Output only the rules.`,
+        prompt: `Calls by ${best.name}, a guest agent.`,
+        untrusted: notes.slice(0, 20),
+        maxTokens: 500,
+      });
+      const playbook = cleanPlaybook(result.text).slice(0, 1000);
+      if (playbook.length >= 40) return { kind: "immigrant", house: "Otter", temperament: `stranger from the guest wing (${best.name})`, playbook, origin: `guest ${best.name}` };
+    } catch {
+      // No model: the wild line arrives instead.
+    }
+    return asWild;
+  }
+  return asWild;
 }
 
 export interface EvolutionConfig {
@@ -490,15 +589,19 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
       const chosen = since >= generationNights && ready ? selection(pop) : null;
       if (chosen) {
         const [a, b] = chosen.parents;
-        let child: { playbook: string; mutation: string | null } = { playbook: interleave(a.playbook, b.playbook), mutation: null };
-        try {
+        const immigration = (pop.generation + 1) % IMMIGRATION_EVERY === 0;
+        let child: Newcomer = { kind: "child", playbook: interleave(a.playbook, b.playbook), mutation: null };
+        if (immigration) child = await immigrantFor(ctx, pop);
+        else try {
+          const wrong = await mistakes(ctx.state, [a.id, b.id], pop.lastGenerationNight ?? "");
           const result = await ctx.think({
             system: BREED_SYSTEM,
             prompt: `Parent A, ${a.name}, balanced accuracy ${Math.round((skill(a.window) ?? 0) * 100)}% over ${graded(a.window)} graded tokens. Parent B, ${b.name}, ${Math.round((skill(b.window) ?? 0) * 100)}% over ${graded(b.window)}. Their playbooks follow.`,
-            untrusted: { parentA: a.playbook, parentB: b.playbook },
+            untrusted: { parentA: a.playbook, parentB: b.playbook, theirMistakes: wrong },
             maxTokens: 900,
           });
-          child = parseChild(result.text) ?? child;
+          const parsed = parseChild(result.text);
+          if (parsed) child = { kind: "child", ...parsed };
         } catch (error) {
           await ctx.trace("evo.breed.fallback", { reason: (error as Error).message.slice(0, 200) });
         }
@@ -528,18 +631,23 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
           text: `${d.name} dies${starving(d.window) ? " of starvation, answering watch on most tokens," : ""} at ${dSkill}% balanced accuracy. "${epitaph}"`,
           ids: [d.id],
         });
-        note({
-          night,
-          generation: pop.generation,
-          kind: "birth",
-          text: `${turned.born.name} is born to ${a.name} and ${b.name}.${child.mutation ? ` Mutation: ${child.mutation}` : ""}`,
-          ids: [turned.born.id, a.id, b.id],
-        });
+        if (child.kind === "immigrant") {
+          note({ night, generation: pop.generation, kind: "arrival", text: `A stranger arrives: ${turned.born.name}, ${child.temperament}, carrying ${child.origin}'s rules.`, ids: [turned.born.id] });
+        } else {
+          note({
+            night,
+            generation: pop.generation,
+            kind: "birth",
+            text: `${turned.born.name} is born to ${a.name} and ${b.name}.${child.mutation ? ` Mutation: ${child.mutation}` : ""}`,
+            ids: [turned.born.id, a.id, b.id],
+          });
+        }
         if (!living(pop).some((c) => c.house === d.house)) {
           note({ night, generation: pop.generation, kind: "extinct", text: `House ${d.house} is extinct.`, ids: [d.id] });
         }
         await ctx.trace("evo.death", { id: d.id, name: d.name, window: d.window, epitaph });
-        await ctx.trace("evo.birth", { id: turned.born.id, name: turned.born.name, parents: [a.id, b.id], mutation: child.mutation, playbook: child.playbook });
+        if (child.kind === "immigrant") await ctx.trace("evo.arrival", { id: turned.born.id, name: turned.born.name, origin: child.origin, playbook: child.playbook });
+        else await ctx.trace("evo.birth", { id: turned.born.id, name: turned.born.name, parents: [a.id, b.id], mutation: child.mutation, playbook: child.playbook });
       }
 
       // 3. Tonight's exam: the same fresh tokens for every creature.

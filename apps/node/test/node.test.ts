@@ -597,3 +597,27 @@ test("a quiet heron is not mistaken for a loop", async () => {
   const heron = enclosure.snapshot().find((a) => a.name === "heron");
   assert.notEqual(heron?.status, "paused");
 });
+
+test("strangers arrive every third turn and mutations can see the parents' mistakes", async () => {
+  const { turnGeneration, foundPopulation, mistakes, EVO, IMMIGRATION_EVERY } = await import("../src/agents/evolution.ts");
+  assert.equal(IMMIGRATION_EVERY, 3);
+  let pop = foundPopulation("2026-10-07");
+  const t = turnGeneration(pop, "2026-10-10", { dies: pop.creatures.c8!, parents: [pop.creatures.c1!, pop.creatures.c6!] }, { kind: "immigrant", house: "Owl", temperament: "the night auditor", playbook: "1. x", origin: "the wild" }, "bye");
+  pop = t.pop;
+  assert.equal(t.born.name, "Owl I");
+  assert.equal(t.born.parents, null);
+  assert.equal(t.born.origin, "the wild");
+  assert.equal(t.born.generation, 0);
+
+  const { MemoryStore } = await import("@aiagentzoo/sdk");
+  const store = new MemoryStore();
+  await store.set(EVO.exam("2026-10-08"), { night: "2026-10-08", tokens: [{ mint: MINT, symbol: "SILK" }] });
+  await store.set(EVO.results("2026-10-08"), {
+    c1: { hits: 0, misses: 1, cases: [{ mint: MINT, symbol: "SILK", verdict: "suspicious", why: "no socials", outcome: "alive", hit: false }] },
+    c6: { hits: 1, misses: 0, cases: [{ mint: MINT, symbol: "SILK", verdict: "suspicious", why: "", outcome: "dead", hit: true }] },
+  });
+  const wrong = await mistakes(store as never, ["c1", "c6"], "2026-10-07");
+  assert.equal(wrong.length, 1);
+  assert.equal(wrong[0]!.parent, "c1");
+  assert.equal((wrong[0]!.token as { symbol: string }).symbol, "SILK");
+});

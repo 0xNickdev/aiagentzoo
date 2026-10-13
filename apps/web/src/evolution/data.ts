@@ -36,7 +36,7 @@ export interface Creature {
 export interface ChronicleEntry {
   night: string;
   generation: number;
-  kind: "founded" | "scored" | "death" | "birth" | "extinct";
+  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival";
   text: string;
   ids: string[];
   at: number;

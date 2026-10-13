@@ -167,6 +167,12 @@ export interface ChainFacts {
   /** Tokens this creator launched in the last 24 hours, this one included. */
   creatorLaunches24h: number;
   graduated: boolean;
+  /** Share of all SOL bought in that came from the five biggest buyers, 0..1: a few wallets propping it up. */
+  top5Share: number | null;
+  /** Buyers who came back and bought again: real interest leaves repeat buyers. */
+  repeatBuyers: number;
+  /** Trades in the first 15 minutes after launch. */
+  trades15m: number;
 }
 
 interface Tracked {
@@ -177,7 +183,8 @@ interface Tracked {
   createdAt: number;
   buys: number;
   sells: number;
-  buyers: Set<string>;
+  buyers: Map<string, { sol: number; buys: number }>;
+  trades15m: number;
   solIn: number;
   solOut: number;
   curveSol: number | null;
@@ -217,7 +224,8 @@ export class PumpTape {
         createdAt,
         buys: 0,
         sells: 0,
-        buyers: new Set(),
+        buyers: new Map(),
+        trades15m: 0,
         solIn: 0,
         solOut: 0,
         curveSol: null,
@@ -242,10 +250,15 @@ export class PumpTape {
       return;
     }
     this.seen.trades += 1;
+    if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     if (ev.isBuy) {
       t.buys += 1;
       t.solIn += ev.sol;
-      if (t.buyers.size < 100) t.buyers.add(ev.user);
+      const b = t.buyers.get(ev.user);
+      if (b) {
+        b.sol += ev.sol;
+        b.buys += 1;
+      } else if (t.buyers.size < 100) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
       if (ev.user === t.creator) t.devBought += ev.tokens;
     } else {
       t.sells += 1;
@@ -280,6 +293,18 @@ export class PumpTape {
       creatorSold: t.devBought > 0 ? Math.min(1, round(t.devSold / t.devBought)) : null,
       creatorLaunches24h: (this.launchesBy.get(t.creator) ?? []).filter((x) => now - x < DAY_MS).length,
       graduated: t.graduated,
+      top5Share:
+        t.solIn > 0
+          ? round(
+              [...t.buyers.values()]
+                .map((b) => b.sol)
+                .sort((a, b) => b - a)
+                .slice(0, 5)
+                .reduce((a, b) => a + b, 0) / t.solIn,
+            )
+          : null,
+      repeatBuyers: [...t.buyers.values()].filter((b) => b.buys >= 2).length,
+      trades15m: t.trades15m,
     };
   }
 

@@ -222,6 +222,7 @@ const KIND_MARK: Record<ChronicleEntry["kind"], { label: string; tone: string }>
   death: { label: "DEATH", tone: "text-rose-200/80" },
   birth: { label: "BIRTH", tone: "text-amber-200/85" },
   extinct: { label: "EXTINCT", tone: "text-rose-200/60" },
+  arrival: { label: "ARRIVAL", tone: "text-emerald-200/80" },
 };
 
 function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; nextTurn: string; curveOn: string }) {
@@ -384,7 +385,8 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
             <li>3. A day later each answer is graded by what actually happened. "Watch" counts as a miss.</li>
             <li>4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.</li>
             <li>5. Every three nights comes a turn: the weakest dies and the two strongest breed.</li>
-            <li>6. A child inherits a mix of both playbooks and exactly one mutation.</li>
+            <li>6. A child inherits a mix of both playbooks and exactly one mutation, aimed at what its parents got wrong.</li>
+            <li>7. Every third turn a stranger arrives instead of a child: the beaver's playbook, a guest's style, or a wild line.</li>
           </ol>
         </motion.div>
       </div>
