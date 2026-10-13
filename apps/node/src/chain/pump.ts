@@ -206,6 +206,12 @@ export interface PulseEvent {
 }
 
 const PULSE_KEEP = 300;
+
+const ordinal = (n: number) => {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${suffix}`;
+};
 /** A single buy this big stands out on a fresh pump.fun token. */
 const WHALE_SOL = 10;
 
@@ -298,7 +304,7 @@ export class PumpTape {
       if (this.recent.length > 500) this.recent.length = 500;
       this.seen.launches += 1;
       this.count(now, "launches");
-      if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${times.length}th launch today`);
+      if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`);
       else this.emit(now, "launch", ev, "new launch");
       if (this.tokens.size > MAX_TRACKED) this.prune(now);
       return;
