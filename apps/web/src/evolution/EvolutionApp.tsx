@@ -223,6 +223,7 @@ const KIND_MARK: Record<ChronicleEntry["kind"], { label: string; tone: string }>
   birth: { label: "BIRTH", tone: "text-amber-200/85" },
   extinct: { label: "EXTINCT", tone: "text-rose-200/60" },
   arrival: { label: "ARRIVAL", tone: "text-emerald-200/80" },
+  correction: { label: "CORRECTION", tone: "text-white/60" },
 };
 
 function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; nextTurn: string; curveOn: string }) {

@@ -70,7 +70,7 @@ export interface Population {
 export interface ChronicleEntry {
   night: string;
   generation: number;
-  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival";
+  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival" | "correction";
   text: string;
   ids: string[];
   at: number;
@@ -345,6 +345,18 @@ export const EPITAPH_SYSTEM = [
   "Write your last words: one dry, self-aware sentence (at most 140 characters) about the rule that failed you. No hashtags, no emojis.",
 ].join("\n");
 
+/** The playbook with `rule` appended as its last numbered line, unless a line already says it. */
+export function withRule(playbook: string, rule: string): string {
+  const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9$%]+/).filter((w) => w.length > 2));
+  const m = words(rule);
+  const lines = playbook.split("\n").filter(Boolean);
+  const present = lines.some((l) => {
+    const w = words(l);
+    return [...m].filter((x) => w.has(x)).length / Math.max(1, m.size) >= 0.6;
+  });
+  return present ? playbook : [...lines, `${lines.length + 1}. ${rule}`].join("\n");
+}
+
 export function parseChild(text: string): { playbook: string; mutation: string } | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -355,15 +367,7 @@ export function parseChild(text: string): { playbook: string; mutation: string }
     const mutation = typeof raw.mutation === "string" ? cleanText(raw.mutation, 200) : "";
     if (playbook.length < 40 || !mutation) return null;
     // The mutation must be in the DNA, not only in the announcement: models sometimes leave it out.
-    const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9$%]+/).filter((w) => w.length > 2));
-    const m = words(mutation);
-    const lines = playbook.split("\n").filter(Boolean);
-    const present = lines.some((l) => {
-      const w = words(l);
-      return [...m].filter((x) => w.has(x)).length / Math.max(1, m.size) >= 0.6;
-    });
-    if (!present) playbook = [...lines, `${lines.length + 1}. ${mutation}`].join("\n");
-    return { playbook, mutation };
+    return { playbook: withRule(playbook, mutation), mutation };
   } catch {
     return null;
   }
@@ -560,6 +564,16 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         pop = foundPopulation(night);
         note({ night, generation: 0, kind: "founded", text: `Eight founders enter the nursery: ${living(pop).map((c) => c.house).join(", ")}.`, ids: living(pop).map((c) => c.id) });
         await ctx.trace("evo.founded", { creatures: living(pop).map(({ id, name, temperament }) => ({ id, name, temperament })) });
+      }
+
+      // 0. A one-time, public correction: a mutation announced at birth but missing from the DNA is written in.
+      for (const c of living(pop)) {
+        if (!c.mutation) continue;
+        const fixed = withRule(c.playbook, c.mutation);
+        if (fixed === c.playbook) continue;
+        pop = { ...pop, creatures: { ...pop.creatures, [c.id]: { ...c, playbook: fixed } } };
+        note({ night, generation: pop.generation, kind: "correction", text: `Correction: the announced mutation was written into ${c.name}'s DNA.`, ids: [c.id] });
+        await ctx.trace("evo.correction", { id: c.id, name: c.name, mutation: c.mutation });
       }
 
       // 1. Every past night with answers and a re-check but no grades yet, oldest first: yesterday as a rule,
