@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { SPECIES, SPECIES_COLOR } from "../data";
-import { NODE_URLS, useLiveZoo } from "../sim/live";
+import { NODE_URLS, useChainPulse, useLiveZoo } from "../sim/live";
 import { GuardianButton, WakeButton } from "./Guardian";
 import { openPassport } from "../passportStore";
-import { NightWatch as Engine, PARTS, type LogEntry, type Snapshot } from "../sim/nightWatch";
+import { NightWatch as Engine, PARTS, PULSE_COLOR, type LogEntry, type Snapshot } from "../sim/nightWatch";
 import { useLiveNumbers } from "./LiveStats";
 import { Reveal, Section } from "./ui";
 
@@ -26,6 +26,7 @@ export default function NightWatch() {
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState(1);
   const live = useLiveZoo(engineRef);
+  const chain = useChainPulse(engineRef);
   const liveNumbers = useLiveNumbers();
 
   useEffect(() => {
@@ -168,6 +169,44 @@ export default function NightWatch() {
                 </button>
               ))}
             </div>
+          )}
+
+          {chain.perMinute && (
+            <div className="font-mono pointer-events-none absolute bottom-11 left-4 text-[10.5px] text-white/50 sm:bottom-12 sm:left-6">
+              <p className="flex items-center gap-2">
+                <i className={`h-1.5 w-1.5 rounded-full ${chain.live ? "animate-pulse bg-[#f1dfb8]" : "bg-white/30"}`} />
+                {chain.live ? "solana · pump.fun, last 60s" : "chain stream paused"}
+              </p>
+              <p className="mt-1.5 flex gap-4">
+                <span>
+                  <b className="font-display text-xl font-normal text-white tabular-nums">{chain.perMinute.launches.toLocaleString("en-US")}</b> launches
+                </span>
+                <span>
+                  <b className="font-display text-xl font-normal text-white tabular-nums">{chain.perMinute.trades.toLocaleString("en-US")}</b> trades
+                </span>
+              </p>
+            </div>
+          )}
+
+          {chain.recent.length > 0 && (
+            <ul className="font-mono pointer-events-none absolute bottom-12 right-4 hidden w-[300px] space-y-1.5 text-[11px] sm:block sm:right-5">
+              <AnimatePresence initial={false}>
+                {chain.recent.map((e) => (
+                  <motion.li
+                    key={e.seq}
+                    layout
+                    initial={{ opacity: 0, x: 12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 truncate rounded-full bg-black/60 px-3 py-1 text-white/75 ring-1 ring-white/[0.06]"
+                  >
+                    <i className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: PULSE_COLOR[e.kind] }} />
+                    <span className="text-white">${e.symbol}</span>
+                    <span className="truncate">{e.text}</span>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
           )}
 
           <div className="font-mono absolute bottom-4 left-4 flex flex-wrap gap-x-5 gap-y-2 text-[10.5px] text-white/50 sm:bottom-5 sm:left-6">

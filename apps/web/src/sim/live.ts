@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { SpeciesId } from "../data";
-import type { NightWatch } from "./nightWatch";
+import type { NightWatch, PulseEvent } from "./nightWatch";
 
 /** Comma-separated node base URLs, e.g. `http://localhost:8781,http://localhost:8782`. */
 export const NODE_URLS: string[] = (import.meta.env.VITE_ZOO_NODES ?? "")
@@ -201,6 +201,61 @@ export function useLiveZoo(engine: React.RefObject<NightWatch | null>): LiveStat
       return es;
     });
     return () => sources.forEach((es) => es.close());
+  }, [engine]);
+
+  return state;
+}
+
+export interface ChainPulse {
+  live: boolean;
+  perMinute: { launches: number; trades: number } | null;
+  /** The newest loud moments (not plain launches), newest first. */
+  recent: PulseEvent[];
+}
+
+const PULSE_EVERY_MS = 2_000;
+
+/** Polls north's pump.fun tape and flies each moment onto the map, spread over the poll interval. */
+export function useChainPulse(engine: React.RefObject<NightWatch | null>): ChainPulse {
+  const [state, setState] = useState<ChainPulse>({ live: false, perMinute: null, recent: [] });
+
+  useEffect(() => {
+    const north = NODE_URLS.find((u) => u.includes("north"));
+    if (!north) return;
+    let after = -1;
+    let stopped = false;
+    const timers = new Set<number>();
+    const poll = async () => {
+      if (document.hidden) return;
+      try {
+        const r = await fetch(`${north}/v1/chain/pulse?after=${Math.max(0, after)}`);
+        if (!r.ok) return;
+        const body = (await r.json()) as { live: boolean; perMinute: ChainPulse["perMinute"]; events: PulseEvent[] };
+        if (stopped) return;
+        // The first read only sets the cursor and replays the last few, so the map doesn't open with a flood.
+        const events = after < 0 ? body.events.slice(-4) : body.events;
+        if (body.events.length) after = body.events[body.events.length - 1]!.seq;
+        else if (after < 0) after = 0;
+        events.forEach((e, i) => {
+          const id = window.setTimeout(() => {
+            timers.delete(id);
+            engine.current?.livePulse(e);
+            if (e.kind !== "launch") setState((s) => ({ ...s, recent: [e, ...s.recent].slice(0, 4) }));
+          }, (i / Math.max(1, events.length)) * PULSE_EVERY_MS);
+          timers.add(id);
+        });
+        setState((s) => ({ ...s, live: body.live, perMinute: body.perMinute }));
+      } catch {
+        /* the next poll tries again */
+      }
+    };
+    poll();
+    const every = window.setInterval(poll, PULSE_EVERY_MS);
+    return () => {
+      stopped = true;
+      clearInterval(every);
+      timers.forEach((id) => clearTimeout(id));
+    };
   }, [engine]);
 
   return state;

@@ -95,6 +95,38 @@ export interface Snapshot {
   status: "building" | "published" | "partial";
 }
 
+/** A moment on the pump.fun tape, as north reports it. */
+export interface PulseEvent {
+  seq: number;
+  at: number;
+  kind: "launch" | "serial" | "dump" | "graduated" | "whale";
+  mint: string;
+  symbol: string;
+  text: string;
+}
+
+export const PULSE_COLOR: Record<PulseEvent["kind"], string> = {
+  launch: "#f1dfb8",
+  serial: "#ffaa55",
+  dump: "#ff5b4f",
+  graduated: "#8ff0a4",
+  whale: "#ffd86b",
+};
+
+/** A token flying across the map: from the edge of the frame (the chain) or from one animal to another. */
+interface Spark {
+  kind: PulseEvent["kind"];
+  sx: number;
+  sy: number;
+  from: Animal | null;
+  to: Animal;
+  t: number;
+  speed: number;
+  label: string | null;
+}
+interface Burst { animal: Animal; color: string; age: number; big: boolean }
+interface Flare { animal: Animal; text: string; color: string; age: number }
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 const hash = () => Math.random().toString(16).slice(2, 8);
@@ -129,6 +161,14 @@ export class NightWatch {
   private ripples: Ripple[] = [];
   /** Short lines that rise over an animal when a node reports what it just did. */
   private notes: Array<{ animal: string; text: string; age: number }> = [];
+  private sparks: Spark[] = [];
+  private bursts: Burst[] = [];
+  private flares: Flare[] = [];
+  /** A red wash over the whole map after a creator dumps, fading out. */
+  private alarm = 0;
+  /** When each animal last caught something, for a short swell of its sprite. */
+  private caught = new Map<Animal, number>();
+  private idleIn = 2;
   /** Where each animal was drawn last frame, for clicks. */
   private hits: Array<{ name: string; x: number; y: number; r: number }> = [];
 
@@ -308,8 +348,74 @@ export class NightWatch {
     if (a && b) this.signals.push({ from: a, to: b, part: -1, accepted, t: 0 });
   }
 
+  /** A moment on the chain tape, flown onto the map. */
+  livePulse(e: PulseEvent) {
+    const by = (name: string) => this.animals.find((x) => x.sprite === name)!;
+    const raven = by("raven");
+    // Launches come every second or so; past a dozen in flight the counter tells the scale better.
+    if (e.kind === "launch" && this.sparks.length > 12) return;
+    const edge = (): [number, number] => (Math.random() < 0.6 ? [rand(-0.02, 0.45), -0.03] : [-0.03, rand(0, 0.7)]);
+    const [sx, sy] = edge();
+    const tag = `$${e.symbol}`;
+    switch (e.kind) {
+      case "launch":
+        this.sparks.push({ kind: e.kind, sx, sy, from: null, to: raven, t: 0, speed: rand(0.5, 0.8), label: null });
+        break;
+      case "serial":
+        this.sparks.push({ kind: e.kind, sx, sy, from: null, to: raven, t: 0, speed: 0.55, label: `${tag} · ${e.text}` });
+        break;
+      case "dump":
+        this.sparks.push({ kind: e.kind, sx, sy, from: null, to: raven, t: 0, speed: 0.7, label: `${tag} · ${e.text}` });
+        break;
+      case "graduated":
+        // Graduates leave pump.fun for the DEX: the raven hands them to the owl.
+        this.sparks.push({ kind: e.kind, sx: 0, sy: 0, from: raven, to: by("owl"), t: 0, speed: 0.4, label: `${tag} graduated` });
+        break;
+      case "whale":
+        this.sparks.push({ kind: e.kind, sx, sy, from: null, to: by("hedgehog"), t: 0, speed: 0.5, label: `${tag} · ${e.text}` });
+        break;
+    }
+  }
+
+  private land(s: Spark) {
+    const a = s.to;
+    const color = PULSE_COLOR[s.kind];
+    this.caught.set(a, 0);
+    a.awake = true;
+    a.sleepIn = Math.max(a.sleepIn, s.kind === "launch" ? 1.5 : 3);
+    this.ripples.push({ enc: a.enc, x: a.ox, y: a.oy, age: 0, tint: color });
+    if (s.kind === "launch") {
+      if (!a.moving && Math.random() < 0.15) this.newTarget(a);
+      return;
+    }
+    this.bursts.push({ animal: a, color, age: 0, big: s.kind === "dump" });
+    if (s.label) this.flares = [...this.flares, { animal: a, text: s.label, color, age: 0 }].slice(-4);
+    if (s.kind === "dump") this.alarm = 1;
+    if (!a.moving) this.newTarget(a);
+  }
+
   /** Movement and signal flight without any simulated decisions. */
   private animate(dt: number) {
+    // Between real events the animals still move about their enclosures.
+    this.idleIn -= dt;
+    if (this.idleIn <= 0) {
+      this.idleIn = rand(1.5, 4);
+      const a = pick(this.animals.filter((x) => !x.moving));
+      if (a) this.wake(a, { type: "live" });
+    }
+    for (const s of this.sparks) s.t += dt * s.speed;
+    for (const s of this.sparks) if (s.t >= 1) this.land(s);
+    this.sparks = this.sparks.filter((s) => s.t < 1);
+    for (const b of this.bursts) b.age += dt;
+    this.bursts = this.bursts.filter((b) => b.age < 1.6);
+    for (const f of this.flares) f.age += dt;
+    this.flares = this.flares.filter((f) => f.age < 6);
+    for (const [a, age] of this.caught) {
+      if (age > 0.5) this.caught.delete(a);
+      else this.caught.set(a, age + dt);
+    }
+    this.alarm = Math.max(0, this.alarm - dt * 0.7);
+
     const move = 0.45 * dt;
     for (const a of this.animals) {
       if (a.awake && a.moving) {
@@ -632,6 +738,52 @@ export class NightWatch {
       glow(head.x, head.y, 16, col, 1);
     }
 
+    // the chain tape: tokens flying in from the edge of the frame
+    for (const s of this.sparks) {
+      const p1 = s.from ? pos(s.from) : { x: s.sx * w, y: s.sy * h };
+      const p2 = pos(s.to);
+      const c = curve(p1, p2);
+      const k = 1 - (1 - s.t) * (1 - s.t);
+      const head = bez(p1, c, p2, k);
+      const col = PULSE_COLOR[s.kind];
+      const loud = s.kind !== "launch";
+      ctx.strokeStyle = col;
+      ctx.lineWidth = loud ? 1.5 : 1;
+      ctx.globalAlpha = loud ? 0.75 : 0.45;
+      ctx.beginPath();
+      const from = Math.max(0, k - (loud ? 0.3 : 0.18));
+      for (let i = 0; i <= 16; i++) {
+        const q = bez(p1, c, p2, from + (k - from) * (i / 16));
+        if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      glow(head.x, head.y, loud ? 22 : 10, col, loud ? 1 : 0.8);
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, loud ? 2.2 : 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // flashes where a loud event lands
+    for (const b of this.bursts) {
+      const p = pos(b.animal);
+      const k = b.age / 1.6;
+      const reach = (b.big ? 150 : 90) * Math.min(1, unit / 700);
+      glow(p.x, p.y, reach * (0.4 + k), b.color, (1 - k) * (b.big ? 0.75 : 0.5));
+      ctx.strokeStyle = b.color;
+      for (let ring = 0; ring < (b.big ? 3 : 2); ring++) {
+        const rk = Math.min(1, Math.max(0, k * 1.4 - ring * 0.18));
+        if (rk <= 0) continue;
+        ctx.globalAlpha = (1 - rk) * 0.8;
+        ctx.lineWidth = b.big ? 2 : 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 12 + rk * reach, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // agents
     const base = Math.min(52, Math.max(30, unit * 0.065));
     this.hits = [];
@@ -640,7 +792,8 @@ export class NightWatch {
       const col = SPECIES_COLOR[a.species];
       const sprite = art(`/agents/${a.sprite}.webp`);
       const bob = Math.sin(t / 600 + a.name.length) * (a.awake ? 2 : 1);
-      const size = base * (a.awake ? 1.15 : 0.9);
+      const swell = this.caught.has(a) ? Math.sin((this.caught.get(a)! / 0.5) * Math.PI) * 0.18 : 0;
+      const size = base * (a.awake ? 1.15 : 0.9) * (1 + swell);
       this.hits.push({ name: a.sprite, x: p.x, y: p.y + bob, r: Math.max(18, size * 0.6) });
 
       if (a.awake) {
@@ -680,6 +833,49 @@ export class NightWatch {
         ctx.font = "400 11px 'Geist Mono', monospace";
         ctx.fillText("z", p.x + size * 0.4 + zt * 6, p.y - size * 0.35 - zt * 10);
       }
+      ctx.globalAlpha = 1;
+    }
+
+    // what the tape just caught, over the animal that caught it
+    ctx.font = '500 11.5px "Geist Mono", ui-monospace, monospace';
+    ctx.textAlign = "left";
+    const stack = new Map<Animal, number>();
+    for (let i = this.flares.length - 1; i >= 0; i--) {
+      const f = this.flares[i]!;
+      const row = stack.get(f.animal) ?? 0;
+      stack.set(f.animal, row + 1);
+      const p = pos(f.animal);
+      const fade = f.age < 0.25 ? f.age / 0.25 : f.age > 5 ? Math.max(0, 6 - f.age) : 1;
+      const tw = ctx.measureText(f.text).width;
+      const bw = tw + 30;
+      const x = Math.min(Math.max(8, p.x - bw / 2), w - bw - 8);
+      const y = p.y - base * 0.9 - 26 - row * 28 - f.age * 3;
+      ctx.globalAlpha = fade * 0.9;
+      ctx.fillStyle = "rgba(6,4,4,0.82)";
+      ctx.beginPath();
+      ctx.roundRect(x, y - 15, bw, 23, 11.5);
+      ctx.fill();
+      ctx.strokeStyle = f.color;
+      ctx.globalAlpha = fade * 0.55;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = f.color;
+      ctx.beginPath();
+      ctx.arc(x + 12, y - 3.5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(f.text, x + 21, y);
+    }
+    ctx.globalAlpha = 1;
+
+    if (this.alarm > 0) {
+      const v = ctx.createRadialGradient(w / 2, h / 2, unit * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+      v.addColorStop(0, "transparent");
+      v.addColorStop(1, "rgba(255,60,50,0.55)");
+      ctx.globalAlpha = this.alarm * 0.6;
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, w, h);
       ctx.globalAlpha = 1;
     }
   }
