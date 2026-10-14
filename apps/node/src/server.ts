@@ -39,6 +39,8 @@ export interface ServerOptions {
   stats?: () => Promise<unknown>;
   /** Every graded agent on one scale, served at GET /v1/leaderboard. */
   board?: () => Promise<unknown>;
+  /** The beaver's night-by-night record, served at GET /v1/beaver/record. */
+  beaverHistory?: () => Promise<unknown>;
   /** "Ask the beaver", on the node that keeps it. */
   asks?: AskDesk;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
@@ -64,7 +66,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, asks, evolution }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, asks, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -123,6 +125,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const row = b.rows.find((r) => [r.id, r.id.replace(/^(guest|nursery):/, ""), r.name].some((k) => k.toLowerCase() === key)) ?? null;
         res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=300" });
         return res.end(badgeSvg(row, row?.name ?? badge[1]!, b.minGraded));
+      }
+      if (req.method === "GET" && path === "/v1/beaver/record") {
+        return beaverHistory ? json(res, 200, await beaverHistory()) : json(res, 404, { error: "the beaver is not on this node" });
       }
       if (req.method === "GET" && path === "/v1/leaderboard") {
         return board ? json(res, 200, await board()) : json(res, 404, { error: "no leaderboard on this node" });
@@ -271,6 +276,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!holdersEnabled()) return json(res, 404, { error: "no RPC configured on this node" });
         const report = await holderReport(holdersOf[1]!);
         return report ? json(res, 200, report) : json(res, 404, { error: "no holders found" });
+      }
+      if (req.method === "GET" && path === "/v1/chain/ruggers") {
+        return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });

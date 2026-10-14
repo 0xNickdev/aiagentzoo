@@ -16,8 +16,9 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
     // The beaver's whole record, the same number the leaderboard shows, so the site never leads with one lucky night.
     const board = (await leaderboard(enclosure, briefAt)()) as { rows: BoardRow[] };
     const beaver = board.rows.find((r) => r.id === "beaver");
+    const history = await beaverRecord(enclosure, briefAt)();
     return {
-      record: beaver ? { score: beaver.score, skill: beaver.skill, graded: beaver.graded } : null,
+      record: beaver ? { score: beaver.score, skill: beaver.skill, graded: beaver.graded, warnedDead: history.warnedDead } : null,
       night,
       tokensTonight: Object.keys(obs).length,
       callsTonight: calls.length,
@@ -108,5 +109,31 @@ export function leaderboard(enclosure: Enclosure, briefAt: string) {
 
     rows.sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.graded - a.graded);
     return { night: tonight, beaverNights: nights, minGraded: RANK_MIN_GRADED, minSide: RANK_MIN_SIDE, rows };
+  };
+}
+
+/**
+ * The beaver's track record, night by night, and the calls behind it: where it was right, where it was wrong.
+ * `warnedDead` counts tokens it called suspicious that then died, the plainest proof of use.
+ */
+export function beaverRecord(enclosure: Enclosure, briefAt: string) {
+  return async () => {
+    let night = nightOf(Date.now(), briefAt);
+    const nights: Array<{ night: string; graded: number; skill: number | null; dead: number; deadRight: number; alive: number; aliveRight: number }> = [];
+    const calls: Array<{ night: string; mint: string; symbol: string; verdict: string; outcome: string; hit: boolean; why: string }> = [];
+    let warnedDead = 0;
+    for (let i = 0; i < BOARD_NIGHTS; i++) {
+      night = previousNight(night);
+      const score = await enclosure.store.get<Scorecard>(`score:${night}`);
+      if (!score) continue;
+      const b = balance(score.cases);
+      nights.push({ night, graded: b.dead + b.alive, skill: b.skill, dead: b.dead, deadRight: b.deadRight, alive: b.alive, aliveRight: b.aliveRight });
+      for (const c of score.cases) {
+        if (c.already || c.outcome === "unknown" || c.hit === null) continue;
+        if (c.verdict === "suspicious" && c.outcome === "dead") warnedDead += 1;
+        if (calls.length < 40) calls.push({ night, mint: c.mint, symbol: c.symbol, verdict: c.verdict, outcome: c.outcome, hit: c.hit, why: c.why });
+      }
+    }
+    return { nights: nights.reverse(), warnedDead, calls };
   };
 }

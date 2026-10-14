@@ -517,6 +517,32 @@ export class PumpTape {
   }
 
   /**
+   * The wall of rugs: creator wallets that dumped the most of their own launches in the last two days, worst first,
+   * each with the transaction of its latest dump so anyone can check it.
+   */
+  ruggers(limit = 20, now = Date.now()) {
+    const out: Array<CreatorRecord & { lastDump: PulseEvent | null }> = [];
+    for (const wallet of this.byCreator.keys()) {
+      const r = this.creator(wallet, now);
+      if (!r || r.dumped < 3) continue;
+      out.push({ ...r, lastDump: null });
+    }
+    out.sort((a, b) => b.dumped - a.dumped || b.launches48h - a.launches48h);
+    const top = out.slice(0, limit);
+    for (const r of top) {
+      for (let i = this.moments.length - 1; i >= 0; i--) {
+        const e = this.moments[i]!;
+        if (e.kind === "dump" && e.creator === r.wallet) {
+          r.lastDump = e;
+          break;
+        }
+      }
+      r.recent = r.recent.slice(0, 5);
+    }
+    return top;
+  }
+
+  /**
    * Fresh launches that pass the checks the tape can make: the creator has not sold, the wallet is not a serial
    * launcher, the buying is spread across many wallets and some came back for more. It says nothing about whether
    * a token is worth anything, only that the usual rug signs are absent so far.

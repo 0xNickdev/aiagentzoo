@@ -15,7 +15,7 @@ import { GuestHouse } from "./guests.ts";
 import { AskDesk } from "./ask.ts";
 import { evolutionView } from "./agents/evolution.ts";
 import { startTelegram } from "./telegram.ts";
-import { canyonStats, leaderboard } from "./stats.ts";
+import { beaverRecord, canyonStats, leaderboard } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
@@ -133,7 +133,7 @@ const server = createNodeServer({
   passports: await PassportIndex.build(enclosure),
   briefs,
   guests,
-  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   visitor: {
     agents: visitorAgents,

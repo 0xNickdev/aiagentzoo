@@ -785,6 +785,8 @@ test("the tape keeps each creator's record and lists fresh launches that pass th
   assert.equal(rec.dumped, 2);
   assert.equal(rec.medianDumpMin, 2);
   assert.equal(tape.creator("nobody", now), null);
+  // Two dumps is not yet a wall entry; a third puts the dev on it.
+  assert.equal(tape.ruggers(10, now).length, 0);
 
   // A clean launch: 30 wallets buying, a few coming back, the creator holding, 20 minutes old.
   const CLEAN = `Clean${"1".repeat(38)}`;
@@ -933,4 +935,22 @@ test("holder report leaves pools out of wallet shares and finds what the creator
   assert.equal(r.topShare, 0.15);
   assert.equal(r.creatorShare, 0.12);
   delete process.env.SOLANA_RPC_URL;
+});
+
+test("the beaver's record counts the tokens it warned about that then died", async () => {
+  const { beaverRecord } = await import("../src/stats.ts");
+  const { nightOf } = await import("../src/agents/nightWatch.ts");
+  const { previousNight } = await import("../src/agents/judgement.ts");
+  const last = previousNight(nightOf(Date.now(), "07:00"));
+  const cases = [
+    { mint: "a", symbol: "A", verdict: "suspicious", why: "", outcome: "dead", hit: true },
+    { mint: "b", symbol: "B", verdict: "suspicious", why: "", outcome: "dead", hit: true, already: true },
+    { mint: "c", symbol: "C", verdict: "promising", why: "", outcome: "dead", hit: false },
+    { mint: "d", symbol: "D", verdict: "suspicious", why: "", outcome: "alive", hit: false },
+  ];
+  const store = { get: async (k: string) => (k === `score:${last}` ? { night: last, cases } : null) };
+  const r = await beaverRecord({ store } as never, "07:00")();
+  assert.equal(r.warnedDead, 1, "already-dead tokens don't count");
+  assert.equal(r.nights.length, 1);
+  assert.equal(r.calls.length, 3);
 });
