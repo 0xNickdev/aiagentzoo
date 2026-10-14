@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { X_URL, XIcon } from "../links";
-import { nodeOf } from "../zoo";
+import { nodeOf, useGuardian } from "../zoo";
 import { Reveal, Section } from "./ui";
 
 type Verdict = "promising" | "watch" | "suspicious";
@@ -218,6 +218,8 @@ export default function AskPage() {
   const [recent, setRecent] = useState<Recent | null>(null);
   const [wallet, setWallet] = useState<CreatorRecord | null>(null);
   const [clean, setClean] = useState<CleanLaunch[] | null>(null);
+  const { session, signIn, busy: signing } = useGuardian();
+  const [holder, setHolder] = useState<{ holder: boolean; balance: number | null; min: number } | null>(null);
   const base = useRef<string | null>(null);
   const northBase = useRef<string | null>(null);
 
@@ -269,6 +271,17 @@ export default function AskPage() {
     return () => clearInterval(timer);
   }, [canyon, loadRecent, loadClean]);
 
+  // A signed-in wallet: does it hold enough $ZOOAGENCY for the larger allowance?
+  useEffect(() => {
+    setHolder(null);
+    if (!session) return;
+    void (async () => {
+      const url = await canyon();
+      const r = url ? await fetch(`${url}/v1/holder/${session.publicKey}`).catch(() => null) : null;
+      if (r?.ok) setHolder((await r.json()) as { holder: boolean; balance: number | null; min: number });
+    })();
+  }, [session, canyon]);
+
   const askAbout = async (mint: string) => {
     setBusy(true);
     setError(null);
@@ -276,7 +289,11 @@ export default function AskPage() {
     try {
       const url = await canyon();
       if (!url) throw new Error("The beaver's node did not answer. Try again in a minute.");
-      const r = await fetch(`${url}/v1/ask`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mint }) });
+      const r = await fetch(`${url}/v1/ask`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+          mint,
+          ...(session ? { guardian: { publicKey: session.publicKey, message: session.message, signature: session.signature } } : {}),
+        }),
+      });
       const body = (await r.json()) as { ask?: Ask; error?: string };
       if (r.status === 404) {
         // Not a token anyone trades: maybe it is a creator's wallet.
@@ -346,6 +363,23 @@ export default function AskPage() {
             </button>
           </form>
           {error && <p className="mt-4 text-center text-[13px] text-[#ff9a8f]">{error}</p>}
+          <p className="font-mono mt-4 text-center text-[11px] text-white/45">
+            {!session ? (
+              <>
+                holding $ZOOAGENCY?{" "}
+                <button type="button" onClick={() => void signIn()} disabled={signing} className="text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100">
+                  sign in with your wallet
+                </button>{" "}
+                for 30 questions an hour instead of 6
+              </>
+            ) : holder?.holder ? (
+              <span className="text-amber-100/80">● holder · 30 questions an hour · 10 tokens under watch</span>
+            ) : holder ? (
+              <>signed in · hold {holder.min.toLocaleString("en-US")} $ZOOAGENCY for 30 questions an hour</>
+            ) : (
+              <>signed in · checking your wallet…</>
+            )}
+          </p>
         </Reveal>
       </Section>
 
