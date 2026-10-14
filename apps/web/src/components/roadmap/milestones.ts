@@ -85,7 +85,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: "token",
     title: "Token launch",
-    text: "$ZOOAGENCY launched through ClawPump. 61.5% of creator fees go to buybacks.",
+    text: "$ZOOAGENCY launched through ClawPump and graduated to PumpSwap.",
     status: "shipped",
     links: ["onchain", "guests"],
     metric: () => "$ZOOAGENCY",
