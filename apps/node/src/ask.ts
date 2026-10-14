@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { createEvent, type Enclosure, type ModelProvider, signEvent } from "@aiagentzoo/sdk";
+import { createEvent, type Enclosure, type ModelProvider, renderUntrusted, signEvent, UNTRUSTED_NOTICE } from "@aiagentzoo/sdk";
 import type { ChainFacts } from "./chain/pump.ts";
 import {
   compact,
@@ -197,10 +197,10 @@ export class AskDesk {
     let call = null as ReturnType<typeof parseCalls>[number] | null;
     if (this.opts.model) {
       try {
+        // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
         const result = await this.opts.model.think({
-          system: judgeSystem(playbook),
-          prompt: "Judge this 1 token. Answer with a JSON array holding one object.",
-          untrusted: [compact(obs)],
+          system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
+          prompt: `Judge this 1 token. Answer with a JSON array holding one object.\n\n${renderUntrusted([compact(obs)])}`,
           maxTokens: 900,
         });
         call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;

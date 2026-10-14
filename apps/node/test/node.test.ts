@@ -734,7 +734,8 @@ test("ask the beaver: a verdict from the market, reused for a while, rate-limite
     return new Response(JSON.stringify([pair]), { status: 200 });
   }) as typeof fetch;
   // A lone object, not an array: models do that when asked about one token.
-  const model = { id: "fake", think: async () => ({ text: JSON.stringify({ mint: MINT_A, verdict: "suspicious", confidence: 0.8, why: "sells 9:1, volume far above liquidity" }), inputTokens: 1, outputTokens: 1 }) };
+  const prompts: string[] = [];
+  const model = { id: "fake", think: async (r: { prompt: string }) => (prompts.push(r.prompt), { text: JSON.stringify({ mint: MINT_A, verdict: "suspicious", confidence: 0.8, why: "sells 9:1, volume far above liquidity" }), inputTokens: 1, outputTokens: 1 }) };
   const desk = new AskDesk({ enclosure: enclosure as never, model, fetchFn, perIpPerHour: 2 });
   const now = 1_800_000_000_000;
 
@@ -743,6 +744,7 @@ test("ask the beaver: a verdict from the market, reused for a while, rate-limite
   assert.ok(first.ok);
   assert.equal(first.ask.verdict, "suspicious");
   assert.equal(first.ask.by, "model");
+  assert.ok(prompts[0]!.includes("<untrusted_data>") && prompts[0]!.includes(MINT_A), "the model sees the token, fenced");
   assert.equal(first.ask.symbol, "WRAP");
   assert.ok(first.ask.facts.flags.includes("sells outnumber buys 3:1"));
   assert.deepEqual(logged, ["ask.answered"]);
