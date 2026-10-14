@@ -7,6 +7,7 @@ import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
+import Play from "./components/Play";
 import BeaverRecord from "./components/BeaverRecord";
 import AgentOfWeek from "./components/AgentOfWeek";
 import Species from "./components/Species";
@@ -125,6 +126,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/agents": AgentsPage,
   "/ask": AskPage,
   "/rugs": WallOfRugs,
+  "/play": Play,
 };
 
 export default function App() {

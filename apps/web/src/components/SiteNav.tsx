@@ -6,6 +6,7 @@ import { useRoute } from "../router";
 
 export const NAV_LINKS = [
   { label: "Ask", href: "/ask" },
+  { label: "Play", href: "/play" },
   { label: "Rugs", href: "/rugs" },
   { label: "Live", href: "/live" },
   { label: "Brief", href: "/brief" },
