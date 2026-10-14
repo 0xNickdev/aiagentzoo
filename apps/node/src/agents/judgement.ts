@@ -202,6 +202,9 @@ export function ruleFlags(o: Observation): string[] {
   const c = o.chain;
   if (c && c.creatorSold !== null && c.creatorSold >= 0.5) reasons.push(`creator sold ${Math.round(c.creatorSold * 100)}% of their bag`);
   if (c && c.creatorLaunches24h >= 5) reasons.push(`creator launched ${c.creatorLaunches24h} tokens today`);
+  if (c && (c.bundleWallets ?? 0) >= 3 && (c.bundleShare ?? 0) >= 0.15) {
+    reasons.push(`bundled: ${c.bundleWallets} wallets took ${Math.round((c.bundleShare ?? 0) * 100)}% of supply in the launch block`);
+  }
   return reasons;
 }
 
@@ -223,11 +226,11 @@ export function ruleCalls(items: Observation[], now: number): Call[] {
 
 /** How to read the on-chain facts, for every judge that sees them. */
 export const CHAIN_NOTE =
-  "Some tokens carry `chain`: facts read from Solana itself. creatorSold is the share of the creator's own bought tokens they already sold (0..1), creatorLaunches24h counts the creator's launches today, buys/sells/buyers count trades on the bonding curve, curveSol is the SOL still in it, top5Share is the share of SOL bought in by the five biggest buyers (0..1), repeatBuyers counts buyers who bought again, trades15m counts trades in the first 15 minutes.";
+  "Some tokens carry `chain`: facts read from Solana itself. creatorSold is the share of the creator's own bought tokens they already sold (0..1), creatorLaunches24h counts the creator's launches today, buys/sells/buyers count trades on the bonding curve, curveSol is the SOL still in it, top5Share is the share of SOL bought in by the five biggest buyers (0..1), repeatBuyers counts buyers who bought again, trades15m counts trades in the first 15 minutes, bundleWallets counts wallets other than the creator that bought in the launch block (a bundle), bundleShare is the share of the whole supply they took (0..1).";
 
 /** Every field a judge can see on an exam token: rules, and mutations, can only use these. */
 export const EXAM_FIELDS =
-  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m";
+  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare";
 
 export function judgeSystem(playbook: Playbook): string {
   return [

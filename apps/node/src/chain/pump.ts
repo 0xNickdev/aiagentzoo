@@ -173,7 +173,16 @@ export interface ChainFacts {
   repeatBuyers: number;
   /** Trades in the first 15 minutes after launch. */
   trades15m: number;
+  /** Wallets other than the creator that bought in the launch block or the next: a bundle. Null when the stream gave no slots. */
+  bundleWallets: number | null;
+  /** Share of the whole supply those wallets took, 0..1. */
+  bundleShare: number | null;
 }
+
+/** pump.fun mints a billion tokens. */
+const SUPPLY = 1_000_000_000;
+/** A buy this many slots after the create still counts as part of the launch bundle. */
+const BUNDLE_SLOTS = 1;
 
 interface Tracked {
   mint: string;
@@ -195,6 +204,10 @@ interface Tracked {
   dumped: boolean;
   /** When that happened. */
   dumpedAt: number | null;
+  /** The slot the token was created in, when the stream says. */
+  createSlot: number | null;
+  /** Tokens each non-creator wallet bought in the launch block or the next. */
+  launchBuys: Map<string, number>;
 }
 
 /** What the tape knows about one creator wallet over the last two days. */
@@ -349,7 +362,7 @@ export class PumpTape {
     return this.connected && now - this.lastEventAt < 120_000;
   }
 
-  apply(ev: PumpEvent, now = Date.now(), tx?: string): void {
+  apply(ev: PumpEvent, now = Date.now(), tx?: string, slot?: number): void {
     this.lastEventAt = now;
     if (ev.kind === "create") {
       if (this.tokens.has(ev.mint)) return;
@@ -372,6 +385,8 @@ export class PumpTape {
         graduated: false,
         dumped: false,
         dumpedAt: null,
+        createSlot: slot ?? null,
+        launchBuys: new Map(),
       });
       const mine = this.byCreator.get(ev.creator) ?? [];
       mine.push(ev.mint);
@@ -408,6 +423,9 @@ export class PumpTape {
         b.buys += 1;
       } else if (t.buyers.size < 100) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
       if (ev.user === t.creator) t.devBought += ev.tokens;
+      else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
+        t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
+      }
       if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`, tx);
     } else {
       t.sells += 1;
@@ -468,6 +486,8 @@ export class PumpTape {
           : null,
       repeatBuyers: [...t.buyers.values()].filter((b) => b.buys >= 2).length,
       trades15m: t.trades15m,
+      bundleWallets: t.createSlot === null ? null : t.launchBuys.size,
+      bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / SUPPLY),
     };
   }
 
@@ -524,7 +544,17 @@ export class PumpTape {
   token(mint: string, now = Date.now()) {
     const t = this.tokens.get(mint);
     if (!t) return null;
-    return { mint, symbol: t.symbol, name: t.name, creator: t.creator, createdAt: t.createdAt, facts: this.facts(mint, now)!, creatorRecord: this.creator(t.creator, now) };
+    return {
+      mint,
+      symbol: t.symbol,
+      name: t.name,
+      creator: t.creator,
+      createdAt: t.createdAt,
+      facts: this.facts(mint, now)!,
+      creatorRecord: this.creator(t.creator, now),
+      // The biggest launch-block buyers, for anyone checking who funded them.
+      bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / SUPPLY) * 10_000) / 10_000 })),
+    };
   }
 
   /** The newest launches, as the sentinels expect them, each with its chain facts attached. */
@@ -589,7 +619,7 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
         const stream = await client.subscribe();
         current = stream;
         await new Promise<void>((resolve, reject) => {
-          stream.on("data", (update: { transaction?: { transaction?: { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
+          stream.on("data", (update: { transaction?: { slot?: string | number; transaction?: { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
             const logs = update.transaction?.transaction?.meta?.logMessages;
             if (!logs) return;
             if (!t.connected) {
@@ -599,7 +629,8 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
             }
             const sig = update.transaction?.transaction?.signature;
             const tx = sig && sig.length ? base58(sig) : undefined;
-            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx);
+            const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
+            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, Number.isFinite(slot) ? slot : undefined);
           });
           stream.on("error", reject);
           stream.on("end", resolve);

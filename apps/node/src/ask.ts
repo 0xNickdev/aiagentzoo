@@ -34,6 +34,8 @@ export interface AskFacts {
   hasSocials: boolean | null;
   market: Observation["market"];
   chain: ChainFacts | null;
+  /** Wallets that bought in the launch block, and whether one wallet paid for several of them. */
+  bundle: { wallets: number; share: number; linked: number; funder: string | null } | null;
   /** The creator wallet's last two days on pump.fun, when the stream saw this token launch. */
   creator: CreatorRecord | null;
   flags: string[];
@@ -215,13 +217,25 @@ export class AskDesk {
 
     const playbook = (await this.store.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
     const record = c?.creatorRecord ?? null;
+    // A launch bundle: who bought in the launch block, and who paid them.
+    let bundle: AskFacts["bundle"] = null;
+    if (c && (c.facts.bundleWallets ?? 0) >= 2) {
+      const b = await this.json<{ funding: { linked: number; groups: Array<{ funder: string; wallets: string[] }> } | null }>(`${this.opts.northUrl}/v1/chain/bundle/${mint}`);
+      bundle = { wallets: c.facts.bundleWallets ?? 0, share: c.facts.bundleShare ?? 0, linked: b?.funding?.linked ?? 0, funder: b?.funding?.groups[0]?.funder ?? null };
+    }
     let call = null as ReturnType<typeof parseCalls>[number] | null;
     if (this.opts.model) {
       try {
         // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
         const result = await this.opts.model.think({
           system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
-          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? " creatorRecord is the creator wallet's last two days on pump.fun: launches, how many it dumped, the median minutes to the dump." : ""}\n\n${renderUntrusted([{ ...compact(obs), ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}) }])}`,
+          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? " creatorRecord is the creator wallet's last two days on pump.fun: launches, how many it dumped, the median minutes to the dump." : ""}\n\n${renderUntrusted([
+            {
+              ...compact(obs),
+              ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}),
+              ...(bundle?.linked ? { bundleFunding: `${bundle.linked} of the launch-block buyers were funded by one wallet` } : {}),
+            },
+          ])}`,
           maxTokens: 900,
         });
         call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;
@@ -232,6 +246,7 @@ export class AskDesk {
       }
     }
     const flags = ruleFlags(obs);
+    if (bundle && bundle.linked >= 2) flags.push(`${bundle.linked} bundle wallets funded by one wallet`);
     if (record && record.launches48h >= 3 && record.dumped >= Math.ceil(record.launches48h / 2)) {
       flags.push(`creator dumped ${record.dumped} of ${record.launches48h} launches in 48h`);
     }
@@ -250,7 +265,7 @@ export class AskDesk {
       why: call.why,
       by: call.by,
       playbookVersion: playbook.version,
-      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, flags, url: m?.url ?? null },
+      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, bundle, flags, url: m?.url ?? null },
       already: outcomeOf(obs) === "dead",
     };
     await this.store.set(`ask:${ask.id}`, ask);

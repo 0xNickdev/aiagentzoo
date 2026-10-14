@@ -7,6 +7,7 @@ import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
+import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
@@ -256,6 +257,13 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && creatorOf) {
         const found = tape.creator(creatorOf[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
+      }
+      const bundleOf = /^\/v1\/chain\/bundle\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && bundleOf) {
+        const t = tape.token(bundleOf[1]!);
+        if (!t) return json(res, 404, { error: "not on the stream" });
+        const funding = t.bundle.length >= 2 ? await traceFunders(t.mint, t.bundle.map((b) => b.wallet)) : null;
+        return json(res, 200, { mint: t.mint, bundleWallets: t.facts.bundleWallets, bundleShare: t.facts.bundleShare, wallets: t.bundle, funding, fundingEnabled: fundersEnabled() });
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });

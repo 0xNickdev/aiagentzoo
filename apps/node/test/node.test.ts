@@ -873,3 +873,39 @@ test("mini app initData is trusted only with Telegram's signature and only for a
   assert.equal(verifyInitData(sign(fields).replace("42", "43"), token, now), null, "tampered user");
   assert.equal(verifyInitData(sign(fields), token, now + 25 * 3_600_000), null, "too old");
 });
+
+test("the tape spots a launch-block bundle, and the bundle's wallets trace back to one funder", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { ruleFlags } = await import("../src/agents/judgement.ts");
+  const tape = new PumpTape();
+  const now = 1_800_000_000_000;
+  const MINT = `Bndl${"1".repeat(39)}`;
+  const DEV = `Dev${"1".repeat(40)}`;
+  tape.apply({ kind: "create", name: "b", symbol: "BNDL", mint: MINT, creator: DEV, ts: now }, now, "tx0", 500);
+  tape.apply({ kind: "trade", mint: MINT, sol: 1, tokens: 30_000_000, isBuy: true, user: DEV, ts: now, curveSol: 1 }, now, "tx1", 500);
+  for (let i = 0; i < 5; i++) {
+    tape.apply({ kind: "trade", mint: MINT, sol: 2, tokens: 40_000_000, isBuy: true, user: `W${i}${"1".repeat(41)}`, ts: now, curveSol: 3 }, now, `b${i}`, 500 + (i % 2));
+  }
+  // A buyer three blocks later is just early, not bundled.
+  tape.apply({ kind: "trade", mint: MINT, sol: 1, tokens: 20_000_000, isBuy: true, user: `Late${"1".repeat(39)}`, ts: now, curveSol: 4 }, now, "late", 503);
+  const f = tape.facts(MINT, now)!;
+  assert.equal(f.bundleWallets, 5, "the creator's own buy is not counted, nor the late buyer");
+  assert.equal(f.bundleShare, 0.2);
+  assert.ok(ruleFlags({ mint: MINT, symbol: "BNDL", name: "", source: "pump", createdAt: now, creator: DEV, hasSocials: null, complete: false, marketCapUsd: null, market: null, seenAt: now, scout: "raven", chain: f }).some((r) => r.startsWith("bundled: 5 wallets took 20%")));
+  assert.equal(tape.token(MINT)!.bundle.length, 5);
+
+  process.env.SOLANA_RPC_URL = "http://rpc.test";
+  const { traceFunders } = await import(`../src/chain/funders.ts?t=${Date.now()}`);
+  const FUNDER = `Fund${"1".repeat(39)}`;
+  const fetchFn = (async (_url: string, init?: { body?: string }) => {
+    const req = JSON.parse(init!.body!) as { method: string; params: [string] };
+    if (req.method === "getSignaturesForAddress") return new Response(JSON.stringify({ result: [{ signature: `sig-${req.params[0]}` }] }));
+    const wallet = req.params[0].slice(4);
+    const source = wallet.startsWith("W0") || wallet.startsWith("W1") || wallet.startsWith("W2") ? FUNDER : `Other${wallet}`;
+    return new Response(JSON.stringify({ result: { transaction: { message: { instructions: [{ program: "system", parsed: { type: "transfer", info: { source, destination: wallet, lamports: 2_100_000_000 } } }] } } } }));
+  }) as typeof fetch;
+  const report = (await traceFunders(MINT, tape.token(MINT)!.bundle.map((b) => b.wallet), fetchFn, now))!;
+  assert.equal(report.linked, 3);
+  assert.equal(report.groups[0]!.funder, FUNDER);
+  delete process.env.SOLANA_RPC_URL;
+});
