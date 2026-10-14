@@ -19,6 +19,27 @@ interface Chain {
   repeatBuyers: number;
 }
 
+interface CreatorRecord {
+  wallet: string;
+  launches24h: number;
+  launches48h: number;
+  dumped: number;
+  medianDumpMin: number | null;
+  graduated: number;
+  recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }>;
+}
+
+interface CleanLaunch {
+  mint: string;
+  symbol: string;
+  name: string;
+  ageMin: number;
+  buyers: number;
+  repeatBuyers: number;
+  top5Share: number | null;
+  creatorSold: number | null;
+}
+
 interface Ask {
   id: string;
   mint: string;
@@ -36,6 +57,7 @@ interface Ask {
     hasSocials: boolean | null;
     market: { liquidityUsd: number | null; volume24hUsd: number | null; priceChange24h: number | null; buys24h: number; sells24h: number; dex: string | null } | null;
     chain: Chain | null;
+    creator?: CreatorRecord | null;
     flags: string[];
     url: string | null;
   };
@@ -67,9 +89,11 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
   const c = a.facts.chain;
   const m = a.facts.market;
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) out.push(["creator sold", pctOf(c.creatorSold), c.creatorSold >= 0.5]);
+  const r = a.facts.creator;
+  if (r) out.push(["creator dumped (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   if (c) out.push(["creator's launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
   if (c?.top5Share !== null && c?.top5Share !== undefined) out.push(["top 5 buyers' share", pctOf(c.top5Share), c.top5Share >= 0.6]);
-  if (c) out.push(["buyers · repeat", `${c.buyers} · ${c.repeatBuyers}`, false]);
+  if (c && !r) out.push(["buyers · repeat", `${c.buyers} · ${c.repeatBuyers}`, false]);
   if (m) {
     out.push(["liquidity", usd(m.liquidityUsd), (m.liquidityUsd ?? 0) < 1000]);
     out.push(["volume 24h", usd(m.volume24hUsd), false]);
@@ -192,7 +216,26 @@ export default function AskPage() {
   const [error, setError] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [recent, setRecent] = useState<Recent | null>(null);
+  const [wallet, setWallet] = useState<CreatorRecord | null>(null);
+  const [clean, setClean] = useState<CleanLaunch[] | null>(null);
   const base = useRef<string | null>(null);
+  const northBase = useRef<string | null>(null);
+
+  const north = useCallback(async () => {
+    if (!northBase.current) northBase.current = (await nodeOf("raven"))?.url ?? null;
+    return northBase.current;
+  }, []);
+
+  const loadClean = useCallback(async () => {
+    const url = await north();
+    if (!url) return;
+    try {
+      const r = await fetch(`${url}/v1/chain/clean?limit=9`);
+      if (r.ok) setClean(((await r.json()) as { launches: CleanLaunch[] }).launches);
+    } catch {
+      /* optional */
+    }
+  }, [north]);
 
   const canyon = useCallback(async () => {
     if (!base.current) base.current = (await nodeOf("beaver"))?.url ?? null;
@@ -213,6 +256,8 @@ export default function AskPage() {
   // A shared link, /ask#<id>, opens that answer.
   useEffect(() => {
     void loadRecent();
+    void loadClean();
+    const timer = window.setInterval(() => void loadClean(), 60_000);
     const id = location.hash.slice(1);
     if (!/^[0-9a-f]{10}$/.test(id)) return;
     void (async () => {
@@ -221,22 +266,29 @@ export default function AskPage() {
       const r = await fetch(`${url}/v1/ask/${id}`).catch(() => null);
       if (r?.ok) setAsk((await r.json()) as Ask);
     })();
-  }, [canyon, loadRecent]);
+    return () => clearInterval(timer);
+  }, [canyon, loadRecent, loadClean]);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const mint = mintIn(input);
-    if (!mint) {
-      setError("Paste a Solana token address, or a pump.fun or DexScreener link.");
-      return;
-    }
+  const askAbout = async (mint: string) => {
     setBusy(true);
     setError(null);
+    setWallet(null);
     try {
       const url = await canyon();
       if (!url) throw new Error("The beaver's node did not answer. Try again in a minute.");
       const r = await fetch(`${url}/v1/ask`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mint }) });
       const body = (await r.json()) as { ask?: Ask; error?: string };
+      if (r.status === 404) {
+        // Not a token anyone trades: maybe it is a creator's wallet.
+        const n = await north();
+        const w = n ? await fetch(`${n}/v1/chain/creator/${mint}`).catch(() => null) : null;
+        if (w?.ok) {
+          setAsk(null);
+          setWallet((await w.json()) as CreatorRecord);
+          history.replaceState(null, "", "/ask");
+          return;
+        }
+      }
       if (!r.ok || !body.ask) throw new Error(body.error ?? "Something went wrong.");
       setAsk(body.ask);
       history.replaceState(null, "", `/ask#${body.ask.id}`);
@@ -246,6 +298,16 @@ export default function AskPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const mint = mintIn(input);
+    if (!mint) {
+      setError("Paste a Solana token address, a creator's wallet, or a pump.fun or DexScreener link.");
+      return;
+    }
+    await askAbout(mint);
   };
 
   return (
@@ -259,7 +321,7 @@ export default function AskPage() {
             <span className="accent">Ask the beaver.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
-            Paste any Solana token. The beaver judges it with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.
+            Paste any Solana token, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.
             Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.
           </p>
         </Reveal>
@@ -269,7 +331,7 @@ export default function AskPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="token address or pump.fun link"
+              placeholder="token, creator wallet, or pump.fun link"
               spellCheck={false}
               autoComplete="off"
               className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-white/35"
@@ -287,7 +349,58 @@ export default function AskPage() {
         </Reveal>
       </Section>
 
-      <AnimatePresence mode="wait">{ask && <Answer key={ask.id} a={ask} />}</AnimatePresence>
+      <AnimatePresence mode="wait">
+        {ask && <Answer key={ask.id} a={ask} />}
+        {wallet && !ask && (
+          <motion.section key={wallet.wallet} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-6 sm:px-8">
+            <div className="liquid-glass mx-auto max-w-7xl rounded-3xl p-6 sm:p-8">
+              <CreatorBlock r={wallet} big />
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <Section className="!pb-6 !pt-6">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-display text-2xl">Passed the basic checks</h2>
+          <p className="font-mono text-[11px] text-white/45">fresh pump.fun launches · live from the chain</p>
+        </div>
+        <p className="mb-5 max-w-3xl text-[13px] font-light leading-relaxed text-white/50">
+          10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.
+          That only means the usual rug signs are absent so far. It is not a call and not advice; most of these still die. Ask the beaver before anything else.
+        </p>
+        {!clean ? (
+          <p className="text-[13px] text-white/45">Reading the chain…</p>
+        ) : clean.length === 0 ? (
+          <p className="text-[13px] text-white/45">Nothing passes right now. On pump.fun that is a normal hour.</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {clean.map((c) => (
+              <li key={c.mint} className="rounded-2xl bg-black/40 px-4 py-3 ring-1 ring-white/10">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-display truncate text-[17px]">${c.symbol}</span>
+                  <span className="font-mono shrink-0 text-[10.5px] text-white/40">{c.ageMin} min old</span>
+                </div>
+                <p className="font-mono mt-1 text-[10.5px] text-white/50">
+                  {c.buyers} buyers · {c.repeatBuyers} came back · top 5 hold {pctOf(c.top5Share)}
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setInput(c.mint);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    void askAbout(c.mint);
+                  }}
+                  className="font-mono mt-2 text-[11px] text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100 disabled:opacity-50"
+                >
+                  ask the beaver →
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <Section className="!pt-6">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
@@ -381,6 +494,11 @@ function Answer({ a }: { a: Ask }) {
               </div>
             ))}
           </dl>
+          {a.facts.creator && (
+            <div className="mt-6 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+              <CreatorBlock r={a.facts.creator} />
+            </div>
+          )}
           {!a.facts.chain && (
             <p className="mt-3 text-[12px] font-light text-white/40">No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.</p>
           )}
@@ -421,5 +539,36 @@ function Answer({ a }: { a: Ask }) {
         </div>
       </div>
     </motion.section>
+  );
+}
+
+/** A creator wallet's last two days, the way a trader asks: does this dev rug, and how fast. */
+function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boolean }) {
+  const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
+  return (
+    <div>
+      <p className="font-mono text-[11px] text-white/40">
+        creator wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h on pump.fun
+      </p>
+      <p className={`font-display mt-2 ${big ? "text-4xl sm:text-5xl" : "text-2xl"} ${serial ? "text-[#ff8a7e]" : "text-white"}`}>
+        {r.launches48h} {r.launches48h === 1 ? "launch" : "launches"}, dumped {r.dumped}
+        {r.medianDumpMin !== null ? `, median ${r.medianDumpMin} min` : ""}
+      </p>
+      <p className="font-mono mt-2 text-[11px] text-white/45">
+        {r.launches24h} in the last 24h · {r.graduated} graduated{serial ? " · a serial dumper" : ""}
+      </p>
+      {big && r.recent.length > 0 && (
+        <ul className="font-mono mt-5 grid gap-1.5 text-[12px] sm:grid-cols-2">
+          {r.recent.map((t) => (
+            <li key={t.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
+              <span className="truncate text-white/80">${t.symbol}</span>
+              <span className={t.dumpedAfterMin !== null ? "text-[#ff8a7e]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}>
+                {t.dumpedAfterMin !== null ? `dumped after ${t.dumpedAfterMin} min` : t.graduated ? "graduated" : "creator holding"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
