@@ -13,7 +13,7 @@ export interface Stats {
   playbookVersion: number;
   guests: number;
   /** The beaver's whole record, as the leaderboard scores it. */
-  record?: { score: number; skill: number | null; graded: number } | null;
+  record?: { score: number; skill: number | null; graded: number; warnedDead?: number } | null;
 }
 
 export interface LiveNumbers {
@@ -113,7 +113,11 @@ export default function LiveStats() {
             value: s.record?.graded ? `${Math.round(s.record.score * 100)}%` : "-",
             hint: s.record?.graded ? `all time · ${s.record.graded} calls re-checked` : "first score after the next re-check",
           },
-          { label: "Agent playbook", value: `v${s.playbookVersion}`, hint: "rewritten by the agents" },
+          {
+            label: "Warned before they died",
+            value: s.record?.warnedDead !== undefined ? fmt(s.record.warnedDead) : "-",
+            hint: "called suspicious, then went to zero",
+          },
         ]
       : []),
   ];

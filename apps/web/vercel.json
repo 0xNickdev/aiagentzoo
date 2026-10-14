@@ -55,6 +55,10 @@
     {
       "source": "/app",
       "destination": "/app.html"
+    },
+    {
+      "source": "/rugs",
+      "destination": "/index.html"
     }
   ]
 }

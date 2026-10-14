@@ -6,6 +6,8 @@ import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
+import WallOfRugs from "./components/WallOfRugs";
+import BeaverRecord from "./components/BeaverRecord";
 import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
@@ -106,6 +108,7 @@ function AgentsPage() {
   return (
     <>
       <Leaderboard />
+      <BeaverRecord />
       <Guests />
       <Developers />
       <Keeper />
@@ -119,6 +122,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/brief": Brief,
   "/agents": AgentsPage,
   "/ask": AskPage,
+  "/rugs": WallOfRugs,
 };
 
 export default function App() {
