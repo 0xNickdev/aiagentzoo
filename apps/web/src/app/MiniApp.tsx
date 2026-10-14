@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
 
@@ -44,7 +45,7 @@ export default function MiniApp() {
 
   return (
     <div className="zapp">
-      <Backdrop />
+      <Backdrop hero={tab === "ask"} />
       <header className="zapp-top">
         <div className="flex items-center gap-2.5">
           <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/15" />
@@ -61,6 +62,7 @@ export default function MiniApp() {
           )}
         </div>
       </header>
+      <Ticker />
 
       <main className="zapp-main">
         <AnimatePresence mode="wait">
@@ -154,7 +156,7 @@ function AskTab() {
   return (
     <section>
       {!answer && !dev && !busy && (
-        <div className="px-1 pb-5 pt-3">
+        <div className="zapp-intro px-1 pb-5">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">ask the beaver</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
             Is it a rug?
@@ -191,10 +193,21 @@ function AskTab() {
       {error && <p className="mt-3 px-1 text-[12.5px] text-[#ff9a8f]">{error}</p>}
 
       {busy && <Thinking />}
-      <AnimatePresence>{answer && <Verdict key={answer.id} a={answer} />}</AnimatePresence>
-      <AnimatePresence>{dev && <DevCard key={dev.wallet} r={dev} />}</AnimatePresence>
+      <AnimatePresence>
+        {(answer || dev) && (
+          <Sheet
+            key={answer?.id ?? dev?.wallet}
+            onClose={() => {
+              setAnswer(null);
+              setDev(null);
+            }}
+          >
+            {answer ? <Verdict a={answer} /> : <DevCard r={dev!} />}
+          </Sheet>
+        )}
+      </AnimatePresence>
 
-      {!busy && recent.length > 0 && (
+      {!busy && !answer && !dev && recent.length > 0 && (
         <div className="mt-7">
           <SectionTitle>Others asked</SectionTitle>
           <div className="glass-card divide-y divide-white/[0.06] rounded-[22px]">
@@ -256,7 +269,7 @@ function Verdict({ a }: { a: Ask }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="mt-4">
+    <motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
       <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
         <div className="zapp-verdict-glow" style={{ background: `radial-gradient(60% 55% at 15% 20%, rgba(${tone.glow},0.28), transparent 70%)` }} />
         <div className="relative">
@@ -326,7 +339,7 @@ function Verdict({ a }: { a: Ask }) {
 function DevCard({ r }: { r: CreatorRecord }) {
   const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
   return (
-    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
       <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
         <div className="zapp-verdict-glow" style={{ background: `radial-gradient(60% 55% at 15% 20%, rgba(${serial ? "255,110,95" : "239,232,218"},0.24), transparent 70%)` }} />
         <div className="relative">
@@ -431,7 +444,7 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
       {!list ? (
         <Skeleton rows={5} />
       ) : list.length === 0 ? (
-        <Empty>Nothing passes right now. On pump.fun that is a normal hour.</Empty>
+        <Empty image="/app/empty-clean.jpg">Nothing passes right now. On pump.fun that is a normal hour.</Empty>
       ) : (
         <div className="grid gap-2">
           {list.map((c, i) => (
@@ -527,7 +540,7 @@ function RanksTab() {
         <Skeleton rows={6} />
       ) : (
         <>
-          {ranked.length === 0 && <Empty>Nobody is ranked yet. A rank needs calls on both dead and living tokens, and living ones are rare. It fills slowly. That is the point.</Empty>}
+          {ranked.length === 0 && <Empty image="/app/empty-ranks.jpg">Nobody is ranked yet. A rank needs calls on both dead and living tokens, and living ones are rare. It fills slowly. That is the point.</Empty>}
           {ranked.length > 0 && (
             <div className="glass-card mb-4 divide-y divide-white/[0.06] rounded-[22px]">
               {ranked.map((r, i) => (
@@ -582,8 +595,87 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <p className="font-mono mb-2 px-1 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{children}</p>;
 }
 
-function Empty({ children }: { children: ReactNode }) {
-  return <div className="glass-card rounded-[22px] px-4 py-5 text-[13px] font-light leading-relaxed text-white/60">{children}</div>;
+function Empty({ children, image }: { children: ReactNode; image?: string }) {
+  return (
+    <div className="glass-card overflow-hidden rounded-[22px]">
+      {image && <img src={image} alt="" className="aspect-[16/10] w-full object-cover opacity-90" />}
+      <p className="px-4 py-4 text-[13px] font-light leading-relaxed text-white/60">{children}</p>
+    </div>
+  );
+}
+
+/** The answer slides up from the bottom like a native sheet; Telegram's back button and a tap outside close it. */
+function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  useEffect(() => {
+    const back = tg?.BackButton;
+    back?.show();
+    back?.onClick(onClose);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      back?.offClick(onClose);
+      back?.hide();
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+  return createPortal(
+    <motion.div className="zapp-sheet-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div
+        className="zapp-sheet"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 320, damping: 34 }}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragEnd={(_, info) => info.offset.y > 120 && onClose()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="zapp-sheet-handle" />
+        {children}
+      </motion.div>
+    </motion.div>,
+    document.body,
+  );
+}
+
+/** The newest dev dump on the chain, rolling under the header. */
+function Ticker() {
+  const [e, setE] = useState<Moment | null>(null);
+  useEffect(() => {
+    const load = async () => {
+      const b = await get<{ moments: Moment[] }>(`${NORTH}/v1/chain/moments?kind=dump&limit=1`);
+      if (b?.moments[0]) setE(b.moments[0]);
+    };
+    void load();
+    const t = window.setInterval(load, 6_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!e) return null;
+  return (
+    <div className="zapp-ticker">
+      <AnimatePresence mode="wait">
+        <motion.button
+          key={e.seq}
+          type="button"
+          onClick={() => e.tx && openLink(`https://solscan.io/tx/${e.tx}`)}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="glass-pill font-mono flex max-w-full items-center gap-2 px-3 py-1.5 text-[10.5px]"
+        >
+          <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6e5f] shadow-[0_0_8px_rgba(255,110,95,0.9)]" />
+          <span className="truncate text-white/80">
+            <b className="font-medium text-white">${e.symbol}</b> · {e.text}
+          </span>
+          <span className="shrink-0 text-white/40">{ago(e.at)}</span>
+        </motion.button>
+      </AnimatePresence>
+    </div>
+  );
 }
 
 function VerdictChip({ v }: { v: Ask["verdict"] }) {
@@ -631,11 +723,14 @@ function Spinner() {
   return <span className="zapp-spin inline-block h-4 w-4 rounded-full border-2 border-black/20 border-t-black" />;
 }
 
-function Backdrop() {
+/** The beaver's clearing behind everything: sharp on Ask, dimmed and blurred behind the other tabs. */
+function Backdrop({ hero }: { hero: boolean }) {
   return (
     <div className="zapp-bg" aria-hidden>
-      <img src="/telegram/welcome.jpg" alt="" />
-      <div className="zapp-bg-shade" />
+      <div className={`zapp-hero ${hero ? "is-on" : ""}`}>
+        <img src="/app/hero.jpg" alt="" />
+        <div className="zapp-hero-fade" />
+      </div>
       {Array.from({ length: 14 }, (_, i) => (
         <i key={i} className="zapp-firefly" style={{ left: `${(i * 37) % 100}%`, top: `${(i * 53) % 90}%`, animationDelay: `${(i * 0.7) % 6}s`, animationDuration: `${6 + (i % 5)}s` }} />
       ))}

@@ -7,9 +7,21 @@ body { min-height: 100svh; }
 .zapp-main { position: relative; z-index: 2; max-width: 560px; margin: 0 auto; }
 
 /* The forest behind everything: the welcome scene, blurred and darkened, with fireflies drifting. */
-.zapp-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.zapp-bg img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; object-position: 35% 50%; filter: blur(18px) saturate(1.15); opacity: 0.55; transform: scale(1.05); }
-.zapp-bg-shade { position: absolute; inset: 0; background: radial-gradient(120% 70% at 30% 0%, rgba(3,5,4,0.2), rgba(3,5,4,0.85) 60%, #030504 100%); }
+.zapp-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+/* The hero is framed to a phone's width, so the beaver sits in the same place on every screen. */
+.zapp-hero { position: absolute; top: 0; left: 50%; width: min(100vw, 560px); aspect-ratio: 1600 / 2848; transform: translateX(-50%); filter: blur(16px) saturate(1.1); opacity: 0.35; transition: filter 0.6s ease, opacity 0.6s ease; }
+.zapp-hero.is-on { filter: none; opacity: 1; }
+.zapp-hero img { width: 100%; height: 100%; object-fit: cover; }
+.zapp-hero-fade { position: absolute; inset: -1px; background: linear-gradient(180deg, rgba(3,5,4,0.45) 0%, rgba(3,5,4,0) 11%, rgba(3,5,4,0) 60%, rgba(3,5,4,0.85) 73%, #030504 84%), linear-gradient(90deg, #030504 0%, rgba(3,5,4,0) 6%, rgba(3,5,4,0) 94%, #030504 100%); }
+/* The title starts where the clearing falls into fog. */
+.zapp-intro { padding-top: calc(min(100vw, 560px) * 1.78 * 0.66 - 96px); }
+
+.zapp-ticker { position: relative; z-index: 3; max-width: 560px; margin: -4px auto 10px; display: flex; justify-content: center; }
+
+/* The answer sheet: frosted bokeh behind glass, sliding up from the bottom. */
+.zapp-sheet-wrap { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.zapp-sheet { position: relative; width: 100%; max-width: 560px; max-height: 90svh; overflow-y: auto; padding: 10px 14px calc(env(safe-area-inset-bottom) + 18px); border-radius: 30px 30px 0 0; background: linear-gradient(180deg, rgba(3,5,4,0.55), rgba(3,5,4,0.85)), url("/app/sheet.jpg") center / cover; box-shadow: 0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14); }
+.zapp-sheet-handle { width: 40px; height: 4px; margin: 2px auto 12px; border-radius: 4px; background: rgba(255,255,255,0.28); }
 .zapp-firefly { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #ffd99a; box-shadow: 0 0 10px 2px rgba(255, 200, 120, 0.55); opacity: 0; animation: zapp-float 7s ease-in-out infinite; }
 @keyframes zapp-float {
   0% { opacity: 0; transform: translate(0, 0); }
