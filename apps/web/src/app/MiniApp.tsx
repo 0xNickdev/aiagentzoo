@@ -454,7 +454,7 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="font-mono text-[11px] text-white/55">
-                  {c.buyers} buyers · {c.repeatBuyers} back · top 5 {pct(c.top5Share)}
+                  {c.buyers >= 100 ? "100+" : c.buyers} buyers · {c.repeatBuyers} back · top 5 {pct(c.top5Share)}
                 </span>
                 <button
                   type="button"

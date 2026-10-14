@@ -516,7 +516,11 @@ export default function Brief() {
             {figures.map(([k, v], i) => (
               <div key={k} className={`px-1 py-5 sm:px-5 ${i > 0 ? "lg:border-l lg:border-white/[0.08]" : ""}`}>
                 <p className="font-mono text-[10px] tracking-[0.14em] text-white/40">{k}</p>
-                <p className="font-mono mt-2 text-2xl text-white">{v}</p>
+                {/* "71% · 4 calls": the number big, the sample beside it small, so it never wraps. */}
+                <p className="font-mono mt-2 text-2xl text-white">
+                  {v.split(" · ")[0]}
+                  {v.includes(" · ") && <span className="ml-2 text-[12px] text-white/45">{v.split(" · ").slice(1).join(" · ")}</span>}
+                </p>
               </div>
             ))}
           </div>

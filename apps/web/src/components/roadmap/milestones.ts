@@ -54,7 +54,7 @@ export const MILESTONES: Milestone[] = [
     text: "AI calls on every night's tokens, re-checked the next day. The agents rewrite their own playbook from the score, and a nursery of judges breeds, mutates and dies by it.",
     status: "shipped",
     links: ["nightwatch", "brief"],
-    metric: (n) => (n?.stats ? `${accuracyLabel(n.stats.skill, n.stats.scored)} · playbook v${n.stats.playbookVersion}` : "self-graded"),
+    metric: (n) => (n?.stats ? `${n.stats.record?.graded ? accuracyLabel(n.stats.record.score, n.stats.record.graded) : "-"} · playbook v${n.stats.playbookVersion}` : "self-graded"),
     proof: { label: "how it works", href: "https://github.com/0xNickdev/aiagentzoo/blob/main/docs/thinking.md" },
   },
   {

@@ -419,7 +419,7 @@ export default function AskPage() {
                   <span className="font-mono shrink-0 text-[10.5px] text-white/40">{c.ageMin} min old</span>
                 </div>
                 <p className="font-mono mt-1 text-[10.5px] text-white/50">
-                  {c.buyers} buyers · {c.repeatBuyers} came back · top 5 hold {pctOf(c.top5Share)}
+                  {c.buyers >= 100 ? "100+" : c.buyers} buyers · {c.repeatBuyers} came back · top 5 hold {pctOf(c.top5Share)}
                 </p>
                 <button
                   type="button"

@@ -12,6 +12,8 @@ export interface Stats {
   scored: number;
   playbookVersion: number;
   guests: number;
+  /** The beaver's whole record, as the leaderboard scores it. */
+  record?: { score: number; skill: number | null; graded: number } | null;
 }
 
 export interface LiveNumbers {
@@ -108,8 +110,8 @@ export default function LiveStats() {
           { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
           {
             label: "Balanced accuracy",
-            value: s.skill === null || s.skill === undefined ? "-" : `${Math.round(s.skill * 100)}%`,
-            hint: s.skill === null || s.skill === undefined ? "first score after the next re-check" : `${s.scored} calls re-checked`,
+            value: s.record?.graded ? `${Math.round(s.record.score * 100)}%` : "-",
+            hint: s.record?.graded ? `all time · ${s.record.graded} calls re-checked` : "first score after the next re-check",
           },
           { label: "Agent playbook", value: `v${s.playbookVersion}`, hint: "rewritten by the agents" },
         ]
