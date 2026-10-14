@@ -47,10 +47,7 @@ export default function MiniApp() {
     <div className="zapp">
       <Backdrop hero={tab === "ask"} />
       <header className="zapp-top">
-        <div className="flex items-center gap-2.5">
-          <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/15" />
-          <span className="font-display text-[15px] tracking-tight">ZOOAI</span>
-        </div>
+        <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
         <div className="glass-pill font-mono flex items-center gap-2 px-3 py-1.5 text-[10.5px] text-white/70">
           <i className="zapp-dot" />
           {pulse ? (
