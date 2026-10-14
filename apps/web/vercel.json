@@ -47,6 +47,10 @@
     {
       "source": "/agents",
       "destination": "/index.html"
+    },
+    {
+      "source": "/ask",
+      "destination": "/index.html"
     }
   ]
 }

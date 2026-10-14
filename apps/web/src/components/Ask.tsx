@@ -1,0 +1,425 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { Download } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { X_URL, XIcon } from "../links";
+import { nodeOf } from "../zoo";
+import { Reveal, Section } from "./ui";
+
+type Verdict = "promising" | "watch" | "suspicious";
+type Outcome = "dead" | "alive" | "unknown";
+
+interface Chain {
+  ageMin: number;
+  buys: number;
+  sells: number;
+  buyers: number;
+  creatorSold: number | null;
+  creatorLaunches24h: number;
+  top5Share: number | null;
+  repeatBuyers: number;
+}
+
+interface Ask {
+  id: string;
+  mint: string;
+  symbol: string;
+  name: string;
+  at: number;
+  verdict: Verdict;
+  confidence: number;
+  why: string;
+  by: "model" | "rules";
+  playbookVersion: number;
+  already: boolean;
+  facts: {
+    graduated: boolean;
+    hasSocials: boolean | null;
+    market: { liquidityUsd: number | null; volume24hUsd: number | null; priceChange24h: number | null; buys24h: number; sells24h: number; dex: string | null } | null;
+    chain: Chain | null;
+    flags: string[];
+    url: string | null;
+  };
+  graded?: { at: number; outcome: Outcome; hit: boolean | null };
+}
+
+interface Recent {
+  asked: number;
+  record: { graded: number; skill: number | null; dead: number; deadRight: number; alive: number; aliveRight: number };
+  asks: Ask[];
+}
+
+const TONE: Record<Verdict, { label: string; color: string; text: string }> = {
+  suspicious: { label: "SUSPICIOUS", color: "#ff7a6e", text: "text-[#ff8a7e]" },
+  watch: { label: "WATCH", color: "#e9e4d8", text: "text-white/85" },
+  promising: { label: "PROMISING", color: "#8ff0a4", text: "text-[#9df3b0]" },
+};
+
+const usd = (n: number | null | undefined) =>
+  n === null || n === undefined ? "-" : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${Math.round(n)}`;
+const pctOf = (n: number | null | undefined) => (n === null || n === undefined ? "-" : `${Math.round(n * 100)}%`);
+
+/** Any Solana address inside whatever was pasted: a bare mint, a pump.fun or DexScreener link. */
+const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
+
+/** The evidence the beaver saw, as short lines. */
+function evidence(a: Ask): Array<[string, string, boolean]> {
+  const out: Array<[string, string, boolean]> = [];
+  const c = a.facts.chain;
+  const m = a.facts.market;
+  if (c?.creatorSold !== null && c?.creatorSold !== undefined) out.push(["creator sold", pctOf(c.creatorSold), c.creatorSold >= 0.5]);
+  if (c) out.push(["creator's launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
+  if (c?.top5Share !== null && c?.top5Share !== undefined) out.push(["top 5 buyers' share", pctOf(c.top5Share), c.top5Share >= 0.6]);
+  if (c) out.push(["buyers · repeat", `${c.buyers} · ${c.repeatBuyers}`, false]);
+  if (m) {
+    out.push(["liquidity", usd(m.liquidityUsd), (m.liquidityUsd ?? 0) < 1000]);
+    out.push(["volume 24h", usd(m.volume24hUsd), false]);
+    out.push(["buys · sells 24h", `${m.buys24h} · ${m.sells24h}`, m.sells24h > m.buys24h * 3]);
+    out.push(["change 24h", m.priceChange24h === null ? "-" : `${m.priceChange24h > 0 ? "+" : ""}${Math.round(m.priceChange24h)}%`, (m.priceChange24h ?? 0) <= -80]);
+  }
+  out.push(["socials", a.facts.hasSocials === null ? "unknown" : a.facts.hasSocials ? "yes" : "none", a.facts.hasSocials === false]);
+  // Nine cells fill the grid when the chain is there; without it, graduation fills the gap.
+  if (!c) out.push(["graduated", a.facts.graduated ? "yes" : "no", false]);
+  return out;
+}
+
+const gradeDue = (a: Ask) => new Date(a.at + 24 * 3_600_000);
+const when = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
+
+function graded(a: Ask): string {
+  if (!a.graded) return a.already ? "already dead when asked · not scored" : `re-checked against reality ${when(gradeDue(a))}`;
+  const o = a.graded.outcome === "unknown" ? "outcome unclear" : `it ${a.graded.outcome === "dead" ? "died" : "lived"}`;
+  return a.graded.hit === null ? `${o} · not scored` : `${o} · the beaver was ${a.graded.hit ? "right" : "wrong"}`;
+}
+
+/* ---------- the shareable card ---------- */
+
+const W = 1200;
+const H = 675;
+
+async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  await Promise.all([document.fonts.load('500 64px "Geist"'), document.fonts.load('300 24px "Geist"'), document.fonts.load('400 16px "Geist Mono"')]);
+  ctx.fillStyle = "#030504";
+  ctx.fillRect(0, 0, W, H);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = "/agents/beaver.webp";
+    });
+    const size = 520;
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(img, W - size + 40, (H - size) / 2 + 30, size, size);
+    ctx.globalAlpha = 1;
+  } catch {
+    // No portrait: plain night.
+  }
+  const shade = ctx.createLinearGradient(0, 0, W, 0);
+  shade.addColorStop(0, "rgba(3,5,4,0.98)");
+  shade.addColorStop(0.6, "rgba(3,5,4,0.85)");
+  shade.addColorStop(1, "rgba(3,5,4,0.2)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, W, H);
+
+  const L = 72;
+  const tone = TONE[a.verdict];
+  const mono = (s: number) => `400 ${s}px "Geist Mono", ui-monospace, monospace`;
+  ctx.font = mono(15);
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.fillText("ZOOAI AGENCY · ASK THE BEAVER", L, 86);
+
+  ctx.font = '500 64px "Geist", sans-serif';
+  ctx.fillStyle = "#fff";
+  ctx.fillText(`$${a.symbol}`.slice(0, 18), L - 3, 166);
+  ctx.font = mono(14);
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.fillText(`${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`, L, 196);
+
+  ctx.font = '500 92px "Geist", sans-serif';
+  ctx.fillStyle = tone.color;
+  ctx.fillText(tone.label, L - 4, 310);
+  ctx.font = mono(15);
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.fillText(`confidence ${Math.round(a.confidence * 100)}% · playbook v${a.playbookVersion}`, L, 344);
+
+  // The reason, wrapped to two lines.
+  ctx.font = '300 27px "Geist", sans-serif';
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  const words = a.why.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const next = line ? `${line} ${w}` : w;
+    if (ctx.measureText(next).width > 640 && line) {
+      lines.push(line);
+      line = w;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  lines.slice(0, 3).forEach((l, i) => ctx.fillText(i === 2 && lines.length > 3 ? `${l}…` : l, L, 402 + i * 38));
+
+  // Three facts across the bottom, between hairlines.
+  const ev = evidence(a).filter(([, , bad]) => bad).concat(evidence(a).filter(([, , bad]) => !bad)).slice(0, 3);
+  const top = 528;
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.beginPath();
+  ctx.moveTo(L, top + 0.5);
+  ctx.lineTo(L + 660, top + 0.5);
+  ctx.stroke();
+  ev.forEach(([k, v, bad], i) => {
+    const x = L + i * 220;
+    ctx.font = mono(24);
+    ctx.fillStyle = bad ? "#ff8a7e" : "#fff";
+    ctx.fillText(v, x, top + 40);
+    ctx.font = mono(11);
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillText(k.toUpperCase(), x, top + 62);
+  });
+
+  ctx.font = mono(14);
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillText(`graded against reality on ${when(gradeDue(a))} · zooaiagency.com/ask`, L, H - 40);
+}
+
+/* ---------- the page ---------- */
+
+export default function AskPage() {
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ask, setAsk] = useState<Ask | null>(null);
+  const [recent, setRecent] = useState<Recent | null>(null);
+  const base = useRef<string | null>(null);
+
+  const canyon = useCallback(async () => {
+    if (!base.current) base.current = (await nodeOf("beaver"))?.url ?? null;
+    return base.current;
+  }, []);
+
+  const loadRecent = useCallback(async () => {
+    const url = await canyon();
+    if (!url) return;
+    try {
+      const r = await fetch(`${url}/v1/asks?limit=12`);
+      if (r.ok) setRecent((await r.json()) as Recent);
+    } catch {
+      /* the feed is optional */
+    }
+  }, [canyon]);
+
+  // A shared link, /ask#<id>, opens that answer.
+  useEffect(() => {
+    void loadRecent();
+    const id = location.hash.slice(1);
+    if (!/^[0-9a-f]{10}$/.test(id)) return;
+    void (async () => {
+      const url = await canyon();
+      if (!url) return;
+      const r = await fetch(`${url}/v1/ask/${id}`).catch(() => null);
+      if (r?.ok) setAsk((await r.json()) as Ask);
+    })();
+  }, [canyon, loadRecent]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const mint = mintIn(input);
+    if (!mint) {
+      setError("Paste a Solana token address, or a pump.fun or DexScreener link.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const url = await canyon();
+      if (!url) throw new Error("The beaver's node did not answer. Try again in a minute.");
+      const r = await fetch(`${url}/v1/ask`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mint }) });
+      const body = (await r.json()) as { ask?: Ask; error?: string };
+      if (!r.ok || !body.ask) throw new Error(body.error ?? "Something went wrong.");
+      setAsk(body.ask);
+      history.replaceState(null, "", `/ask#${body.ask.id}`);
+      void loadRecent();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "200,170,110", glowAt: "50% 35%", opacity: 0.35 }}>
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <p className="font-mono text-[12px] text-white/50">Ask the beaver · graded by reality tomorrow</p>
+          <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
+            Is it a rug?
+            <br />
+            <span className="accent">Ask the beaver.</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
+            Paste any Solana token. The beaver judges it with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.
+            Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.15}>
+          <form onSubmit={submit} className="liquid-glass mx-auto mt-10 flex max-w-2xl flex-col gap-2 rounded-3xl p-2 sm:flex-row sm:rounded-full">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="token address or pump.fun link"
+              spellCheck={false}
+              autoComplete="off"
+              className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-white/35"
+              aria-label="Token address"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-full bg-white px-7 py-3 text-[14px] font-medium text-black transition hover:bg-white/90 disabled:opacity-60"
+            >
+              {busy ? "The beaver is reading…" : "Ask"}
+            </button>
+          </form>
+          {error && <p className="mt-4 text-center text-[13px] text-[#ff9a8f]">{error}</p>}
+        </Reveal>
+      </Section>
+
+      <AnimatePresence mode="wait">{ask && <Answer key={ask.id} a={ask} />}</AnimatePresence>
+
+      <Section className="!pt-6">
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-display text-2xl">Recent questions</h2>
+          {recent && (
+            <p className="font-mono text-[11px] text-white/45">
+              {recent.asked.toLocaleString("en-US")} asked · beaver on asks:{" "}
+              {recent.record.graded ? `${pctOf(recent.record.skill)} balanced · ${recent.record.graded} graded` : "first grades after a day"}
+            </p>
+          )}
+        </div>
+        {!recent?.asks.length ? (
+          <p className="text-[13px] text-white/45">No questions yet. Be the first.</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {recent.asks.map((a) => (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAsk(a);
+                    history.replaceState(null, "", `/ask#${a.id}`);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full rounded-2xl bg-black/40 px-4 py-3 text-left ring-1 ring-white/10 transition hover:bg-black/55 hover:ring-white/25"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-display truncate text-[17px]">${a.symbol}</span>
+                    <span className={`font-mono shrink-0 text-[11px] ${TONE[a.verdict].text}`}>{TONE[a.verdict].label}</span>
+                  </div>
+                  <p className="font-mono mt-1 truncate text-[10.5px] text-white/40">{graded(a)}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+    </>
+  );
+}
+
+function Answer({ a }: { a: Ask }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [png, setPng] = useState<string | null>(null);
+  const tone = TONE[a.verdict];
+
+  useEffect(() => {
+    if (!canvas.current) return;
+    setPng(null);
+    void drawCard(canvas.current, a).then(() => setPng(canvas.current!.toDataURL("image/png")));
+  }, [a]);
+
+  const link = `zooaiagency.com/ask#${a.id}`;
+  const tweet = encodeURIComponent(
+    [`asked the beaver about $${a.symbol}: ${tone.label.toLowerCase()}.`, a.why, "", `graded against reality tomorrow: ${link}`].join("\n"),
+  );
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-6 sm:px-8">
+      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="liquid-glass rounded-3xl p-6 sm:p-8">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-mono truncate text-[11px] text-white/40">
+                {a.name ? `${a.name} · ` : ""}
+                {a.mint}
+              </p>
+              <h2 className="font-display mt-1 text-4xl">${a.symbol}</h2>
+            </div>
+            {a.facts.url && (
+              <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
+                chart ↗
+              </a>
+            )}
+          </div>
+
+          <p className="font-display mt-6 text-6xl leading-none sm:text-7xl" style={{ color: tone.color }}>
+            {tone.label}
+          </p>
+          <p className="font-mono mt-3 text-[11px] text-white/45">
+            confidence {Math.round(a.confidence * 100)}% · playbook v{a.playbookVersion}
+            {a.by === "rules" ? " · rules only, the model was busy" : ""}
+          </p>
+          <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-white/85">{a.why}</p>
+
+          <dl className="font-mono mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] sm:grid-cols-3">
+            {evidence(a).map(([k, v, bad]) => (
+              <div key={k} className="bg-[#070908] px-4 py-3">
+                <dt className="text-white/40">{k}</dt>
+                <dd className={`mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-white/85"}`}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {!a.facts.chain && (
+            <p className="mt-3 text-[12px] font-light text-white/40">No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.</p>
+          )}
+
+          <p className={`font-mono mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#9df3b0]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-amber-100/70"}`}>
+            {a.graded ? "● " : "○ "}
+            {graded(a)}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <canvas ref={canvas} className="hidden" />
+          <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-black ring-1 ring-white/10">
+            {png ? <img src={png} alt={`Card: the beaver on $${a.symbol}`} className="h-full w-full" /> : <div className="h-full w-full animate-pulse bg-white/[0.03]" />}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={png ?? undefined}
+              download={`beaver-${a.symbol}-${a.id}.png`}
+              className={`inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black ${png ? "hover:bg-white/90" : "pointer-events-none opacity-50"}`}
+            >
+              <Download size={14} /> Download card
+            </a>
+            <a
+              href={`https://x.com/intent/post?text=${tweet}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-white/90 hover:text-white"
+              title={`Follow ${X_URL.replace("https://x.com/", "@")}`}
+            >
+              <XIcon size={13} /> Post on X
+            </a>
+          </div>
+          <p className="font-mono text-[11px] text-white/40">
+            share: <span className="text-white/70">{link}</span>
+          </p>
+          <p className="text-[11.5px] font-light text-white/35">Not financial advice. A verdict from public data, checked in public a day later.</p>
+        </div>
+      </div>
+    </motion.section>
+  );
+}

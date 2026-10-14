@@ -5,6 +5,7 @@ import { DOCS_URL, GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
 import { useRoute } from "../router";
 
 export const NAV_LINKS = [
+  { label: "Ask", href: "/ask" },
   { label: "Live", href: "/live" },
   { label: "Brief", href: "/brief" },
   { label: "Evolution", href: "/evolution" },

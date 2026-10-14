@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
+import AskPage from "./components/Ask";
 import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
@@ -117,6 +118,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/live": LivePage,
   "/brief": Brief,
   "/agents": AgentsPage,
+  "/ask": AskPage,
 };
 
 export default function App() {
