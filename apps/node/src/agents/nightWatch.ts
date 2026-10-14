@@ -614,8 +614,9 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const result = await ctx.think({
           system:
             "You are the Archivist of ZOOAI AGENCY. Write the 'Night in review' paragraph of a factual morning brief about new Solana tokens. " +
-            "3-5 sentences, plain English, numbers over adjectives, no hype, no investment advice, no names of people.",
-          prompt: "Summarise the night from these aggregated sections.",
+            "3-5 sentences, plain English, numbers over adjectives, no hype, no investment advice, no names of people. " +
+            "Use the headline figures exactly as given, never recount them from the lists. Write any accuracy or share as a percentage (75%, not 0.75 or 1).",
+          prompt: `Summarise the night from these aggregated sections. Headline figures, to use exactly: ${draft.observed} tokens observed, ${draft.launches} fresh launches, ${draft.graduated.length} graduated, ${draft.wentToZero.length} went to zero, ${draft.suspicious.length} flagged as suspicious.`,
           untrusted: draft,
           maxTokens: 600,
         });

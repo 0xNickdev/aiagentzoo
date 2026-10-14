@@ -13,7 +13,11 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
     const score = await enclosure.store.get<Scorecard>(`score:${previousNight(night)}`);
     const playbook = await enclosure.store.get<Playbook>("beaver:playbook");
     const all = guests?.list() ?? [];
+    // The beaver's whole record, the same number the leaderboard shows, so the site never leads with one lucky night.
+    const board = (await leaderboard(enclosure, briefAt)()) as { rows: BoardRow[] };
+    const beaver = board.rows.find((r) => r.id === "beaver");
     return {
+      record: beaver ? { score: beaver.score, skill: beaver.skill, graded: beaver.graded } : null,
       night,
       tokensTonight: Object.keys(obs).length,
       callsTonight: calls.length,

@@ -333,7 +333,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       "",
     ];
     if (!list.length) lines.push("Nothing passes right now. On pump.fun that is a normal hour.");
-    for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${c.ageMin} min · ${c.buyers} buyers · top 5 ${pct(c.top5Share)}\n<code>${c.mint}</code>`);
+    for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${c.ageMin} min · ${c.buyers >= 100 ? "100+" : c.buyers} buyers · top 5 ${pct(c.top5Share)}\n<code>${c.mint}</code>`);
     const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: `Ask about $${c.symbol}`, callback_data: `ask:${c.mint}` }]);
     keyboard.push([{ text: "Refresh", callback_data: "clean" }]);
     return void send(chat, lines.join("\n"), keyboard);
