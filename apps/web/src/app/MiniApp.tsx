@@ -246,7 +246,9 @@ function Verdict({ a }: { a: Ask }) {
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) facts.push(["Dev sold", pct(c.creatorSold), c.creatorSold >= 0.5]);
   if (r) facts.push(["Dev rugged (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   else if (c) facts.push(["Dev launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
-  if (c?.top5Share !== null && c?.top5Share !== undefined) facts.push(["Top 5 buyers", pct(c.top5Share), c.top5Share >= 0.6]);
+  const b = a.facts.bundle;
+  if (b) facts.push([b.linked >= 2 ? `Bundle · ${b.linked} same funder` : "Bundle at launch", `${b.wallets} · ${pct(b.share)}`, b.wallets >= 3 || b.linked >= 2]);
+  else if (c?.top5Share !== null && c?.top5Share !== undefined) facts.push(["Top 5 buyers", pct(c.top5Share), c.top5Share >= 0.6]);
   if (m) {
     facts.push(["Liquidity", usd(m.liquidityUsd), (m.liquidityUsd ?? 0) < 1000]);
     facts.push(["Buys · sells", `${m.buys24h} · ${m.sells24h}`, m.sells24h > m.buys24h * 3]);

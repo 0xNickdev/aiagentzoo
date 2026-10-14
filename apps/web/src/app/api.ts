@@ -34,6 +34,7 @@ export interface Ask {
     market: { liquidityUsd: number | null; volume24hUsd: number | null; priceChange24h: number | null; buys24h: number; sells24h: number } | null;
     chain: { creatorSold: number | null; creatorLaunches24h: number; top5Share: number | null; buyers: number; repeatBuyers: number; ageMin: number } | null;
     creator?: CreatorRecord | null;
+    bundle?: { wallets: number; share: number; linked: number; funder: string | null } | null;
     url: string | null;
   };
   graded?: { outcome: "dead" | "alive" | "unknown"; hit: boolean | null };
