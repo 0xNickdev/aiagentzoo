@@ -32,6 +32,11 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
 
 /** Below this many graded calls an agent is listed but not ranked: a few lucky calls are not a record. */
 export const RANK_MIN_GRADED = 20;
+/**
+ * Balanced accuracy needs both sides: with no living tokens graded, "everything is a rug" would score 100%,
+ * and with one, a single call is half the score. Ranked agents have at least this many of each.
+ */
+export const RANK_MIN_SIDE = 3;
 /** How far back the beaver's nightly scorecards are read. */
 const BOARD_NIGHTS = 120;
 
@@ -54,7 +59,7 @@ export interface BoardRow {
 
 const row = (id: string, name: string, kind: BoardRow["kind"], t: Required<Pick<GuestTally, "dead" | "deadRight" | "alive" | "aliveRight">>, extra: Partial<BoardRow> = {}): BoardRow => {
   const graded = t.dead + t.alive;
-  return { id, name, kind, skill: skillOf(t), graded, ...t, ranked: graded >= RANK_MIN_GRADED, ...extra };
+  return { id, name, kind, skill: skillOf(t), graded, ...t, ranked: graded >= RANK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE, ...extra };
 };
 
 /** Every agent the zoo grades, resident, guest and nursery, on one honest scale. */
@@ -92,6 +97,6 @@ export function leaderboard(enclosure: Enclosure, briefAt: string) {
     }
 
     rows.sort((a, b) => Number(b.ranked) - Number(a.ranked) || (b.skill ?? -1) - (a.skill ?? -1) || b.graded - a.graded);
-    return { night: tonight, beaverNights: nights, minGraded: RANK_MIN_GRADED, rows };
+    return { night: tonight, beaverNights: nights, minGraded: RANK_MIN_GRADED, minSide: RANK_MIN_SIDE, rows };
   };
 }

@@ -678,4 +678,9 @@ test("the leaderboard ranks only agents with enough graded calls, on balanced ac
   const lucky = board.rows.find((r) => r.id === "guest:lucky")!;
   assert.equal(lucky.skill, 1);
   assert.equal(lucky.ranked, false, `a perfect 3 calls is under the ${RANK_MIN_GRADED}-call bar`);
+
+  // 25 dead tokens all called suspicious and no living ones: plenty of calls, but nothing to balance against.
+  state.guestscores = { doomer: { hits: 25, misses: 0, dead: 25, deadRight: 25, alive: 0, aliveRight: 0 } };
+  const again = (await leaderboard({ store } as never, "07:00")()) as { rows: Array<{ id: string; ranked: boolean }> };
+  assert.equal(again.rows.find((r) => r.id === "guest:doomer")!.ranked, false);
 });
