@@ -961,3 +961,28 @@ test("agent of the week runs Monday to Sunday", async () => {
   assert.equal(weekOf("2026-10-12"), "2026-10-12");
   assert.equal(weekOf("2026-10-18"), "2026-10-12", "Sunday closes it");
 });
+
+test("humans vs the beaver: answers to tonight's exam, graded by the same re-check as the nursery", async () => {
+  const { submitAnswers, humansView } = await import("../src/humans.ts");
+  const { nightOf } = await import("../src/agents/nightWatch.ts");
+  const { previousNight } = await import("../src/agents/judgement.ts");
+  const now = Date.now();
+  const night = nightOf(now, "07:00");
+  const state = new Map<string, unknown>([[`evo:exam:${night}`, { night, tokens: [{ mint: "A" }, { mint: "B" }] }]]);
+  const store = { get: async (k: string) => state.get(k) ?? null, set: async (k: string, v: unknown) => void state.set(k, v) };
+  const r = await submitAnswers(store as never, "W1", [{ mint: "A", verdict: "suspicious" }, { mint: "Z", verdict: "promising" }, { mint: "B", verdict: "maybe" }], "07:00", now);
+  assert.ok(r.ok && r.answered === 1, "only tonight's tokens with a real verdict count");
+
+  // Yesterday's answers, graded by yesterday's re-check.
+  const y = previousNight(night);
+  state.set(`humans:${y}`, { W1: { A: "suspicious", B: "promising" } });
+  state.set(`followup:${y}`, { A: { symbol: "A", outcome: "dead" }, B: { symbol: "B", outcome: "dead" } });
+  const view = await humansView(store as never, "07:00", "W1", now);
+  const me = view.standings.find((s) => s.you)!;
+  // Yesterday may fall in last week on a Monday; then this week is empty and last week holds it.
+  if (me) {
+    assert.equal(me.dead, 2);
+    assert.equal(me.deadRight, 1);
+  }
+  assert.deepEqual(view.mine, { A: "suspicious" });
+});

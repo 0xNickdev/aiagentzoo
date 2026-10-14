@@ -7,6 +7,7 @@ import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
+import { humansView, submitAnswers } from "./humans.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { setWatch, verifyInitData } from "./telegram.ts";
@@ -127,6 +128,20 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const row = b.rows.find((r) => [r.id, r.id.replace(/^(guest|nursery):/, ""), r.name].some((k) => k.toLowerCase() === key)) ?? null;
         res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=300" });
         return res.end(badgeSvg(row, row?.name ?? badge[1]!, b.minGraded));
+      }
+      if (req.method === "GET" && path === "/v1/humans") {
+        if (!evolution) return json(res, 404, { error: "no nursery on this node" });
+        const w = url.searchParams.get("wallet");
+        return json(res, 200, await humansView(enclosure.store, evolution.briefAt, w && SOLANA_ADDRESS.test(w) ? w : null));
+      }
+      if (req.method === "POST" && path === "/v1/humans/answer") {
+        if (!evolution) return json(res, 404, { error: "no nursery on this node" });
+        const body = (await readJson(req).catch(() => null)) as { guardian?: GuardianSession; answers?: unknown } | null;
+        const check = verifyGuardian(body?.guardian as GuardianSession);
+        if (!check.ok) return json(res, 401, { error: "sign in with your wallet first" });
+        if (!(await isHolder(check.address))) return json(res, 403, { error: `hold ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY to play` });
+        const result = await submitAnswers(enclosure.store, check.address, body?.answers, evolution.briefAt);
+        return result.ok ? json(res, 200, result) : json(res, result.status, { error: result.reason });
       }
       if (req.method === "GET" && path === "/v1/agent-of-the-week") {
         return weekly ? json(res, 200, await weekly()) : json(res, 404, { error: "no contest on this node" });
