@@ -1,6 +1,7 @@
 import type { Enclosure } from "@aiagentzoo/sdk";
-import { type Call, type Playbook, previousNight, type Scorecard } from "./agents/judgement.ts";
-import { nightOf } from "./agents/nightWatch.ts";
+import { evolutionView } from "./agents/evolution.ts";
+import { balance, type Call, type GuestTally, type Playbook, previousNight, type Scorecard, skillOf } from "./agents/judgement.ts";
+import { GUEST_SCORES, nightOf } from "./agents/nightWatch.ts";
 import type { GuestHouse } from "./guests.ts";
 
 /** The numbers the site shows up top, read from the canyon's state. */
@@ -26,5 +27,71 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
       clawpumpGuests: all.filter((g) => g.platform === "clawpump").length,
       model,
     };
+  };
+}
+
+/** Below this many graded calls an agent is listed but not ranked: a few lucky calls are not a record. */
+export const RANK_MIN_GRADED = 20;
+/** How far back the beaver's nightly scorecards are read. */
+const BOARD_NIGHTS = 120;
+
+export interface BoardRow {
+  id: string;
+  name: string;
+  kind: "resident" | "guest" | "nursery";
+  /** Balanced accuracy over every graded call: half for calling the dead, half for calling the living. */
+  skill: number | null;
+  /** Calls graded against what the token did next. */
+  graded: number;
+  dead: number;
+  deadRight: number;
+  alive: number;
+  aliveRight: number;
+  ranked: boolean;
+  /** Night the agent died, for nursery creatures that did. */
+  died?: string | null;
+}
+
+const row = (id: string, name: string, kind: BoardRow["kind"], t: Required<Pick<GuestTally, "dead" | "deadRight" | "alive" | "aliveRight">>, extra: Partial<BoardRow> = {}): BoardRow => {
+  const graded = t.dead + t.alive;
+  return { id, name, kind, skill: skillOf(t), graded, ...t, ranked: graded >= RANK_MIN_GRADED, ...extra };
+};
+
+/** Every agent the zoo grades, resident, guest and nursery, on one honest scale. */
+export function leaderboard(enclosure: Enclosure, briefAt: string) {
+  return async () => {
+    const tonight = nightOf(Date.now(), briefAt);
+    const rows: BoardRow[] = [];
+
+    // The beaver: every night's calls, re-balanced as one record.
+    const cases: Scorecard["cases"] = [];
+    let night = tonight;
+    let nights = 0;
+    for (let i = 0; i < BOARD_NIGHTS; i++) {
+      night = previousNight(night);
+      const score = await enclosure.store.get<Scorecard>(`score:${night}`);
+      if (!score) continue;
+      nights += 1;
+      cases.push(...score.cases);
+    }
+    if (cases.length) {
+      const b = balance(cases);
+      rows.push(row("beaver", "Beaver", "resident", b));
+    }
+
+    const guests = (await enclosure.store.get<Record<string, GuestTally>>(GUEST_SCORES)) ?? {};
+    for (const [name, t] of Object.entries(guests)) {
+      rows.push(row(`guest:${name}`, name, "guest", { dead: t.dead ?? 0, deadRight: t.deadRight ?? 0, alive: t.alive ?? 0, aliveRight: t.aliveRight ?? 0 }));
+    }
+
+    const evo = (await evolutionView(enclosure.store, briefAt)) as {
+      creatures: Array<{ id: string; name: string; diedNight: string | null; lifetime: { dead: number; deadRight: number; alive: number; aliveRight: number } }>;
+    } | null;
+    for (const c of evo?.creatures ?? []) {
+      rows.push(row(`nursery:${c.id}`, c.name, "nursery", c.lifetime, { died: c.diedNight }));
+    }
+
+    rows.sort((a, b) => Number(b.ranked) - Number(a.ranked) || (b.skill ?? -1) - (a.skill ?? -1) || b.graded - a.graded);
+    return { night: tonight, beaverNights: nights, minGraded: RANK_MIN_GRADED, rows };
   };
 }

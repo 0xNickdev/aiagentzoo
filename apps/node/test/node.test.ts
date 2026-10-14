@@ -649,3 +649,33 @@ test("a mutation the model announced but left out of the playbook is written int
   const kept = parseChild(JSON.stringify({ playbook: "1. No socials is suspicious.\n2. Five buyers bringing over 70% of the SOL in is suspicious.", mutation: "Five buyers bringing in over 70% of SOL is suspicious." }));
   assert.equal(kept!.playbook.split("\n").length, 2, "not added twice");
 });
+
+test("the leaderboard ranks only agents with enough graded calls, on balanced accuracy", async () => {
+  const { leaderboard, RANK_MIN_GRADED } = await import("../src/stats.ts");
+  const now = Date.now();
+  const { nightOf } = await import("../src/agents/nightWatch.ts");
+  const { previousNight } = await import("../src/agents/judgement.ts");
+  const last = previousNight(nightOf(now, "07:00"));
+  const cases = Array.from({ length: 30 }, (_, i) => ({
+    mint: `m${i}`,
+    symbol: `T${i}`,
+    verdict: i < 20 ? "suspicious" : "promising",
+    why: "",
+    outcome: i < 18 ? "dead" : "alive",
+    hit: null,
+  }));
+  const state: Record<string, unknown> = {
+    [`score:${last}`]: { night: last, checked: 30, hits: 0, misses: 0, accuracy: null, cases, guests: {} },
+    guestscores: { lucky: { hits: 3, misses: 0, dead: 3, deadRight: 3, alive: 0, aliveRight: 0 } },
+  };
+  const store = { get: async (k: string) => state[k] ?? null };
+  const board = (await leaderboard({ store } as never, "07:00")()) as { rows: Array<{ id: string; ranked: boolean; graded: number; skill: number | null }> };
+  assert.equal(board.rows[0]!.id, "beaver");
+  assert.equal(board.rows[0]!.graded, 30);
+  assert.ok(board.rows[0]!.ranked);
+  // dead: 18, all called suspicious; alive: 12, 10 called promising -> (1 + 10/12) / 2
+  assert.equal(Math.round(board.rows[0]!.skill! * 1000), Math.round(((1 + 10 / 12) / 2) * 1000));
+  const lucky = board.rows.find((r) => r.id === "guest:lucky")!;
+  assert.equal(lucky.skill, 1);
+  assert.equal(lucky.ranked, false, `a perfect 3 calls is under the ${RANK_MIN_GRADED}-call bar`);
+});

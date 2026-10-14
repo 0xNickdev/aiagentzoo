@@ -30,6 +30,8 @@ export interface ServerOptions {
   guests?: GuestHouse;
   /** Live numbers for the site, served at GET /v1/stats. */
   stats?: () => Promise<unknown>;
+  /** Every graded agent on one scale, served at GET /v1/leaderboard. */
+  board?: () => Promise<unknown>;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
   evolution?: { briefAt: string };
 }
@@ -53,7 +55,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, evolution }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -104,6 +106,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
       if (req.method === "GET" && path === "/v1/agents") return json(res, 200, enclosure.snapshot());
 
+      if (req.method === "GET" && path === "/v1/leaderboard") {
+        return board ? json(res, 200, await board()) : json(res, 404, { error: "no leaderboard on this node" });
+      }
       if (req.method === "GET" && path === "/v1/stats") {
         return stats ? json(res, 200, await stats()) : json(res, 404, { error: "no stats on this node" });
       }
