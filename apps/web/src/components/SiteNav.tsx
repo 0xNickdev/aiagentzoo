@@ -23,9 +23,9 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
   return (
     <header className={overlay ? "relative z-20" : "sticky top-0 z-40 border-b border-white/[0.07] bg-[#030504]/75 backdrop-blur-xl"}>
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
-        <a href="/" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight text-white">
-          <img src="/token.png" alt="" className="h-7 w-7 rounded-full ring-1 ring-white/20" />
-          ZOOAI AGENCY
+        <a href="/" className="flex items-center gap-2.5 text-white" aria-label="ZOOAI AGENCY">
+          <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
+          <span className="font-mono mt-0.5 text-[10.5px] tracking-[0.22em] text-white/50">AGENCY</span>
         </a>
         <div className="hidden items-center gap-8 lg:flex">
           {NAV_LINKS.map((link) => (
