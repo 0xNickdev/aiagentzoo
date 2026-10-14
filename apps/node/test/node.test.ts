@@ -684,3 +684,24 @@ test("the leaderboard ranks only agents with enough graded calls, on balanced ac
   const again = (await leaderboard({ store } as never, "07:00")()) as { rows: Array<{ id: string; ranked: boolean }> };
   assert.equal(again.rows.find((r) => r.id === "guest:doomer")!.ranked, false);
 });
+
+test("the nursery exam draws half sturdy tokens, and a turn waits for living tokens", async () => {
+  const { drawExam, livingGraded, MIN_LIVING_FOR_TURN, fitness, foundPopulation } = await import("../src/agents/evolution.ts");
+  const tok = (i: number, liq: number, complete = false) => ({ mint: `m${String(i).padStart(3, "0")}`, complete, market: { liquidityUsd: liq } });
+  const pool = [...Array.from({ length: 40 }, (_, i) => tok(i, 2_000)), ...Array.from({ length: 6 }, (_, i) => tok(100 + i, 25_000)), tok(200, 500, true)];
+  const exam = drawExam(pool, 8, "2026-10-15");
+  assert.equal(exam.length, 8);
+  assert.equal(exam.filter((t) => t.complete || t.market.liquidityUsd >= 10_000).length, 4);
+  assert.deepEqual(drawExam(pool, 8, "2026-10-15"), exam, "anyone can recompute the draw from the night");
+  // Too few sturdy tokens: the fresh half fills the rest.
+  assert.equal(drawExam([...Array.from({ length: 10 }, (_, i) => tok(i, 2_000)), tok(99, 50_000)], 8, "n").length, 8);
+
+  // On an exam with living tokens in it, calling everything a rug loses to telling them apart.
+  const doomer = fitness({ hits: 8, misses: 4, dead: 8, deadRight: 8, alive: 4, aliveRight: 0 });
+  const judge = fitness({ hits: 9, misses: 3, dead: 8, deadRight: 6, alive: 4, aliveRight: 3 });
+  assert.ok(judge > doomer);
+
+  const pop = foundPopulation("2026-10-10");
+  assert.equal(livingGraded(pop), 0);
+  assert.ok(livingGraded(pop) < MIN_LIVING_FOR_TURN);
+});

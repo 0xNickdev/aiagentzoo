@@ -63,6 +63,8 @@ export const graded = (t: Tally) => full(t).dead + full(t).alive;
 export interface Population {
   generation: number;
   lastGenerationNight: string | null;
+  /** The last night a due turn was skipped for lack of living tokens. */
+  quietNight?: string;
   nextId: number;
   creatures: Record<string, Creature>;
 }
@@ -70,7 +72,7 @@ export interface Population {
 export interface ChronicleEntry {
   night: string;
   generation: number;
-  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival" | "correction";
+  kind: "founded" | "scored" | "death" | "birth" | "extinct" | "arrival" | "correction" | "quiet";
   text: string;
   ids: string[];
   at: number;
@@ -245,8 +247,35 @@ export const living = (p: Population) => Object.values(p.creatures).filter((c) =
  */
 export const fitness = (t: Tally) => {
   const x = full(t);
-  return ((x.deadRight + 0.5) / (x.dead + 1) + (x.aliveRight + 0.5) / (x.alive + 1)) / 2;
+  return ((x.deadRight + 1) / (x.dead + 2) + (x.aliveRight + 1) / (x.alive + 2)) / 2;
 };
+
+/**
+ * Living tokens a turn needs graded before anyone may die. Most fresh tokens die, so without living ones
+ * the only thing selection can see is who calls the dead, and it would breed creatures that call everything a rug.
+ */
+export const MIN_LIVING_FOR_TURN = 3;
+
+/** Living tokens graded in the window: every creature sits the same exam, so the most any of them saw. */
+export const livingGraded = (pop: Population) => Math.max(0, ...living(pop).map((c) => full(c.window).alive));
+
+/** Liquidity above which a token is counted sturdy for the exam draw. */
+export const STURDY_LIQUIDITY = 10_000;
+
+/**
+ * Half the exam from fresh launches, half from sturdier tokens (deep liquidity or already graduated), each half a
+ * seeded draw anyone can recompute from the night id. Fresh launches almost all die; the sturdy half gives the
+ * nursery living tokens to tell apart, so calling everything a rug stops paying. Short halves borrow from the other.
+ */
+export function drawExam<T extends { mint: string; complete: boolean; market: { liquidityUsd: number | null } | null }>(scorable: T[], size: number, night: string): T[] {
+  const sorted = [...scorable].sort((x, y) => x.mint.localeCompare(y.mint));
+  const sturdy = sorted.filter((o) => o.complete || (o.market?.liquidityUsd ?? 0) >= STURDY_LIQUIDITY);
+  const fresh = sorted.filter((o) => !sturdy.includes(o));
+  const half = Math.ceil(size / 2);
+  const a = sample(sturdy, Math.max(half, size - fresh.length), `${night}:sturdy`);
+  const b = sample(fresh, size - a.length, `${night}:fresh`);
+  return [...a, ...b].slice(0, size);
+}
 /** Plain accuracy of scored verdicts, for display. */
 export const accuracy = (t: Tally) => (t.hits + t.misses ? t.hits / (t.hits + t.misses) : null);
 /** Balanced accuracy without the prior, or null before anything is graded. */
@@ -610,7 +639,22 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
       // a night late, the turn goes ahead anyway rather than stall on a missing re-check.
       const ready =
         Boolean(await ctx.state.get<NightResults>(EVO.results(yesterday))) || !(await ctx.state.get<Exam>(EVO.exam(yesterday))) || since > generationNights;
-      const chosen = since >= generationNights && ready ? selection(pop) : null;
+      const due = since >= generationNights && ready;
+      // Without enough living tokens graded, a turn would only reward calling everything a rug: it waits instead.
+      const fair = livingGraded(pop) >= MIN_LIVING_FOR_TURN;
+      if (due && !fair) {
+        // The clock restarts so the turn is tried again in a few nights; the window is kept, so the record grows.
+        pop = { ...pop, lastGenerationNight: night, quietNight: night };
+        note({
+          night,
+          generation: pop.generation,
+          kind: "quiet",
+          text: `A quiet turn: only ${livingGraded(pop)} living ${livingGraded(pop) === 1 ? "token" : "tokens"} graded since the last one, too few to judge fairly. Nobody dies, nobody is born; the record keeps growing.`,
+          ids: [],
+        });
+        await ctx.trace("evo.quiet", { night, living: livingGraded(pop) });
+      }
+      const chosen = due && fair ? selection(pop) : null;
       if (chosen) {
         const [a, b] = chosen.parents;
         const immigration = (pop.generation + 1) % IMMIGRATION_EVERY === 0;
@@ -682,7 +726,7 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         // picked at random with the night as the seed, not the ones the rules already flag.
         const scorable = obs.filter((o) => o.market && outcomeOf(o) !== "dead" && o.source !== "followup");
         if (scorable.length >= examAfter) {
-          exam = { night, tokens: sample(scorable.sort((x, y) => x.mint.localeCompare(y.mint)), EXAM_SIZE, night).map(compact) };
+          exam = { night, tokens: drawExam(scorable, EXAM_SIZE, night).map(compact) };
           await ctx.state.set(EVO.exam(night), exam);
           await ctx.trace("evo.exam", { night, mints: exam.tokens.map((t) => t.mint) });
         }

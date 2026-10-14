@@ -46,6 +46,11 @@ export interface BoardRow {
   kind: "resident" | "guest" | "nursery";
   /** Balanced accuracy over every graded call: half for calling the dead, half for calling the living. */
   skill: number | null;
+  /**
+   * The same with one right and one wrong added to each side, which the board ranks by: a handful of calls
+   * pulls toward 50%, a long record speaks for itself.
+   */
+  score: number;
   /** Calls graded against what the token did next. */
   graded: number;
   dead: number;
@@ -59,7 +64,8 @@ export interface BoardRow {
 
 const row = (id: string, name: string, kind: BoardRow["kind"], t: Required<Pick<GuestTally, "dead" | "deadRight" | "alive" | "aliveRight">>, extra: Partial<BoardRow> = {}): BoardRow => {
   const graded = t.dead + t.alive;
-  return { id, name, kind, skill: skillOf(t), graded, ...t, ranked: graded >= RANK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE, ...extra };
+  const score = ((t.deadRight + 1) / (t.dead + 2) + (t.aliveRight + 1) / (t.alive + 2)) / 2;
+  return { id, name, kind, skill: skillOf(t), score, graded, ...t, ranked: graded >= RANK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE, ...extra };
 };
 
 /** Every agent the zoo grades, resident, guest and nursery, on one honest scale. */
@@ -96,7 +102,7 @@ export function leaderboard(enclosure: Enclosure, briefAt: string) {
       rows.push(row(`nursery:${c.id}`, c.name, "nursery", c.lifetime, { died: c.diedNight }));
     }
 
-    rows.sort((a, b) => Number(b.ranked) - Number(a.ranked) || (b.skill ?? -1) - (a.skill ?? -1) || b.graded - a.graded);
+    rows.sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.graded - a.graded);
     return { night: tonight, beaverNights: nights, minGraded: RANK_MIN_GRADED, minSide: RANK_MIN_SIDE, rows };
   };
 }
