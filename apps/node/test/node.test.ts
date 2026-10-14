@@ -714,3 +714,52 @@ test("the badge shows a record with its sample, and admits an unknown agent", as
   assert.ok(!svg.includes("x<y"), "names are escaped");
   assert.ok(badgeSvg(null, "ghost", 20).includes("not in the zoo"));
 });
+
+test("ask the beaver: a verdict from the market, reused for a while, rate-limited, graded a day later", async () => {
+  const { AskDesk } = await import("../src/ask.ts");
+  const MINT_A = "So11111111111111111111111111111111111111112";
+  const state = new Map<string, unknown>();
+  const logged: string[] = [];
+  const identity = Identity.generate();
+  const enclosure = {
+    node: { id: "canyon.zoo", identity },
+    store: { get: async (k: string) => state.get(k) ?? null, set: async (k: string, v: unknown) => void state.set(k, v) },
+    log: { append: async (e: { type: string }) => void logged.push(e.type) },
+  };
+  let liquidity = 8_000;
+  const fetchFn = (async (url: string) => {
+    if (!String(url).includes("dexscreener")) return new Response("{}", { status: 404 });
+    const mint = String(url).split("/").pop()!;
+    const pair = { baseToken: { address: mint, symbol: "WRAP", name: "wrapped" }, dexId: "pumpswap", liquidity: { usd: liquidity }, volume: { h24: 900_000 }, priceChange: { h24: -10 }, txns: { h24: { buys: 10, sells: 90 } }, info: { socials: [] } };
+    return new Response(JSON.stringify([pair]), { status: 200 });
+  }) as typeof fetch;
+  const model = { id: "fake", think: async () => ({ text: JSON.stringify([{ mint: MINT_A, verdict: "suspicious", confidence: 0.8, why: "sells 9:1, volume far above liquidity" }]), inputTokens: 1, outputTokens: 1 }) };
+  const desk = new AskDesk({ enclosure: enclosure as never, model, fetchFn, perIpPerHour: 2 });
+  const now = 1_800_000_000_000;
+
+  assert.equal(((await desk.ask("not-a-mint", "1.1.1.1", now)) as { status: number }).status, 400);
+  const first = await desk.ask(MINT_A, "1.1.1.1", now);
+  assert.ok(first.ok);
+  assert.equal(first.ask.verdict, "suspicious");
+  assert.equal(first.ask.symbol, "WRAP");
+  assert.ok(first.ask.facts.flags.includes("sells outnumber buys 3:1"));
+  assert.deepEqual(logged, ["ask.answered"]);
+
+  const again = await desk.ask(MINT_A, "2.2.2.2", now + 60_000);
+  assert.ok(again.ok && again.reused && again.ask.id === first.ask.id, "same token within half an hour: same answer");
+
+  const MINT_B = "11111111111111111111111111111111";
+  const MINT_C = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
+  assert.ok((await desk.ask(MINT_B, "1.1.1.1", now + 2 * 3_600_000)).ok);
+  assert.ok((await desk.ask(MINT_A, "1.1.1.1", now + 2 * 3_600_000 + 1)).ok);
+  assert.equal(((await desk.ask(MINT_C, "1.1.1.1", now + 2 * 3_600_000 + 2)) as { status: number }).status, 429);
+
+  liquidity = 50;
+  assert.equal((await desk.get(first.ask.id, now + 3_600_000))!.graded, undefined, "not graded before a day");
+  const graded = (await desk.get(first.ask.id, now + 25 * 3_600_000))!;
+  assert.equal(graded.graded!.outcome, "dead");
+  assert.equal(graded.graded!.hit, true);
+  assert.ok(logged.includes("ask.graded"));
+  const board = await desk.recent(10, now + 25 * 3_600_000);
+  assert.equal(board.record.deadRight >= 1, true);
+});

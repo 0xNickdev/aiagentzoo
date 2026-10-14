@@ -430,6 +430,13 @@ export class PumpTape {
     };
   }
 
+  /** One token as the tape knows it, for questions about a single mint. */
+  token(mint: string, now = Date.now()) {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    return { mint, symbol: t.symbol, name: t.name, creator: t.creator, createdAt: t.createdAt, facts: this.facts(mint, now)! };
+  }
+
   /** The newest launches, as the sentinels expect them, each with its chain facts attached. */
   launches(limit: number, now = Date.now()) {
     return this.recent.slice(0, limit).flatMap((mint) => {

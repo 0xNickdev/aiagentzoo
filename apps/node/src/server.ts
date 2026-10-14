@@ -5,6 +5,7 @@ import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
 import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
+import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
 import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
@@ -34,6 +35,8 @@ export interface ServerOptions {
   stats?: () => Promise<unknown>;
   /** Every graded agent on one scale, served at GET /v1/leaderboard. */
   board?: () => Promise<unknown>;
+  /** "Ask the beaver", on the node that keeps it. */
+  asks?: AskDesk;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
   evolution?: { briefAt: string };
 }
@@ -57,7 +60,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, evolution }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, asks, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -238,6 +241,27 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "GET" && path === "/v1/chain") {
         return json(res, 200, tape.status());
+      }
+      const chainToken = /^\/v1\/chain\/token\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && chainToken) {
+        const found = tape.token(chainToken[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
+      }
+      if (req.method === "POST" && path === "/v1/ask") {
+        if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
+        const body = (await readJson(req).catch(() => null)) as { mint?: unknown } | null;
+        const result = await asks.ask(body?.mint, clientIp(req));
+        return result.ok ? json(res, 200, { ask: result.ask, reused: result.reused }) : json(res, result.status, { error: result.reason });
+      }
+      const askOf = /^\/v1\/ask\/([0-9a-f]{10})$/.exec(path);
+      if (req.method === "GET" && askOf) {
+        if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
+        const found = await asks.get(askOf[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "no such question" });
+      }
+      if (req.method === "GET" && path === "/v1/asks") {
+        if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
+        return json(res, 200, await asks.recent(clampInt(url.searchParams.get("limit"), 24, 1, 100)));
       }
       if (req.method === "GET" && path === "/v1/chain/moments") {
         const q = url.searchParams;
