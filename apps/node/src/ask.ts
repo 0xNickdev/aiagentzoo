@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { createEvent, type Enclosure, type ModelProvider, renderUntrusted, signEvent, UNTRUSTED_NOTICE } from "@aiagentzoo/sdk";
+import type { HolderReport } from "./chain/holders.ts";
 import type { ChainFacts, CreatorRecord } from "./chain/pump.ts";
 import {
   compact,
@@ -36,6 +37,8 @@ export interface AskFacts {
   chain: ChainFacts | null;
   /** Wallets that bought in the launch block, and whether one wallet paid for several of them. */
   bundle: { wallets: number; share: number; linked: number; funder: string | null } | null;
+  /** Who holds the supply now, read from an RPC: the eyes for tokens past the bonding curve. */
+  holders: HolderReport | null;
   /** The creator wallet's last two days on pump.fun, when the stream saw this token launch. */
   creator: CreatorRecord | null;
   flags: string[];
@@ -217,6 +220,8 @@ export class AskDesk {
 
     const playbook = (await this.store.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
     const record = c?.creatorRecord ?? null;
+    // Past the curve the stream is blind; who holds the supply now is the next best evidence.
+    const holders = !c || obs.complete ? await this.json<HolderReport>(`${this.opts.northUrl}/v1/chain/holders/${mint}`) : null;
     // A launch bundle: who bought in the launch block, and who paid them.
     let bundle: AskFacts["bundle"] = null;
     if (c && (c.facts.bundleWallets ?? 0) >= 2) {
@@ -234,6 +239,17 @@ export class AskDesk {
               ...compact(obs),
               ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}),
               ...(bundle?.linked ? { bundleFunding: `${bundle.linked} of the launch-block buyers were funded by one wallet` } : {}),
+              ...(holders
+                ? {
+                    holders: {
+                      top10WalletsShare: holders.top10Share,
+                      largestWalletShare: holders.topShare,
+                      inPoolsAndLocks: holders.programShare,
+                      creatorStillHolds: holders.creatorShare,
+                      note: "read from Solana now; pools and locks excluded from wallet shares. Volume far above pool liquidity is normal for an actively traded graduated token.",
+                    },
+                  }
+                : {}),
             },
           ])}`,
           maxTokens: 900,
@@ -247,6 +263,8 @@ export class AskDesk {
     }
     const flags = ruleFlags(obs);
     if (bundle && bundle.linked >= 2) flags.push(`${bundle.linked} bundle wallets funded by one wallet`);
+    if (holders && holders.top10Share >= 0.5) flags.push(`top 10 wallets hold ${Math.round(holders.top10Share * 100)}% of supply`);
+    if (holders?.creatorShare !== null && holders?.creatorShare !== undefined && holders.creatorShare >= 0.1) flags.push(`creator still holds ${Math.round(holders.creatorShare * 100)}%`);
     if (record && record.launches48h >= 3 && record.dumped >= Math.ceil(record.launches48h / 2)) {
       flags.push(`creator dumped ${record.dumped} of ${record.launches48h} launches in 48h`);
     }
@@ -265,7 +283,7 @@ export class AskDesk {
       why: call.why,
       by: call.by,
       playbookVersion: playbook.version,
-      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, bundle, flags, url: m?.url ?? null },
+      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, bundle, holders, flags, url: m?.url ?? null },
       already: outcomeOf(obs) === "dead",
     };
     await this.store.set(`ask:${ask.id}`, ask);

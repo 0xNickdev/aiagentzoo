@@ -221,6 +221,8 @@ export function askMessage(a: Ask): string {
   const m = a.facts.market;
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) lines.push(`• creator sold ${pct(c.creatorSold)}`);
   if (r) lines.push(`• creator: ${creatorLine(r)}`);
+  const h = a.facts.holders;
+  if (h) lines.push(`• top 10 wallets hold ${pct(h.top10Share)}${h.creatorShare !== null ? ` · dev holds ${pct(h.creatorShare)}` : ""}`);
   const b = a.facts.bundle;
   if (b && b.wallets >= 2) lines.push(`• bundle: ${b.wallets} wallets took ${pct(b.share)} of supply in the launch block${b.linked >= 2 ? `, ${b.linked} funded by one wallet` : ""}`);
   if (c?.top5Share !== null && c?.top5Share !== undefined) lines.push(`• top 5 buyers: ${pct(c.top5Share)} of the buying`);

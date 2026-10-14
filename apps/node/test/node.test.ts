@@ -909,3 +909,28 @@ test("the tape spots a launch-block bundle, and the bundle's wallets trace back 
   assert.equal(report.groups[0]!.funder, FUNDER);
   delete process.env.SOLANA_RPC_URL;
 });
+
+test("holder report leaves pools out of wallet shares and finds what the creator still holds", async () => {
+  process.env.SOLANA_RPC_URL = "http://rpc.test";
+  const { holderReport } = await import(`../src/chain/holders.ts?t=${Date.now()}`);
+  const fetchFn = (async (url: string, init?: { body?: string }) => {
+    if (String(url).includes("pump.fun")) return new Response(JSON.stringify({ creator: "Dev" }));
+    const { method, params } = JSON.parse(init!.body!) as { method: string; params: unknown[] };
+    const ok = (result: unknown) => new Response(JSON.stringify({ result }));
+    if (method === "getTokenSupply") return ok({ value: { uiAmount: 1000 } });
+    if (method === "getTokenLargestAccounts") return ok({ value: [{ address: "ta-pool", uiAmount: 400 }, { address: "ta-w1", uiAmount: 150 }, { address: "ta-w2", uiAmount: 50 }] });
+    if (method === "getMultipleAccounts") {
+      const keys = params[0] as string[];
+      if (keys[0]!.startsWith("ta-")) return ok({ value: keys.map((k) => ({ data: { parsed: { info: { owner: k === "ta-pool" ? "Pool" : k.slice(3) } } } })) });
+      return ok({ value: keys.map((k) => (k === "Pool" ? { owner: "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA" } : { owner: "11111111111111111111111111111111" })) });
+    }
+    if (method === "getTokenAccountsByOwner") return ok({ value: [{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: 120 } } } } } }] });
+    return ok(null);
+  }) as typeof fetch;
+  const r = (await holderReport("MINT", fetchFn, 1))!;
+  assert.equal(r.programShare, 0.4, "the pool is not a holder");
+  assert.equal(r.top10Share, 0.2);
+  assert.equal(r.topShare, 0.15);
+  assert.equal(r.creatorShare, 0.12);
+  delete process.env.SOLANA_RPC_URL;
+});

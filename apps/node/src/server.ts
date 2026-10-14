@@ -8,6 +8,7 @@ import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts"
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
+import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
@@ -264,6 +265,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!t) return json(res, 404, { error: "not on the stream" });
         const funding = t.bundle.length >= 2 ? await traceFunders(t.mint, t.bundle.map((b) => b.wallet)) : null;
         return json(res, 200, { mint: t.mint, bundleWallets: t.facts.bundleWallets, bundleShare: t.facts.bundleShare, wallets: t.bundle, funding, fundingEnabled: fundersEnabled() });
+      }
+      const holdersOf = /^\/v1\/chain\/holders\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && holdersOf) {
+        if (!holdersEnabled()) return json(res, 404, { error: "no RPC configured on this node" });
+        const report = await holderReport(holdersOf[1]!);
+        return report ? json(res, 200, report) : json(res, 404, { error: "no holders found" });
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
