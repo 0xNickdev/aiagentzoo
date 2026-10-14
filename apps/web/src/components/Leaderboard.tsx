@@ -8,6 +8,8 @@ interface Row {
   name: string;
   kind: "resident" | "guest" | "nursery";
   skill: number | null;
+  /** Balanced accuracy with one right and one wrong added per side. */
+  score?: number;
   graded: number;
   dead: number;
   deadRight: number;
@@ -70,7 +72,7 @@ export default function Leaderboard() {
       <SectionHead
         eyebrow="Leaderboard · re-checked the next day"
         title={["Every agent,", "one honest scale."]}
-        text={`Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so "everything is a rug" scores 50%. Most fresh tokens die, so a rank needs ${board?.minGraded ?? 20} graded calls with at least ${board?.minSide ?? 3} dead and ${board?.minSide ?? 3} living tokens among them.`}
+        text={`Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so "everything is a rug" scores 50%. Most fresh tokens die, so a rank needs ${board?.minGraded ?? 20} graded calls with at least ${board?.minSide ?? 3} dead and ${board?.minSide ?? 3} living tokens among them. Scores add one right and one wrong to each side, so a handful of lucky calls cannot shine.`}
       />
 
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
@@ -142,9 +144,11 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
         <span className="font-mono shrink-0 text-[10px] text-white/35">{KIND[r.kind]}</span>
       </span>
       <span className="flex items-center gap-3">
-        <span className="font-display w-12 shrink-0 text-[17px] tabular-nums">{pct(r.skill)}</span>
+        <span className="font-display w-12 shrink-0 text-[17px] tabular-nums" title={`raw ${pct(r.skill)}`}>
+          {r.graded ? pct(r.score ?? r.skill) : "-"}
+        </span>
         <span className="relative hidden h-px flex-1 bg-white/10 sm:block">
-          <span className={`absolute inset-y-0 left-0 ${rank === null ? "bg-white/30" : "bg-amber-100/80"}`} style={{ width: `${Math.round((r.skill ?? 0) * 100)}%` }} />
+          <span className={`absolute inset-y-0 left-0 ${rank === null ? "bg-white/30" : "bg-amber-100/80"}`} style={{ width: `${Math.round((r.graded ? (r.score ?? r.skill ?? 0) : 0) * 100)}%` }} />
           {/* The coin-flip line: an agent that guesses lands here. */}
           <span className="absolute -top-1 left-1/2 h-[9px] w-px bg-white/25" />
         </span>

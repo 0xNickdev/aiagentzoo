@@ -224,6 +224,7 @@ const KIND_MARK: Record<ChronicleEntry["kind"], { label: string; tone: string }>
   extinct: { label: "EXTINCT", tone: "text-rose-200/60" },
   arrival: { label: "ARRIVAL", tone: "text-emerald-200/80" },
   correction: { label: "CORRECTION", tone: "text-white/60" },
+  quiet: { label: "QUIET TURN", tone: "text-white/50" },
 };
 
 function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; nextTurn: string; curveOn: string }) {
@@ -382,10 +383,10 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           <p className="font-mono text-[11px] tracking-[0.14em] text-white/40">THE RULES OF THE NURSERY</p>
           <ol className="mt-4 space-y-2.5 text-[13.5px] font-light leading-relaxed text-white/70">
             <li>1. A playbook is fixed for life. Creatures never rewrite their own rules.</li>
-            <li>2. Every night all of them answer the same exam of fresh tokens.</li>
+            <li>2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.</li>
             <li>3. A day later each answer is graded by what actually happened. "Watch" counts as a miss.</li>
             <li>4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.</li>
-            <li>5. Every three nights comes a turn: the weakest dies and the two strongest breed.</li>
+            <li>5. Every three nights comes a turn: the weakest dies and the two strongest breed. With fewer than three living tokens graded, the turn is quiet and nobody dies.</li>
             <li>6. A child inherits a mix of both playbooks and exactly one mutation, aimed at what its parents got wrong.</li>
             <li>7. Every third turn a stranger arrives instead of a child: the beaver's playbook, a guest's style, or a wild line.</li>
           </ol>
