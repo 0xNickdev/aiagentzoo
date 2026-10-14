@@ -41,6 +41,8 @@ export interface ServerOptions {
   board?: () => Promise<unknown>;
   /** The beaver's night-by-night record, served at GET /v1/beaver/record. */
   beaverHistory?: () => Promise<unknown>;
+  /** Agent of the week standings, served at GET /v1/agent-of-the-week. */
+  weekly?: () => Promise<unknown>;
   /** "Ask the beaver", on the node that keeps it. */
   asks?: AskDesk;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
@@ -66,7 +68,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, asks, evolution }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
@@ -125,6 +127,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const row = b.rows.find((r) => [r.id, r.id.replace(/^(guest|nursery):/, ""), r.name].some((k) => k.toLowerCase() === key)) ?? null;
         res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=300" });
         return res.end(badgeSvg(row, row?.name ?? badge[1]!, b.minGraded));
+      }
+      if (req.method === "GET" && path === "/v1/agent-of-the-week") {
+        return weekly ? json(res, 200, await weekly()) : json(res, 404, { error: "no contest on this node" });
       }
       if (req.method === "GET" && path === "/v1/beaver/record") {
         return beaverHistory ? json(res, 200, await beaverHistory()) : json(res, 404, { error: "the beaver is not on this node" });

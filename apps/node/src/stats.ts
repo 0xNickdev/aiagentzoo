@@ -137,3 +137,46 @@ export function beaverRecord(enclosure: Enclosure, briefAt: string) {
     return { nights: nights.reverse(), warnedDead, calls };
   };
 }
+
+/** Monday of the week a night falls in, as YYYY-MM-DD (UTC). */
+export function weekOf(night: string): string {
+  const d = new Date(`${night}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+const addDays = (day: string, n: number) => {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * Agent of the week: guest agents ranked on the calls graded in one Monday-to-Sunday week, on the same honest
+ * scale as the leaderboard. To qualify an agent needs 20 graded calls with at least 3 dead and 3 living tokens.
+ */
+export function agentOfWeek(enclosure: Enclosure, briefAt: string) {
+  const standings = async (start: string) => {
+    const tallies = new Map<string, Required<Pick<GuestTally, "dead" | "deadRight" | "alive" | "aliveRight">>>();
+    for (let i = 0; i < 7; i++) {
+      const score = await enclosure.store.get<Scorecard>(`score:${addDays(start, i)}`);
+      for (const [name, g] of Object.entries(score?.guests ?? {})) {
+        const t = tallies.get(name) ?? { dead: 0, deadRight: 0, alive: 0, aliveRight: 0 };
+        tallies.set(name, { dead: t.dead + (g.dead ?? 0), deadRight: t.deadRight + (g.deadRight ?? 0), alive: t.alive + (g.alive ?? 0), aliveRight: t.aliveRight + (g.aliveRight ?? 0) });
+      }
+    }
+    return [...tallies.entries()]
+      .map(([name, t]) => row(`guest:${name}`, name, "guest", t))
+      .sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.graded - a.graded);
+  };
+  return async () => {
+    const start = weekOf(nightOf(Date.now(), briefAt));
+    const last = addDays(start, -7);
+    const lastRows = await standings(last);
+    return {
+      minGraded: RANK_MIN_GRADED,
+      minSide: RANK_MIN_SIDE,
+      week: { start, end: addDays(start, 6), endsAt: `${addDays(start, 7)}T00:00:00Z`, standings: await standings(start) },
+      lastWeek: { start: last, end: addDays(last, 6), winner: lastRows.find((r) => r.ranked) ?? null },
+    };
+  };
+}

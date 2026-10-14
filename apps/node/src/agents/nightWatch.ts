@@ -99,6 +99,8 @@ const MAX_GUESTS_PER_BRIEF = 50;
 export const WATCH_PREFIX = "watch:";
 /** Hits and misses of every guest's verdicts, kept by the beaver. */
 export const GUEST_SCORES = "guestscores";
+/** Tokens re-checked a night, sent to the gatherer in batches of 30. */
+export const FOLLOWUP_MAX = 90;
 export const WATCH_EVERY_MS = 60 * 60_000;
 
 const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -481,16 +483,23 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         // The hedgehog is back with yesterday's tokens: score the calls, then rewrite the playbook.
         const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
         const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
-        score = scoreNight(yesterday, pastCalls, pastReports, items);
+        // The re-check arrives in batches: the night is scored on everything back so far, never on one batch.
+        const before = score;
+        const seen = (await ctx.state.get<Observation[]>(`followupobs:${yesterday}`)) ?? [];
+        const merged = [...new Map([...seen, ...items].map((o) => [o.mint, o])).values()];
+        await ctx.state.set(`followupobs:${yesterday}`, merged);
+        score = scoreNight(yesterday, pastCalls, pastReports, merged);
         await ctx.state.set(`score:${yesterday}`, score);
         // Keep what the re-check found, so others who judged these tokens (the nursery) can be scored too.
-        await ctx.state.set(FOLLOWUP(yesterday), Object.fromEntries(items.map((o) => [o.mint, { symbol: o.symbol, outcome: outcomeOf(o) }])) satisfies Followup);
+        await ctx.state.set(FOLLOWUP(yesterday), Object.fromEntries(merged.map((o) => [o.mint, { symbol: o.symbol, outcome: outcomeOf(o) }])) satisfies Followup);
         await ctx.trace("calls.scored", { night: yesterday, hits: score.hits, misses: score.misses, accuracy: score.accuracy, guests: score.guests });
         // Guests earn a track record from the same checks: one ledger of hits and misses per guest.
         const ledger = (await ctx.state.get<Record<string, GuestTally>>(GUEST_SCORES)) ?? {};
         for (const [name, g] of Object.entries(score.guests)) {
           const prev = ledger[name] ?? { hits: 0, misses: 0 };
-          const sum = (k: keyof GuestTally) => (prev[k] ?? 0) + (g[k] ?? 0);
+          // Only what this batch added: the ledger already holds the night's earlier batches.
+          const had = before?.guests[name];
+          const sum = (k: keyof GuestTally) => (prev[k] ?? 0) + (g[k] ?? 0) - (had?.[k] ?? 0);
           ledger[name] = { hits: sum("hits"), misses: sum("misses"), dead: sum("dead"), deadRight: sum("deadRight"), alive: sum("alive"), aliveRight: sum("aliveRight") };
         }
         if (Object.keys(score.guests).length) await ctx.state.set(GUEST_SCORES, ledger);
@@ -553,9 +562,10 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
         const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
         const exam = (await ctx.state.get<Exam>(EVO.exam(yesterday)))?.tokens.map((t) => t.mint) ?? [];
-        const mints = followupMints(pastCalls, pastReports, exam);
+        // Up to 90 re-checks a night, so guests (who get half the room after the nursery's exam) can build a record in a week.
+        const mints = followupMints(pastCalls, pastReports, exam, FOLLOWUP_MAX);
         await ctx.state.set("beaver:followedUp", yesterday);
-        if (mints.length) await ctx.signal(hedgehog, "followup.check", { mints });
+        for (let i = 0; i < mints.length; i += 30) await ctx.signal(hedgehog, "followup.check", { mints: mints.slice(i, i + 30) });
       }
 
       // Judge the night's new tokens, at most every judgeEveryMs.

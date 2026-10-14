@@ -954,3 +954,10 @@ test("the beaver's record counts the tokens it warned about that then died", asy
   assert.equal(r.nights.length, 1);
   assert.equal(r.calls.length, 3);
 });
+
+test("agent of the week runs Monday to Sunday", async () => {
+  const { weekOf } = await import("../src/stats.ts");
+  assert.equal(weekOf("2026-10-15"), "2026-10-12", "a Thursday belongs to the week starting Monday");
+  assert.equal(weekOf("2026-10-12"), "2026-10-12");
+  assert.equal(weekOf("2026-10-18"), "2026-10-12", "Sunday closes it");
+});
