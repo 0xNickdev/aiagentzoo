@@ -797,3 +797,19 @@ test("the tape keeps each creator's record and lists fresh launches that pass th
   const clean = tape.clean(10, now + 20 * 60_000);
   assert.deepEqual(clean.map((c) => c.symbol), ["OK"], "the serial dumper's tokens never make the list");
 });
+
+test("telegram messages carry the verdict and evidence, and escape whatever a token calls itself", async () => {
+  const { askMessage, alertMessage } = await import("../src/telegram.ts");
+  const ask = {
+    id: "abcdef0123", mint: "M", symbol: "<b>RUG</b>", name: "", at: 0, verdict: "suspicious" as const, confidence: 0.9, why: "creator sold & ran", by: "model" as const, playbookVersion: 7, already: false,
+    facts: { graduated: false, hasSocials: false, market: null, chain: null, flags: [], url: null,
+      creator: { wallet: "W", launches24h: 9, launches48h: 12, dumped: 11, medianDumpMin: 1, graduated: 0, recent: [] } },
+  };
+  const text = askMessage(ask as never);
+  assert.ok(text.includes("SUSPICIOUS"));
+  assert.ok(text.includes("12 launches in 48h, dumped 11, median 1 min"));
+  assert.ok(text.includes("&lt;b&gt;RUG&lt;/b&gt;") && text.includes("creator sold &amp; ran"));
+  assert.ok(text.includes("zooaiagency.com/ask#abcdef0123"));
+  const alert = alertMessage({ seq: 1, at: 0, kind: "dump", mint: "M", symbol: "X", text: "creator sold 90% after 1 min", tx: "SIG" });
+  assert.ok(alert.includes("solscan.io/tx/SIG"));
+});

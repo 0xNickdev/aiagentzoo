@@ -13,6 +13,7 @@ import { loadConfig } from "./config.ts";
 import { BriefIndex } from "./briefs.ts";
 import { GuestHouse } from "./guests.ts";
 import { AskDesk } from "./ask.ts";
+import { startTelegram } from "./telegram.ts";
 import { canyonStats, leaderboard } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
@@ -96,6 +97,14 @@ const guests =
       })
     : undefined;
 
+// The beaver answers anyone's question about a token, on the canyon where it lives.
+const northUrl = config.peers.find((p) => p.id === "north.zoo")?.url;
+const asks = config.role === "canyon" ? new AskDesk({ enclosure, model, northUrl, perDay: Number(process.env.ZOO_ASK_PER_DAY ?? 500) }) : undefined;
+const stopTelegram =
+  asks && process.env.TELEGRAM_BOT_TOKEN
+    ? startTelegram({ token: process.env.TELEGRAM_BOT_TOKEN, desk: asks, store: enclosure.store, northUrl, log: (m) => console.log(`[${config.id}] ${m}`) })
+    : null;
+
 const server = createNodeServer({
   enclosure,
   adminToken: config.adminToken,
@@ -104,7 +113,7 @@ const server = createNodeServer({
   passports: await PassportIndex.build(enclosure),
   briefs: await BriefIndex.build(enclosure),
   guests,
-  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), asks: new AskDesk({ enclosure, model, northUrl: config.peers.find((p) => p.id === "north.zoo")?.url, perDay: Number(process.env.ZOO_ASK_PER_DAY ?? 500) }), evolution: { briefAt: config.briefAt } } : {}),
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   visitor: {
     agents: visitorAgents,
@@ -131,6 +140,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     enclosure.stop();
     stopStream?.();
+    stopTelegram?.();
     server.close(() => {
       db.close();
       process.exit(0);
