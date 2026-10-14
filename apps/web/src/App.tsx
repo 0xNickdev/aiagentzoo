@@ -8,6 +8,7 @@ import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
 import BeaverRecord from "./components/BeaverRecord";
+import AgentOfWeek from "./components/AgentOfWeek";
 import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
@@ -107,6 +108,7 @@ function LivePage() {
 function AgentsPage() {
   return (
     <>
+      <AgentOfWeek />
       <Leaderboard />
       <BeaverRecord />
       <Guests />
