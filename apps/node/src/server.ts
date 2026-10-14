@@ -5,6 +5,8 @@ import { Cooldown, type GuardianSession, verifyGuardian } from "./guardian.ts";
 import type { PassportIndex } from "./passport.ts";
 import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
+import { badgeSvg } from "./badge.ts";
+import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
 import { tape } from "./chain/pump.ts";
@@ -106,6 +108,15 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
       if (req.method === "GET" && path === "/v1/agents") return json(res, 200, enclosure.snapshot());
 
+      const badge = /^\/v1\/badge\/([A-Za-z0-9_.-]{1,64})\.svg$/.exec(path);
+      if (req.method === "GET" && badge) {
+        if (!board) return json(res, 404, { error: "no leaderboard on this node" });
+        const b = (await board()) as { minGraded: number; rows: BoardRow[] };
+        const key = badge[1]!.toLowerCase();
+        const row = b.rows.find((r) => [r.id, r.id.replace(/^(guest|nursery):/, ""), r.name].some((k) => k.toLowerCase() === key)) ?? null;
+        res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=300" });
+        return res.end(badgeSvg(row, row?.name ?? badge[1]!, b.minGraded));
+      }
       if (req.method === "GET" && path === "/v1/leaderboard") {
         return board ? json(res, 200, await board()) : json(res, 404, { error: "no leaderboard on this node" });
       }

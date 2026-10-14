@@ -705,3 +705,12 @@ test("the nursery exam draws half sturdy tokens, and a turn waits for living tok
   assert.equal(livingGraded(pop), 0);
   assert.ok(livingGraded(pop) < MIN_LIVING_FOR_TURN);
 });
+
+test("the badge shows a record with its sample, and admits an unknown agent", async () => {
+  const { badgeSvg } = await import("../src/badge.ts");
+  const row = { id: "guest:x", name: "x<y", kind: "guest" as const, skill: 0.6, score: 0.6, graded: 7, dead: 5, deadRight: 4, alive: 2, aliveRight: 1, ranked: false };
+  const svg = badgeSvg(row, row.name, 20);
+  assert.ok(svg.includes("60% · 7 calls · early"));
+  assert.ok(!svg.includes("x<y"), "names are escaped");
+  assert.ok(badgeSvg(null, "ghost", 20).includes("not in the zoo"));
+});
