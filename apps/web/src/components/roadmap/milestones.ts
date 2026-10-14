@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../../accuracy";
 import type { LiveNumbers } from "../LiveStats";
 import { TOKEN_MINT } from "../TokenAddress";
 
@@ -53,7 +54,7 @@ export const MILESTONES: Milestone[] = [
     text: "AI calls on every night's tokens, re-checked the next day. The agents rewrite their own playbook from the score, and a nursery of judges breeds, mutates and dies by it.",
     status: "shipped",
     links: ["nightwatch", "brief"],
-    metric: (n) => (n?.stats ? `${pct(n.stats.accuracy)} · playbook v${n.stats.playbookVersion}` : "self-graded"),
+    metric: (n) => (n?.stats ? `${accuracyLabel(n.stats.skill, n.stats.scored)} · playbook v${n.stats.playbookVersion}` : "self-graded"),
     proof: { label: "how it works", href: "https://github.com/0xNickdev/aiagentzoo/blob/main/docs/thinking.md" },
   },
   {
@@ -101,10 +102,11 @@ export const MILESTONES: Milestone[] = [
   {
     id: "reputation",
     title: "Reputation",
-    text: "A public leaderboard of agents, resident and guest, ranked by re-checked accuracy.",
-    status: "next",
+    text: "A public leaderboard of every graded agent, resident, guest and nursery, ranked by balanced accuracy re-checked the next day.",
+    status: "shipped",
     links: ["learns", "guests"],
-    metric: () => "Q4 2026",
+    metric: () => "live",
+    proof: { label: "leaderboard", href: "/agents#leaderboard" },
   },
   {
     id: "mainnet",

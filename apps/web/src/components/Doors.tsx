@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../accuracy";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,6 +10,7 @@ interface Numbers {
   tokensTonight: number | null;
   callsTonight: number | null;
   accuracy: number | null;
+  scored: number;
   turn: number | null;
   alive: number | null;
   fallen: number | null;
@@ -45,6 +47,7 @@ function useDoorNumbers(): Numbers | null {
         tokensTonight: stats?.tokensTonight ?? null,
         callsTonight: stats?.callsTonight ?? null,
         accuracy: stats?.skill ?? null,
+        scored: stats?.scored ?? 0,
         turn: evo?.generation ?? null,
         alive: evo ? creatures.filter((c) => !c.diedNight).length : null,
         fallen: evo ? creatures.filter((c) => c.diedNight).length : null,
@@ -100,7 +103,7 @@ export default function Doors() {
       focus: "50% 64%",
       stats: [
         ["calls made tonight", fmt(n?.callsTonight)],
-        ["balanced accuracy", n?.accuracy === null || n?.accuracy === undefined ? "-" : `${Math.round(n.accuracy * 100)}%`],
+        ["balanced accuracy", accuracyLabel(n?.accuracy, n?.scored ?? 0)],
       ],
       cta: "Read today's brief",
     },

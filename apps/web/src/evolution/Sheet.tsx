@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../accuracy";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -116,8 +117,8 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
 
                 <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] text-white/40">
                   {[
-                    ["lifetime", pct(c.lifetimeSkill)],
-                    ["since last turn", pct(c.skill)],
+                    ["lifetime", accuracyLabel(c.lifetimeSkill, c.lifetime.hits + c.lifetime.misses)],
+                    ["since last turn", accuracyLabel(c.skill, c.window.hits + c.window.misses)],
                     ["dead · living called", `${c.lifetime.deadRight}/${c.lifetime.dead} · ${c.lifetime.aliveRight}/${c.lifetime.alive}`],
                   ].map(([k, v]) => (
                     <div key={k} className="bg-[#070908] px-4 py-3">

@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../accuracy";
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import NightCard, { type NightCardData } from "./NightCard";
@@ -454,6 +455,7 @@ export default function Brief() {
       highlight: tell ? clean(`$${tell.symbol}: ${(tell.reasons ?? []).join(", ")}.`) : null,
       nursery,
       skill: sec.learned?.score?.skill ?? null,
+      scored: sec.learned?.score ? sec.learned.score.hits + sec.learned.score.misses : 0,
     });
   };
   const s = brief?.sections;
@@ -466,7 +468,7 @@ export default function Brief() {
         ["GRADUATED", String(s.graduated.length)],
         ["WENT TO ZERO", String(s.wentToZero.length)],
         ["FLAGGED", String(s.suspicious.length)],
-        ["BALANCED ACCURACY", s.learned?.score?.skill !== undefined && s.learned?.score?.skill !== null ? `${Math.round(s.learned.score.skill * 100)}%` : "-"],
+        ["BALANCED ACCURACY", accuracyLabel(s.learned?.score?.skill, scored)],
       ]
     : [];
 

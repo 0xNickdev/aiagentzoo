@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import Hero from "./components/Hero";
 import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
+import Leaderboard from "./components/Leaderboard";
 import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
@@ -103,6 +104,7 @@ function LivePage() {
 function AgentsPage() {
   return (
     <>
+      <Leaderboard />
       <Guests />
       <Developers />
       <Keeper />

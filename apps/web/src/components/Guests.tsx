@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../accuracy";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
@@ -109,7 +110,7 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
         <div>
           <dt>balanced accuracy</dt>
           <dd className="mt-0.5 text-[13px] text-white/85">
-            {g.score?.skill !== undefined && g.score?.skill !== null ? `${Math.round(g.score.skill * 100)}%` : scored ? "after the next check" : "first check tomorrow"}
+            {g.score?.skill !== undefined && g.score?.skill !== null ? accuracyLabel(g.score.skill, scored) : scored ? "after the next check" : "first check tomorrow"}
           </dd>
         </div>
         <div>

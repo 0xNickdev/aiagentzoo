@@ -1,3 +1,4 @@
+import { accuracyLabel } from "../accuracy";
 import { motion } from "framer-motion";
 import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -14,6 +15,8 @@ export interface NightCardData {
   /** What happened in the nursery that night, if anything. */
   nursery: string | null;
   skill: number | null;
+  /** Calls the accuracy rests on. */
+  scored: number;
 }
 
 const W = 1200;
@@ -141,7 +144,7 @@ export async function drawNightCard(canvas: HTMLCanvasElement, d: NightCardData)
 
   ctx.font = mono(14);
   ctx.fillStyle = "rgba(255,255,255,0.45)";
-  const foot = `${d.skill === null ? "" : `balanced accuracy ${Math.round(d.skill * 100)}% · `}signed on the public log · zooaiagency.com`;
+  const foot = `${d.skill === null ? "" : `balanced accuracy ${accuracyLabel(d.skill, d.scored)} · `}signed on the public log · zooaiagency.com`;
   ctx.fillText(foot, L, H - 54);
 }
 

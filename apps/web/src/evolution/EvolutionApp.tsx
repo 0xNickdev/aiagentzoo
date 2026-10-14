@@ -408,7 +408,8 @@ function Waiting({ state }: { state: "loading" | "empty" | "offline" }) {
 
 export default function EvolutionApp() {
   const { data, state } = useNursery();
-  const [open, setOpen] = useState<string | null>(null);
+  // A link like /evolution#c9 (the leaderboard uses it) opens that creature.
+  const [open, setOpen] = useState<string | null>(() => (/^#c\d{1,6}$/.test(location.hash) ? location.hash.slice(1) : null));
   const close = useCallback(() => setOpen(null), []);
   return (
     <div className="min-h-screen">
