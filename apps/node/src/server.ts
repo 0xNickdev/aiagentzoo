@@ -7,6 +7,7 @@ import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
+import { setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
@@ -258,6 +259,17 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
+      if (req.method === "POST" && path === "/v1/tg/watch") {
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (!token || !asks) return json(res, 404, { error: "no telegram bot on this node" });
+        const body = (await readJson(req).catch(() => null)) as { initData?: string; mint?: string } | null;
+        const user = verifyInitData(String(body?.initData ?? ""), token);
+        if (user === null) return json(res, 401, { error: "open this from the Telegram bot" });
+        if (typeof body?.mint !== "string" || !SOLANA_ADDRESS.test(body.mint)) return json(res, 400, { error: "not a Solana token address" });
+        // In a private chat with the bot the chat id is the user id, so alerts land there.
+        const result = await setWatch(enclosure.store, user, body.mint, true);
+        return result.ok ? json(res, 200, { ok: true }) : json(res, 409, { error: result.reason });
       }
       if (req.method === "POST" && path === "/v1/ask") {
         if (!asks) return json(res, 404, { error: "the beaver is not on this node" });

@@ -855,3 +855,21 @@ test("the telegram bot welcomes with a picture and a menu, answers a pasted addr
   assert.ok(sent.some((c) => c.method === "sendMessage" && String(c.body.text).includes("$WRAP")));
   assert.deepEqual(state.get("tg:watchers"), { So11111111111111111111111111111111111111112: [7] });
 });
+
+test("mini app initData is trusted only with Telegram's signature and only for a day", async () => {
+  const { verifyInitData } = await import("../src/telegram.ts");
+  const { createHmac } = await import("node:crypto");
+  const token = "123:ABC";
+  const now = 1_800_000_000_000;
+  const sign = (fields: Record<string, string>) => {
+    const check = Object.entries(fields).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join("\n");
+    const secret = createHmac("sha256", "WebAppData").update(token).digest();
+    const hash = createHmac("sha256", secret).update(check).digest("hex");
+    return new URLSearchParams({ ...fields, hash }).toString();
+  };
+  const fields = { auth_date: String(now / 1000), user: JSON.stringify({ id: 42, first_name: "Ann" }), query_id: "q" };
+  assert.equal(verifyInitData(sign(fields), token, now), 42);
+  assert.equal(verifyInitData(sign(fields), "999:other", now), null, "another bot's token");
+  assert.equal(verifyInitData(sign(fields).replace("42", "43"), token, now), null, "tampered user");
+  assert.equal(verifyInitData(sign(fields), token, now + 25 * 3_600_000), null, "too old");
+});
