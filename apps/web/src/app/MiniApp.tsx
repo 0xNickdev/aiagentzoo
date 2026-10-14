@@ -246,6 +246,11 @@ function Verdict({ a }: { a: Ask }) {
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) facts.push(["Dev sold", pct(c.creatorSold), c.creatorSold >= 0.5]);
   if (r) facts.push(["Dev rugged (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   else if (c) facts.push(["Dev launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
+  const h = a.facts.holders;
+  if (h) {
+    facts.push(["Top 10 wallets", pct(h.top10Share), h.top10Share >= 0.5]);
+    if (h.creatorShare !== null) facts.push(["Dev holds", pct(h.creatorShare), h.creatorShare >= 0.1]);
+  }
   const b = a.facts.bundle;
   if (b) facts.push([b.linked >= 2 ? `Bundle · ${b.linked} same funder` : "Bundle at launch", `${b.wallets} · ${pct(b.share)}`, b.wallets >= 3 || b.linked >= 2]);
   else if (c?.top5Share !== null && c?.top5Share !== undefined) facts.push(["Top 5 buyers", pct(c.top5Share), c.top5Share >= 0.6]);

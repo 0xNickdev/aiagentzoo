@@ -35,6 +35,7 @@ export interface Ask {
     chain: { creatorSold: number | null; creatorLaunches24h: number; top5Share: number | null; buyers: number; repeatBuyers: number; ageMin: number } | null;
     creator?: CreatorRecord | null;
     bundle?: { wallets: number; share: number; linked: number; funder: string | null } | null;
+    holders?: { top10Share: number; topShare: number; programShare: number; creator: string | null; creatorShare: number | null } | null;
     url: string | null;
   };
   graded?: { outcome: "dead" | "alive" | "unknown"; hit: boolean | null };

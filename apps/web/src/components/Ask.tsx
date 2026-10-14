@@ -59,6 +59,7 @@ interface Ask {
     chain: Chain | null;
     creator?: CreatorRecord | null;
     bundle?: { wallets: number; share: number; linked: number; funder: string | null } | null;
+    holders?: { top10Share: number; topShare: number; programShare: number; creator: string | null; creatorShare: number | null } | null;
     flags: string[];
     url: string | null;
   };
@@ -93,6 +94,11 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
   const r = a.facts.creator;
   if (r) out.push(["creator dumped (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   if (c) out.push(["creator's launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
+  const h = a.facts.holders;
+  if (h) {
+    out.push(["top 10 wallets hold", pctOf(h.top10Share), h.top10Share >= 0.5]);
+    if (h.creatorShare !== null) out.push(["dev still holds", pctOf(h.creatorShare), h.creatorShare >= 0.1]);
+  }
   const b = a.facts.bundle;
   if (b) out.push(["bundle at launch", `${b.wallets} wallets · ${pctOf(b.share)}${b.linked >= 2 ? ` · ${b.linked} same funder` : ""}`, b.wallets >= 3 || b.linked >= 2]);
   else if (c?.top5Share !== null && c?.top5Share !== undefined) out.push(["top 5 buyers' share", pctOf(c.top5Share), c.top5Share >= 0.6]);
