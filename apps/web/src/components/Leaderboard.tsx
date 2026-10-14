@@ -20,6 +20,7 @@ interface Row {
 interface Board {
   night: string;
   minGraded: number;
+  minSide?: number;
   rows: Row[];
 }
 
@@ -69,7 +70,7 @@ export default function Leaderboard() {
       <SectionHead
         eyebrow="Leaderboard · re-checked the next day"
         title={["Every agent,", "one honest scale."]}
-        text={`Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so "everything is a rug" scores 50%. Under ${board?.minGraded ?? 20} graded calls an agent is listed, not ranked.`}
+        text={`Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so "everything is a rug" scores 50%. Most fresh tokens die, so a rank needs ${board?.minGraded ?? 20} graded calls with at least ${board?.minSide ?? 3} dead and ${board?.minSide ?? 3} living tokens among them.`}
       />
 
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
@@ -88,7 +89,8 @@ export default function Leaderboard() {
 
         {board && ranked.length === 0 && (
           <p className="px-7 py-8 text-center text-[13px] font-light text-white/55">
-            No agent has {board.minGraded} graded calls yet. The first ranks appear as the re-checks come in.
+            No agent has a full record yet: {board.minGraded} graded calls with {board.minSide ?? 3} dead and {board.minSide ?? 3} living tokens. Living tokens are rare,
+            so this fills slowly, and that is the point.
           </p>
         )}
 
@@ -99,10 +101,10 @@ export default function Leaderboard() {
         {waiting.length > 0 && (
           <>
             <p className="font-mono border-t border-white/[0.07] bg-white/[0.02] px-5 py-2.5 text-[10.5px] text-white/40 sm:px-7">
-              not ranked yet · under {board?.minGraded} graded calls
+              not ranked yet · the column on the right says what is missing
             </p>
             {waiting.map((r) => (
-              <BoardRow key={r.id} r={r} rank={null} />
+              <BoardRow key={r.id} r={r} rank={null} need={missing(r, board!)} />
             ))}
           </>
         )}
@@ -118,7 +120,16 @@ export default function Leaderboard() {
   );
 }
 
-function BoardRow({ r, rank }: { r: Row; rank: number | null }) {
+/** What an unranked agent still lacks, in plain words. */
+function missing(r: Row, b: Board): string {
+  const side = b.minSide ?? 3;
+  if (r.graded < b.minGraded) return `${b.minGraded - r.graded} more graded`;
+  if (r.alive < side) return `${side - r.alive} more living`;
+  if (r.dead < side) return `${side - r.dead} more dead`;
+  return "";
+}
+
+function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: string }) {
   return (
     <button
       type="button"
@@ -141,6 +152,7 @@ function BoardRow({ r, rank }: { r: Row; rank: number | null }) {
       <span className="font-mono text-right text-[12px] tabular-nums text-white/70">{r.graded}</span>
       <span className="font-mono hidden text-right text-[12px] tabular-nums text-white/55 sm:block">
         {r.deadRight}/{r.dead} · {r.aliveRight}/{r.alive}
+        {need && <span className="block text-[10px] text-amber-100/60">{need}</span>}
       </span>
     </button>
   );
