@@ -15,6 +15,14 @@ export const NAV_LINKS = [
   { label: "Docs", href: DOCS_URL },
 ];
 
+/** The tools a visitor uses, grouped under one menu on wide screens so the bar stays calm. */
+const TOOLS = [
+  { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
+  { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
+  { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
+];
+const TOOL_HREFS = new Set(TOOLS.map((t) => t.href));
+
 /** The site header: over the hero video on the home page, a sticky bar everywhere else. */
 /** `active` marks the current page on documents outside the app router (/docs, /evolution). */
 export default function SiteNav({ overlay = false, active }: { overlay?: boolean; active?: string }) {
@@ -30,7 +38,22 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
           <span className="font-mono mt-0.5 text-[10.5px] tracking-[0.22em] text-white/50">AGENCY</span>
         </a>
         <div className="hidden items-center gap-8 lg:flex">
-          {NAV_LINKS.map((link) => (
+          <div className="group relative">
+            <button type="button" className={`flex items-center gap-1 text-[13.5px] transition-colors duration-300 hover:text-white ${TOOL_HREFS.has(route) ? "text-white" : "text-white/65"}`}>
+              Tools <span className="text-[10px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
+            </button>
+            <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+              <div className="liquid-glass rounded-2xl bg-[#070908]/90 p-2 shadow-2xl backdrop-blur-xl">
+                {TOOLS.map((t) => (
+                  <a key={t.href} href={t.href} className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === t.href ? "bg-white/[0.06]" : ""}`}>
+                    <span className="block text-[13.5px] text-white">{t.label}</span>
+                    <span className="font-mono block text-[10.5px] text-white/45">{t.note}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+          {NAV_LINKS.filter((l) => !TOOL_HREFS.has(l.href)).map((link) => (
             <a
               key={link.label}
               href={link.href}

@@ -32,7 +32,12 @@ export default function WallOfRugs() {
   }, []);
 
   return (
-    <Section backdrop={{ src: "/backdrops/watch.webp", tint: "160,70,60", glowAt: "50% 20%", opacity: 0.3 }}>
+    <Section className="!pt-0 overflow-x-clip" backdrop={{ tint: "200,60,50", glowAt: "50% 10%", opacity: 0.4 }}>
+      {/* The wall itself, as a banner: a backdrop would stretch it past the red plaques on a page this tall. */}
+      <div className="relative left-1/2 mb-2 h-[52vh] min-h-[300px] w-screen -translate-x-1/2 overflow-hidden">
+        <img src="/backdrops/rugs.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[50%_42%]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.35)_0%,rgba(3,5,4,0)_30%,rgba(3,5,4,0.2)_70%,#030504_100%)]" />
+      </div>
       <SectionHead
         eyebrow="Wall of rugs · last 48 hours · read from Solana"
         title={["The devs who dump", "their own tokens."]}

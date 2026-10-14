@@ -84,7 +84,7 @@ export default function Play() {
 
   return (
     <>
-      <Section className="!pb-8" backdrop={{ src: "/backdrops/cycle.webp", tint: "200,170,110", glowAt: "50% 30%", opacity: 0.35 }}>
+      <Section className="!pb-8" backdrop={{ src: "/backdrops/play.jpg", tint: "120,160,200", glowAt: "50% 40%", opacity: 0.6 }}>
         <SectionHead
           eyebrow="Humans vs the beaver · every night · holders only"
           title={["Can you beat", "an AI that evolves?"]}
@@ -126,7 +126,7 @@ export default function Play() {
                     {t.graduated && <span className="font-mono text-[10px] text-[#9df3b0]">graduated</span>}
                   </div>
                   <dl className="font-mono mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-                    <Fact k="liquidity" v={usd(t.market?.liq)} />
+                    <Fact k="liquidity" v={t.market?.liq === null || t.market?.liq === undefined ? (t.graduated ? "-" : "on curve") : usd(t.market.liq)} />
                     <Fact k="24h" v={t.market?.change24h === null || t.market?.change24h === undefined ? "-" : `${Math.round(t.market.change24h)}%`} />
                     <Fact k="buys/sells" v={t.market ? `${t.market.buys24h}/${t.market.sells24h}` : "-"} />
                     <Fact k="socials" v={t.hasSocials === null || t.hasSocials === undefined ? "?" : t.hasSocials ? "yes" : "none"} />
