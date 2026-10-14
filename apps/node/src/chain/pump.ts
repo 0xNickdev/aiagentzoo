@@ -193,6 +193,35 @@ interface Tracked {
   graduated: boolean;
   /** The creator has sold half of what they bought; announced once. */
   dumped: boolean;
+  /** When that happened. */
+  dumpedAt: number | null;
+}
+
+/** What the tape knows about one creator wallet over the last two days. */
+export interface CreatorRecord {
+  wallet: string;
+  launches24h: number;
+  launches48h: number;
+  /** Of those, how many the creator sold half or more of their own bag in. */
+  dumped: number;
+  /** Median minutes from launch to that sale. */
+  medianDumpMin: number | null;
+  graduated: number;
+  recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }>;
+}
+
+/** A fresh token that passed the basic checks the tape can make; not a judgement of its worth. */
+export interface CleanLaunch {
+  mint: string;
+  symbol: string;
+  name: string;
+  ageMin: number;
+  buyers: number;
+  repeatBuyers: number;
+  top5Share: number | null;
+  creatorSold: number | null;
+  curveSol: number | null;
+  graduated: boolean;
 }
 
 /** A moment on the tape worth showing as it happens: the live map flashes on these. */
@@ -236,6 +265,8 @@ export class PumpTape {
   seen = { launches: 0, trades: 0 };
   private pulse: PulseEvent[] = [];
   private pulseSeq = 0;
+  /** Mints each creator launched, newest last, for as long as the tokens are kept. */
+  private readonly byCreator = new Map<string, string[]>();
   /** Every loud moment (not plain launches) of the last two days, oldest first. */
   private moments: PulseEvent[] = [];
   /** Per-second counts over the last minute, a ring indexed by second. */
@@ -340,7 +371,11 @@ export class PumpTape {
         devSold: 0,
         graduated: false,
         dumped: false,
+        dumpedAt: null,
       });
+      const mine = this.byCreator.get(ev.creator) ?? [];
+      mine.push(ev.mint);
+      this.byCreator.set(ev.creator, mine);
       const times = (this.launchesBy.get(ev.creator) ?? []).filter((t) => now - t < DAY_MS);
       times.push(createdAt);
       this.launchesBy.set(ev.creator, times);
@@ -381,6 +416,7 @@ export class PumpTape {
         t.devSold += ev.tokens;
         if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
           t.dumped = true;
+          t.dumpedAt = ev.ts;
           const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
           const min = Math.max(0, Math.round((ev.ts - t.createdAt) / 60_000));
           this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
@@ -392,6 +428,11 @@ export class PumpTape {
 
   prune(now = Date.now()): void {
     for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS) this.tokens.delete(mint);
+    for (const [creator, mints] of this.byCreator) {
+      const kept = mints.filter((m) => this.tokens.has(m));
+      if (kept.length) this.byCreator.set(creator, kept);
+      else this.byCreator.delete(creator);
+    }
     for (const [creator, times] of this.launchesBy) {
       const kept = times.filter((x) => now - x < DAY_MS);
       if (kept.length) this.launchesBy.set(creator, kept);
@@ -430,11 +471,60 @@ export class PumpTape {
     };
   }
 
+  /** A creator wallet's last two days: how often it launches, how often it dumps, and how fast. */
+  creator(wallet: string, now = Date.now()): CreatorRecord | null {
+    const tokens = (this.byCreator.get(wallet) ?? []).map((m) => this.tokens.get(m)).filter((t): t is Tracked => Boolean(t));
+    if (!tokens.length) return null;
+    const minutes = tokens.filter((t) => t.dumpedAt !== null).map((t) => Math.max(0, Math.round((t.dumpedAt! - t.createdAt) / 60_000))).sort((a, b) => a - b);
+    return {
+      wallet,
+      launches24h: tokens.filter((t) => now - t.createdAt < DAY_MS).length,
+      launches48h: tokens.length,
+      dumped: minutes.length,
+      medianDumpMin: minutes.length ? minutes[Math.floor(minutes.length / 2)]! : null,
+      graduated: tokens.filter((t) => t.graduated).length,
+      recent: tokens
+        .slice(-12)
+        .reverse()
+        .map((t) => ({
+          mint: t.mint,
+          symbol: t.symbol,
+          createdAt: t.createdAt,
+          dumpedAfterMin: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000)),
+          graduated: t.graduated,
+        })),
+    };
+  }
+
+  /**
+   * Fresh launches that pass the checks the tape can make: the creator has not sold, the wallet is not a serial
+   * launcher, the buying is spread across many wallets and some came back for more. It says nothing about whether
+   * a token is worth anything, only that the usual rug signs are absent so far.
+   */
+  clean(limit = 20, now = Date.now()): CleanLaunch[] {
+    const out: CleanLaunch[] = [];
+    for (const mint of this.recent) {
+      if (out.length >= limit) break;
+      const t = this.tokens.get(mint);
+      if (!t) continue;
+      const age = (now - t.createdAt) / 60_000;
+      if (age < 10 || age > 180) continue;
+      const f = this.facts(mint, now)!;
+      if (f.creatorSold !== null && f.creatorSold > 0.1) continue;
+      if (f.creatorLaunches24h > 2) continue;
+      if (f.buyers < 25 || f.repeatBuyers < 3) continue;
+      if (f.top5Share === null || f.top5Share > 0.5) continue;
+      if (f.buys <= f.sells) continue;
+      out.push({ mint, symbol: t.symbol.slice(0, 16), name: t.name.slice(0, 40), ageMin: Math.round(age), buyers: f.buyers, repeatBuyers: f.repeatBuyers, top5Share: f.top5Share, creatorSold: f.creatorSold, curveSol: f.curveSol, graduated: f.graduated });
+    }
+    return out;
+  }
+
   /** One token as the tape knows it, for questions about a single mint. */
   token(mint: string, now = Date.now()) {
     const t = this.tokens.get(mint);
     if (!t) return null;
-    return { mint, symbol: t.symbol, name: t.name, creator: t.creator, createdAt: t.createdAt, facts: this.facts(mint, now)! };
+    return { mint, symbol: t.symbol, name: t.name, creator: t.creator, createdAt: t.createdAt, facts: this.facts(mint, now)!, creatorRecord: this.creator(t.creator, now) };
   }
 
   /** The newest launches, as the sentinels expect them, each with its chain facts attached. */

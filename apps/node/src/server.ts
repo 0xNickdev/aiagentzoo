@@ -247,6 +247,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const found = tape.token(chainToken[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
       }
+      const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && creatorOf) {
+        const found = tape.creator(creatorOf[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
+      }
+      if (req.method === "GET" && path === "/v1/chain/clean") {
+        return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
       if (req.method === "POST" && path === "/v1/ask") {
         if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
         const body = (await readJson(req).catch(() => null)) as { mint?: unknown } | null;

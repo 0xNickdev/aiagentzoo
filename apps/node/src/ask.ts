@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { createEvent, type Enclosure, type ModelProvider, renderUntrusted, signEvent, UNTRUSTED_NOTICE } from "@aiagentzoo/sdk";
-import type { ChainFacts } from "./chain/pump.ts";
+import type { ChainFacts, CreatorRecord } from "./chain/pump.ts";
 import {
   compact,
   DEFAULT_PLAYBOOK,
@@ -34,6 +34,8 @@ export interface AskFacts {
   hasSocials: boolean | null;
   market: Observation["market"];
   chain: ChainFacts | null;
+  /** The creator wallet's last two days on pump.fun, when the stream saw this token launch. */
+  creator: CreatorRecord | null;
   flags: string[];
   url: string | null;
 }
@@ -144,7 +146,9 @@ export class AskDesk {
 
   private async chain(mint: string) {
     if (!this.opts.northUrl) return null;
-    return this.json<{ symbol: string; name: string; creator: string; createdAt: number; facts: ChainFacts }>(`${this.opts.northUrl}/v1/chain/token/${mint}`);
+    return this.json<{ symbol: string; name: string; creator: string; createdAt: number; facts: ChainFacts; creatorRecord?: CreatorRecord | null }>(
+      `${this.opts.northUrl}/v1/chain/token/${mint}`,
+    );
   }
 
   private allowed(ip: string, now: number): boolean {
@@ -194,13 +198,14 @@ export class AskDesk {
     };
 
     const playbook = (await this.store.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
+    const record = c?.creatorRecord ?? null;
     let call = null as ReturnType<typeof parseCalls>[number] | null;
     if (this.opts.model) {
       try {
         // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
         const result = await this.opts.model.think({
           system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
-          prompt: `Judge this 1 token. Answer with a JSON array holding one object.\n\n${renderUntrusted([compact(obs)])}`,
+          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? " creatorRecord is the creator wallet's last two days on pump.fun: launches, how many it dumped, the median minutes to the dump." : ""}\n\n${renderUntrusted([{ ...compact(obs), ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}) }])}`,
           maxTokens: 900,
         });
         call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;
@@ -211,6 +216,9 @@ export class AskDesk {
       }
     }
     const flags = ruleFlags(obs);
+    if (record && record.launches48h >= 3 && record.dumped >= Math.ceil(record.launches48h / 2)) {
+      flags.push(`creator dumped ${record.dumped} of ${record.launches48h} launches in 48h`);
+    }
     if (!call) {
       call = { mint, symbol: obs.symbol, verdict: flags.length >= 2 ? "suspicious" : "watch", confidence: 0.5, why: flags.join(", ") || "not enough evidence either way", by: "rules", at: now };
     }
@@ -226,7 +234,7 @@ export class AskDesk {
       why: call.why,
       by: call.by,
       playbookVersion: playbook.version,
-      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, flags, url: m?.url ?? null },
+      facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, flags, url: m?.url ?? null },
       already: outcomeOf(obs) === "dead",
     };
     await this.store.set(`ask:${ask.id}`, ask);

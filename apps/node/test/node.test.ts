@@ -767,3 +767,33 @@ test("ask the beaver: a verdict from the market, reused for a while, rate-limite
   const board = await desk.recent(10, now + 25 * 3_600_000);
   assert.equal(board.record.deadRight >= 1, true);
 });
+
+test("the tape keeps each creator's record and lists fresh launches that pass the basic checks", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const now = 1_800_000_000_000;
+  const DEV = "DevWa11et1111111111111111111111111111111111";
+  // A serial dumper: three launches, sells two of them inside a few minutes.
+  for (let i = 0; i < 3; i++) {
+    const mint = `Mint${i}${"1".repeat(39)}`;
+    tape.apply({ kind: "create", name: `t${i}`, symbol: `T${i}`, mint, creator: DEV, ts: now }, now);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1000, isBuy: true, user: DEV, ts: now, curveSol: 1 }, now);
+    if (i < 2) tape.apply({ kind: "trade", mint, sol: 1, tokens: 1000, isBuy: false, user: DEV, ts: now + (i + 1) * 60_000, curveSol: 1 }, now);
+  }
+  const rec = tape.creator(DEV, now)!;
+  assert.equal(rec.launches24h, 3);
+  assert.equal(rec.dumped, 2);
+  assert.equal(rec.medianDumpMin, 2);
+  assert.equal(tape.creator("nobody", now), null);
+
+  // A clean launch: 30 wallets buying, a few coming back, the creator holding, 20 minutes old.
+  const CLEAN = `Clean${"1".repeat(38)}`;
+  tape.apply({ kind: "create", name: "clean", symbol: "OK", mint: CLEAN, creator: "Other1111111111111111111111111111111111111", ts: now }, now);
+  for (let b = 0; b < 30; b++) {
+    const user = `Buyer${String(b).padStart(2, "0")}${"1".repeat(36)}`;
+    tape.apply({ kind: "trade", mint: CLEAN, sol: 0.5, tokens: 10, isBuy: true, user, ts: now + 60_000, curveSol: 15 }, now);
+    if (b < 4) tape.apply({ kind: "trade", mint: CLEAN, sol: 0.5, tokens: 10, isBuy: true, user, ts: now + 120_000, curveSol: 17 }, now);
+  }
+  const clean = tape.clean(10, now + 20 * 60_000);
+  assert.deepEqual(clean.map((c) => c.symbol), ["OK"], "the serial dumper's tokens never make the list");
+});
