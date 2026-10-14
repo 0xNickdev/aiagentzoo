@@ -78,6 +78,8 @@ export interface AskOptions {
   /** The node that streams pump.fun, for chain facts. */
   northUrl?: string;
   perIpPerHour?: number;
+  /** For a signed-in wallet holding $ZOOAGENCY. */
+  perHolderPerHour?: number;
   perDay?: number;
   fetchFn?: typeof fetch;
 }
@@ -95,6 +97,7 @@ export class AskDesk {
   private readonly perIp = new Map<string, number[]>();
   private readonly fetchFn: typeof fetch;
   private readonly perIpPerHour: number;
+  private readonly perHolderPerHour: number;
   private readonly perDay: number;
 
   private readonly opts: AskOptions;
@@ -103,6 +106,7 @@ export class AskDesk {
     this.opts = opts;
     this.fetchFn = opts.fetchFn ?? fetch;
     this.perIpPerHour = opts.perIpPerHour ?? 6;
+    this.perHolderPerHour = opts.perHolderPerHour ?? 30;
     this.perDay = opts.perDay ?? 500;
   }
 
@@ -151,11 +155,11 @@ export class AskDesk {
     );
   }
 
-  private allowed(ip: string, now: number): boolean {
-    const recent = (this.perIp.get(ip) ?? []).filter((t) => now - t < 3_600_000);
-    this.perIp.set(ip, recent);
+  private allowed(key: string, limit: number, now: number): boolean {
+    const recent = (this.perIp.get(key) ?? []).filter((t) => now - t < 3_600_000);
+    this.perIp.set(key, recent);
     if (this.perIp.size > 20_000) for (const [k, v] of this.perIp) if (!v.some((t) => now - t < 3_600_000)) this.perIp.delete(k);
-    return recent.length < this.perIpPerHour;
+    return recent.length < limit;
   }
 
   private async log(type: string, payload: unknown): Promise<void> {
@@ -163,7 +167,11 @@ export class AskDesk {
     await enclosure.log.append(signEvent(createEvent({ kind: "system", type, from: { node: enclosure.node.id, agent: "beaver" }, payload }), enclosure.node.identity));
   }
 
-  async ask(mintRaw: unknown, ip: string, now = Date.now()): Promise<AskResult> {
+  /** `who` is the caller's IP, or `holder:<wallet>` for a signed-in holder, who gets a larger allowance. */
+  async ask(mintRaw: unknown, who: string, now = Date.now()): Promise<AskResult> {
+    const ip = who;
+    const holder = who.startsWith("holder:");
+    const limit = holder ? this.perHolderPerHour : this.perIpPerHour;
     const mint = typeof mintRaw === "string" ? mintRaw.trim() : "";
     if (!MINT.test(mint)) return { ok: false, status: 400, reason: "that is not a Solana token address" };
 
@@ -173,7 +181,15 @@ export class AskDesk {
       if (prev && now - prev.at < REUSE_MS) return { ok: true, ask: prev, reused: true };
     }
 
-    if (!this.allowed(ip, now)) return { ok: false, status: 429, reason: `the beaver answers ${this.perIpPerHour} questions an hour per visitor` };
+    if (!this.allowed(ip, limit, now)) {
+      return {
+        ok: false,
+        status: 429,
+        reason: holder
+          ? `the beaver answers ${limit} questions an hour per holder`
+          : `the beaver answers ${limit} questions an hour per visitor; holders of $ZOOAGENCY get ${this.perHolderPerHour}`,
+      };
+    }
     const dayKey = `ask:count:${dayOf(now)}`;
     const today = (await this.store.get<number>(dayKey)) ?? 0;
     if (today >= this.perDay) return { ok: false, status: 429, reason: "the beaver is done for today, back after midnight UTC" };

@@ -7,6 +7,7 @@ import type { BriefIndex } from "./briefs.ts";
 import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts";
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
+import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
@@ -28,7 +29,7 @@ export interface ServerOptions {
   /** Published Morning Briefs. */
   briefs?: BriefIndex;
   /** Guardian watchlists. Enabled on the node whose sentinel reads them. */
-  watchlist?: { perGuardian: number; maxGuardians: number };
+  watchlist?: { perGuardian: number; maxGuardians: number; perHolder?: number };
   /** Guest enclosures for outside agents. Disabled when unset. */
   guests?: GuestHouse;
   /** Live numbers for the site, served at GET /v1/stats. */
@@ -159,7 +160,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (body.action === "remove") {
           next = current.filter((m) => m !== body.mint);
         } else if (!current.includes(body.mint)) {
-          if (current.length >= watchlist.perGuardian) return json(res, 409, { error: `up to ${watchlist.perGuardian} tokens per guardian` });
+          const cap = (await isHolder(check.address)) ? Math.max(watchlist.perGuardian, watchlist.perHolder ?? 10) : watchlist.perGuardian;
+          if (current.length >= cap) {
+            return json(res, 409, { error: `up to ${cap} tokens per guardian${cap === watchlist.perGuardian ? `; holders of $ZOOAGENCY watch ${watchlist.perHolder ?? 10}` : ""}` });
+          }
           if (current.length === 0 && (await enclosure.store.keys(WATCH_PREFIX)).length >= watchlist.maxGuardians) {
             return json(res, 409, { error: "the watch is full, try again later" });
           }
@@ -257,8 +261,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "POST" && path === "/v1/ask") {
         if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
-        const body = (await readJson(req).catch(() => null)) as { mint?: unknown } | null;
-        const result = await asks.ask(body?.mint, clientIp(req));
+        const body = (await readJson(req).catch(() => null)) as { mint?: unknown; guardian?: GuardianSession } | null;
+        // A signed-in wallet that holds $ZOOAGENCY asks on its own, larger allowance.
+        let who = clientIp(req);
+        if (body?.guardian) {
+          const check = verifyGuardian(body.guardian);
+          if (check.ok && (await isHolder(check.address))) who = `holder:${check.address}`;
+        }
+        const result = await asks.ask(body?.mint, who);
         return result.ok ? json(res, 200, { ask: result.ask, reused: result.reused }) : json(res, result.status, { error: result.reason });
       }
       const askOf = /^\/v1\/ask\/([0-9a-f]{10})$/.exec(path);
@@ -266,6 +276,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!asks) return json(res, 404, { error: "the beaver is not on this node" });
         const found = await asks.get(askOf[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "no such question" });
+      }
+      const holderOf = /^\/v1\/holder\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && holderOf) {
+        const balance = await balanceOf(holderOf[1]!);
+        return json(res, 200, { wallet: holderOf[1], balance, min: HOLDER_MIN, holder: (balance ?? 0) >= HOLDER_MIN, mint: TOKEN_MINT });
       }
       if (req.method === "GET" && path === "/v1/asks") {
         if (!asks) return json(res, 404, { error: "the beaver is not on this node" });

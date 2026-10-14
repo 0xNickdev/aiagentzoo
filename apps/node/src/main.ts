@@ -105,7 +105,7 @@ const server = createNodeServer({
   briefs: await BriefIndex.build(enclosure),
   guests,
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), asks: new AskDesk({ enclosure, model, northUrl: config.peers.find((p) => p.id === "north.zoo")?.url, perDay: Number(process.env.ZOO_ASK_PER_DAY ?? 500) }), evolution: { briefAt: config.briefAt } } : {}),
-  ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500 } } : {}),
+  ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   visitor: {
     agents: visitorAgents,
     agentCooldownMs: Number(process.env.ZOO_VISITOR_AGENT_COOLDOWN_MS ?? 60_000),
