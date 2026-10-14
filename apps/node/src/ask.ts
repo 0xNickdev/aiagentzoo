@@ -80,6 +80,13 @@ export interface AskOptions {
   fetchFn?: typeof fetch;
 }
 
+/** A lone JSON object, as a model sometimes answers for a single token, wrapped into the array the parser expects. */
+const asArray = (text: string) => {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? `[${text.slice(start, end + 1)}]` : text;
+};
+
 const dayOf = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export class AskDesk {
@@ -190,10 +197,17 @@ export class AskDesk {
     let call = null as ReturnType<typeof parseCalls>[number] | null;
     if (this.opts.model) {
       try {
-        const result = await this.opts.model.think({ system: judgeSystem(playbook), prompt: "Judge these 1 tokens.", untrusted: [compact(obs)], maxTokens: 700 });
-        call = parseCalls(result.text, [obs], now)[0] ?? null;
-      } catch {
+        const result = await this.opts.model.think({
+          system: judgeSystem(playbook),
+          prompt: "Judge this 1 token. Answer with a JSON array holding one object.",
+          untrusted: [compact(obs)],
+          maxTokens: 900,
+        });
+        call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;
+        if (!call) console.warn(`[ask] unreadable answer for ${mint}: ${result.text.slice(0, 200)}`);
+      } catch (error) {
         // The rules answer instead.
+        console.warn(`[ask] model failed for ${mint}: ${(error as Error).message.slice(0, 200)}`);
       }
     }
     const flags = ruleFlags(obs);
