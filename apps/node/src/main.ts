@@ -13,6 +13,7 @@ import { loadConfig } from "./config.ts";
 import { BriefIndex } from "./briefs.ts";
 import { GuestHouse } from "./guests.ts";
 import { AskDesk } from "./ask.ts";
+import { evolutionView } from "./agents/evolution.ts";
 import { startTelegram } from "./telegram.ts";
 import { canyonStats, leaderboard } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
@@ -99,10 +100,29 @@ const guests =
 
 // The beaver answers anyone's question about a token, on the canyon where it lives.
 const northUrl = config.peers.find((p) => p.id === "north.zoo")?.url;
+const briefs = await BriefIndex.build(enclosure);
 const asks = config.role === "canyon" ? new AskDesk({ enclosure, model, northUrl, perDay: Number(process.env.ZOO_ASK_PER_DAY ?? 500) }) : undefined;
 const stopTelegram =
   asks && process.env.TELEGRAM_BOT_TOKEN
-    ? startTelegram({ token: process.env.TELEGRAM_BOT_TOKEN, desk: asks, store: enclosure.store, northUrl, log: (m) => console.log(`[${config.id}] ${m}`) })
+    ? startTelegram({
+        token: process.env.TELEGRAM_BOT_TOKEN,
+        desk: asks,
+        store: enclosure.store,
+        northUrl,
+        log: (m) => console.log(`[${config.id}] ${m}`),
+        data: {
+          board: leaderboard(enclosure, config.briefAt) as never,
+          stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests) as never,
+          evolution: (() => evolutionView(enclosure.store, config.briefAt)) as never,
+          latestBrief: async () => {
+            const ref = briefs.list(1)[0];
+            if (!ref) return null;
+            const entry = await briefs.get(ref.id);
+            const sec = (entry?.event.payload as { content?: { sections?: { launches?: number; graduated?: unknown[]; wentToZero?: unknown[] } } } | undefined)?.content?.sections;
+            return { id: ref.id, night: ref.night, launches: sec?.launches, graduated: sec?.graduated?.length, wentToZero: sec?.wentToZero?.length };
+          },
+        },
+      })
     : null;
 
 const server = createNodeServer({
@@ -111,7 +131,7 @@ const server = createNodeServer({
   corsOrigin: config.corsOrigin,
   meta: { role: config.role, model: model?.id ?? null, visitorAgents },
   passports: await PassportIndex.build(enclosure),
-  briefs: await BriefIndex.build(enclosure),
+  briefs,
   guests,
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),

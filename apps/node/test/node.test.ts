@@ -809,7 +809,49 @@ test("telegram messages carry the verdict and evidence, and escape whatever a to
   assert.ok(text.includes("SUSPICIOUS"));
   assert.ok(text.includes("12 launches in 48h, dumped 11, median 1 min"));
   assert.ok(text.includes("&lt;b&gt;RUG&lt;/b&gt;") && text.includes("creator sold &amp; ran"));
-  assert.ok(text.includes("zooaiagency.com/ask#abcdef0123"));
+  assert.ok(text.includes("Graded against reality in 24h"));
   const alert = alertMessage({ seq: 1, at: 0, kind: "dump", mint: "M", symbol: "X", text: "creator sold 90% after 1 min", tx: "SIG" });
   assert.ok(alert.includes("solscan.io/tx/SIG"));
+});
+
+test("the telegram bot welcomes with a picture and a menu, answers a pasted address, and watches from a button", async () => {
+  const { startTelegram, COMMANDS } = await import("../src/telegram.ts");
+  const sent: Array<{ method: string; body: Record<string, unknown> }> = [];
+  const updates = [
+    { update_id: 1, message: { message_id: 1, chat: { id: 7, type: "private" }, from: { id: 9, first_name: "Ann" }, text: "/start" } },
+    { update_id: 2, message: { message_id: 2, chat: { id: 7, type: "private" }, from: { id: 9 }, text: "So11111111111111111111111111111111111111112" } },
+    { update_id: 3, callback_query: { id: "q", from: { id: 9 }, data: "watch:So11111111111111111111111111111111111111112", message: { message_id: 3, chat: { id: 7, type: "private" } } } },
+  ];
+  let served = false;
+  const fetchFn = (async (url: string, init?: { body?: string }) => {
+    const method = String(url).split("/").pop()!;
+    const body = init?.body ? (JSON.parse(init.body) as Record<string, unknown>) : {};
+    sent.push({ method, body });
+    if (method === "getUpdates") {
+      await new Promise((r) => setTimeout(r, 20));
+      const result = served ? [] : updates;
+      served = true;
+      return new Response(JSON.stringify({ ok: true, result }));
+    }
+    return new Response(JSON.stringify({ ok: true, result: { username: "zoo_bot" } }));
+  }) as typeof fetch;
+  const state = new Map<string, unknown>();
+  const store = { get: async (k: string) => state.get(k) ?? null, set: async (k: string, v: unknown) => void state.set(k, v) };
+  const desk = {
+    ask: async (mint: string) => ({
+      ok: true as const,
+      reused: false,
+      ask: { id: "abcdef0123", mint, symbol: "WRAP", name: "", at: 0, verdict: "watch", confidence: 0.5, why: "thin data", by: "model", playbookVersion: 7, already: false, facts: { graduated: false, hasSocials: null, market: null, chain: null, creator: null, flags: [], url: null } },
+    }),
+  };
+  const stop = startTelegram({ token: "T", desk: desk as never, store: store as never, fetchFn, log: () => {} });
+  await new Promise((r) => setTimeout(r, 200));
+  stop();
+
+  assert.ok(sent.some((c) => c.method === "setMyCommands" && (c.body.commands as unknown[]).length === COMMANDS.length));
+  const photo = sent.find((c) => c.method === "sendPhoto")!;
+  assert.ok(String(photo.body.caption).includes("Hi Ann"));
+  assert.ok(JSON.stringify(photo.body.reply_markup).includes("Ask the beaver"));
+  assert.ok(sent.some((c) => c.method === "sendMessage" && String(c.body.text).includes("$WRAP")));
+  assert.deepEqual(state.get("tg:watchers"), { So11111111111111111111111111111111111111112: [7] });
 });
