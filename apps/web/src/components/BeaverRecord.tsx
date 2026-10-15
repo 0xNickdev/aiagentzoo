@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
-import { t } from "../i18n";
+import { lang, t } from "../i18n";
 
 interface Night {
   night: string;
@@ -20,6 +20,7 @@ interface Call {
   outcome: string;
   hit: boolean;
   why: string;
+  whyZh?: string;
 }
 
 /** The beaver's track record, night by night: the honest argument for everything else. */
@@ -82,7 +83,7 @@ export default function BeaverRecord() {
                     {t(c.hit ? "right" : "wrong")} · {t("said {v}", { v: t(c.verdict) })}, {t(c.outcome === "dead" ? "it died" : "it lived")}
                   </span>
                 </div>
-                {c.why && <p className="mt-0.5 truncate text-[11.5px] font-light text-white/45">{c.why}</p>}
+                {c.why && <p className="mt-0.5 truncate text-[11.5px] font-light text-white/45">{lang() === "zh" && c.whyZh ? c.whyZh : c.why}</p>}
               </li>
             ))}
           </ul>

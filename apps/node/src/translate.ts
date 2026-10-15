@@ -20,3 +20,19 @@ export async function toChinese(model: ModelProvider | null | undefined, text: s
     return null;
   }
 }
+
+/** Several short texts as one numbered list, so one model call translates them all. */
+export const numberedLines = (texts: string[]) => texts.map((t, i) => `${i + 1}. ${t.replace(/\s+/g, " ").trim()}`).join("\n");
+
+/** The numbered translations back, by position; a line the model skipped or left in English is null. */
+export function parseNumbered(reply: string, count: number): Array<string | null> {
+  const out: Array<string | null> = Array.from({ length: count }, () => null);
+  for (const line of reply.split("\n")) {
+    const m = /^\s*(\d+)[.)、:：]\s*(.+)$/.exec(line);
+    if (!m) continue;
+    const i = Number(m[1]) - 1;
+    const text = m[2]!.replace(/[\u2013\u2014]/g, "-").trim();
+    if (i >= 0 && i < count && /[\u4e00-\u9fff]/.test(text)) out[i] = text.slice(0, 400);
+  }
+  return out;
+}

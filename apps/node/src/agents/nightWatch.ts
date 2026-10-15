@@ -1,6 +1,6 @@
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
-import { ZH_SYSTEM } from "../translate.ts";
+import { numberedLines, parseNumbered, ZH_SYSTEM } from "../translate.ts";
 import type { Launch, Market } from "../sources.ts";
 import type { ChainFacts } from "../chain/pump.ts";
 import {
@@ -621,6 +621,23 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
           } catch (error) {
             fresh = markAlready(ruleCalls(asked, ctx.now), asked);
             await ctx.trace("judge.fallback", { reason: (error as Error).message.slice(0, 300), ruleCalls: fresh.length });
+          }
+          // The reasons for Chinese readers, all in one go; the page falls back to the English if this fails.
+          const said = fresh.filter((c) => c.by === "model" && c.why);
+          if (said.length) {
+            try {
+              const zh = await ctx.think({
+                system: ZH_SYSTEM,
+                prompt: `Translate each numbered line. Reply with the same numbers, one line each.`,
+                untrusted: numberedLines(said.map((c) => c.why)),
+                maxTokens: 120 * said.length + 200,
+              });
+              parseNumbered(zh.text, said.length).forEach((text, i) => {
+                if (text) said[i]!.whyZh = text;
+              });
+            } catch {
+              // Budget spent or no model: English only tonight.
+            }
           }
           calls = [...calls, ...fresh].slice(-200);
           await ctx.state.set(callsKey, calls);

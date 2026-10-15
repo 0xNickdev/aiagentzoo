@@ -119,18 +119,19 @@ export function beaverRecord(enclosure: Enclosure, briefAt: string) {
   return async () => {
     let night = nightOf(Date.now(), briefAt);
     const nights: Array<{ night: string; graded: number; skill: number | null; dead: number; deadRight: number; alive: number; aliveRight: number }> = [];
-    const calls: Array<{ night: string; mint: string; symbol: string; verdict: string; outcome: string; hit: boolean; why: string }> = [];
+    const calls: Array<{ night: string; mint: string; symbol: string; verdict: string; outcome: string; hit: boolean; why: string; whyZh?: string }> = [];
     let warnedDead = 0;
     for (let i = 0; i < BOARD_NIGHTS; i++) {
       night = previousNight(night);
       const score = await enclosure.store.get<Scorecard>(`score:${night}`);
       if (!score) continue;
+      const zh = new Map(((await enclosure.store.get<Call[]>(`calls:${night}`)) ?? []).filter((c) => c.whyZh).map((c) => [c.mint, c.whyZh!]));
       const b = balance(score.cases);
       nights.push({ night, graded: b.dead + b.alive, skill: b.skill, dead: b.dead, deadRight: b.deadRight, alive: b.alive, aliveRight: b.aliveRight });
       for (const c of score.cases) {
         if (c.already || c.outcome === "unknown" || c.hit === null) continue;
         if (c.verdict === "suspicious" && c.outcome === "dead") warnedDead += 1;
-        if (calls.length < 40) calls.push({ night, mint: c.mint, symbol: c.symbol, verdict: c.verdict, outcome: c.outcome, hit: c.hit, why: c.why });
+        if (calls.length < 40) calls.push({ night, mint: c.mint, symbol: c.symbol, verdict: c.verdict, outcome: c.outcome, hit: c.hit, why: c.why, ...(zh.has(c.mint) ? { whyZh: zh.get(c.mint)! } : {}) });
       }
     }
     return { nights: nights.reverse(), warnedDead, calls };

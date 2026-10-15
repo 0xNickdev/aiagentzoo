@@ -21,6 +21,8 @@ export interface Call {
   /** 0..1 */
   confidence: number;
   why: string;
+  /** The same reason in Simplified Chinese, when the model could write it. */
+  whyZh?: string;
   /** "model" when the beaver thought it through, "rules" when no model was at hand. */
   by: "model" | "rules";
   at: number;

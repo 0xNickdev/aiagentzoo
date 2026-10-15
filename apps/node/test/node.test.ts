@@ -1219,3 +1219,9 @@ test("the bot answers a Chinese client in Chinese, and /lang switches the chat",
   assert.ok(texts.some((x) => x.includes("Language: English")));
   assert.ok(texts.some((x) => x.startsWith("<b>Commands</b>")));
 });
+
+test("the beaver's reasons come back from one numbered translation, missing lines stay English", async () => {
+  const { numberedLines, parseNumbered } = await import("../src/translate.ts");
+  assert.equal(numberedLines(["creator sold  90%", "no socials"]), "1. creator sold 90%\n2. no socials");
+  assert.deepEqual(parseNumbered("1. 开发者砸盘 90%\n2) no socials\n3、 越界", 2), ["开发者砸盘 90%", null]);
+});

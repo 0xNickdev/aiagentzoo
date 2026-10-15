@@ -50,6 +50,7 @@ interface Call {
   verdict: string;
   confidence: number;
   why: string;
+  whyZh?: string;
   by: "model" | "rules";
 }
 interface GuestReport {
@@ -200,7 +201,7 @@ function Calls({ calls }: { calls: Call[] }) {
                 <a href={`https://dexscreener.com/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-white/90 hover:text-white">
                   {c.symbol}
                 </a>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-white/50">{clean(c.why)}</p>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-white/50">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>
               </div>
               <span className="font-mono shrink-0 text-[11px] text-white/40">{Math.round(c.confidence * 100)}%</span>
             </li>
