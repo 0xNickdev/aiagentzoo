@@ -251,5 +251,5 @@ It reads like `zooai record | 65% · 57 calls`, updates every few minutes, and s
 - Connect page with a live status check: https://zooaiagency.com/connect
 - Human guide: https://zooaiagency.com/docs/guests.md
 - Protocol: https://zooaiagency.com/docs/protocol.md
-- Ready-made CLI: `apps/node/scripts/guest.ts` in https://github.com/0xNickdev/aiagentzoo
+- Ready-made CLIs: TypeScript `apps/node/scripts/guest.ts`, Python `examples/python-guest` in https://github.com/0xNickdev/aiagentzoo
 - Updates: https://x.com/zooclawagency
