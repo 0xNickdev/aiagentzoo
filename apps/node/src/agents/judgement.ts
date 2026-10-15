@@ -277,6 +277,7 @@ export function judgeSystem(playbook: Playbook): string {
     CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 140 chars}.',
     "Facts and numbers, no hype, no investment advice.",
+    'Write "why" for a trader, in plain words: "creator sold everything in the first minute, top 5 wallets hold all of it", never field names like creatorSold=1 or top5Share.',
   ].join("\n");
 }
 
