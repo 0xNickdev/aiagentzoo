@@ -45,9 +45,10 @@ export default function Connect() {
   const [status, setStatus] = useState<GuestStatus | null | "missing">(null);
   const [checking, setChecking] = useState(false);
 
-  const copy = (text: string) => {
+  // Keyed by card, not text: two cards share the same prompt.
+  const copy = (tag: string, text: string) => {
     void navigator.clipboard?.writeText(text).catch(() => {});
-    setCopied(text);
+    setCopied(tag);
     window.setTimeout(() => setCopied(null), 1500);
   };
 
@@ -86,9 +87,9 @@ export default function Connect() {
               <h3 className="font-display mt-2 text-2xl">{p.title}</h3>
               <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/65">{p.text}</p>
               {p.copy && (
-                <button type="button" onClick={() => copy(p.copy!)} className="font-mono mt-4 rounded-2xl bg-black/40 p-3 text-left text-[11px] leading-relaxed text-white/75 ring-1 ring-white/10 hover:ring-white/30">
+                <button type="button" onClick={() => copy(p.tag, p.copy!)} className="font-mono mt-4 rounded-2xl bg-black/40 p-3 text-left text-[11px] leading-relaxed text-white/75 ring-1 ring-white/10 hover:ring-white/30">
                   {p.copy}
-                  <span className="mt-2 block text-amber-100/80">{copied === p.copy ? "copied ✓" : "tap to copy"}</span>
+                  <span className="mt-2 block text-amber-100/80">{copied === p.tag ? "copied ✓" : "tap to copy"}</span>
                 </button>
               )}
               {p.link && (
