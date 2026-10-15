@@ -658,8 +658,18 @@ export function startTelegram(opts: TelegramOptions): () => void {
         : T("Linked, but this wallet holds less than {h} $ZOOAGENCY, so alerts arrive with everyone else's. Top up and they come first, no need to link again.", { h: HOLDER_MIN.toLocaleString("en-US") }),
     );
   };
-  // Alerts for everyone else wait here until the holders' head start is over.
+  // Alerts for everyone else wait here until the holders' head start is over, kept in the store so a deploy does not drop them.
   const later: PlannedAlert[] = [];
+  const saveLater = () => Promise.resolve(opts.store.set("tg:later", later)).catch(() => undefined);
+  const restored = Promise.resolve(opts.store.get<PlannedAlert[]>("tg:later"))
+    .then((saved) => {
+      // An alert that should have gone out over an hour ago is no longer news.
+      const fresh = (saved ?? []).filter((a) => a && Date.now() - a.at < 60 * 60_000);
+      later.push(...fresh);
+      later.sort((a, b) => a.at - b.at);
+      if (fresh.length) log(`[telegram] ${fresh.length} delayed alerts restored`);
+    })
+    .catch(() => undefined);
 
   // Alerts: follow north's pulse and tell every chat that watches the token, holders first.
   let cursor = -1;
@@ -671,19 +681,25 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (body.events.length) cursor = body.events[body.events.length - 1]!.seq;
     else if (first) cursor = 0;
     if (first) return;
-    later.push(...(await planAlerts(body.events, await watchers(), (chat) => isHolderChat(chat), Date.now(), (chat) => chatLang(opts.store, chat))));
+    const planned = await planAlerts(body.events, await watchers(), (chat) => isHolderChat(chat), Date.now(), (chat) => chatLang(opts.store, chat));
+    if (!planned.length) return;
+    later.push(...planned);
     later.sort((a, b) => a.at - b.at);
+    if (planned.some((a) => a.at > Date.now())) await saveLater();
   };
   const flush = async () => {
     const now = Date.now();
+    let sent = 0;
     while (later.length && later[0]!.at <= now) {
       const a = later.shift()!;
+      sent += 1;
       await send(a.chat, a.text, [[{ text: "Ask the beaver now", callback_data: `ask:${a.mint}` }]]);
     }
+    if (sent) await saveLater();
   };
 
   void poll();
-  const timer = setInterval(() => void alerts().then(flush), 10_000);
+  const timer = setInterval(() => void restored.then(alerts).then(flush), 10_000);
   timer.unref?.();
   return () => {
     stopped = true;
