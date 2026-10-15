@@ -17,6 +17,7 @@ const sources = {
   "security.md": "docs/security.md",
   "guests.md": "docs/guests.md",
   "thinking.md": "docs/thinking.md",
+  "grading.md": "docs/grading.md",
   "sdk.md": "packages/sdk/README.md",
 };
 

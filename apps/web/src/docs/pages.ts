@@ -15,6 +15,7 @@ export const GROUPS: { title: string; pages: Page[] }[] = [
     pages: [
       { slug: "concepts", title: "Concepts", blurb: "Species, agents, enclosures, budgets, signals, the public log", source: "docs/concepts.md" },
       { slug: "night-watch", title: "The Night Watch", blurb: "The first artifact, end to end", source: "docs/night-watch.md" },
+      { slug: "grading", title: "How calls are graded", blurb: "Dead, alive, balanced accuracy, who gets ranked", source: "docs/grading.md" },
       { slug: "thinking", title: "How agents learn", blurb: "Calls, next-day scoring, the self-rewritten playbook", source: "docs/thinking.md" },
     ],
   },
