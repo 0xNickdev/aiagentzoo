@@ -1177,3 +1177,37 @@ test("the morning brief tells the weekly contest: the leader, and what the rest 
   assert.match(text, /owlet\*\* - 55% over 25 graded calls · 2 more living to qualify/);
   assert.match(weekText({ ...w, rows: [w.rows[1]!] }), /^Nobody qualifies yet/);
 });
+
+test("the bot answers a Chinese client in Chinese, and /lang switches the chat", async () => {
+  const { startTelegram } = await import("../src/telegram.ts");
+  const sent: Array<{ method: string; body: Record<string, unknown> }> = [];
+  const updates = [
+    { update_id: 1, message: { message_id: 1, chat: { id: 8, type: "private" }, from: { id: 8, first_name: "Li", language_code: "zh-hans" }, text: "/start" } },
+    { update_id: 2, message: { message_id: 2, chat: { id: 8, type: "private" }, from: { id: 8, language_code: "zh-hans" }, text: "/lang" } },
+    { update_id: 3, message: { message_id: 3, chat: { id: 8, type: "private" }, from: { id: 8, language_code: "zh-hans" }, text: "/help" } },
+  ];
+  let served = false;
+  const fetchFn = (async (url: string, init?: { body?: string }) => {
+    const method = String(url).split("/").pop()!;
+    sent.push({ method, body: init?.body ? JSON.parse(init.body) : {} });
+    if (method === "getUpdates") {
+      await new Promise((r) => setTimeout(r, 20));
+      const result = served ? [] : updates;
+      served = true;
+      return new Response(JSON.stringify({ ok: true, result }));
+    }
+    return new Response(JSON.stringify({ ok: true, result: { username: "zoo_bot" } }));
+  }) as typeof fetch;
+  const state = new Map<string, unknown>();
+  const store = { get: async (k: string) => state.get(k) ?? null, set: async (k: string, v: unknown) => void state.set(k, v) };
+  const stop = startTelegram({ token: "T", desk: {} as never, store: store as never, fetchFn, log: () => {} });
+  await new Promise((r) => setTimeout(r, 200));
+  stop();
+  assert.match(String(sent.find((c) => c.method === "sendPhoto")!.body.caption), /Li，你好，欢迎来到 ZOOAI AGENCY/);
+  assert.ok(sent.some((c) => c.method === "setMyCommands" && c.body.language_code === "zh" && JSON.stringify(c.body).includes("海狸")));
+  // /lang flips this chat to English, and later answers follow it.
+  assert.equal(state.get("tg:lang:8"), "en");
+  const texts = sent.filter((c) => c.method === "sendMessage").map((c) => String(c.body.text));
+  assert.ok(texts.some((x) => x.includes("Language: English")));
+  assert.ok(texts.some((x) => x.startsWith("<b>Commands</b>")));
+});

@@ -1,0 +1,197 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { StateStore } from "@aiagentzoo/sdk";
+
+/**
+ * The bot in English and Simplified Chinese. Each update is handled inside the language of its chat, so every
+ * message built while answering it reads `T("...")` without passing a language around. A chat's language comes
+ * from /lang, or else from the Telegram client's own language.
+ */
+export type BotLang = "en" | "zh";
+
+const als = new AsyncLocalStorage<BotLang>();
+
+export const inLang = <T>(lang: BotLang, fn: () => T): T => als.run(lang, fn);
+export const botLang = (): BotLang => als.getStore() ?? "en";
+
+/** Translates an English string for the chat being answered; `{name}` placeholders are filled from `vars`. */
+export function T(en: string, vars?: Record<string, string | number>): string {
+  const s = botLang() === "zh" ? (BOT_ZH[en] ?? en) : en;
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+}
+
+/** The chat's language: its own choice, or the Telegram client's language the first time. */
+export async function chatLang(store: StateStore, chat: number, clientLanguage?: string): Promise<BotLang> {
+  const saved = await store.get<BotLang>(`tg:lang:${chat}`);
+  if (saved === "zh" || saved === "en") return saved;
+  return clientLanguage && /^zh/i.test(clientLanguage) ? "zh" : "en";
+}
+
+export const setChatLang = (store: StateStore, chat: number, lang: BotLang) => store.set(`tg:lang:${chat}`, lang);
+
+/** The chain's own phrases, written by the nodes in English. */
+const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^creator sold (\d+)% after (\d+) min$/, (m) => `开发者 ${m[2]} 分钟后卖出 ${m[1]}%`],
+  [/^pool drained to ([\d.]+) SOL after graduation$/, (m) => `毕业后池子被抽到只剩 ${m[1]} SOL`],
+  [/^wallet's (\d+)(?:st|nd|rd|th) launch today$/, (m) => `该钱包今天第 ${m[1]} 次发币`],
+  [/^\+([\d.]+) SOL buy after graduation$/, (m) => `毕业后 +${m[1]} SOL 大单买入`],
+  [/^\+([\d.]+) SOL buy$/, (m) => `+${m[1]} SOL 大单买入`],
+  [/^graduated$/, () => "已毕业"],
+  [/^new launch$/, () => "新币上线"],
+];
+
+export function TC(text: string): string {
+  if (botLang() !== "zh") return text;
+  for (const [re, fn] of CHAIN) {
+    const m = text.match(re);
+    if (m) return fn(m);
+  }
+  return text;
+}
+
+export const BOT_ZH: Record<string, string> = {
+  "<b>Welcome to ZOOAI AGENCY.</b>": "<b>欢迎来到 ZOOAI AGENCY。</b>",
+  "<b>Hi {name}, welcome to ZOOAI AGENCY.</b>": "<b>{name}，你好，欢迎来到 ZOOAI AGENCY。</b>",
+  "A zoo of AI agents that watch every pump.fun launch straight from Solana, call out rugs, and get graded by reality the next day. In public.": "一座 AI 智能体动物园：直接从 Solana 链上盯着每一个 pump.fun 新币，点名跑路盘，第二天由市场打分。全部公开。",
+  "<b>What I can do for you:</b>": "<b>我能帮你做什么：</b>",
+  "· Judge any token: rug or not, with the evidence": "· 判断任意代币会不会跑路，并给出证据",
+  "· Check a dev's wallet: how many tokens it launched, how many it dumped, how fast": "· 查开发者钱包：发了多少币、砸了多少、多快砸的",
+  "· Alert you the moment a creator dumps a token you watch": "· 你监控的币一旦开发者砸盘，立刻提醒你",
+  "· Show fresh launches that passed the basic checks": "· 给你看通过基础检查的新币",
+  "Open the zoo for the full experience, or paste a token address right here.": "打开动物园体验全部功能，或者直接在这里粘贴代币地址。",
+  "<b>1/3 · The raven reads the chain</b>": "<b>1/3 · 渡鸦直接读链</b>",
+  "Most bots ask an API what is new. Our raven listens to Solana itself: every pump.fun launch, every buy, every sell.": "大多数机器人是去问某个 API 有什么新东西。我们的渡鸦直接监听 Solana 本身：每一个 pump.fun 新币、每一笔买、每一笔卖。",
+  "So it knows what a chart never shows: the creator already sold their bag, this wallet launched 80 tokens today, five wallets did all the buying.": "所以它知道 K 线永远看不到的东西：开发者已经把筹码卖了，这个钱包今天发了 80 个币，所有买单其实就五个钱包。",
+  "<b>2/3 · The beaver judges, reality grades</b>": "<b>2/3 · 海狸判断，市场打分</b>",
+  "Ask about any token and the beaver gives a verdict: suspicious, watch, or promising, with the reason.": "问任意一个币，海狸都会给出判断：可疑、观望或看好，并说明理由。",
+  "Tomorrow its answer is checked against what the token actually did. Right or wrong, it stays on the record, signed on a public log.": "明天会拿这个币的真实走势核对它的答案。不管对错都留在记录里，签名记在公开日志上。",
+  "<b>3/3 · Judges that evolve</b>": "<b>3/3 · 会进化的裁判</b>",
+  "In the nursery eight judges with fixed rules sit the same exam every night. Every three nights the weakest dies and the best two breed a child with one mutation aimed at their mistakes.": "育种园里，八个规则固定的裁判每晚考同一张卷子。每三晚，最弱的死去，最强的两个繁殖出一个孩子，带着一次专门针对它们错误的变异。",
+  "Nobody hand-picks the winner. The leaderboard ranks every agent on one honest scale: calling everything a rug scores 50%, not 100%.": "没人手动挑赢家。排行榜用同一把诚实的尺子给所有智能体排名：全喊跑路只能拿 50%，不是 100%。",
+  "<b>Commands</b>": "<b>命令</b>",
+  "/ask &lt;token&gt; · is it a rug? the beaver judges it": "/ask &lt;代币&gt; · 会不会跑路？海狸来判断",
+  "/dev &lt;wallet&gt; · a creator's last 48h: launches, dumps, how fast": "/dev &lt;钱包&gt; · 开发者近 48 小时：发币、砸盘、多快",
+  "/rugs · the latest creator dumps, with transactions": "/rugs · 最新的开发者砸盘，附交易",
+  "/clean · fresh launches that passed the basic checks": "/clean · 通过基础检查的新币",
+  "/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to {n})": "/watch &lt;代币&gt; · 砸盘、池子被抽干、毕业、大单买入都会提醒（最多 {n} 个）",
+  "/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first": "/link &lt;验证码&gt; · 持有 {h}+ $ZOOAGENCY 的持币者提前 {m} 分钟收到预警",
+  "/unwatch &lt;token&gt; · /list": "/unwatch &lt;代币&gt; · /list",
+  "/live · pump.fun right now: launches and trades a minute": "/live · pump.fun 此刻：每分钟发币和成交数",
+  "/nursery · the evolving judges": "/nursery · 会进化的裁判",
+  "/leaderboard · every agent on one honest scale": "/leaderboard · 同一把尺子下的所有智能体",
+  "/brief · last night's Morning Brief": "/brief · 昨晚的早报",
+  "/token · $ZOOAGENCY": "/token · $ZOOAGENCY",
+  "/tour · how the zoo works": "/tour · 动物园怎么运作",
+  "/lang · English / 中文": "/lang · English / 中文",
+  "In a private chat just paste an address. Not financial advice.": "私聊里直接粘贴地址即可。不构成投资建议。",
+  "Open the zoo": "打开动物园",
+  "Ask the beaver": "问问海狸",
+  "Check a dev": "查开发者",
+  "Live rugs": "实时跑路",
+  "Clean launches": "干净新币",
+  "Nursery": "育种园",
+  "Leaderboard": "排行榜",
+  "How it works": "怎么运作",
+  "Website": "官网",
+  "English / 中文": "English / 中文",
+  "← Back": "← 返回",
+  "Next →": "下一页 →",
+  "Try it: open the zoo": "试试看：打开动物园",
+  "Menu": "菜单",
+  "Is it a rug? The beaver judges any token": "会跑路吗？海狸判断任意代币",
+  "A creator wallet's launches and dumps": "开发者钱包的发币和砸盘记录",
+  "Latest creator dumps, with transactions": "最新开发者砸盘，附交易",
+  "Fresh launches that passed the basic checks": "通过基础检查的新币",
+  "Alert when a token's creator dumps": "开发者砸盘时提醒",
+  "Stop watching a token": "取消监控",
+  "Tokens you watch": "你监控的币",
+  "Holders: get alerts first": "持币者：抢先收预警",
+  "pump.fun right now": "pump.fun 此刻",
+  "The evolving judges": "会进化的裁判",
+  "Every agent on one honest scale": "同一把尺子下的所有智能体",
+  "Last night's Morning Brief": "昨晚的早报",
+  "$ZOOAGENCY": "$ZOOAGENCY",
+  "How the zoo works": "动物园怎么运作",
+  "All commands": "全部命令",
+  "{n} launches in 48h, dumped {d}": "48 小时内发了 {n} 个币，砸盘 {d} 个",
+  ", median {m} min": "，中位数 {m} 分钟",
+  "SUSPICIOUS": "可疑",
+  "WATCH": "观望",
+  "PROMISING": "看好",
+  "• creator sold {p}": "• 开发者已卖出 {p}",
+  "• creator: {c}": "• 开发者：{c}",
+  "• top 10 wallets hold {p}": "• 前十钱包持仓 {p}",
+  " · dev holds {p}": " · 开发者持有 {p}",
+  "• bundle: {w} wallets took {p} of supply in the launch block": "• 捆绑：开盘区块 {w} 个钱包吃走 {p} 的供应",
+  ", {n} funded by one wallet": "，其中 {n} 个由同一钱包出资",
+  "• top 5 buyers: {p} of the buying": "• 前五买家占全部买入的 {p}",
+  "• liquidity ${l} · buys/sells 24h {b}/{s}": "• 流动性 ${l} · 24 小时买/卖 {b}/{s}",
+  "• no socials": "• 没有社交媒体",
+  "<i>Already dead when asked: shown, not scored.</i>": "<i>提问时已经归零：只展示，不计分。</i>",
+  "<i>Graded against reality in 24h, right or wrong.</i>": "<i>24 小时后由市场打分，对错都算。</i>",
+  "Watch it": "监控它",
+  "Card & record": "卡片和记录",
+  "Chart": "K 线",
+  "Dev {w}": "开发者 {w}",
+  " · 🔴 serial dumper": " · 🔴 连环砸盘号",
+  "{a} in the last 24h · {g} graduated": "近 24 小时 {a} 个 · 毕业 {g} 个",
+  "dumped after {m} min": "{m} 分钟后砸盘",
+  "graduated": "已毕业",
+  "creator holding": "开发者还拿着",
+  "Open on the site": "在网站上打开",
+  "No pump.fun launches from this wallet in the last 48 hours that our stream saw.": "近 48 小时我们的链上监听没看到这个钱包在 pump.fun 发过币。",
+  "No creator dumps on the record right now.": "目前没有开发者砸盘记录。",
+  "<b>Latest creator dumps on pump.fun</b>": "<b>pump.fun 最新开发者砸盘</b>",
+  "<i>read straight from Solana, each with its transaction</i>": "<i>直接从 Solana 读取，每条都附交易</i>",
+  "Refresh": "刷新",
+  "Watch it live": "看实时",
+  "<b>Passed the basic checks</b>": "<b>通过基础检查</b>",
+  "<i>10-180 min old, creator has not sold, not a serial wallet, 25+ buyers, no 5 wallets holding most of it. Not a call, not advice: most still die.</i>": "<i>发币 10-180 分钟，开发者没卖，不是连环发币号，25 个以上买家，没有五个钱包吃掉大头。这不是判断，也不是建议：大多数照样会归零。</i>",
+  "Nothing passes right now. On pump.fun that is a normal hour.": "现在一个都没通过。在 pump.fun 上，这很正常。",
+  "{a} min · {b} buyers · top 5 {p}": "{a} 分钟 · {b} 个买家 · 前五 {p}",
+  "Ask about ${s}": "问 ${s}",
+  "<b>pump.fun right now</b>": "<b>pump.fun 此刻</b>",
+  "{l} launches and {t} trades in the last minute": "过去一分钟 {l} 个新币、{t} 笔成交",
+  "tonight the pack watched {t} tokens and made {c} calls": "今晚整群动物盯了 {t} 个币，做了 {c} 个判断",
+  "Open the live map": "打开实时地图",
+  "The nursery is resting. Try again in a minute.": "育种园在休息，一分钟后再试。",
+  "<b>The nursery</b> · turn {g} · next in {n} nights": "<b>育种园</b> · 第 {g} 轮 · {n} 晚后下一轮",
+  "{p} over {n}": "{n} 个判断 {p}",
+  "no grades yet": "还没有分数",
+  "Open the nursery": "打开育种园",
+  "The leaderboard is resting. Try again in a minute.": "排行榜在休息，一分钟后再试。",
+  "<b>Every agent, one honest scale</b>": "<b>所有智能体，同一把诚实的尺子</b>",
+  "<i>balanced accuracy; a rank needs {n} graded calls with dead and living tokens among them</i>": "<i>平衡准确率；上榜需要 {n} 个已打分判断，其中要有归零币也要有存活币</i>",
+  "Nobody is ranked yet. Living tokens are rare, so it fills slowly. That is the point.": "还没有人上榜。存活的币很少，所以填得慢，这正是重点。",
+  "{n} graded": "已打分 {n}",
+  "<b>On the way:</b>": "<b>正在接近：</b>",
+  "Full leaderboard": "完整排行榜",
+  "The next Morning Brief comes out at 07:00 UTC.": "下一份早报 UTC 07:00 发布。",
+  "{n} fresh launches": "{n} 个新币",
+  "{n} graduated": "毕业 {n} 个",
+  "{n} went to zero": "归零 {n} 个",
+  "<b>Morning Brief · night of {n}</b>": "<b>早报 · {n}</b>",
+  "<i>Written by the tortoise, no human in the loop, signed on the public log.</i>": "<i>由陆龟撰写，全程无人参与，签名记在公开日志上。</i>",
+  "Read the brief": "看早报",
+  "Launched through ClawPump, graduated to PumpSwap.": "通过 ClawPump 发射，已毕业上 PumpSwap。",
+  "Holders who sign in on the site with a wallet holding {h}+ ask the beaver 30 times an hour, watch 10 tokens and get alerts first (/link).": "在网站上用持有 {h}+ 的钱包登录的持币者，每小时可以问海狸 30 次、监控 10 个币，并且抢先收到预警（/link）。",
+  "Up to {n} tokens per chat. Stop watching one first. /list shows them.": "每个聊天最多监控 {n} 个币。先取消一个。/list 可以查看。",
+  "Watching <code>{m}</code>.\nYou will hear the moment its creator dumps, it graduates, or someone buys big.": "正在监控 <code>{m}</code>。\n开发者砸盘、毕业或有大单买入，第一时间通知你。",
+  "Stopped watching <code>{m}</code>.": "已取消监控 <code>{m}</code>。",
+  "Stop watching": "取消监控",
+  "Nothing under watch yet. Send /watch with a token address.": "还没有监控任何币。发送 /watch 加代币地址。",
+  "<b>Under watch</b>": "<b>监控中</b>",
+  "Stop {m}": "取消 {m}",
+  "Send me a token address or a pump.fun link.": "发给我一个代币地址或 pump.fun 链接。",
+  "Send me the creator's wallet address.": "发给我开发者钱包地址。",
+  "token address or link": "代币地址或链接",
+  "wallet address": "钱包地址",
+  "What next?": "接下来做什么？",
+  "Unlinked. Alerts now arrive with everyone else's.": "已解绑。预警现在和其他人同时到。",
+  "Paste a token address or a pump.fun link, or pick from the menu.": "粘贴代币地址或 pump.fun 链接，或者从菜单里选。",
+  "Language: English. /lang switches back.": "语言：中文。发送 /lang 切回英文。",
+  "Sign in with your wallet at {site}/play, tap \"Get alerts first\", and send me the code: /link ABC123": "在 {site}/play 用钱包登录，点“在 Telegram 抢先收预警”，然后把验证码发给我：/link ABC123",
+  "That code is unknown or expired. Make a new one on the site; codes last 15 minutes.": "验证码无效或已过期。去网站重新生成一个，验证码 15 分钟内有效。",
+  "Linked. You hold {h}+ $ZOOAGENCY: alerts on tokens you /watch reach you {m} minutes before everyone else.": "已绑定。你持有 {h}+ $ZOOAGENCY：你 /watch 的币一有预警，会比所有人早 {m} 分钟发给你。",
+  "Linked, but this wallet holds less than {h} $ZOOAGENCY, so alerts arrive with everyone else's. Top up and they come first, no need to link again.": "已绑定，但这个钱包持有不到 {h} $ZOOAGENCY，所以预警和其他人同时到。补足持仓后就会抢先收到，不用重新绑定。",
+  "<i>Holders saw this {m} min ago. /link to see alerts first.</i>": "<i>持币者 {m} 分钟前就看到了。发送 /link 抢先收预警。</i>",
+};

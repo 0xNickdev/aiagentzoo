@@ -4,6 +4,7 @@ import type { Ask, AskDesk } from "./ask.ts";
 import type { CleanLaunch, CreatorRecord, PulseEvent } from "./chain/pump.ts";
 import type { BoardRow } from "./stats.ts";
 import { HOLDER_MIN, isHolder as holds } from "./holders.ts";
+import { type BotLang, botLang, chatLang, inLang, setChatLang, T, TC } from "./tg-i18n.ts";
 
 /**
  * The beaver in Telegram: the zoo where traders already are. A welcome with a picture and buttons, a three-step
@@ -32,14 +33,14 @@ type Keyboard = Button[][];
 interface Message {
   message_id: number;
   chat: { id: number; type: string };
-  from?: { id: number; first_name?: string };
+  from?: { id: number; first_name?: string; language_code?: string };
   text?: string;
   reply_to_message?: { text?: string };
 }
 interface Update {
   update_id: number;
   message?: Message;
-  callback_query?: { id: string; from: { id: number }; data?: string; message?: Message };
+  callback_query?: { id: string; from: { id: number; language_code?: string }; data?: string; message?: Message };
 }
 
 /** What the canyon can tell the bot beyond the beaver's answers. */
@@ -90,15 +91,25 @@ export interface PlannedAlert {
 }
 
 /** Who hears about which chain moment, and when: holders at once, everyone else after the head start. */
-export async function planAlerts(events: PulseEvent[], watchers: Record<string, number[]>, isHolderChat: (chat: number) => Promise<boolean>, now: number): Promise<PlannedAlert[]> {
+export async function planAlerts(
+  events: PulseEvent[],
+  watchers: Record<string, number[]>,
+  isHolderChat: (chat: number) => Promise<boolean>,
+  now: number,
+  langOf: (chat: number) => Promise<BotLang> = async () => "en",
+): Promise<PlannedAlert[]> {
   const out: PlannedAlert[] = [];
   for (const e of events) {
     if (e.kind === "launch") continue;
     for (const chat of watchers[e.mint] ?? []) {
+      const holder = await isHolderChat(chat);
+      const l = await langOf(chat);
       out.push(
-        (await isHolderChat(chat))
-          ? { chat, mint: e.mint, at: now, text: `⚡ ${alertMessage(e)}` }
-          : { chat, mint: e.mint, at: now + HOLDER_HEAD_START_MS, text: `${alertMessage(e)}\n<i>Holders saw this ${HOLDER_HEAD_START_MS / 60_000} min ago. /link to see alerts first.</i>` },
+        inLang(l, () =>
+          holder
+            ? { chat, mint: e.mint, at: now, text: `⚡ ${alertMessage(e)}` }
+            : { chat, mint: e.mint, at: now + HOLDER_HEAD_START_MS, text: `${alertMessage(e)}\n${T("<i>Holders saw this {m} min ago. /link to see alerts first.</i>", { m: HOLDER_HEAD_START_MS / 60_000 })}` },
+        ),
       );
     }
   }
@@ -153,7 +164,7 @@ export async function setWatch(store: StateStore, chat: number, mint: string, on
 
 /* ---------- copy ---------- */
 
-export const WELCOME = [
+const WELCOME_LINES = [
   "<b>Welcome to ZOOAI AGENCY.</b>",
   "",
   "A zoo of AI agents that watch every pump.fun launch straight from Solana, call out rugs, and get graded by reality the next day. In public.",
@@ -165,41 +176,43 @@ export const WELCOME = [
   "· Show fresh launches that passed the basic checks",
   "",
   "Open the zoo for the full experience, or paste a token address right here.",
-].join("\n");
+];
+export const welcomeText = () => WELCOME_LINES.map((l) => T(l)).join("\n");
 
-export const TOUR = [
+const TOUR_LINES = [
   [
     "<b>1/3 · The raven reads the chain</b>",
     "",
     "Most bots ask an API what is new. Our raven listens to Solana itself: every pump.fun launch, every buy, every sell.",
     "",
     "So it knows what a chart never shows: the creator already sold their bag, this wallet launched 80 tokens today, five wallets did all the buying.",
-  ].join("\n"),
+  ],
   [
     "<b>2/3 · The beaver judges, reality grades</b>",
     "",
     "Ask about any token and the beaver gives a verdict: suspicious, watch, or promising, with the reason.",
     "",
     "Tomorrow its answer is checked against what the token actually did. Right or wrong, it stays on the record, signed on a public log.",
-  ].join("\n"),
+  ],
   [
     "<b>3/3 · Judges that evolve</b>",
     "",
     "In the nursery eight judges with fixed rules sit the same exam every night. Every three nights the weakest dies and the best two breed a child with one mutation aimed at their mistakes.",
     "",
     "Nobody hand-picks the winner. The leaderboard ranks every agent on one honest scale: calling everything a rug scores 50%, not 100%.",
-  ].join("\n"),
+  ],
 ];
+const tourPage = (i: number) => TOUR_LINES[i]!.map((l) => T(l)).join("\n");
 
-const HELP = [
+const HELP_LINES = () => [
   "<b>Commands</b>",
   "",
   "/ask &lt;token&gt; · is it a rug? the beaver judges it",
   "/dev &lt;wallet&gt; · a creator's last 48h: launches, dumps, how fast",
   "/rugs · the latest creator dumps, with transactions",
   "/clean · fresh launches that passed the basic checks",
-  `/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to ${WATCH_MAX})`,
-  `/link &lt;code&gt; · holders of ${HOLDER_MIN.toLocaleString("en-US")}+ $ZOOAGENCY get alerts ${HOLDER_HEAD_START_MS / 60_000} minutes first`,
+  T("/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to {n})", { n: WATCH_MAX }),
+  T("/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 }),
   "/unwatch &lt;token&gt; · /list",
   "/live · pump.fun right now: launches and trades a minute",
   "/nursery · the evolving judges",
@@ -208,8 +221,11 @@ const HELP = [
   "/token · $ZOOAGENCY",
   "/tour · how the zoo works",
   "",
+  "/lang · English / 中文",
+  "",
   "In a private chat just paste an address. Not financial advice.",
-].join("\n");
+];
+const helpText = () => HELP_LINES().map((l) => T(l)).join("\n");
 
 export const COMMANDS = [
   { command: "app", description: "Open the zoo" },
@@ -230,87 +246,88 @@ export const COMMANDS = [
   { command: "help", description: "All commands" },
 ];
 
-const MENU: Keyboard = [
-  [{ text: "Open the zoo", web_app: { url: APP_URL } }],
+const menu = (): Keyboard => [
+  [{ text: T("Open the zoo"), web_app: { url: APP_URL } }],
   [
-    { text: "Ask the beaver", callback_data: "prompt:ask" },
-    { text: "Check a dev", callback_data: "prompt:dev" },
+    { text: T("Ask the beaver"), callback_data: "prompt:ask" },
+    { text: T("Check a dev"), callback_data: "prompt:dev" },
   ],
   [
-    { text: "Live rugs", callback_data: "rugs" },
-    { text: "Clean launches", callback_data: "clean" },
+    { text: T("Live rugs"), callback_data: "rugs" },
+    { text: T("Clean launches"), callback_data: "clean" },
   ],
   [
-    { text: "Nursery", callback_data: "nursery" },
-    { text: "Leaderboard", callback_data: "leaderboard" },
+    { text: T("Nursery"), callback_data: "nursery" },
+    { text: T("Leaderboard"), callback_data: "leaderboard" },
   ],
   [
-    { text: "How it works", callback_data: "tour:0" },
-    { text: "Website", url: SITE },
+    { text: T("How it works"), callback_data: "tour:0" },
+    { text: T("Website"), url: SITE },
   ],
+  [{ text: T("English / 中文"), callback_data: "lang" }],
 ];
 
 const tourKeyboard = (i: number): Keyboard => [
   [
-    ...(i > 0 ? [{ text: "← Back", callback_data: `tour:${i - 1}` }] : []),
-    i < TOUR.length - 1 ? { text: "Next →", callback_data: `tour:${i + 1}` } : { text: "Try it: open the zoo", web_app: { url: APP_URL } },
+    ...(i > 0 ? [{ text: T("← Back"), callback_data: `tour:${i - 1}` }] : []),
+    i < TOUR_LINES.length - 1 ? { text: T("Next →"), callback_data: `tour:${i + 1}` } : { text: T("Try it: open the zoo"), web_app: { url: APP_URL } },
   ],
-  [{ text: "Menu", callback_data: "menu" }],
+  [{ text: T("Menu"), callback_data: "menu" }],
 ];
 
 /* ---------- formatting ---------- */
 
 function creatorLine(r: CreatorRecord): string {
-  return `${r.launches48h} launches in 48h, dumped ${r.dumped}${r.medianDumpMin !== null ? `, median ${r.medianDumpMin} min` : ""}`;
+  return T("{n} launches in 48h, dumped {d}", { n: r.launches48h, d: r.dumped }) + (r.medianDumpMin !== null ? T(", median {m} min", { m: r.medianDumpMin }) : "");
 }
 
 /** The answer as a Telegram message: verdict, reason, the telling facts, the link. */
 export function askMessage(a: Ask): string {
   const icon = a.verdict === "suspicious" ? "🔴" : a.verdict === "promising" ? "🟢" : "⚪️";
-  const lines = [`${icon} <b>$${esc(a.symbol)}</b> · <b>${a.verdict.toUpperCase()}</b> · ${Math.round(a.confidence * 100)}%`, "", esc(a.why), ""];
+  const lines = [`${icon} <b>$${esc(a.symbol)}</b> · <b>${T(a.verdict.toUpperCase())}</b> · ${Math.round(a.confidence * 100)}%`, "", esc(a.why), ""];
   const c = a.facts.chain;
   const r = a.facts.creator;
   const m = a.facts.market;
-  if (c?.creatorSold !== null && c?.creatorSold !== undefined) lines.push(`• creator sold ${pct(c.creatorSold)}`);
-  if (r) lines.push(`• creator: ${creatorLine(r)}`);
+  if (c?.creatorSold !== null && c?.creatorSold !== undefined) lines.push(T("• creator sold {p}", { p: pct(c.creatorSold) }));
+  if (r) lines.push(T("• creator: {c}", { c: creatorLine(r) }));
   const h = a.facts.holders;
-  if (h) lines.push(`• top 10 wallets hold ${pct(h.top10Share)}${h.creatorShare !== null ? ` · dev holds ${pct(h.creatorShare)}` : ""}`);
+  if (h) lines.push(T("• top 10 wallets hold {p}", { p: pct(h.top10Share) }) + (h.creatorShare !== null ? T(" · dev holds {p}", { p: pct(h.creatorShare) }) : ""));
   const b = a.facts.bundle;
-  if (b && b.wallets >= 2) lines.push(`• bundle: ${b.wallets} wallets took ${pct(b.share)} of supply in the launch block${b.linked >= 2 ? `, ${b.linked} funded by one wallet` : ""}`);
-  if (c?.top5Share !== null && c?.top5Share !== undefined) lines.push(`• top 5 buyers: ${pct(c.top5Share)} of the buying`);
-  if (m) lines.push(`• liquidity $${Math.round(m.liquidityUsd ?? 0).toLocaleString("en-US")} · buys/sells 24h ${m.buys24h}/${m.sells24h}`);
-  if (a.facts.hasSocials === false) lines.push("• no socials");
-  lines.push("", a.already ? "<i>Already dead when asked: shown, not scored.</i>" : "<i>Graded against reality in 24h, right or wrong.</i>");
+  if (b && b.wallets >= 2) lines.push(T("• bundle: {w} wallets took {p} of supply in the launch block", { w: b.wallets, p: pct(b.share) }) + (b.linked >= 2 ? T(", {n} funded by one wallet", { n: b.linked }) : ""));
+  if (c?.top5Share !== null && c?.top5Share !== undefined) lines.push(T("• top 5 buyers: {p} of the buying", { p: pct(c.top5Share) }));
+  if (m) lines.push(T("• liquidity ${l} · buys/sells 24h {b}/{s}", { l: Math.round(m.liquidityUsd ?? 0).toLocaleString("en-US"), b: m.buys24h, s: m.sells24h }));
+  if (a.facts.hasSocials === false) lines.push(T("• no socials"));
+  lines.push("", T(a.already ? "<i>Already dead when asked: shown, not scored.</i>" : "<i>Graded against reality in 24h, right or wrong.</i>"));
   return lines.join("\n");
 }
 
 function askKeyboard(a: Ask): Keyboard {
   return [
     [
-      { text: "Watch it", callback_data: `watch:${a.mint}` },
-      { text: "Card & record", url: `${SITE}/ask#${a.id}` },
+      { text: T("Watch it"), callback_data: `watch:${a.mint}` },
+      { text: T("Card & record"), url: `${SITE}/ask#${a.id}` },
     ],
-    [{ text: "Chart", url: a.facts.url ?? `https://dexscreener.com/solana/${a.mint}` }],
+    [{ text: T("Chart"), url: a.facts.url ?? `https://dexscreener.com/solana/${a.mint}` }],
   ];
 }
 
 export function alertMessage(e: PulseEvent): string {
   const icon = e.kind === "dump" || e.kind === "drained" ? "🔴" : e.kind === "graduated" ? "🟢" : "⚪️";
   const tx = e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : "";
-  return `${icon} <b>$${esc(e.symbol)}</b>: ${esc(e.text)}${tx}\n<code>${e.mint}</code>`;
+  return `${icon} <b>$${esc(e.symbol)}</b>: ${esc(TC(e.text))}${tx}\n<code>${e.mint}</code>`;
 }
 
 export function devMessage(r: CreatorRecord): string {
   const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
   const lines = [
-    `<b>Dev ${short(r.wallet)}</b>${serial ? " · 🔴 serial dumper" : ""}`,
+    `<b>${T("Dev {w}", { w: short(r.wallet) })}</b>${serial ? T(" · 🔴 serial dumper") : ""}`,
     "",
     `<b>${creatorLine(r)}</b>`,
-    `${r.launches24h} in the last 24h · ${r.graduated} graduated`,
+    T("{a} in the last 24h · {g} graduated", { a: r.launches24h, g: r.graduated }),
     "",
   ];
   for (const t of r.recent.slice(0, 8)) {
-    lines.push(`${t.dumpedAfterMin !== null ? "🔴" : t.graduated ? "🟢" : "⚪️"} $${esc(t.symbol)} · ${t.dumpedAfterMin !== null ? `dumped after ${t.dumpedAfterMin} min` : t.graduated ? "graduated" : "creator holding"}`);
+    lines.push(`${t.dumpedAfterMin !== null ? "🔴" : t.graduated ? "🟢" : "⚪️"} $${esc(t.symbol)} · ${t.dumpedAfterMin !== null ? T("dumped after {m} min", { m: t.dumpedAfterMin }) : T(t.graduated ? "graduated" : "creator holding")}`);
   }
   lines.push("", `<code>${r.wallet}</code>`);
   return lines.join("\n");
@@ -346,9 +363,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
   /* ----- actions shared by commands and buttons ----- */
 
   const welcome = async (chat: number, name?: string) => {
-    const caption = name ? WELCOME.replace("Welcome to ZOOAI AGENCY.", `Hi ${esc(name)}, welcome to ZOOAI AGENCY.`) : WELCOME;
-    const photo = await call("sendPhoto", { chat_id: chat, photo: WELCOME_IMAGE, caption, parse_mode: "HTML", reply_markup: { inline_keyboard: MENU } }).catch(() => null);
-    if (!photo?.ok) await send(chat, caption, MENU);
+    const text = welcomeText();
+    const caption = name ? text.replace(T("<b>Welcome to ZOOAI AGENCY.</b>"), T("<b>Hi {name}, welcome to ZOOAI AGENCY.</b>", { name: esc(name) })) : text;
+    const photo = await call("sendPhoto", { chat_id: chat, photo: WELCOME_IMAGE, caption, parse_mode: "HTML", reply_markup: { inline_keyboard: menu() } }).catch(() => null);
+    if (!photo?.ok) await send(chat, caption, menu());
   };
 
   const ask = async (chat: number, who: string, mint: string) => {
@@ -358,112 +376,119 @@ export function startTelegram(opts: TelegramOptions): () => void {
     // Not a traded token: perhaps it is a creator's wallet.
     if (result.status === 404) {
       const dev = await north<CreatorRecord>(`/v1/chain/creator/${mint}`);
-      if (dev) return void send(chat, devMessage(dev), [[{ text: "Open on the site", url: `${SITE}/ask` }]]);
+      if (dev) return void send(chat, devMessage(dev), [[{ text: T("Open on the site"), url: `${SITE}/ask` }]]);
     }
     return void send(chat, `${esc(result.reason)}`);
   };
 
   const dev = async (chat: number, wallet: string) => {
     const r = await north<CreatorRecord>(`/v1/chain/creator/${wallet}`);
-    if (!r) return void send(chat, "No pump.fun launches from this wallet in the last 48 hours that our stream saw.");
+    if (!r) return void send(chat, T("No pump.fun launches from this wallet in the last 48 hours that our stream saw."));
     return void send(chat, devMessage(r));
   };
 
   const rugs = async (chat: number) => {
     const body = await north<{ moments: PulseEvent[] }>("/v1/chain/moments?kind=dump&limit=8");
     const list = body?.moments ?? [];
-    if (!list.length) return void send(chat, "No creator dumps on the record right now.");
-    const lines = ["<b>Latest creator dumps on pump.fun</b>", "<i>read straight from Solana, each with its transaction</i>", ""];
-    for (const e of list) lines.push(`• <b>$${esc(e.symbol)}</b> · ${esc(e.text)}${e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : ""}`);
-    return void send(chat, lines.join("\n"), [[{ text: "Refresh", callback_data: "rugs" }, { text: "Watch it live", url: `${SITE}/live` }]]);
+    if (!list.length) return void send(chat, T("No creator dumps on the record right now."));
+    const lines = [T("<b>Latest creator dumps on pump.fun</b>"), T("<i>read straight from Solana, each with its transaction</i>"), ""];
+    for (const e of list) lines.push(`• <b>$${esc(e.symbol)}</b> · ${esc(TC(e.text))}${e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : ""}`);
+    return void send(chat, lines.join("\n"), [[{ text: T("Refresh"), callback_data: "rugs" }, { text: T("Watch it live"), url: `${SITE}/live` }]]);
   };
 
   const clean = async (chat: number) => {
     const body = await north<{ launches: CleanLaunch[] }>("/v1/chain/clean?limit=6");
     const list = body?.launches ?? [];
     const lines = [
-      "<b>Passed the basic checks</b>",
-      "<i>10-180 min old, creator has not sold, not a serial wallet, 25+ buyers, no 5 wallets holding most of it. Not a call, not advice: most still die.</i>",
+      T("<b>Passed the basic checks</b>"),
+      T("<i>10-180 min old, creator has not sold, not a serial wallet, 25+ buyers, no 5 wallets holding most of it. Not a call, not advice: most still die.</i>"),
       "",
     ];
-    if (!list.length) lines.push("Nothing passes right now. On pump.fun that is a normal hour.");
-    for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${c.ageMin} min · ${c.buyers >= 100 ? "100+" : c.buyers} buyers · top 5 ${pct(c.top5Share)}\n<code>${c.mint}</code>`);
-    const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: `Ask about $${c.symbol}`, callback_data: `ask:${c.mint}` }]);
-    keyboard.push([{ text: "Refresh", callback_data: "clean" }]);
+    if (!list.length) lines.push(T("Nothing passes right now. On pump.fun that is a normal hour."));
+    for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${T("{a} min · {b} buyers · top 5 {p}", { a: c.ageMin, b: c.buyers >= 100 ? "100+" : c.buyers, p: pct(c.top5Share) })}\n<code>${c.mint}</code>`);
+    const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: T("Ask about ${s}", { s: c.symbol }), callback_data: `ask:${c.mint}` }]);
+    keyboard.push([{ text: T("Refresh"), callback_data: "clean" }]);
     return void send(chat, lines.join("\n"), keyboard);
   };
 
   const live = async (chat: number) => {
     const [pulse, stats] = await Promise.all([north<{ live: boolean; perMinute: { launches: number; trades: number } }>("/v1/chain/pulse?after=999999999"), data.stats?.().catch(() => null)]);
-    const lines = ["<b>pump.fun right now</b>", ""];
-    if (pulse) lines.push(`${pulse.live ? "🟢" : "⚪️"} ${pulse.perMinute.launches} launches and ${pulse.perMinute.trades.toLocaleString("en-US")} trades in the last minute`);
-    if (stats?.tokensTonight !== undefined) lines.push(`tonight the pack watched ${stats.tokensTonight.toLocaleString("en-US")} tokens and made ${stats.callsTonight ?? 0} calls`);
-    return void send(chat, lines.join("\n"), [[{ text: "Open the live map", url: `${SITE}/live` }]]);
+    const lines = [T("<b>pump.fun right now</b>"), ""];
+    if (pulse) lines.push(`${pulse.live ? "🟢" : "⚪️"} ${T("{l} launches and {t} trades in the last minute", { l: pulse.perMinute.launches, t: pulse.perMinute.trades.toLocaleString("en-US") })}`);
+    if (stats?.tokensTonight !== undefined) lines.push(T("tonight the pack watched {t} tokens and made {c} calls", { t: stats.tokensTonight.toLocaleString("en-US"), c: stats.callsTonight ?? 0 }));
+    return void send(chat, lines.join("\n"), [[{ text: T("Open the live map"), url: `${SITE}/live` }]]);
   };
 
   const nursery = async (chat: number) => {
     const evo = await data.evolution?.().catch(() => null);
-    if (!evo) return void send(chat, "The nursery is resting. Try again in a minute.");
+    if (!evo) return void send(chat, T("The nursery is resting. Try again in a minute."));
     const alive = evo.creatures.filter((c) => !c.diedNight).sort((a, b) => (b.lifetimeSkill ?? 0) - (a.lifetimeSkill ?? 0));
-    const lines = [`<b>The nursery</b> · turn ${evo.generation} · next in ${evo.nextGenerationInNights} ${evo.nextGenerationInNights === 1 ? "night" : "nights"}`, ""];
-    for (const c of alive) lines.push(`• <b>${esc(c.name)}</b>, ${esc(c.temperament)} · ${c.graded ? `${pct(c.lifetimeSkill)} over ${c.graded}` : "no grades yet"}`);
+    const lines = [T("<b>The nursery</b> · turn {g} · next in {n} nights", { g: evo.generation, n: evo.nextGenerationInNights }), ""];
+    for (const c of alive) lines.push(`• <b>${esc(c.name)}</b>, ${esc(c.temperament)} · ${c.graded ? T("{p} over {n}", { p: pct(c.lifetimeSkill), n: c.graded }) : T("no grades yet")}`);
     const last = evo.chronicle.find((e) => e.kind !== "scored");
     if (last) lines.push("", `<i>${esc(last.text)}</i>`);
-    return void send(chat, lines.join("\n"), [[{ text: "Open the nursery", url: `${SITE}/evolution` }]]);
+    return void send(chat, lines.join("\n"), [[{ text: T("Open the nursery"), url: `${SITE}/evolution` }]]);
   };
 
   const leaderboard = async (chat: number) => {
     const b = await data.board?.().catch(() => null);
-    if (!b) return void send(chat, "The leaderboard is resting. Try again in a minute.");
-    const lines = ["<b>Every agent, one honest scale</b>", `<i>balanced accuracy; a rank needs ${b.minGraded} graded calls with dead and living tokens among them</i>`, ""];
+    if (!b) return void send(chat, T("The leaderboard is resting. Try again in a minute."));
+    const lines = [T("<b>Every agent, one honest scale</b>"), T("<i>balanced accuracy; a rank needs {n} graded calls with dead and living tokens among them</i>", { n: b.minGraded }), ""];
     const ranked = b.rows.filter((r) => r.ranked);
-    if (!ranked.length) lines.push("Nobody is ranked yet. Living tokens are rare, so it fills slowly. That is the point.", "");
-    for (const [i, r] of ranked.slice(0, 8).entries()) lines.push(`${i + 1}. <b>${esc(r.name)}</b> · ${pct(r.score)} · ${r.graded} graded`);
+    if (!ranked.length) lines.push(T("Nobody is ranked yet. Living tokens are rare, so it fills slowly. That is the point."), "");
+    for (const [i, r] of ranked.slice(0, 8).entries()) lines.push(`${i + 1}. <b>${esc(r.name)}</b> · ${pct(r.score)} · ${T("{n} graded", { n: r.graded })}`);
     const next = b.rows.filter((r) => !r.ranked && !r.died && r.graded).slice(0, 5);
-    if (next.length) lines.push("<b>On the way:</b>", ...next.map((r) => `• ${esc(r.name)} · ${pct(r.score)} · ${r.graded} graded`));
-    return void send(chat, lines.join("\n"), [[{ text: "Full leaderboard", url: `${SITE}/agents#leaderboard` }]]);
+    if (next.length) lines.push(T("<b>On the way:</b>"), ...next.map((r) => `• ${esc(r.name)} · ${pct(r.score)} · ${T("{n} graded", { n: r.graded })}`));
+    return void send(chat, lines.join("\n"), [[{ text: T("Full leaderboard"), url: `${SITE}/agents#leaderboard` }]]);
   };
 
   const brief = async (chat: number) => {
     const b = await data.latestBrief?.().catch(() => null);
-    if (!b) return void send(chat, "The next Morning Brief comes out at 07:00 UTC.");
+    if (!b) return void send(chat, T("The next Morning Brief comes out at 07:00 UTC."));
     const parts = [
-      b.launches !== undefined ? `${b.launches.toLocaleString("en-US")} fresh launches` : null,
-      b.graduated !== undefined ? `${b.graduated} graduated` : null,
-      b.wentToZero !== undefined ? `${b.wentToZero} went to zero` : null,
+      b.launches !== undefined ? T("{n} fresh launches", { n: b.launches.toLocaleString("en-US") }) : null,
+      b.graduated !== undefined ? T("{n} graduated", { n: b.graduated }) : null,
+      b.wentToZero !== undefined ? T("{n} went to zero", { n: b.wentToZero }) : null,
     ].filter(Boolean);
-    return void send(chat, [`<b>Morning Brief · night of ${b.night}</b>`, "", parts.join(" · "), "", "<i>Written by the tortoise, no human in the loop, signed on the public log.</i>"].join("\n"), [
-      [{ text: "Read the brief", url: `${SITE}/brief` }],
+    return void send(chat, [T("<b>Morning Brief · night of {n}</b>", { n: b.night }), "", parts.join(" · "), "", T("<i>Written by the tortoise, no human in the loop, signed on the public log.</i>")].join("\n"), [
+      [{ text: T("Read the brief"), url: `${SITE}/brief` }],
     ]);
   };
 
   const token = (chat: number) =>
     send(
       chat,
-      ["<b>$ZOOAGENCY</b>", "", "Launched through ClawPump, graduated to PumpSwap.", `Holders who sign in on the site with a wallet holding ${HOLDER_MIN.toLocaleString("en-US")}+ ask the beaver 30 times an hour, watch 10 tokens and get alerts first (/link).`, "", `<code>${TOKEN_CA}</code>`].join("\n"),
-      [[{ text: "Chart", url: `https://dexscreener.com/solana/${TOKEN_CA}` }, { text: "Website", url: SITE }]],
+      ["<b>$ZOOAGENCY</b>", "", T("Launched through ClawPump, graduated to PumpSwap."), T("Holders who sign in on the site with a wallet holding {h}+ ask the beaver 30 times an hour, watch 10 tokens and get alerts first (/link).", { h: HOLDER_MIN.toLocaleString("en-US") }), "", `<code>${TOKEN_CA}</code>`].join("\n"),
+      [[{ text: T("Chart"), url: `https://dexscreener.com/solana/${TOKEN_CA}` }, { text: T("Website"), url: SITE }]],
     );
 
   const watch = async (chat: number, mint: string, on: boolean) => {
     const res = await setWatch(opts.store, chat, mint, on);
-    if (!res.ok) return void send(chat, `${res.reason} /list shows them.`);
+    if (!res.ok) return void send(chat, T("Up to {n} tokens per chat. Stop watching one first. /list shows them.", { n: WATCH_MAX }));
     return void send(
       chat,
-      on ? `Watching <code>${mint}</code>.\nYou will hear the moment its creator dumps, it graduates, or someone buys big.` : `Stopped watching <code>${mint}</code>.`,
-      on ? [[{ text: "Stop watching", callback_data: `unwatch:${mint}` }]] : undefined,
+      on ? T("Watching <code>{m}</code>.\nYou will hear the moment its creator dumps, it graduates, or someone buys big.", { m: mint }) : T("Stopped watching <code>{m}</code>.", { m: mint }),
+      on ? [[{ text: T("Stop watching"), callback_data: `unwatch:${mint}` }]] : undefined,
     );
   };
 
   const list = async (chat: number) => {
     const mine = Object.entries(await watchers()).filter(([, chats]) => chats.includes(chat)).map(([m]) => m);
-    if (!mine.length) return void send(chat, "Nothing under watch yet. Send /watch with a token address.");
-    return void send(chat, ["<b>Under watch</b>", "", ...mine.map((m) => `<code>${m}</code>`)].join("\n"), mine.map((m) => [{ text: `Stop ${short(m)}`, callback_data: `unwatch:${m}` }]));
+    if (!mine.length) return void send(chat, T("Nothing under watch yet. Send /watch with a token address."));
+    return void send(chat, [T("<b>Under watch</b>"), "", ...mine.map((m) => `<code>${m}</code>`)].join("\n"), mine.map((m) => [{ text: T("Stop {m}", { m: short(m) }), callback_data: `unwatch:${m}` }]));
   };
 
   const prompt = (chat: number, what: "ask" | "dev") =>
-    send(chat, what === "ask" ? "Send me a token address or a pump.fun link." : "Send me the creator's wallet address.", undefined, {
-      reply_markup: { force_reply: true, input_field_placeholder: what === "ask" ? "token address or link" : "wallet address" },
+    send(chat, T(what === "ask" ? "Send me a token address or a pump.fun link." : "Send me the creator's wallet address."), undefined, {
+      reply_markup: { force_reply: true, input_field_placeholder: T(what === "ask" ? "token address or link" : "wallet address") },
     });
+
+  const switchLang = async (chat: number) => {
+    // The language this chat is being answered in, saved or taken from the Telegram client.
+    const next: BotLang = botLang() === "zh" ? "en" : "zh";
+    await setChatLang(opts.store, chat, next);
+    return inLang(next, () => send(chat, T("Language: English. /lang switches back."), menu()));
+  };
 
   /* ----- routing ----- */
 
@@ -479,7 +504,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const who = `tg:${msg.from?.id ?? chat}`;
 
     // An answer to "send me the creator's wallet".
-    if (!cmd && msg.reply_to_message?.text?.includes("creator's wallet") && address) return dev(chat, address);
+    if (!cmd && /creator's wallet|开发者钱包/.test(msg.reply_to_message?.text ?? "") && address) return dev(chat, address);
 
     switch (cmd) {
       case "/start":
@@ -489,11 +514,11 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/app":
         return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);
       case "/menu":
-        return void send(chat, "What next?", MENU);
+        return void send(chat, T("What next?"), menu());
       case "/help":
-        return void send(chat, HELP, MENU);
+        return void send(chat, helpText(), menu());
       case "/tour":
-        return void send(chat, TOUR[0]!, tourKeyboard(0));
+        return void send(chat, tourPage(0), tourKeyboard(0));
       case "/ask":
         return address ? ask(chat, who, address) : prompt(chat, "ask");
       case "/dev":
@@ -522,11 +547,13 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/unlink":
         await opts.store.delete(`tg:wallet:${chat}`);
         holderOf.delete(chat);
-        return void send(chat, "Unlinked. Alerts now arrive with everyone else's.");
+        return void send(chat, T("Unlinked. Alerts now arrive with everyone else's."));
+      case "/lang":
+        return switchLang(chat);
       default:
         // In a private chat, a pasted address is a question.
         if (isPrivate && address) return ask(chat, who, address);
-        if (isPrivate) return void send(chat, "Paste a token address or a pump.fun link, or pick from the menu.", MENU);
+        if (isPrivate) return void send(chat, T("Paste a token address or a pump.fun link, or pick from the menu."), menu());
     }
   };
 
@@ -537,15 +564,17 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!chat) return;
     const [kind, value = ""] = data.split(":");
     switch (kind) {
+      case "lang":
+        return switchLang(chat);
       case "menu":
-        return void send(chat, "What next?", MENU);
+        return void send(chat, T("What next?"), menu());
       case "tour": {
-        const i = Math.max(0, Math.min(TOUR.length - 1, Number(value) || 0));
+        const i = Math.max(0, Math.min(TOUR_LINES.length - 1, Number(value) || 0));
         // Turn the page in place when the tour is already on screen.
         const edited = q.message?.text?.includes("/3 ·")
-          ? await call("editMessageText", { chat_id: chat, message_id: q.message.message_id, text: TOUR[i], parse_mode: "HTML", reply_markup: { inline_keyboard: tourKeyboard(i) } }).catch(() => null)
+          ? await call("editMessageText", { chat_id: chat, message_id: q.message.message_id, text: tourPage(i), parse_mode: "HTML", reply_markup: { inline_keyboard: tourKeyboard(i) } }).catch(() => null)
           : null;
-        if (!edited?.ok) await send(chat, TOUR[i]!, tourKeyboard(i));
+        if (!edited?.ok) await send(chat, tourPage(i), tourKeyboard(i));
         return;
       }
       case "prompt":
@@ -571,6 +600,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const me = await call("getMe", {}).catch(() => null);
     botName = (me?.result as { username?: string } | undefined)?.username ?? "";
     await call("setMyCommands", { commands: COMMANDS }).catch(() => null);
+    // Chinese clients see the menu in Chinese.
+    await call("setMyCommands", { commands: inLang("zh", () => COMMANDS.map((c) => ({ ...c, description: T(c.description) }))), language_code: "zh" }).catch(() => null);
     await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open", web_app: { url: APP_URL } } }).catch(() => null);
     await call("setMyShortDescription", { short_description: "Is it a rug? AI agents read pump.fun straight from Solana and get graded by reality the next day." }).catch(() => null);
     await call("setMyDescription", {
@@ -587,7 +618,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
         const r = await call("getUpdates", { offset, timeout: 30, allowed_updates: ["message", "callback_query"] });
         for (const u of (r.result as Update[] | undefined) ?? []) {
           offset = u.update_id + 1;
-          const job = u.message ? onMessage(u.message) : u.callback_query ? onButton(u.callback_query) : null;
+          const chatId = u.message?.chat.id ?? u.callback_query?.message?.chat.id;
+          const from = u.message?.from ?? u.callback_query?.from;
+          const l = chatId === undefined ? "en" : await chatLang(opts.store, chatId, from?.language_code);
+          const job = inLang(l, () => (u.message ? onMessage(u.message) : u.callback_query ? onButton(u.callback_query) : null));
           await job?.catch((e) => log(`[telegram] ${(e as Error).message}`));
         }
         if (!r.ok) await new Promise((res) => setTimeout(res, 5_000));
@@ -611,17 +645,17 @@ export function startTelegram(opts: TelegramOptions): () => void {
   };
   const link = async (chat: number, code: string) => {
     if (!code.trim()) {
-      return void send(chat, `Sign in with your wallet at ${SITE}/play, tap "Get alerts first", and send me the code: /link ABC123`);
+      return void send(chat, T("Sign in with your wallet at {site}/play, tap \"Get alerts first\", and send me the code: /link ABC123", { site: SITE }));
     }
     const wallet = await redeemCode(opts.store, chat, code);
-    if (!wallet) return void send(chat, "That code is unknown or expired. Make a new one on the site; codes last 15 minutes.");
+    if (!wallet) return void send(chat, T("That code is unknown or expired. Make a new one on the site; codes last 15 minutes."));
     holderOf.delete(chat);
     const holder = await isHolderChat(chat);
     await send(
       chat,
       holder
-        ? `Linked. You hold ${HOLDER_MIN.toLocaleString("en-US")}+ $ZOOAGENCY: alerts on tokens you /watch reach you ${HOLDER_HEAD_START_MS / 60_000} minutes before everyone else.`
-        : `Linked, but this wallet holds less than ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY, so alerts arrive with everyone else's. Top up and they come first, no need to link again.`,
+        ? T("Linked. You hold {h}+ $ZOOAGENCY: alerts on tokens you /watch reach you {m} minutes before everyone else.", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 })
+        : T("Linked, but this wallet holds less than {h} $ZOOAGENCY, so alerts arrive with everyone else's. Top up and they come first, no need to link again.", { h: HOLDER_MIN.toLocaleString("en-US") }),
     );
   };
   // Alerts for everyone else wait here until the holders' head start is over.
@@ -637,7 +671,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (body.events.length) cursor = body.events[body.events.length - 1]!.seq;
     else if (first) cursor = 0;
     if (first) return;
-    later.push(...(await planAlerts(body.events, await watchers(), (chat) => isHolderChat(chat), Date.now())));
+    later.push(...(await planAlerts(body.events, await watchers(), (chat) => isHolderChat(chat), Date.now(), (chat) => chatLang(opts.store, chat))));
     later.sort((a, b) => a.at - b.at);
   };
   const flush = async () => {
