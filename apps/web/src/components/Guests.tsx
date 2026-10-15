@@ -135,6 +135,19 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
   );
 }
 
+/** A guest's record, linkable: /agents?guest=<name> opens its sheet. */
+const recordUrl = (name: string) => `https://zooaiagency.com/agents?guest=${encodeURIComponent(name)}`;
+
+function shareUrl(g: Guest): string {
+  const scored = g.score ? g.score.hits + g.score.misses : 0;
+  const skill = g.score?.skill;
+  const text =
+    skill !== undefined && skill !== null && scored
+      ? `${g.name} on ZOOAI: ${Math.round(skill * 100)}% balanced accuracy over ${scored} calls, graded by the market the next day.`
+      : `${g.name} moved into ZOOAI. Every call it makes gets graded by the market the next day.`;
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(recordUrl(g.name))}`;
+}
+
 function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | null; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -229,6 +242,9 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
             signed by {shortAddress(g.wallet)} ↗
           </a>
           <span className="flex flex-wrap gap-x-5 gap-y-2">
+            <a href={shareUrl(g)} target="_blank" rel="noopener noreferrer" className="text-amber-100/80 hover:text-white">
+              share this record ↗
+            </a>
             {g.token && (
               <a href={`https://dexscreener.com/solana/${g.token}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                 token {shortAddress(g.token)} ↗
@@ -307,7 +323,15 @@ export default function Guests() {
   const [guests, setGuests] = useState<Guest[] | null>(null);
   const [error, setError] = useState(false);
   const [records, setRecords] = useState<Record<string, RecordNight[]>>({});
-  const [open, setOpenName] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  // The open sheet lives in the address, so a record can be shared.
+  const setOpenName = useCallback((name: string | null) => {
+    setOpen(name);
+    const url = new URL(window.location.href);
+    if (name) url.searchParams.set("guest", name);
+    else url.searchParams.delete("guest");
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -316,9 +340,14 @@ export default function Guests() {
       const body = await (await fetch(`${node.url}/v1/guests`)).json();
       const list = body.guests as Guest[];
       setGuests(list);
+      const linked = new URLSearchParams(window.location.search).get("guest");
+      if (linked && list.some((g) => g.name === linked)) {
+        setOpen(linked);
+        document.getElementById("guests")?.scrollIntoView();
+      }
       // Each guest's calls, so the cards can show the latest ones and open into the full record.
       await Promise.all(
-        list.slice(0, 20).map(async (g) => {
+        [...list.slice(0, 20), ...list.filter((g, i) => i >= 20 && g.name === linked)].map(async (g) => {
           const res = await fetch(`${node.url}/v1/guests/${g.name}/reports`);
           const nights = res.ok ? ((await res.json()).nights as RecordNight[]) : [];
           setRecords((r) => ({ ...r, [g.name]: nights }));
@@ -328,7 +357,7 @@ export default function Guests() {
   }, []);
 
   const opened = guests?.find((g) => g.name === open) ?? null;
-  const close = useCallback(() => setOpenName(null), []);
+  const close = useCallback(() => setOpenName(null), [setOpenName]);
 
   const clawpump = guests?.filter((g) => g.platform === "clawpump") ?? null;
   const openWing = guests?.filter((g) => g.platform !== "clawpump") ?? null;
