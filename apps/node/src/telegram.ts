@@ -284,7 +284,7 @@ function creatorLine(r: CreatorRecord): string {
 /** The answer as a Telegram message: verdict, reason, the telling facts, the link. */
 export function askMessage(a: Ask): string {
   const icon = a.verdict === "suspicious" ? "🔴" : a.verdict === "promising" ? "🟢" : "⚪️";
-  const lines = [`${icon} <b>$${esc(a.symbol)}</b> · <b>${T(a.verdict.toUpperCase())}</b> · ${Math.round(a.confidence * 100)}%`, "", esc(a.why), ""];
+  const lines = [`${icon} <b>$${esc(a.symbol)}</b> · <b>${T(a.verdict.toUpperCase())}</b> · ${Math.round(a.confidence * 100)}%`, "", esc(botLang() === "zh" && a.whyZh ? a.whyZh : a.why), ""];
   const c = a.facts.chain;
   const r = a.facts.creator;
   const m = a.facts.market;

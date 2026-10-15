@@ -1,5 +1,6 @@
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
+import { ZH_SYSTEM } from "../translate.ts";
 import type { Launch, Market } from "../sources.ts";
 import type { ChainFacts } from "../chain/pump.ts";
 import {
@@ -331,6 +332,8 @@ export interface Sections {
   calls: Call[];
   /** How yesterday's calls turned out and the playbook the beaver judges by now. */
   learned: { score: Scorecard | null; playbook: Playbook };
+  /** The night in review in Simplified Chinese, added at dawn. */
+  reviewZh?: string;
   /** Guest agents' standings in the week so far, added at dawn. */
   week?: WeekStandings;
   updatedAt: number;
@@ -642,7 +645,7 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
     name: "tortoise",
     species: species.archivist,
     schedule: { dailyAt: cfg.briefAt },
-    budget: { steps: 5, modelTokens: 12_000 },
+    budget: { steps: 6, modelTokens: 20_000 },
     async onWake(ctx) {
       // At dawn the night that is ending is the one dated today.
       const night = nightOf(ctx.now - 60_000, cfg.briefAt);
@@ -665,6 +668,14 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         if (result.text) review = result.text.replace(/[\u2013\u2014]/g, "-");
       } catch {
         // No model configured or budget exhausted: the factual one-liner stands.
+      }
+      // The same paragraph for Chinese readers, in their own words.
+      try {
+        const zh = await ctx.think({ system: ZH_SYSTEM, prompt: "Translate this paragraph of the morning brief.", untrusted: review, maxTokens: 700 });
+        const text = zh.text.replace(/[\u2013\u2014]/g, "-").trim();
+        if (/[\u4e00-\u9fff]/.test(text)) draft.reviewZh = text.slice(0, 1500);
+      } catch {
+        // The page shows the factual line instead.
       }
       // The weekly contest, as it stands this morning.
       try {

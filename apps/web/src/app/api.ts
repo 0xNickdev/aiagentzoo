@@ -25,6 +25,7 @@ export interface Ask {
   verdict: Verdict;
   confidence: number;
   why: string;
+  whyZh?: string;
   by: "model" | "rules";
   playbookVersion: number;
   already: boolean;

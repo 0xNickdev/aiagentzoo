@@ -34,6 +34,7 @@ interface Sections {
   guests?: GuestReport[];
   week?: Week;
   calls?: Call[];
+  reviewZh?: string;
   learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null } | null; playbook: { version: number; text: string } };
 }
 interface Week {
@@ -568,7 +569,7 @@ export default function Brief() {
             <div>
               <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("NIGHT OF {n} · NIGHT IN REVIEW", { n: s.night })}</p>
               <p className="mt-4 text-[16px] font-light leading-[1.7] text-white/80 sm:text-[19px]">
-                {(lang() === "zh" ? null : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.graduated.length, z: s.wentToZero.length, f: s.suspicious.length })}
+                {(lang() === "zh" ? (s.reviewZh ?? null) : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.graduated.length, z: s.wentToZero.length, f: s.suspicious.length })}
               </p>
             </div>
             <div className="flex flex-col justify-end gap-3 lg:items-end">

@@ -16,6 +16,7 @@ import {
   type Verdict,
 } from "./agents/judgement.ts";
 import type { Observation } from "./agents/nightWatch.ts";
+import { toChinese } from "./translate.ts";
 import { curveCapSol } from "./sources.ts";
 
 /**
@@ -55,6 +56,8 @@ export interface Ask {
   verdict: Verdict;
   confidence: number;
   why: string;
+  /** The same reason in Simplified Chinese, when a model wrote it. */
+  whyZh?: string;
   /** "model" when the beaver thought it through, "rules" when no model was at hand. */
   by: "model" | "rules";
   playbookVersion: number;
@@ -276,6 +279,7 @@ export class AskDesk {
       call = { mint, symbol: obs.symbol, verdict: flags.length >= 2 ? "suspicious" : "watch", confidence: 0.5, why: flags.join(", ") || "not enough evidence either way", by: "rules", at: now };
     }
 
+    const whyZh = await toChinese(this.opts.model, call.why);
     const ask: Ask = {
       id: randomBytes(5).toString("hex"),
       mint,
@@ -285,6 +289,7 @@ export class AskDesk {
       verdict: call.verdict,
       confidence: call.confidence,
       why: call.why,
+      ...(whyZh ? { whyZh } : {}),
       by: call.by,
       playbookVersion: playbook.version,
       facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, bundle, holders, flags, url: m?.url ?? null },

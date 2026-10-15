@@ -300,7 +300,7 @@ function Verdict({ a }: { a: Ask }) {
           >
             {tt(tone.label)}
           </motion.p>
-          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-white/85">{a.why}</p>
+          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-white/85">{lang() === "zh" && a.whyZh ? a.whyZh : a.why}</p>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
             {facts.slice(0, 6).map(([k, v, bad], i) => (
@@ -329,7 +329,7 @@ function Verdict({ a }: { a: Ask }) {
               type="button"
               onClick={() => {
                 haptic.tap();
-                share(`${SITE}/ask#${a.id}`, pick(`the beaver on $${a.symbol}: ${tone.label.toLowerCase()}. ${a.why}`, `海狸对 $${a.symbol} 的判断：${tt(tone.label)}。${a.why}`));
+                share(`${SITE}/ask#${a.id}`, pick(`the beaver on $${a.symbol}: ${tone.label.toLowerCase()}. ${a.why}`, `海狸对 $${a.symbol} 的判断：${tt(tone.label)}。${a.whyZh ?? a.why}`));
               }}
               className="glass-btn"
             >

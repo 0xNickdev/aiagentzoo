@@ -50,6 +50,7 @@ interface Ask {
   verdict: Verdict;
   confidence: number;
   why: string;
+  whyZh?: string;
   by: "model" | "rules";
   playbookVersion: number;
   already: boolean;
@@ -116,6 +117,8 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
   return out;
 }
 
+/** The beaver's reason in the reader's language, when a Chinese one was written. */
+const whyOf = (a: Ask) => (lang() === "zh" && a.whyZh ? a.whyZh : a.why);
 const gradeDue = (a: Ask) => new Date(a.at + 24 * 3_600_000);
 const when = (d: Date) => d.toLocaleString(lang() === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
 
@@ -182,11 +185,12 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
   // The reason, wrapped to two lines.
   ctx.font = '300 27px "Geist", sans-serif';
   ctx.fillStyle = "rgba(255,255,255,0.88)";
-  const words = a.why.split(/\s+/);
+  const words = lang() === "zh" && a.whyZh ? Array.from(a.whyZh) : a.why.split(/\s+/);
   const lines: string[] = [];
   let line = "";
   for (const w of words) {
-    const next = line ? `${line} ${w}` : w;
+    // Chinese wraps by character, with no spaces between.
+    const next = line ? `${line}${lang() === "zh" && a.whyZh ? "" : " "}${w}` : w;
     if (ctx.measureText(next).width > 640 && line) {
       lines.push(line);
       line = w;
@@ -501,7 +505,7 @@ function Answer({ a }: { a: Ask }) {
   const tweet = encodeURIComponent(
     pick(
       [`asked the beaver about $${a.symbol}: ${tone.label.toLowerCase()}.`, a.why, "", `graded against reality tomorrow: ${link}`],
-      [`问了海狸 $${a.symbol}：${t(tone.label)}。`, a.why, "", `明天由市场打分：${link}`],
+      [`问了海狸 $${a.symbol}：${t(tone.label)}。`, whyOf(a), "", `明天由市场打分：${link}`],
     ).join("\n"),
   );
 
@@ -531,7 +535,7 @@ function Answer({ a }: { a: Ask }) {
             {t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion })}
             {a.by === "rules" ? t(" · rules only, the model was busy") : ""}
           </p>
-          <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-white/85">{a.why}</p>
+          <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-white/85">{whyOf(a)}</p>
 
           <dl className="font-mono mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] sm:grid-cols-3">
             {evidence(a).map(([k, v, bad]) => (
