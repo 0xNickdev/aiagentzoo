@@ -1065,10 +1065,11 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   const create = line([27, 114, 169, 77, 222, 235, 99, 118], Buffer.concat([str("grad"), str("GRAD"), str("ipfs://x"), fromBase58(GRAD), fromBase58(CREATOR), fromBase58(CREATOR)]));
   const buy = line([189, 219, 127, 211, 78, 230, 97, 238], Buffer.concat([fromBase58(GRAD), u64(1_000_000_000n), u64(10_000_000n * 1_000_000n), Buffer.from([1]), fromBase58(CREATOR), u64(1_791_600_000n)]));
   // A PumpSwap trade: timestamp, 13 amounts (base, limit, 4 reserves, quote, 5 fees, what the user paid or got), pool, user.
-  const swap = (isBuy: boolean, user: string, tokens: bigint, lamports: bigint, poolLamports: bigint) => {
-    const f = [tokens * 1_000_000n, 0n, 0n, 0n, 0n, poolLamports, lamports, 0n, 0n, 0n, 0n, 0n, lamports];
+  // The reserves are from before the swap; the pool's SOL after it is reserves plus or minus the quote with the LP fee.
+  const swap = (isBuy: boolean, user: string, tokens: bigint, lamports: bigint, poolLamports: bigint, pool = POOL) => {
+    const f = [tokens * 1_000_000n, 0n, 0n, 0n, 0n, poolLamports, lamports, 0n, 0n, 0n, 0n, lamports, lamports];
     const disc = isBuy ? [103, 244, 82, 31, 44, 245, 119, 119] : [62, 47, 55, 10, 165, 3, 220, 42];
-    return line(disc, Buffer.concat([u64(1_791_600_100n), ...f.map(u64), fromBase58(POOL), fromBase58(user)]));
+    return line(disc, Buffer.concat([u64(1_791_600_100n), ...f.map(u64), fromBase58(pool), fromBase58(user)]));
   };
 
   const tape = new PumpTape();
@@ -1081,7 +1082,7 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   assert.equal(f.ammSells, 1);
   assert.equal(f.ammSolIn, 2);
   assert.equal(f.ammSolOut, 3);
-  assert.equal(f.poolSol, 88);
+  assert.equal(f.poolSol, 85);
   // The creator bought 10M on the curve and sold 6M on PumpSwap: a dump after graduation still counts.
   assert.equal(f.creatorSold, 0.6);
   assert.deepEqual(tape.pulseAfter(0).map((e) => e.kind), ["launch", "graduated", "dump"]);
@@ -1093,6 +1094,13 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   assert.equal(reborn.creator(CREATOR, now)?.launches48h, 1);
   reborn.apply(parsePumpLogs([swap(true, "11111111111111111111111111111111", 1n, 1_000_000_000n, 89_000_000_000n)])[0]!, now);
   assert.equal(reborn.facts(GRAD, now)!.ammBuys, 2);
+  // Someone opens a second, tiny SOL pool for the token: its trades count, but it does not stand in for the main pool.
+  const SIDE = "5hgao1gkk4742tsPbJaJoXtKViRNVYw6KPEn2Jvm4HaM";
+  reborn.apply({ kind: "pool", mint: GRAD, pool: SIDE }, now);
+  reborn.apply(parsePumpLogs([swap(false, "11111111111111111111111111111111", 1n, 100_000_000n, 500_000_000n, SIDE)])[0]!, now);
+  assert.equal(reborn.facts(GRAD, now)!.ammSells, 2);
+  assert.equal(reborn.facts(GRAD, now)!.poolSol, 90);
+  assert.equal(reborn.pulseAfter(0).filter((e) => e.kind === "drained").length, 0);
   // The pool falls from 90 SOL to 5: drained, announced once.
   for (const lamports of [5_000_000_000n, 4_000_000_000n]) reborn.apply(parsePumpLogs([swap(false, "11111111111111111111111111111111", 1n, 1n, lamports)])[0]!, now);
   assert.deepEqual(reborn.pulseAfter(0).filter((e) => e.kind === "drained").map((e) => e.text), ["pool drained to 5.0 SOL after graduation"]);

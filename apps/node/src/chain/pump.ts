@@ -171,12 +171,16 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
         if (quote === WSOL) out.push({ kind: "pool", mint, pool });
       } else if (head.equals(DISC.ammBuy) || head.equals(DISC.ammSell)) {
         // timestamp, then 13 u64: base amount, quote limit, user and pool reserves, quote amount, fees, what the user paid or got.
+        // The reserves are read before the swap; what moves the pool's SOL is the quote amount with the LP fee (f[11]).
         const ts = Number(r.i64()) * 1000;
         const f: bigint[] = [];
         for (let i = 0; i < 13; i++) f.push(r.u64());
         const pool = base58(r.key());
         const user = base58(r.key());
-        out.push({ kind: "swap", pool, isBuy: head.equals(DISC.ammBuy), tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol: Number(f[5]) / LAMPORTS, user, ts });
+        const isBuy = head.equals(DISC.ammBuy);
+        const [reserve, moved] = [f[5]!, f[11]!];
+        const poolSol = Math.max(0, Number(isBuy ? reserve + moved : reserve - moved) / LAMPORTS);
+        out.push({ kind: "swap", pool, isBuy, tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol, user, ts });
       }
     } catch {
       // A truncated or unfamiliar event: skip it.
@@ -475,7 +479,8 @@ export class PumpTape {
       if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
       t.graduated = true;
       if (ev.kind === "pool") {
-        t.pool = ev.pool;
+        // Anyone can open another SOL pool for a token; the first one, from the migration, is the one we follow.
+        t.pool ??= ev.pool;
         this.pools.set(ev.pool, t.mint);
       }
       return;
@@ -522,10 +527,13 @@ export class PumpTape {
     if (!t) return;
     this.seen.trades += 1;
     this.count(now, "trades");
-    t.poolSol = ev.poolSol;
-    t.poolPeak = Math.max(t.poolPeak ?? 0, ev.poolSol);
+    // Trades on a side pool still count, but only the main pool says how much SOL is left.
+    if (ev.pool === t.pool) {
+      t.poolSol = ev.poolSol;
+      t.poolPeak = Math.max(t.poolPeak ?? 0, ev.poolSol);
+    }
     // A graduated pool opens with about 85 SOL. Down to a fifth of its best, the liquidity has left: announced once.
-    if (!t.drained && t.poolPeak >= DRAIN_MIN_PEAK && ev.poolSol < t.poolPeak * DRAIN_SHARE) {
+    if (ev.pool === t.pool && !t.drained && t.poolPeak !== null && t.poolPeak >= DRAIN_MIN_PEAK && ev.poolSol < t.poolPeak * DRAIN_SHARE) {
       t.drained = true;
       this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} SOL after graduation`, tx);
     }
