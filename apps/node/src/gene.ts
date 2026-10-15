@@ -23,6 +23,7 @@ export interface Ballot {
   at: number;
 }
 export interface GeneVote {
+  v?: number;
   week: string;
   candidates: Candidate[];
   votes: Record<string, Ballot>;
@@ -36,6 +37,9 @@ const prevWeek = (week: string) => new Date(Date.parse(`${week}T00:00:00Z`) - 7 
 const PROPOSE_SYSTEM = [
   "You are the heron of ZOOAI AGENCY. You keep a nursery of AI judges that call fresh Solana tokens suspicious, watch or promising.",
   "Propose exactly three different rules a judge could add to its playbook, each aimed at the mistakes below. One sentence each, at most 160 characters, concrete numbers where they help.",
+  "Holders vote on them, so write plain English a person reads at a glance: words, not code. Say 'above', 'below', 'at least', 'and', 'is missing'; no ==, >, <, &&, parentheses or quotes.",
+  "Tokens still on the pump.fun bonding curve always have no pool liquidity (market.liq is empty) and that is normal, never a red flag on its own; their size is market.curveCapSol, which starts near 28.",
+  "Give one rule for catching dead tokens, one for spotting tokens that will live, and one that tells them apart in a way the mistakes show the nursery gets wrong.",
   `Rules may only use fields the judges actually see: ${EXAM_FIELDS}.`,
   'Answer with a JSON array of three strings only, like ["rule one", "rule two", "rule three"].',
   UNTRUSTED_NOTICE,
@@ -54,7 +58,7 @@ export async function proposeRules(store: StateStore, model?: ModelProvider | nu
       const end = result.text.lastIndexOf("]");
       const rules = (JSON.parse(result.text.slice(start, end + 1)) as unknown[])
         .filter((r): r is string => typeof r === "string")
-        .map((r) => cleanText(r, 160))
+        .map((r) => cleanText(r.replace(/==/g, " is ").replace(/!=/g, " is not ").replace(/>=|≥/g, " at least ").replace(/<=|≤/g, " at most ").replace(/>/g, " above ").replace(/</g, " below ").replace(/&&/g, " and ").replace(/\|\|/g, " or "), 160))
         .filter((r) => r.length >= 20);
       if (new Set(rules).size >= 3) return [...new Set(rules)].slice(0, 3);
     } catch {
@@ -65,12 +69,15 @@ export async function proposeRules(store: StateStore, model?: ModelProvider | nu
   return own.length >= 3 ? own.slice(0, 3) : [];
 }
 
+/** Bumped when the way candidates are written changes: a vote nobody has used yet is drawn again. */
+const CANDIDATES_V = 2;
+
 export async function openVote(store: StateStore, week: string, model?: ModelProvider | null): Promise<GeneVote | null> {
   const existing = await store.get<GeneVote>(GENE.vote(week));
-  if (existing) return existing;
+  if (existing && (existing.v === CANDIDATES_V || Object.keys(existing.votes).length || existing.closed)) return existing;
   const rules = await proposeRules(store, model);
   if (rules.length < 3) return null;
-  const vote: GeneVote = { week, candidates: rules.map((rule, i) => ({ id: IDS[i]!, rule })), votes: {}, closed: null };
+  const vote: GeneVote = { v: CANDIDATES_V, week, candidates: rules.map((rule, i) => ({ id: IDS[i]!, rule })), votes: {}, closed: null };
   await store.set(GENE.vote(week), vote);
   return vote;
 }
