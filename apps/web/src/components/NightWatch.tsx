@@ -7,6 +7,7 @@ import { openPassport } from "../passportStore";
 import { NightWatch as Engine, PARTS, PULSE_COLOR, type LogEntry, type Snapshot } from "../sim/nightWatch";
 import { useLiveNumbers } from "./LiveStats";
 import { Reveal, Section } from "./ui";
+import { t } from "../i18n";
 
 const SPEEDS = [1, 3, 8];
 const LIVE_SECTIONS = ["Night in review", "Top volume", "Graduated", "Went to zero", "Suspicious", "Freshly promoted"];
@@ -115,12 +116,12 @@ export default function NightWatch() {
       <Reveal className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="font-mono text-[12px] text-white/55">
-            {live.enabled ? `Live enclosures · ${live.connected}/${NODE_URLS.length} nodes online` : "Live enclosures · simulation"}
+            {live.enabled ? t("Live enclosures · {a}/{b} nodes online", { a: live.connected, b: NODE_URLS.length }) : t("Live enclosures · simulation")}
           </p>
-          <h2 className="font-display mt-2 text-4xl text-white md:text-5xl">The Night Watch</h2>
+          <h2 className="font-display mt-2 text-4xl text-white md:text-5xl">{t("The Night Watch")}</h2>
         </div>
         <p className="max-w-md text-[14px] font-light leading-relaxed text-white/60 md:text-right">
-          Three nodes, four species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.
+          {t("Three nodes, four species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
         </p>
       </Reveal>
 
@@ -227,7 +228,7 @@ export default function NightWatch() {
                 <span>real cycles</span>
               </div>
               <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">
-                Wake a sentinel on its live node: it really scans, and the step lands in the log under your name.
+                {t("Wake a sentinel on its live node: it really scans, and the step lands in the log under your name.")}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <WakeButton agent="raven" />

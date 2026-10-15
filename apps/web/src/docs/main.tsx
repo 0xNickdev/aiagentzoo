@@ -1,3 +1,4 @@
+import { LangRoot } from "../i18n";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
@@ -7,7 +8,7 @@ import "./docs.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <DocsApp />
+    <LangRoot>{(l) => <DocsApp key={l} />}</LangRoot>
     <Analytics />
   </StrictMode>,
 );

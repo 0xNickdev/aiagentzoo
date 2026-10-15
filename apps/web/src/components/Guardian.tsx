@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadDirectory, shortAddress, useGuardian, wakeAgent } from "../zoo";
+import { t } from "../i18n";
 
 /** Sign in / out as a guardian with a Solana wallet. */
 export function GuardianButton({ className = "" }: { className?: string }) {
@@ -10,7 +11,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
         <button
           type="button"
           onClick={signOut}
-          title="Sign out"
+          title={t("Sign out")}
           className="liquid-glass rounded-full px-4 py-2 text-[12px] text-white/90"
         >
           Guardian {shortAddress(session.publicKey)}
@@ -22,7 +23,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           disabled={busy}
           className="liquid-glass w-full rounded-full px-4 py-2.5 text-[12px] text-white/90 disabled:opacity-50"
         >
-          {busy ? "Check your wallet…" : "Sign in as guardian"}
+          {busy ? t("Check your wallet…") : t("Sign in as guardian")}
         </button>
       )}
       {error && <p className="mt-2 text-[11px] text-white/50">{error}</p>}
@@ -70,9 +71,9 @@ export function WakeButton({ agent }: { agent: string }) {
         disabled={allowed === null || waiting > 0 || state?.text === "Waking…"}
         className="rounded-full bg-white px-4 py-2.5 text-[12px] font-medium text-black transition hover:bg-white/90 disabled:opacity-40"
       >
-        {waiting > 0 ? `Again in ${waiting}s` : `Wake the ${agent}`}
+        {waiting > 0 ? t("Again in {n}s", { n: waiting }) : t("Wake the {a}", { a: t(agent) })}
       </button>
-      {state && <span className="text-[11px] font-light leading-snug text-white/55">{state.text}</span>}
+      {state && <span className="text-[11px] font-light leading-snug text-white/55">{t(state.text)}</span>}
     </div>
   );
 }

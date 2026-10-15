@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SPECIES, SPECIES_COLOR, type SpeciesId } from "../data";
 import { loadPassport, type Passport as PassportData } from "../zoo";
 import { WakeButton } from "./Guardian";
+import { t } from "../i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -105,7 +106,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                   ].map(([value, label]) => (
                     <div key={label}>
                       <b className="font-display block text-3xl font-normal leading-none">{value}</b>
-                      <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{label}</span>
+                      <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{t(String(label))}</span>
                     </div>
                   ))}
                 </div>

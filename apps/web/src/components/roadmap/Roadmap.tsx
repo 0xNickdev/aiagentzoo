@@ -2,6 +2,7 @@ import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef
 import { type LiveNumbers, useLiveNumbers } from "../LiveStats";
 import { type Milestone, MILESTONES } from "./milestones";
 import { SPOTS, VIDEO_SIZE } from "./spots";
+import { t } from "../../i18n";
 
 const VIDEO_DESKTOP = "/video/roadmap-1912.mp4";
 const VIDEO_MOBILE = "/video/roadmap-1280.mp4";
@@ -19,10 +20,10 @@ function MilestoneList({ live, className = "" }: { live: Live; className?: strin
       {MILESTONES.map((m, i) => (
         <li key={m.id} className="rounded-2xl bg-black/40 p-5 ring-1 ring-white/10">
           <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-amber-100/80" : "text-white/45"}`}>
-            {String(i + 1).padStart(2, "0")} · {m.status === "shipped" ? "● shipped" : "○ next"} · {m.metric(live)}
+            {String(i + 1).padStart(2, "0")} · {t(m.status === "shipped" ? "● shipped" : "○ next")} · {m.metric(live)}
           </p>
-          <h3 className="font-display mt-2 text-lg">{m.title}</h3>
-          <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{m.text}</p>
+          <h3 className="font-display mt-2 text-lg">{t(m.title)}</h3>
+          <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{t(m.text)}</p>
         </li>
       ))}
     </ol>
@@ -202,10 +203,10 @@ function MilestoneCard({ m, index, live }: { m: Milestone; index: number; live: 
   return (
     <div className="p-5">
       <p className={`font-mono text-[10.5px] ${m.status === "shipped" ? "text-amber-100/85" : "text-white/50"}`}>
-        {String(index + 1).padStart(2, "0")} · {m.status === "shipped" ? "● shipped" : "○ next"}
+        {String(index + 1).padStart(2, "0")} · {t(m.status === "shipped" ? "● shipped" : "○ next")}
       </p>
-      <p className="font-display mt-2 text-xl text-white">{m.title}</p>
-      <p className="mt-2 text-[13px] font-light leading-relaxed text-white/70">{m.text}</p>
+      <p className="font-display mt-2 text-xl text-white">{t(m.title)}</p>
+      <p className="mt-2 text-[13px] font-light leading-relaxed text-white/70">{t(m.text)}</p>
       <p className="font-mono mt-4 text-[12.5px] text-white">
         <Scramble text={m.metric(live)} />
       </p>
@@ -217,7 +218,7 @@ function MilestoneCard({ m, index, live }: { m: Milestone; index: number; live: 
           rel="noopener noreferrer"
           className="font-mono mt-3 inline-block text-[11px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white"
         >
-          verify: {m.proof.label} ↗
+          {t("verify:")} {t(m.proof.label)} ↗
         </a>
       )}
     </div>
@@ -302,13 +303,12 @@ export default function Roadmap() {
           style={{ background: "radial-gradient(60% 70% at 18% 30%, rgba(3,5,4,0.72), rgba(3,5,4,0) 70%)" }}
         />
         <div className="relative mx-auto max-w-7xl">
-          <p className="font-mono text-[12px] text-white/55">Roadmap</p>
+          <p className="font-mono text-[12px] text-white/55">{t("Roadmap")}</p>
           <h2 className="font-display mt-3 max-w-md text-4xl leading-[1.05] text-white md:text-5xl">
-            A living network first, <span className="accent">the token second</span>
+            {t("A living network first,")} <span className="accent">{t("the token second")}</span>
           </h2>
           <p className="mt-4 max-w-sm text-[14px] font-light leading-relaxed text-white/65">
-            {shipped} of {MILESTONES.length} milestones run in production. Each glowing sphere is one; hover it to see what it builds on and what
-            it unlocks.
+            {t("{a} of {b} milestones run in production. Each glowing sphere is one; hover it to see what it builds on and what it unlocks.", { a: shipped, b: MILESTONES.length })}
           </p>
         </div>
       </div>
@@ -411,7 +411,7 @@ export default function Roadmap() {
                       style={{ left: k.x + p.r + 30, top: k.y - 7 }}
                     >
                       <Scramble text={m.metric(live)} />
-                      <span className="block text-[10px] text-white/50">{m.title}</span>
+                      <span className="block text-[10px] text-white/50">{t(m.title)}</span>
                     </span>
                   )}
                   <button

@@ -5,6 +5,7 @@ import SiteNav from "../components/SiteNav";
 import { type ChronicleEntry, type Creature, dayOf, type Nursery, pad, pct, portrait, useNursery } from "./data";
 import Sheet from "./Sheet";
 import Tree from "./Tree";
+import { t } from "../i18n";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const rise = (delay = 0) => ({
@@ -52,21 +53,20 @@ function Hero({ data }: { data: Nursery | null }) {
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 pb-10 pt-28 sm:px-8">
         <motion.p {...rise(0.1)} className="font-mono text-[11px] tracking-[0.18em] text-white/55">
-          THE NURSERY · LIVE ON SOLANA
+          {t("THE NURSERY · LIVE ON SOLANA")}
         </motion.p>
         <motion.h1 {...rise(0.2)} className="font-display mt-5 max-w-4xl text-[2.9rem] leading-[0.98] sm:text-7xl lg:text-[6rem]">
-          Judges that don't learn. <span className="accent">They evolve.</span>
+          {t("Judges that don't learn.")} <span className="accent">{t("They evolve.")}</span>
         </motion.h1>
         <motion.p {...rise(0.35)} className="mt-7 max-w-xl text-[15px] font-light leading-relaxed text-white/70 sm:text-lg">
-          Eight judges carry their rules as DNA. Every night they read the same fresh tokens; a day later reality grades them. Every three
-          nights the weakest dies and the two best breed. Nobody edits their rules. Only selection does.
+          {t("Eight judges carry their rules as DNA. Every night they read the same fresh tokens; a day later reality grades them. Every three nights the weakest dies and the two best breed. Nobody edits their rules. Only selection does.")}
         </motion.p>
         <motion.div {...rise(0.5)} className="mt-9 flex flex-wrap gap-3">
           <a href="#living" className="rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black hover:bg-white/90">
-            Meet the living
+            {t("Meet the living")}
           </a>
           <a href="#tree" className="liquid-glass rounded-full px-6 py-3 text-[14px] text-white/90 hover:text-white">
-            The bloodlines
+            {t("The bloodlines")}
           </a>
         </motion.div>
       </div>
@@ -86,7 +86,7 @@ function Hero({ data }: { data: Nursery | null }) {
         </div>
         <div className="mt-3 flex items-center gap-2.5 text-[12px] text-white/45">
           <img src="/evolution/heron.webp" alt="" className="h-6 w-6 rounded-full" />
-          Kept by the heron. Every birth, death and grade is signed on the public log.
+          {t("Kept by the heron. Every birth, death and grade is signed on the public log.")}
         </div>
       </motion.div>
     </section>
@@ -198,7 +198,7 @@ function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => v
             <h2 className="font-display mt-3 text-5xl sm:text-6xl">The bloodlines</h2>
           </div>
           <p className="max-w-sm text-[14px] font-light leading-relaxed text-white/55">
-            Amber threads follow the fitter parent, whose house the child carries. Grey nodes have fallen. Tap anyone to read their DNA.
+            {t("Amber threads follow the fitter parent, whose house the child carries. Grey nodes have fallen. Tap anyone to read their DNA.")}
           </p>
         </motion.div>
         <motion.div {...rise(0.15)} className="mt-12 rounded-3xl bg-black/35 p-4 ring-1 ring-white/10 backdrop-blur-sm sm:p-6">
@@ -369,7 +369,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">MEAN BALANCED ACCURACY PER TURN</p>
           <h3 className="font-display mt-3 text-3xl">Is it working?</h3>
           <p className="mt-3 text-[14px] font-light leading-relaxed text-white/55">
-            If selection does its job, the nursery should be right a little more often after every turn. This is the only chart that matters here.
+            {t("If selection does its job, the nursery should be right a little more often after every turn. This is the only chart that matters here.")}
           </p>
         </motion.div>
         <motion.div {...rise(0.2)} className="mt-8 rounded-3xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
@@ -382,13 +382,13 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
         <motion.div {...rise(0.3)} className="mt-8 rounded-3xl bg-white/[0.02] p-6 ring-1 ring-white/[0.08]">
           <p className="font-mono text-[11px] tracking-[0.14em] text-white/40">THE RULES OF THE NURSERY</p>
           <ol className="mt-4 space-y-2.5 text-[13.5px] font-light leading-relaxed text-white/70">
-            <li>1. A playbook is fixed for life. Creatures never rewrite their own rules.</li>
-            <li>2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.</li>
-            <li>3. A day later each answer is graded by what actually happened. "Watch" counts as a miss.</li>
-            <li>4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.</li>
-            <li>5. Every three nights comes a turn: the weakest dies and the two strongest breed. With fewer than three living tokens graded, the turn is quiet and nobody dies.</li>
-            <li>6. A child inherits a mix of both playbooks and exactly one mutation, aimed at what its parents got wrong.</li>
-            <li>7. Every third turn a stranger arrives instead of a child: the beaver's playbook, a guest's style, or a wild line.</li>
+            <li>{t("1. A playbook is fixed for life. Creatures never rewrite their own rules.")}</li>
+            <li>{t("2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.")}</li>
+            <li>{t("3. A day later each answer is graded by what actually happened. \"Watch\" counts as a miss.")}</li>
+            <li>{t("4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.")}</li>
+            <li>{t("5. Every three nights comes a turn: the weakest dies and the two strongest breed. With fewer than three living tokens graded, the turn is quiet and nobody dies.")}</li>
+            <li>{t("6. A child inherits a mix of both playbooks and exactly one mutation, aimed at what its parents got wrong.")}</li>
+            <li>{t("7. Every third turn a stranger arrives instead of a child: the beaver's playbook, a guest's style, or a wild line.")}</li>
           </ol>
         </motion.div>
       </div>
