@@ -8,6 +8,9 @@ import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts"
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
 import { humansView, submitAnswers } from "./humans.ts";
+import { castVote, geneView, nameNewborn } from "./gene.ts";
+import { weekOf } from "./stats.ts";
+import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
@@ -142,6 +145,28 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!(await isHolder(check.address))) return json(res, 403, { error: `hold ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY to play` });
         const result = await submitAnswers(enclosure.store, check.address, body?.answers, evolution.briefAt);
         return result.ok ? json(res, 200, result) : json(res, result.status, { error: result.reason });
+      }
+      if (req.method === "GET" && path === "/v1/gene") {
+        if (!evolution) return json(res, 404, { error: "no nursery on this node" });
+        const w = url.searchParams.get("wallet");
+        return json(res, 200, await geneView(enclosure.store, evolution.briefAt, w && SOLANA_ADDRESS.test(w) ? w : null));
+      }
+      if (req.method === "POST" && (path === "/v1/gene/vote" || path === "/v1/gene/name")) {
+        if (!evolution) return json(res, 404, { error: "no nursery on this node" });
+        const body = (await readJson(req).catch(() => null)) as { guardian?: GuardianSession; pick?: unknown; name?: unknown } | null;
+        const check = verifyGuardian(body?.guardian as GuardianSession);
+        if (!check.ok) return json(res, 401, { error: "sign in with your wallet first" });
+        if (path === "/v1/gene/name") {
+          const named = await nameNewborn(enclosure.store, check.address, String(body?.name ?? ""));
+          return named.ok ? json(res, 200, named) : json(res, named.status, { error: named.reason });
+        }
+        // One vote per wallet, weighed by its balance; the week's close reads every balance again.
+        const balance = await balanceOf(check.address);
+        if (balance === null) return json(res, 503, { error: "could not read your balance, try again in a minute" });
+        if (balance < HOLDER_MIN) return json(res, 403, { error: `hold ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY to vote` });
+        const week = weekOf(nightOf(Date.now(), evolution.briefAt));
+        const cast = await castVote(enclosure.store, week, check.address, String(body?.pick ?? ""), balance);
+        return cast.ok ? json(res, 200, { ok: true, weight: balance }) : json(res, cast.status, { error: cast.reason });
       }
       if (req.method === "GET" && path === "/v1/agent-of-the-week") {
         return weekly ? json(res, 200, await weekly()) : json(res, 404, { error: "no contest on this node" });

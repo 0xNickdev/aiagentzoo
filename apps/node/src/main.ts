@@ -21,6 +21,8 @@ import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
 import { startPumpStream, tape } from "./chain/pump.ts";
 import { notifyGraded } from "./notify.ts";
+import { tickGene } from "./gene.ts";
+import { balanceOf } from "./holders.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 
 const config = loadConfig();
@@ -115,6 +117,12 @@ const guests =
 
 // Guests with a webhook hear when their calls are graded.
 if (guests) setInterval(() => void notifyGraded(enclosure, guests, config.briefAt).catch(() => {}), 10 * 60_000);
+// The holders' weekly vote on the nursery's next gene: last week closes, this week opens.
+if (config.role === "canyon") {
+  const gene = () => void tickGene(enclosure.store, config.briefAt, (w) => balanceOf(w), model).catch((e) => console.log(`[${config.id}] gene: ${(e as Error).message}`));
+  setTimeout(gene, 60_000);
+  setInterval(gene, 10 * 60_000);
+}
 
 // The beaver answers anyone's question about a token, on the canyon where it lives.
 const northUrl = config.peers.find((p) => p.id === "north.zoo")?.url;

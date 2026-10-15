@@ -501,7 +501,12 @@ test("the nursery: creatures sit the same exam, the weakest dies, the strongest 
   now += 86_400_000;
   await grade(1);
   await seed(2);
+  // The holders voted a gene and the week's best human picked a name: both go to this turn's newborn.
+  const { GENE } = await import("../src/agents/evolution.ts");
+  await enclosure.store.set(GENE.pending, { week: "2026-10-05", rule: "Suspicious when chain.creatorSold is above 0.5." });
+  await enclosure.store.set(GENE.name, { week: "2026-10-05", wallet: "w", name: "Ember" });
   await enclosure.wake("heron");
+  assert.equal(await enclosure.store.get(GENE.pending), undefined, "the gene is used once");
 
   const view = await evolutionView(enclosure.store, "07:00", now, 2);
   assert.equal(view?.generation, 1);
@@ -519,7 +524,8 @@ test("the nursery: creatures sit the same exam, the weakest dies, the strongest 
   assert.match(dead[0]!.epitaph ?? "", /certainty/);
   assert.ok(view!.chronicle.some((e) => e.kind === "death" && /starvation/.test(e.text)));
   const child = view!.creatures.find((c) => c.generation === 1)!;
-  assert.equal(child.name, "Badger II");
+  assert.equal(child.name, "Ember");
+  assert.ok(view!.chronicle.some((e) => e.kind === "birth" && /chosen by \$ZOOAGENCY holders: Suspicious when chain.creatorSold/.test(e.text) && /Named Ember/.test(e.text)));
   assert.deepEqual(child.parents![0], "c4", "the best breeds");
   assert.equal(view!.creatures.filter((c) => c.diedNight === null).length, 8);
   assert.equal(view!.history.length, 1);
@@ -1114,4 +1120,44 @@ test("holders hear about a watched token's dump first, everyone else after the h
   assert.match(holder.text, /^⚡/);
   assert.equal(other.at, now + HOLDER_HEAD_START_MS);
   assert.match(other.text, /Holders saw this 10 min ago/);
+});
+
+test("holders vote the nursery's next gene with their balance, and the week's best human names the newborn", async () => {
+  const { openVote, castVote, closeWeek, geneView, nameNewborn } = await import("../src/gene.ts");
+  const { GENE, EVO } = await import("../src/agents/evolution.ts");
+  const state = new Map<string, unknown>();
+  const store = {
+    get: async (k: string) => state.get(k),
+    set: async (k: string, v: unknown) => void state.set(k, structuredClone(v)),
+    delete: async (k: string) => void state.delete(k),
+    keys: async (p = "") => [...state.keys()].filter((k) => k.startsWith(p)).sort(),
+  } as any;
+  // A model proposes three rules aimed at the nursery's mistakes.
+  state.set(EVO.population, { generation: 1, lastGenerationNight: null, nextId: 3, creatures: {
+    c1: { id: "c1", name: "Fox I", house: "Fox", generation: 0, parents: null, temperament: "t", playbook: "1. x", mutation: null, bornNight: "n", diedNight: null, epitaph: null, lifetime: {}, window: {} },
+  } });
+  const model = { id: "m", think: async () => ({ text: '["Suspicious when chain.creatorSold is above 0.5 in the first hour.", "Promising needs chain.repeatBuyers of 10 or more.", "Watch any token with chain.bundleShare above 0.2."]', inputTokens: 0, outputTokens: 0 }) };
+  const week = "2026-10-19";
+  const vote = (await openVote(store, week, model))!;
+  assert.deepEqual(vote.candidates.map((c) => c.id), ["a", "b", "c"]);
+  assert.equal((await openVote(store, week, model))!.candidates[0]!.rule, vote.candidates[0]!.rule, "opened once");
+
+  assert.equal((await castVote(store, week, "whale", "d", 9e6)).ok, false);
+  await castVote(store, week, "whale", "a", 9_000_000);
+  await castVote(store, week, "two", "b", 3_000_000);
+  await castVote(store, week, "three", "b", 2_000_000);
+  assert.deepEqual((await geneView(store, "07:00", "two", Date.UTC(2026, 9, 21, 12))).tally, { a: 9_000_000, b: 5_000_000, c: 0 });
+
+  // The whale sold after voting: at the close only what it still holds counts, and b wins.
+  const closed = (await closeWeek(store, week, async (w) => (w === "whale" ? 1_000_000 : 5_000_000)))!;
+  assert.equal(closed.closed!.winner!.id, "b");
+  assert.deepEqual(state.get(GENE.pending), { week, rule: "Promising needs chain.repeatBuyers of 10 or more." });
+  assert.equal((await castVote(store, week, "late", "a", 1)).ok, false, "closed");
+
+  // Naming: only the week's best human, one capitalised word.
+  state.set(GENE.name, { week, wallet: "winner", name: null });
+  assert.equal((await nameNewborn(store, "someone", "Ember")).ok, false);
+  assert.equal((await nameNewborn(store, "winner", "ember fire")).ok, false);
+  assert.equal((await nameNewborn(store, "winner", "Ember")).ok, true);
+  assert.equal((state.get(GENE.name) as any).name, "Ember");
 });

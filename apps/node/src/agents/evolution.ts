@@ -113,6 +113,22 @@ export const EVO = {
 
 /** What the hedgehog found when it re-checked a night's tokens, kept by the beaver for everyone who judged them. */
 export const FOLLOWUP = (night: string) => `followup:${night}`;
+
+/** What holders and the week's best human hand the nursery: a rule for the next newborn, and its name (see gene.ts). */
+export const GENE = {
+  vote: (week: string) => `gene:vote:${week}`,
+  pending: "gene:pending",
+  name: "gene:name",
+};
+export interface PendingGene {
+  week: string;
+  rule: string;
+}
+export interface PendingName {
+  week: string;
+  wallet: string;
+  name: string | null;
+}
 export type Followup = Record<string, { symbol: string; outcome: Outcome }>;
 
 export const POPULATION_SIZE = 8;
@@ -659,7 +675,10 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         const [a, b] = chosen.parents;
         const immigration = (pop.generation + 1) % IMMIGRATION_EVERY === 0;
         let child: Newcomer = { kind: "child", playbook: interleave(a.playbook, b.playbook), mutation: null };
+        // A rule the holders voted for replaces the heron's mutation: the parents' rules, plus theirs.
+        const gene = immigration ? null : await ctx.state.get<PendingGene>(GENE.pending);
         if (immigration) child = await immigrantFor(ctx, pop);
+        else if (gene) child = { kind: "child", playbook: withRule(child.playbook, gene.rule), mutation: gene.rule };
         else try {
           const wrong = await mistakes(ctx.state, [a.id, b.id], pop.lastGenerationNight ?? "");
           const result = await ctx.think({
@@ -690,6 +709,16 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         }
         const turned = turnGeneration(pop, night, chosen, child, epitaph);
         pop = turned.pop;
+        if (gene) await ctx.state.delete(GENE.pending);
+        // The week's best human on /play names the newborn, once they have chosen a name.
+        const naming = await ctx.state.get<PendingName>(GENE.name);
+        let namedBy = "";
+        if (naming?.name) {
+          turned.born.name = naming.name;
+          pop.creatures[turned.born.id] = turned.born;
+          namedBy = ` Named ${naming.name} by the best human of the week of ${naming.week}.`;
+          await ctx.state.delete(GENE.name);
+        }
         const history = (await ctx.state.get<GenerationRecord[]>(EVO.history)) ?? [];
         await ctx.state.set(EVO.history, [...history, turned.record].slice(-200));
         note({
@@ -700,13 +729,13 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
           ids: [d.id],
         });
         if (child.kind === "immigrant") {
-          note({ night, generation: pop.generation, kind: "arrival", text: `A stranger arrives: ${turned.born.name}, ${child.temperament}, carrying ${child.origin}'s rules.`, ids: [turned.born.id] });
+          note({ night, generation: pop.generation, kind: "arrival", text: `A stranger arrives: ${turned.born.name}, ${child.temperament}, carrying ${child.origin}'s rules.${namedBy}`, ids: [turned.born.id] });
         } else {
           note({
             night,
             generation: pop.generation,
             kind: "birth",
-            text: `${turned.born.name} is born to ${a.name} and ${b.name}.${child.mutation ? ` Mutation: ${child.mutation}` : ""}`,
+            text: `${turned.born.name} is born to ${a.name} and ${b.name}.${child.mutation ? ` Mutation${gene ? `, chosen by $ZOOAGENCY holders` : ""}: ${child.mutation}` : ""}${namedBy}`,
             ids: [turned.born.id, a.id, b.id],
           });
         }

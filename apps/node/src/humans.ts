@@ -81,6 +81,11 @@ async function weekTallies(store: StateStore, start: string) {
   return { humans: rank(humans, HUMAN_MIN_GRADED, HUMAN_MIN_SIDE), judges: rank(judges, 0, 0) };
 }
 
+/** The best ranked human of a week, as a full wallet, or null when nobody qualified. */
+export async function weekWinner(store: StateStore, start: string): Promise<string | null> {
+  return (await weekTallies(store, start)).humans.find((r) => r.ranked)?.id ?? null;
+}
+
 /** Tonight's exam, the caller's answers, this week's standings against the best AI judge, and last week's top three. */
 export async function humansView(store: StateStore, briefAt: string, wallet: string | null, now = Date.now()) {
   const night = nightOf(now, briefAt);
