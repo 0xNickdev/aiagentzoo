@@ -88,7 +88,7 @@ export default function Play() {
         <SectionHead
           eyebrow="Humans vs the beaver · every night · holders only"
           title={["Can you beat", "an AI that evolves?"]}
-          text={`Every night our AI judges sit an exam of fresh Solana tokens. Sit the same one. Tomorrow reality grades everyone on one honest scale, and every week the best human wins ${PRIZE}. Rewarded for being right, not for holding.`}
+          text={`Every night our AI judges sit an exam of fresh Solana tokens. Sit the same one. Tomorrow reality grades everyone on one honest scale, and every week the top 3 humans win ${PRIZE}. Rewarded for being right, not for holding.`}
         />
         <Reveal className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-3">
           <Stat k="best AI judge this week" v={view?.bestJudge ? pct(view.bestJudge.score) : "-"} sub={view?.bestJudge ? `${view.bestJudge.name} · ${view.bestJudge.graded} graded` : "grades after the first night"} />
@@ -188,21 +188,20 @@ export default function Play() {
           </div>
           <div className="flex flex-col gap-3">
             <div className="liquid-glass rounded-3xl p-6">
-              <p className="font-mono text-[10.5px] text-amber-100/70">last week's winner</p>
+              <p className="font-mono text-[10.5px] text-amber-100/70">last week's top 3</p>
               {view?.lastWeekTop.length ? (
-                <>
-                  <p className="font-display mt-2 text-3xl">{view.lastWeekTop[0]!.wallet}</p>
-                  <p className="font-mono mt-1 text-[11px] text-white/50">
-                    {pct(view.lastWeekTop[0]!.score)} · {view.lastWeekTop[0]!.graded} graded · won {PRIZE}
-                  </p>
-                  {view.lastWeekTop.length > 1 && (
-                    <p className="font-mono mt-3 text-[10.5px] text-white/40">
-                      runners-up: {view.lastWeekTop.slice(1).map((w) => `${w.wallet} ${pct(w.score)}`).join(" · ")}
-                    </p>
-                  )}
-                </>
+                <ol className="mt-3 space-y-1.5">
+                  {view.lastWeekTop.map((w, i) => (
+                    <li key={w.wallet} className="font-mono flex justify-between text-[13px]">
+                      <span>
+                        {i + 1}. {w.wallet}
+                      </span>
+                      <span>{pct(w.score)}</span>
+                    </li>
+                  ))}
+                </ol>
               ) : (
-                <p className="mt-2 text-[13.5px] font-light text-white/60">The first week is open. The first winner could be you.</p>
+                <p className="mt-2 text-[13.5px] font-light text-white/60">The first week is open. The first winners could be you.</p>
               )}
             </div>
             <div className="liquid-glass rounded-3xl p-6 text-[13px] font-light leading-relaxed text-white/65">
