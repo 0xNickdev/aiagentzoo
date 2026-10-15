@@ -239,7 +239,7 @@ export const CHAIN_NOTE =
 
 /** Every field a judge can see on an exam token: rules, and mutations, can only use these. */
 export const EXAM_FIELDS =
-  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare";
+  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.curveCapSol, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare, chain.poolSol, chain.ammBuys, chain.ammSells, chain.ammSolIn, chain.ammSolOut";
 
 export function judgeSystem(playbook: Playbook): string {
   return [
@@ -266,7 +266,7 @@ export function compact(o: Observation) {
     graduated: o.complete,
     hasSocials: o.hasSocials,
     marketCapUsd: o.marketCapUsd,
-    market: m ? { liq: m.liquidityUsd, vol24h: m.volume24hUsd, change24h: m.priceChange24h, buys24h: m.buys24h, sells24h: m.sells24h, dex: m.dex } : null,
+    market: m ? { liq: m.liquidityUsd, curveCapSol: m.curveCapSol ?? null, vol24h: m.volume24hUsd, change24h: m.priceChange24h, buys24h: m.buys24h, sells24h: m.sells24h, dex: m.dex } : null,
     flags: ruleFlags(o),
     chain: o.chain ?? null,
   };

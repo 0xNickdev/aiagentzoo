@@ -1,24 +1,36 @@
 /**
  * The pump.fun tape: every launch and trade on the bonding curve, read straight from Solana as it happens.
  *
- * A Yellowstone gRPC stream delivers every transaction that touches the pump.fun program. Its logs carry
- * Anchor events (create, trade, complete); we decode the fields we need and keep a rolling 48-hour picture
- * per token: who launched it, how many bought and sold, and whether the creator already dumped their bag.
+ * A Yellowstone gRPC stream delivers every transaction that touches the pump.fun program or PumpSwap. Its logs
+ * carry Anchor events (create, trade, complete; pool created, buy, sell); we decode the fields we need and keep a
+ * rolling 48-hour picture per token: who launched it, how many bought and sold, whether the creator already dumped
+ * their bag, and once it graduates, how its PumpSwap pool is doing.
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+/** PumpSwap, where a token's pool lives once it graduates from the curve. */
+export const PUMP_AMM_PROGRAM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
+const WSOL = "So11111111111111111111111111111111111111112";
 
 const DISC = {
   create: Buffer.from([27, 114, 169, 77, 222, 235, 99, 118]),
   trade: Buffer.from([189, 219, 127, 211, 78, 230, 97, 238]),
   complete: Buffer.from([95, 114, 97, 156, 212, 46, 152, 8]),
+  // PumpSwap events: a pool is created when a token graduates, then buys and sells on it.
+  pool: Buffer.from([177, 49, 12, 210, 160, 118, 167, 116]),
+  ammBuy: Buffer.from([103, 244, 82, 31, 44, 245, 119, 119]),
+  ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
 };
 
 export type PumpEvent =
   | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
-  | { kind: "complete"; mint: string };
+  | { kind: "complete"; mint: string }
+  /** A PumpSwap pool against SOL was created for this token: it graduated. */
+  | { kind: "pool"; mint: string; pool: string }
+  /** A buy or sell on a PumpSwap pool. Its event names only the pool, so the tape maps it back to a token. */
+  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number };
 
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -91,6 +103,10 @@ class Reader {
     this.o += 8;
     return v;
   }
+  skip(n: number) {
+    if (this.o + n > this.b.length) throw new Error("short");
+    this.o += n;
+  }
   bool() {
     return this.b[this.o++] === 1;
   }
@@ -142,6 +158,25 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
       } else if (head.equals(DISC.complete)) {
         r.key(); // user
         out.push({ kind: "complete", mint: base58(r.key()) });
+      } else if (head.equals(DISC.pool)) {
+        r.i64(); // timestamp
+        r.skip(2); // index
+        r.key(); // creator
+        const mint = base58(r.key());
+        const quote = base58(r.key());
+        r.skip(2); // decimals
+        for (let i = 0; i < 7; i++) r.u64(); // amounts in, reserves, liquidity
+        r.skip(1); // bump
+        const pool = base58(r.key());
+        if (quote === WSOL) out.push({ kind: "pool", mint, pool });
+      } else if (head.equals(DISC.ammBuy) || head.equals(DISC.ammSell)) {
+        // timestamp, then 13 u64: base amount, quote limit, user and pool reserves, quote amount, fees, what the user paid or got.
+        const ts = Number(r.i64()) * 1000;
+        const f: bigint[] = [];
+        for (let i = 0; i < 13; i++) f.push(r.u64());
+        const pool = base58(r.key());
+        const user = base58(r.key());
+        out.push({ kind: "swap", pool, isBuy: head.equals(DISC.ammBuy), tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol: Number(f[5]) / LAMPORTS, user, ts });
       }
     } catch {
       // A truncated or unfamiliar event: skip it.
@@ -177,6 +212,12 @@ export interface ChainFacts {
   bundleWallets: number | null;
   /** Share of the whole supply those wallets took, 0..1. */
   bundleShare: number | null;
+  /** After graduation, on PumpSwap: SOL in the pool now, null before it has one. */
+  poolSol: number | null;
+  ammBuys: number;
+  ammSells: number;
+  ammSolIn: number;
+  ammSolOut: number;
 }
 
 /** pump.fun mints a billion tokens. */
@@ -208,6 +249,13 @@ interface Tracked {
   createSlot: number | null;
   /** Tokens each non-creator wallet bought in the launch block or the next. */
   launchBuys: Map<string, number>;
+  /** Its PumpSwap pool, once graduated. */
+  pool: string | null;
+  poolSol: number | null;
+  ammBuys: number;
+  ammSells: number;
+  ammSolIn: number;
+  ammSolOut: number;
 }
 
 /** What the tape knows about one creator wallet over the last two days. */
@@ -280,6 +328,8 @@ export class PumpTape {
   private pulseSeq = 0;
   /** Mints each creator launched, newest last, for as long as the tokens are kept. */
   private readonly byCreator = new Map<string, string[]>();
+  /** PumpSwap pools of the tokens on the tape, pool to mint. */
+  private readonly pools = new Map<string, string>();
   /** Every loud moment (not plain launches) of the last two days, oldest first. */
   private moments: PulseEvent[] = [];
   /** Per-second counts over the last minute, a ring indexed by second. */
@@ -387,6 +437,12 @@ export class PumpTape {
         dumpedAt: null,
         createSlot: slot ?? null,
         launchBuys: new Map(),
+        pool: null,
+        poolSol: null,
+        ammBuys: 0,
+        ammSells: 0,
+        ammSolIn: 0,
+        ammSolOut: 0,
       });
       const mine = this.byCreator.get(ev.creator) ?? [];
       mine.push(ev.mint);
@@ -403,12 +459,17 @@ export class PumpTape {
       if (this.tokens.size > MAX_TRACKED) this.prune(now);
       return;
     }
+    if (ev.kind === "swap") return this.swap(ev, now, tx);
     const t = this.tokens.get(ev.mint);
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
-    if (ev.kind === "complete") {
+    if (ev.kind === "complete" || ev.kind === "pool") {
       if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
       t.graduated = true;
+      if (ev.kind === "pool") {
+        t.pool = ev.pool;
+        this.pools.set(ev.pool, t.mint);
+      }
       return;
     }
     this.seen.trades += 1;
@@ -430,22 +491,44 @@ export class PumpTape {
     } else {
       t.sells += 1;
       t.solOut += ev.sol;
-      if (ev.user === t.creator) {
-        t.devSold += ev.tokens;
-        if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
-          t.dumped = true;
-          t.dumpedAt = ev.ts;
-          const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
-          const min = Math.max(0, Math.round((ev.ts - t.createdAt) / 60_000));
-          this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
-        }
-      }
+      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
     }
     if (ev.curveSol !== null) t.curveSol = ev.curveSol;
   }
 
+  private creatorSold(t: Tracked, tokens: number, ts: number, now: number, tx?: string): void {
+    t.devSold += tokens;
+    if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
+      t.dumped = true;
+      t.dumpedAt = ts;
+      const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
+      const min = Math.max(0, Math.round((ts - t.createdAt) / 60_000));
+      this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
+    }
+  }
+
+  /** Life after the curve: trades on the PumpSwap pools of tokens we watched launch. */
+  private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string): void {
+    const mint = this.pools.get(ev.pool);
+    const t = mint ? this.tokens.get(mint) : undefined;
+    if (!t) return;
+    this.seen.trades += 1;
+    this.count(now, "trades");
+    t.poolSol = ev.poolSol;
+    if (ev.isBuy) {
+      t.ammBuys += 1;
+      t.ammSolIn += ev.sol;
+      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy after graduation`, tx);
+    } else {
+      t.ammSells += 1;
+      t.ammSolOut += ev.sol;
+      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
+    }
+  }
+
   prune(now = Date.now()): void {
     for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS) this.tokens.delete(mint);
+    for (const [pool, mint] of this.pools) if (!this.tokens.has(mint)) this.pools.delete(pool);
     for (const [creator, mints] of this.byCreator) {
       const kept = mints.filter((m) => this.tokens.has(m));
       if (kept.length) this.byCreator.set(creator, kept);
@@ -488,6 +571,11 @@ export class PumpTape {
       trades15m: t.trades15m,
       bundleWallets: t.createSlot === null ? null : t.launchBuys.size,
       bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / SUPPLY),
+      poolSol: t.poolSol === null ? null : round(t.poolSol),
+      ammBuys: t.ammBuys,
+      ammSells: t.ammSells,
+      ammSolIn: round(t.ammSolIn),
+      ammSolOut: round(t.ammSolOut),
     };
   }
 
@@ -665,7 +753,10 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
             {
               accounts: {},
               slots: {},
-              transactions: { pump: { vote: false, failed: false, accountInclude: [PUMP_PROGRAM], accountExclude: [], accountRequired: [] } },
+              transactions: {
+                pump: { vote: false, failed: false, accountInclude: [PUMP_PROGRAM], accountExclude: [], accountRequired: [] },
+                amm: { vote: false, failed: false, accountInclude: [PUMP_AMM_PROGRAM], accountExclude: [], accountRequired: [] },
+              },
               transactionsStatus: {},
               blocks: {},
               blocksMeta: {},

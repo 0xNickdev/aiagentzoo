@@ -996,3 +996,58 @@ test("humans vs the beaver: answers to tonight's exam, graded by the same re-che
   }
   assert.deepEqual(view.mine, { A: "suspicious" });
 });
+
+test("the tape follows a token onto PumpSwap after it graduates", async () => {
+  const { parsePumpLogs, PumpTape, fromBase58 } = await import("../src/chain/pump.ts");
+  // Real logs from mainnet: a pool created at graduation, and a sell on another pool.
+  const realPool =
+    "Program data: sTEM0qB2p3QMcdBqAAAAAAAA0q9yz37jvAP9dQ1p9yvq4yFeIB6S+4C1zGyv5MfUfXXo1yD4PLkKGAlLGE6lyUJ8wIYMn9hOrq7xxqON3ANfnwabiFf+q4GE+2h/Y0YYwDXaxDncGus7VZig8AAAAAABBglKdVSlDLsAAOY4SugTAAAASnVUpQy7AADmOEroEwAAAGQAAAAAAAAAT/JrWdADAADr8WtZ0AMAAP5uYT+VxA1pOv+m2cNuMkZ98bV19KRNDzNNsURxSU0QA4v0h3a/ShiHYI+Ox05iwcbpTsZLVnWg9S/kTQcLYncrjF/kd2zGaiJaWXOMa5wo4Rfj9sTIGuByEV+Hw3GqSp5StczG5IPAFrEaXjUe5UN/oQyAnYt3oMGZmeaXqEWIb1LC83tr8MvNIMlZWHFG/j2yPQJxVdI1NPk/MkmvpgQqAAAAAAAAAAAAAAE=";
+  const realSell =
+    "Program data: Pi83CqUD3CovcdBqAAAAABkaUl4BAAAAd8piXdX1AQAZGlJeAQAAADdBQP+s5wMA568N9aIAAABPTx3M/6kGAQwtWRb3LwIAGQAAAAAAAACYJLJgZgEAAAUAAAAAAAAAuG3wrEcAAAB0CKe1kC4CALyatghJLgIARdq8folYGiZgs8xYV4Fu5R5hivgdSvWEpFJwUyXUDOZEgAMe6AHxidtaU/9QdEAQ+3KCTi/4ky8ebR8WSdG5MTdS4IgTCT2TGl4EcxRbqvuSq9lLzJQOs8JCyKq3QlerhTWFkd2+V3gQvzFGNuCfmhW3UqHe2j1T3idKaWgPm95KwvjQ3Vy8l+MonBl8tQYqVPPZVrnOblEV+WVnqlyz5ryFgGo/TURi+0sX74LE2NiJZ56XysFhBl168zXVUH8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAA3DZ41iMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const GRAD = "Gfur7siWmL1SjkBit3mA4rJ1PqBGJzje5ZwQZkqapump";
+  const POOL = "8RsrWtfzSd9Wzy1BMmU18w2UR397UQGz7tDwtK7mJ79t";
+  const [pool] = parsePumpLogs([realPool]);
+  assert.deepEqual(pool, { kind: "pool", mint: GRAD, pool: POOL });
+  const [sell] = parsePumpLogs([realSell]) as any[];
+  assert.equal(sell.kind, "swap");
+  assert.equal(sell.isBuy, false);
+  assert.equal(sell.pool, "5hgao1gkk4742tsPbJaJoXtKViRNVYw6KPEn2Jvm4HaM");
+  assert.equal(sell.user, "5cPwQhFCDMAzuJ8w5TGLTbVvmTbaM2TuZ3r7jNyvXXpL");
+
+  const CREATOR = "So11111111111111111111111111111111111111112";
+  const str = (s: string) => {
+    const b = Buffer.from(s);
+    const len = Buffer.alloc(4);
+    len.writeUInt32LE(b.length);
+    return Buffer.concat([len, b]);
+  };
+  const u64 = (n: bigint) => {
+    const b = Buffer.alloc(8);
+    b.writeBigUInt64LE(n);
+    return b;
+  };
+  const line = (disc: number[], body: Buffer) => `Program data: ${Buffer.concat([Buffer.from(disc), body]).toString("base64")}`;
+  const create = line([27, 114, 169, 77, 222, 235, 99, 118], Buffer.concat([str("grad"), str("GRAD"), str("ipfs://x"), fromBase58(GRAD), fromBase58(CREATOR), fromBase58(CREATOR)]));
+  const buy = line([189, 219, 127, 211, 78, 230, 97, 238], Buffer.concat([fromBase58(GRAD), u64(1_000_000_000n), u64(10_000_000n * 1_000_000n), Buffer.from([1]), fromBase58(CREATOR), u64(1_791_600_000n)]));
+  // A PumpSwap trade: timestamp, 13 amounts (base, limit, 4 reserves, quote, 5 fees, what the user paid or got), pool, user.
+  const swap = (isBuy: boolean, user: string, tokens: bigint, lamports: bigint, poolLamports: bigint) => {
+    const f = [tokens * 1_000_000n, 0n, 0n, 0n, 0n, poolLamports, lamports, 0n, 0n, 0n, 0n, 0n, lamports];
+    const disc = isBuy ? [103, 244, 82, 31, 44, 245, 119, 119] : [62, 47, 55, 10, 165, 3, 220, 42];
+    return line(disc, Buffer.concat([u64(1_791_600_100n), ...f.map(u64), fromBase58(POOL), fromBase58(user)]));
+  };
+
+  const tape = new PumpTape();
+  const now = 1_791_600_000_000;
+  const events = parsePumpLogs([create, buy, realPool, swap(true, "11111111111111111111111111111111", 1_000n, 2_000_000_000n, 90_000_000_000n), swap(false, CREATOR, 6_000_000n, 3_000_000_000n, 88_000_000_000n)]);
+  for (const e of events) tape.apply(e, now);
+  const f = tape.facts(GRAD, now)!;
+  assert.equal(f.graduated, true);
+  assert.equal(f.ammBuys, 1);
+  assert.equal(f.ammSells, 1);
+  assert.equal(f.ammSolIn, 2);
+  assert.equal(f.ammSolOut, 3);
+  assert.equal(f.poolSol, 88);
+  // The creator bought 10M on the curve and sold 6M on PumpSwap: a dump after graduation still counts.
+  assert.equal(f.creatorSold, 0.6);
+  assert.deepEqual(tape.pulseAfter(0).map((e) => e.kind), ["launch", "graduated", "dump"]);
+});
