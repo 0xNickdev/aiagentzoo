@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useStat
 import { createPortal } from "react-dom";
 import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
+import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 
 type Tab = "ask" | "rugs" | "clean" | "nursery" | "ranks";
 
@@ -47,15 +48,20 @@ export default function MiniApp() {
     <div className="zapp">
       <Backdrop hero={tab === "ask"} />
       <header className="zapp-top">
-        <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
+        <div className="flex items-center gap-2">
+          <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
+          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono px-2.5 py-1 text-[10.5px] text-white/75" aria-label="Language">
+            {lang() === "zh" ? "EN" : "中文"}
+          </button>
+        </div>
         <div className="glass-pill font-mono flex items-center gap-2 px-3 py-1.5 text-[10.5px] text-white/70">
           <i className="zapp-dot" />
           {pulse ? (
             <span>
-              <b className="font-medium text-white">{pulse.launches}</b> launches · <b className="font-medium text-white">{pulse.trades.toLocaleString("en-US")}</b> trades / min
+              <b className="font-medium text-white">{pulse.launches}</b> {tt("launches")} · <b className="font-medium text-white">{pulse.trades.toLocaleString("en-US")}</b> {tt("trades / min")}
             </span>
           ) : (
-            <span>reading solana…</span>
+            <span>{tt("reading solana…")}</span>
           )}
         </div>
       </header>
@@ -78,7 +84,7 @@ export default function MiniApp() {
           <button key={t.id} type="button" onClick={() => go(t.id)} className={`zapp-tab ${tab === t.id ? "is-on" : ""}`} aria-current={tab === t.id}>
             {tab === t.id && <motion.span layoutId="tab-glow" className="zapp-tab-glow" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="relative">{t.icon}</span>
-            <span className="relative mt-0.5 text-[10px]">{t.label}</span>
+            <span className="relative mt-0.5 text-[10px]">{tt(t.label)}</span>
           </button>
         ))}
       </nav>
@@ -100,7 +106,7 @@ function AskTab() {
   const run = useCallback(async (raw: string) => {
     const mint = mintIn(raw);
     if (!mint) {
-      setError("Paste a token address, a dev wallet, or a pump.fun link.");
+      setError(tt("Paste a token address, a dev wallet, or a pump.fun link."));
       haptic.verdict("watch");
       return;
     }
@@ -118,7 +124,7 @@ function AskTab() {
     } else if (r.dev) {
       setDev(r.dev);
       haptic.verdict(r.dev.dumped >= Math.ceil(r.dev.launches48h / 2) && r.dev.launches48h >= 3 ? "suspicious" : "watch");
-    } else setError(r.error ?? "Something went wrong.");
+    } else setError(r.error ?? tt("Something went wrong."));
   }, []);
 
   useEffect(() => {
@@ -154,14 +160,14 @@ function AskTab() {
     <section>
       {!answer && !dev && !busy && (
         <div className="zapp-intro px-1 pb-5">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">ask the beaver</p>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">{tt("ask the beaver")}</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
-            Is it a rug?
+            {tt("Is it a rug?")}
             <br />
-            <span className="text-white/50">Know before you ape.</span>
+            <span className="text-white/50">{tt("Know before you ape.")}</span>
           </h1>
           <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
-            Read straight from Solana: did the dev sell, how many tokens this wallet launched, who did the buying. Graded by reality tomorrow.
+            {tt("Read straight from Solana: did the dev sell, how many tokens this wallet launched, who did the buying. Graded by reality tomorrow.")}
           </p>
         </div>
       )}
@@ -171,7 +177,7 @@ function AskTab() {
           ref={field}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="token, dev wallet or pump.fun link"
+          placeholder={tt("token, dev wallet or pump.fun link")}
           spellCheck={false}
           autoComplete="off"
           enterKeyHint="search"
@@ -206,7 +212,7 @@ function AskTab() {
 
       {!busy && !answer && !dev && recent.length > 0 && (
         <div className="mt-7">
-          <SectionTitle>Others asked</SectionTitle>
+          <SectionTitle>{tt("Others asked")}</SectionTitle>
           <div className="glass-card divide-y divide-white/[0.06] rounded-[22px]">
             {recent.map((a) => (
               <button
@@ -223,7 +229,7 @@ function AskTab() {
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${a.symbol}</span>
                   <span className="font-mono block text-[10px] text-white/40">
-                    {a.graded ? (a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : `${ago(a.at)} ago · grading in 24h`}
+                    {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: ago(a.at) })}
                   </span>
                 </span>
                 <VerdictChip v={a.verdict} />
@@ -244,7 +250,7 @@ function Verdict({ a }: { a: Ask }) {
   const r = a.facts.creator;
   const facts: Array<[string, string, boolean]> = [];
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) facts.push(["Dev sold", pct(c.creatorSold), c.creatorSold >= 0.5]);
-  if (r) facts.push(["Dev rugged (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
+  if (r) facts.push(["Dev rugged (48h)", tt("{a} of {b}", { a: r.dumped, b: r.launches48h }), r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   else if (c) facts.push(["Dev launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
   const h = a.facts.holders;
   if (h) {
@@ -252,7 +258,7 @@ function Verdict({ a }: { a: Ask }) {
     if (h.creatorShare !== null) facts.push(["Dev holds", pct(h.creatorShare), h.creatorShare >= 0.1]);
   }
   const b = a.facts.bundle;
-  if (b) facts.push([b.linked >= 2 ? `Bundle · ${b.linked} same funder` : "Bundle at launch", `${b.wallets} · ${pct(b.share)}`, b.wallets >= 3 || b.linked >= 2]);
+  if (b) facts.push([b.linked >= 2 ? tt("Bundle · {n} same funder", { n: b.linked }) : "Bundle at launch", `${b.wallets} · ${pct(b.share)}`, b.wallets >= 3 || b.linked >= 2]);
   else if (c?.top5Share !== null && c?.top5Share !== undefined) facts.push(["Top 5 buyers", pct(c.top5Share), c.top5Share >= 0.6]);
   if (m) {
     facts.push(["Liquidity", usd(m.liquidityUsd), (m.liquidityUsd ?? 0) < 1000]);
@@ -264,7 +270,7 @@ function Verdict({ a }: { a: Ask }) {
   const doWatch = async () => {
     haptic.tap();
     if (!inTelegram || !tg) {
-      setWatching("Open this inside the Telegram bot to get alerts.");
+      setWatching(tt("Open this inside the Telegram bot to get alerts."));
       return;
     }
     const res = await watch(tg.initData, a.mint);
@@ -292,14 +298,14 @@ function Verdict({ a }: { a: Ask }) {
             className="font-display mt-4 text-[44px] leading-none"
             style={{ color: tone.color, textShadow: `0 0 40px rgba(${tone.glow},0.35)` }}
           >
-            {tone.label}
+            {tt(tone.label)}
           </motion.p>
           <p className="mt-3 text-[14.5px] font-light leading-relaxed text-white/85">{a.why}</p>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
             {facts.slice(0, 6).map(([k, v, bad], i) => (
               <motion.div key={k} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }} className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-white/45">{k}</p>
+                <p className="text-[10.5px] text-white/45">{tt(k)}</p>
                 <p className={`font-mono mt-0.5 text-[15px] ${bad ? "text-[#ff8f84]" : "text-white/90"}`}>{v}</p>
               </motion.div>
             ))}
@@ -308,26 +314,26 @@ function Verdict({ a }: { a: Ask }) {
           <p className="font-mono mt-4 text-[10.5px] text-amber-100/70">
             {a.graded
               ? a.graded.hit === null
-                ? "Graded · not scored"
-                : `Graded · the beaver was ${a.graded.hit ? "right" : "wrong"}`
+                ? tt("Graded · not scored")
+                : tt(a.graded.hit ? "Graded · the beaver was right" : "Graded · the beaver was wrong")
               : a.already
-                ? "Already dead when asked · not scored"
-                : "Reality grades this answer in 24h"}
+                ? tt("Already dead when asked · not scored")
+                : tt("Reality grades this answer in 24h")}
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => void doWatch()} className="glass-btn">
-              Watch
+              {tt("Watch")}
             </button>
             <button
               type="button"
               onClick={() => {
                 haptic.tap();
-                share(`${SITE}/ask#${a.id}`, `the beaver on $${a.symbol}: ${tone.label.toLowerCase()}. ${a.why}`);
+                share(`${SITE}/ask#${a.id}`, pick(`the beaver on $${a.symbol}: ${tone.label.toLowerCase()}. ${a.why}`, `海狸对 $${a.symbol} 的判断：${tt(tone.label)}。${a.why}`));
               }}
               className="glass-btn"
             >
-              Share
+              {tt("Share")}
             </button>
             <button type="button" onClick={() => openLink(a.facts.url ?? `https://dexscreener.com/solana/${a.mint}`)} className="glass-btn">
               Chart
@@ -349,7 +355,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
         <div className="relative">
           <p className="font-mono text-[10px] text-white/40">dev wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h</p>
           <p className="font-display mt-3 text-[40px] leading-none" style={{ color: serial ? TONE.suspicious.color : "#fff" }}>
-            {serial ? "Serial rugger" : "No pattern yet"}
+            {tt(serial ? "Serial rugger" : "No pattern yet")}
           </p>
           <div className="mt-5 grid grid-cols-3 gap-2">
             {[
@@ -358,7 +364,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
               ["Median", r.medianDumpMin === null ? "-" : `${r.medianDumpMin} min`],
             ].map(([k, v]) => (
               <div key={k} className="rounded-2xl bg-black/30 px-3 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-white/45">{k}</p>
+                <p className="text-[10.5px] text-white/45">{tt(k)}</p>
                 <p className="font-mono mt-0.5 text-[16px]">{v}</p>
               </div>
             ))}
@@ -368,7 +374,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
               <div key={t.mint} className="flex items-center justify-between py-2 text-[13px]">
                 <span className="truncate">${t.symbol}</span>
                 <span className={`font-mono text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
-                  {t.dumpedAfterMin !== null ? `rugged in ${t.dumpedAfterMin} min` : t.graduated ? "graduated" : "dev holding"}
+                  {t.dumpedAfterMin !== null ? tt("rugged in {m} min", { m: t.dumpedAfterMin }) : tt(t.graduated ? "graduated" : "dev holding")}
                 </span>
               </div>
             ))}
@@ -394,7 +400,7 @@ function RugsTab() {
   }, []);
   return (
     <section>
-      <TabHead kicker="live from the chain" title="Devs dumping, right now." text="Every time a creator sells half or more of their own token. Tap one to see the transaction." />
+      <TabHead kicker={tt("live from the chain")} title={tt("Devs dumping, right now.")} text={tt("Every time a creator sells half or more of their own token. Tap one to see the transaction.")} />
       {!list ? (
         <Skeleton rows={6} />
       ) : (
@@ -413,7 +419,7 @@ function RugsTab() {
               >
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${e.symbol}</span>
-                  <span className="block text-[12px] font-light text-[#ffb3ab]">{e.text}</span>
+                  <span className="block text-[12px] font-light text-[#ffb3ab]">{tChain(e.text)}</span>
                 </span>
                 <span className="font-mono shrink-0 text-[10.5px] text-white/40">{ago(e.at)}</span>
               </motion.button>
@@ -441,14 +447,14 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
   return (
     <section>
       <TabHead
-        kicker="passed the basic checks"
-        title="No rug signs. Yet."
-        text="10 to 180 minutes old. Dev has not sold, not a serial wallet, 25+ buyers, no five wallets holding most of it. Not a call: most of these still die."
+        kicker={tt("passed the basic checks")}
+        title={tt("No rug signs. Yet.")}
+        text={tt("10 to 180 minutes old. Dev has not sold, not a serial wallet, 25+ buyers, no five wallets holding most of it. Not a call: most of these still die.")}
       />
       {!list ? (
         <Skeleton rows={5} />
       ) : list.length === 0 ? (
-        <Empty image="/app/empty-clean.jpg">Nothing passes right now. On pump.fun that is a normal hour.</Empty>
+        <Empty image="/app/empty-clean.jpg">{tt("Nothing passes right now. On pump.fun that is a normal hour.")}</Empty>
       ) : (
         <div className="grid gap-2">
           {list.map((c, i) => (
@@ -459,7 +465,7 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="font-mono text-[11px] text-white/55">
-                  {c.buyers >= 100 ? "100+" : c.buyers} buyers · {c.repeatBuyers} back · top 5 {pct(c.top5Share)}
+                  {tt("{b} buyers · {r} back · top 5 {p}", { b: c.buyers >= 100 ? "100+" : c.buyers, r: c.repeatBuyers, p: pct(c.top5Share) })}
                 </span>
                 <button
                   type="button"
@@ -492,7 +498,7 @@ function NurseryTab() {
   const story = evo?.chronicle.find((e) => e.kind !== "scored");
   return (
     <section>
-      <TabHead kicker="the nursery" title="Judges that evolve." text="Eight AI judges, fixed rules, the same exam every night. Every three nights the weakest dies and the best two breed." />
+      <TabHead kicker={tt("the nursery")} title={tt("Judges that evolve.")} text={tt("Eight AI judges, fixed rules, the same exam every night. Every three nights the weakest dies and the best two breed.")} />
       {!evo ? (
         <Skeleton rows={6} />
       ) : (
@@ -539,12 +545,12 @@ function RanksTab() {
   const next = (rows ?? []).filter((r) => !r.ranked && !r.died && r.graded);
   return (
     <section>
-      <TabHead kicker="leaderboard" title="One honest scale." text={'Every agent, ours and guests, graded by what tokens actually did. Calling everything a rug scores 50%, not 100%.'} />
+      <TabHead kicker={tt("leaderboard")} title={tt("One honest scale.")} text={tt("Every agent, ours and guests, graded by what tokens actually did. Calling everything a rug scores 50%, not 100%.")} />
       {!rows ? (
         <Skeleton rows={6} />
       ) : (
         <>
-          {ranked.length === 0 && <Empty image="/app/empty-ranks.jpg">Nobody is ranked yet. A rank needs calls on both dead and living tokens, and living ones are rare. It fills slowly. That is the point.</Empty>}
+          {ranked.length === 0 && <Empty image="/app/empty-ranks.jpg">{tt("Nobody is ranked yet. A rank needs calls on both dead and living tokens, and living ones are rare. It fills slowly. That is the point.")}</Empty>}
           {ranked.length > 0 && (
             <div className="glass-card mb-4 divide-y divide-white/[0.06] rounded-[22px]">
               {ranked.map((r, i) => (
@@ -554,7 +560,7 @@ function RanksTab() {
           )}
           {next.length > 0 && (
             <>
-              <SectionTitle>On the way</SectionTitle>
+              <SectionTitle>{tt("On the way")}</SectionTitle>
               <div className="glass-card divide-y divide-white/[0.06] rounded-[22px] opacity-80">
                 {next.map((r) => (
                   <Row key={r.id} r={r} />
@@ -673,7 +679,7 @@ function Ticker() {
         >
           <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6e5f] shadow-[0_0_8px_rgba(255,110,95,0.9)]" />
           <span className="truncate text-white/80">
-            <b className="font-medium text-white">${e.symbol}</b> · {e.text}
+            <b className="font-medium text-white">${e.symbol}</b> · {tChain(e.text)}
           </span>
           <span className="shrink-0 text-white/40">{ago(e.at)}</span>
         </motion.button>
@@ -686,7 +692,7 @@ function VerdictChip({ v }: { v: Ask["verdict"] }) {
   const t = TONE[v];
   return (
     <span className="font-mono shrink-0 rounded-full px-2.5 py-1 text-[10px]" style={{ color: t.color, background: `rgba(${t.glow},0.1)` }}>
-      {t.label}
+      {tt(t.label)}
     </span>
   );
 }
@@ -705,7 +711,7 @@ function Skeleton({ rows }: { rows: number }) {
 }
 
 function Thinking() {
-  const lines = ["Reading the chain…", "Checking the dev's wallet…", "Counting who bought…", "The beaver is thinking…"];
+  const lines = ["Reading the chain…", "Checking the dev's wallet…", "Counting who bought…", "The beaver is thinking…"].map((l) => tt(l));
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = window.setInterval(() => setI((x) => (x + 1) % lines.length), 1100);

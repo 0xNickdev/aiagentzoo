@@ -20,6 +20,9 @@ function initial(): Lang {
   } catch {
     /* storage blocked: fall through to the browser's language */
   }
+  // Inside Telegram the account's language is the better guess than the device's.
+  const tg = (window as unknown as { Telegram?: { WebApp?: { initDataUnsafe?: { user?: { language_code?: string } } } } }).Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
+  if (tg) return /^zh/i.test(tg) ? "zh" : "en";
   return typeof navigator !== "undefined" && /^zh\b/i.test(navigator.language) ? "zh" : "en";
 }
 
