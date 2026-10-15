@@ -99,7 +99,7 @@ export interface Snapshot {
 export interface PulseEvent {
   seq: number;
   at: number;
-  kind: "launch" | "serial" | "dump" | "graduated" | "whale";
+  kind: "launch" | "serial" | "dump" | "graduated" | "whale" | "drained";
   mint: string;
   symbol: string;
   text: string;
@@ -111,6 +111,7 @@ export const PULSE_COLOR: Record<PulseEvent["kind"], string> = {
   dump: "#ff5b4f",
   graduated: "#8ff0a4",
   whale: "#ffd86b",
+  drained: "#ff5b4f",
 };
 
 /** A token flying across the map: from the edge of the frame (the chain) or from one animal to another. */
@@ -365,6 +366,7 @@ export class NightWatch {
         this.sparks.push({ kind: e.kind, sx, sy, from: null, to: raven, t: 0, speed: 0.55, label: `${tag} · ${e.text}` });
         break;
       case "dump":
+      case "drained":
         this.sparks.push({ kind: e.kind, sx, sy, from: null, to: raven, t: 0, speed: 0.7, label: `${tag} · ${e.text}` });
         break;
       case "graduated":
@@ -388,9 +390,9 @@ export class NightWatch {
       if (!a.moving && Math.random() < 0.15) this.newTarget(a);
       return;
     }
-    this.bursts.push({ animal: a, color, age: 0, big: s.kind === "dump" });
+    this.bursts.push({ animal: a, color, age: 0, big: s.kind === "dump" || s.kind === "drained" });
     if (s.label) this.flares = [...this.flares, { animal: a, text: s.label, color, age: 0 }].slice(-2);
-    if (s.kind === "dump") this.alarm = 0.6;
+    if (s.kind === "dump" || s.kind === "drained") this.alarm = 0.6;
     if (!a.moving) this.newTarget(a);
   }
 

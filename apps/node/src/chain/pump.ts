@@ -252,6 +252,9 @@ interface Tracked {
   /** Its PumpSwap pool, once graduated. */
   pool: string | null;
   poolSol: number | null;
+  /** The most SOL its pool has held; a pool that falls far below it was drained. */
+  poolPeak: number | null;
+  drained: boolean;
   ammBuys: number;
   ammSells: number;
   ammSolIn: number;
@@ -289,7 +292,7 @@ export interface CleanLaunch {
 export interface PulseEvent {
   seq: number;
   at: number;
-  kind: "launch" | "serial" | "dump" | "graduated" | "whale";
+  kind: "launch" | "serial" | "dump" | "graduated" | "whale" | "drained";
   mint: string;
   symbol: string;
   text: string;
@@ -309,6 +312,9 @@ const ordinal = (n: number) => {
   const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
   return `${n}${suffix}`;
 };
+/** A pool that held at least this much SOL and fell below this share of it was drained. */
+const DRAIN_MIN_PEAK = 20;
+const DRAIN_SHARE = 0.2;
 /** A single buy this big stands out on a fresh pump.fun token. */
 const WHALE_SOL = 10;
 
@@ -439,6 +445,8 @@ export class PumpTape {
         launchBuys: new Map(),
         pool: null,
         poolSol: null,
+        poolPeak: null,
+        drained: false,
         ammBuys: 0,
         ammSells: 0,
         ammSolIn: 0,
@@ -515,6 +523,12 @@ export class PumpTape {
     this.seen.trades += 1;
     this.count(now, "trades");
     t.poolSol = ev.poolSol;
+    t.poolPeak = Math.max(t.poolPeak ?? 0, ev.poolSol);
+    // A graduated pool opens with about 85 SOL. Down to a fifth of its best, the liquidity has left: announced once.
+    if (!t.drained && t.poolPeak >= DRAIN_MIN_PEAK && ev.poolSol < t.poolPeak * DRAIN_SHARE) {
+      t.drained = true;
+      this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} SOL after graduation`, tx);
+    }
     if (ev.isBuy) {
       t.ammBuys += 1;
       t.ammSolIn += ev.sol;
@@ -539,7 +553,7 @@ export class PumpTape {
     try {
       const saved = JSON.parse(json) as {
         v?: number;
-        tokens?: Array<Omit<Tracked, "buyers" | "launchBuys" | "pool" | "poolSol" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, { sol: number; buys: number }][]; launchBuys: [string, number][] }>;
+        tokens?: Array<Omit<Tracked, "buyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, { sol: number; buys: number }][]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
         seen?: { launches: number; trades: number };
@@ -552,6 +566,8 @@ export class PumpTape {
           ...s,
           pool: s.pool ?? null,
           poolSol: s.poolSol ?? null,
+          poolPeak: s.poolPeak ?? null,
+          drained: s.drained ?? false,
           ammBuys: s.ammBuys ?? 0,
           ammSells: s.ammSells ?? 0,
           ammSolIn: s.ammSolIn ?? 0,

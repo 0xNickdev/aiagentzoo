@@ -221,7 +221,7 @@ const LAUNCH_EVERY_MS = 1_200;
 /** The per-minute counter moves this often, not on every poll. */
 const COUNTER_EVERY_MS = 10_000;
 /** Rarer moments first: a graduate or a big buy beats the fiftieth dump. */
-const PRIORITY: Record<PulseEvent["kind"], number> = { graduated: 4, whale: 3, dump: 2, serial: 1, launch: 0 };
+const PRIORITY: Record<PulseEvent["kind"], number> = { drained: 5, graduated: 4, whale: 3, dump: 2, serial: 1, launch: 0 };
 
 /**
  * Polls north's pump.fun tape and plays it back at a readable pace: launches as a thin stream,

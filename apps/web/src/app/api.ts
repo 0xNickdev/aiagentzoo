@@ -44,7 +44,7 @@ export interface Ask {
 export interface Moment {
   seq: number;
   at: number;
-  kind: "launch" | "serial" | "dump" | "graduated" | "whale";
+  kind: "launch" | "serial" | "dump" | "graduated" | "whale" | "drained";
   mint: string;
   symbol: string;
   text: string;
