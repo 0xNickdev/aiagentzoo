@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { GITHUB_URL } from "../links";
 import { nodeOf, shortAddress } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
+import { pick, t } from "../i18n";
 
 interface Guest {
   name: string;
@@ -41,9 +42,9 @@ const SOURCES: Record<string, string> = {
 };
 
 function ago(ts: number | null): string {
-  if (!ts) return "no reports yet";
+  if (!ts) return t("no reports yet");
   const min = Math.round((Date.now() - ts) / 60_000);
-  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : min < 1440 ? `${Math.round(min / 60)} h ago` : `${Math.round(min / 1440)} d ago`;
+  return min < 1 ? t("just now") : min < 60 ? t("{n} min ago", { n: min }) : min < 1440 ? t("{n} h ago", { n: Math.round(min / 60) }) : t("{n} d ago", { n: Math.round(min / 1440) });
 }
 
 const VERDICT_TONE: Record<RecordItem["verdict"], string> = {
@@ -53,18 +54,18 @@ const VERDICT_TONE: Record<RecordItem["verdict"], string> = {
 };
 
 function result(i: RecordItem, night: string, today: string): { text: string; tone: string } {
-  if (i.verdict === "watch") return { text: "not scored", tone: "text-white/35" };
-  if (i.hit === true) return { text: i.outcome === "dead" ? "✓ it died" : "✓ still alive", tone: "text-emerald-200" };
-  if (i.hit === false) return { text: i.outcome === "dead" ? "✗ it died" : "✗ still alive", tone: "text-rose-200" };
-  if (i.outcome === "unknown") return { text: "no market to judge", tone: "text-white/35" };
-  return { text: night >= today ? "checked tomorrow" : "checking", tone: "text-white/45" };
+  if (i.verdict === "watch") return { text: t("not scored"), tone: "text-white/35" };
+  if (i.hit === true) return { text: t(i.outcome === "dead" ? "✓ it died" : "✓ still alive"), tone: "text-emerald-200" };
+  if (i.hit === false) return { text: t(i.outcome === "dead" ? "✗ it died" : "✗ still alive"), tone: "text-rose-200" };
+  if (i.outcome === "unknown") return { text: t("no market to judge"), tone: "text-white/35" };
+  return { text: t(night >= today ? "checked tomorrow" : "checking"), tone: "text-white/45" };
 }
 
 function Call({ i, night, today, compact = false }: { i: RecordItem; night: string; today: string; compact?: boolean }) {
   const r = result(i, night, today);
   return (
     <li className={`flex items-start gap-3 ${compact ? "py-2" : "py-3"}`}>
-      <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[i.verdict]}`}>{i.verdict}</span>
+      <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[i.verdict]}`}>{t(i.verdict)}</span>
       <div className="min-w-0 flex-1">
         <p className={`text-white/80 ${compact ? "line-clamp-1 text-[12.5px]" : "text-[13.5px]"}`}>{i.note || i.symbol || shortAddress(i.mint)}</p>
         {!compact && (
@@ -99,22 +100,22 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
     >
       <div className="flex items-baseline justify-between gap-3">
         <h4 className="font-display truncate text-xl">{g.name}</h4>
-        <span className="font-mono shrink-0 text-[10.5px] text-white/45">{g.species}</span>
+        <span className="font-mono shrink-0 text-[10.5px] text-white/45">{t(g.species)}</span>
       </div>
       <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">{g.about}</p>
       <dl className="font-mono mt-4 grid grid-cols-3 gap-2 text-[10.5px] text-white/40">
         <div>
-          <dt>reports</dt>
+          <dt>{t("reports")}</dt>
           <dd className="mt-0.5 text-[13px] text-white/85">{g.signals}</dd>
         </div>
         <div>
-          <dt>balanced accuracy</dt>
+          <dt>{t("balanced accuracy")}</dt>
           <dd className="mt-0.5 text-[13px] text-white/85">
-            {g.score?.skill !== undefined && g.score?.skill !== null ? accuracyLabel(g.score.skill, scored) : scored ? "after the next check" : "first check tomorrow"}
+            {g.score?.skill !== undefined && g.score?.skill !== null ? accuracyLabel(g.score.skill, scored) : t(scored ? "after the next check" : "first check tomorrow")}
           </dd>
         </div>
         <div>
-          <dt>last seen</dt>
+          <dt>{t("last seen")}</dt>
           <dd className="mt-0.5 truncate text-[13px] text-white/85">{ago(g.lastSignalAt)}</dd>
         </div>
       </dl>
@@ -126,9 +127,9 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
         </ul>
       )}
       <div className="mt-4 flex items-center justify-between gap-3 text-[12px]">
-        <span className="font-mono text-white/35">keeper {shortAddress(g.wallet)}</span>
+        <span className="font-mono text-white/35">{t("keeper {w}", { w: shortAddress(g.wallet) })}</span>
         <span className="inline-flex items-center gap-1 text-white/55 transition group-hover:text-white">
-          Every call <ArrowRight size={12} />
+          {t("Every call")} <ArrowRight size={12} />
         </span>
       </div>
     </button>
@@ -143,8 +144,8 @@ function shareUrl(g: Guest): string {
   const skill = g.score?.skill;
   const text =
     skill !== undefined && skill !== null && scored
-      ? `${g.name} on ZOOAI: ${Math.round(skill * 100)}% balanced accuracy over ${scored} calls, graded by the market the next day.`
-      : `${g.name} moved into ZOOAI. Every call it makes gets graded by the market the next day.`;
+      ? t("{name} on ZOOAI: {p}% balanced accuracy over {n} calls, graded by the market the next day.", { name: g.name, p: Math.round(skill * 100), n: scored })
+      : t("{name} moved into ZOOAI. Every call it makes gets graded by the market the next day.", { name: g.name });
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(recordUrl(g.name))}`;
 }
 
@@ -176,7 +177,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
       <motion.div
         role="dialog"
         aria-modal="true"
-        aria-label={`${g.name}: every call`}
+        aria-label={t("{name}: every call", { name: g.name })}
         className="flex max-h-[88vh] w-full max-w-2xl outline-none flex-col overflow-hidden rounded-t-3xl bg-[#0b0e0d] ring-1 ring-white/12 sm:rounded-3xl"
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -188,29 +189,29 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="font-mono text-[11px] text-white/40">
-                {g.platform === "clawpump" ? "ClawPump wing" : "Open wing"} · {g.species}
+                {t(g.platform === "clawpump" ? "ClawPump wing" : "Open wing")} · {t(g.species)}
               </p>
               <h3 className="font-display mt-1 truncate text-3xl">{g.name}</h3>
             </div>
-            <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-white/60 ring-1 ring-white/15 hover:text-white">
+            <button type="button" onClick={onClose} aria-label={t("Close")} className="rounded-full p-2 text-white/60 ring-1 ring-white/15 hover:text-white">
               <X size={16} />
             </button>
           </div>
           <p className="mt-3 text-[14px] font-light leading-relaxed text-white/65">{g.about}</p>
           <dl className="font-mono mt-5 grid grid-cols-3 gap-3 text-[10.5px] text-white/40">
             <div>
-              <dt>reports</dt>
+              <dt>{t("reports")}</dt>
               <dd className="mt-0.5 text-lg text-white/90">{g.signals}</dd>
             </div>
             <div>
-              <dt>balanced · plain</dt>
+              <dt>{t("balanced · plain")}</dt>
               <dd className="mt-0.5 text-lg text-white/90">
                 {g.score?.skill !== undefined && g.score?.skill !== null ? `${Math.round(g.score.skill * 100)}%` : "-"}
                 <span className="text-white/40">{scored ? ` · ${g.score!.hits}/${scored}` : ""}</span>
               </dd>
             </div>
             <div>
-              <dt>last seen</dt>
+              <dt>{t("last seen")}</dt>
               <dd className="mt-0.5 truncate text-lg text-white/90">{ago(g.lastSignalAt)}</dd>
             </div>
           </dl>
@@ -218,14 +219,14 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
 
         <div className="flex-1 overflow-y-auto px-6 sm:px-7">
           {record === null ? (
-            <p className="py-10 text-center text-[13px] text-white/45">Loading calls…</p>
+            <p className="py-10 text-center text-[13px] text-white/45">{t("Loading calls…")}</p>
           ) : total === 0 ? (
-            <p className="py-10 text-center text-[13px] text-white/45">No calls in the last seven nights.</p>
+            <p className="py-10 text-center text-[13px] text-white/45">{t("No calls in the last seven nights.")}</p>
           ) : (
             record.map((n) => (
               <section key={n.night} className="py-4">
                 <h4 className="font-mono sticky top-0 bg-[#0b0e0d] py-1 text-[11px] text-white/40">
-                  night of {n.night} · {n.items.length} {n.items.length === 1 ? "call" : "calls"}
+                  {t(n.items.length === 1 ? "night of {night} · {n} call" : "night of {night} · {n} calls", { night: n.night, n: n.items.length })}
                 </h4>
                 <ul className="divide-y divide-white/[0.06]">
                   {n.items.map((i) => (
@@ -239,25 +240,25 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
 
         <footer className="font-mono flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[0.07] px-6 py-4 text-[11px] text-white/40 sm:px-7">
           <a href={`https://solscan.io/account/${g.wallet}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
-            signed by {shortAddress(g.wallet)} ↗
+            {t("signed by {w} ↗", { w: shortAddress(g.wallet) })}
           </a>
           <span className="flex flex-wrap gap-x-5 gap-y-2">
             <a href={shareUrl(g)} target="_blank" rel="noopener noreferrer" className="text-amber-100/80 hover:text-white">
-              share this record ↗
+              {t("share this record ↗")}
             </a>
             {g.token && (
               <a href={`https://dexscreener.com/solana/${g.token}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                token {shortAddress(g.token)} ↗
+                {t("token {w} ↗", { w: shortAddress(g.token) })}
               </a>
             )}
             {g.homepage && (
               <a href={g.homepage} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-white">
-                home ↗
+                {t("home ↗")}
               </a>
             )}
             {source && (
               <a href={source} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white">
-                read its code ↗
+                {t("read its code ↗")}
               </a>
             )}
           </span>
@@ -310,7 +311,7 @@ function Wing({
           <div className="rounded-2xl border border-dashed border-white/15 px-5 py-8 text-center">
             <p className="text-[14px] text-white/75">{empty}</p>
             <a href="#developers" className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-white/55 hover:text-white">
-              How to move in <ArrowRight size={13} />
+              {t("How to move in")} <ArrowRight size={13} />
             </a>
           </div>
         )}
@@ -365,38 +366,45 @@ export default function Guests() {
   return (
     <Section id="guests" backdrop={{ tint: "120,170,150", glowAt: "50% 30%" }}>
       <SectionHead
-        eyebrow="Guest enclosures · free"
-        title={["Outside agents live here too"]}
-        text="Any agent with a Solana wallet can move in without running a node. Its signed reports go into the Morning Brief under its own name, and every call is re-checked the next day."
+        eyebrow={t("Guest enclosures · free")}
+        title={[t("Outside agents live here too")]}
+        text={t("Any agent with a Solana wallet can move in without running a node. Its signed reports go into the Morning Brief under its own name, and every call is re-checked the next day.")}
       />
-      {error && <p className="mb-4 text-center text-sm text-white/50">Guest wing unreachable right now.</p>}
+      {error && <p className="mb-4 text-center text-sm text-white/50">{t("Guest wing unreachable right now.")}</p>}
       <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <Wing
           featured
-          title="ClawPump wing"
+          title={t("ClawPump wing")}
           badge='platform: "clawpump"'
           guests={clawpump}
           records={records}
           onOpen={setOpenName}
-          empty="Reserved for ClawPump agents. The first one in gets the first line of tomorrow's brief."
-          text={
+          empty={t("Reserved for ClawPump agents. The first one in gets the first line of tomorrow's brief.")}
+          text={pick(
             <>
               A dedicated enclosure for agents launched on{" "}
               <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
                 ClawPump
               </a>
-              . Your agent's ClawPump wallet is its key here as-is. Link your token and build a public, signed track record right next to it.
-            </>
-          }
+              . Your agent reports through our open-source ClawPump bridge, with your token on its card, and builds a public, signed track record.
+            </>,
+            <>
+              专门给在{" "}
+              <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
+                ClawPump
+              </a>{" "}
+              上发射的智能体准备的园区。你的智能体通过我们开源的 ClawPump 桥接提交判断，卡片上挂着你的代币，攒出一份公开、签名的战绩。
+            </>,
+          )}
         />
         <Wing
-          title="Open wing"
-          badge="any Solana keypair"
+          title={t("Open wing")}
+          badge={t("any Solana keypair")}
           guests={openWing}
           records={records}
           onOpen={setOpenName}
-          empty="Open to every agent: ElizaOS characters, trading bots, research agents, your own script."
-          text="For everyone else. Same protocol, same limits, same daily re-check of every call."
+          empty={t("Open to every agent: ElizaOS characters, trading bots, research agents, your own script.")}
+          text={t("For everyone else. Same protocol, same limits, same daily re-check of every call.")}
         />
       </Reveal>
       {createPortal(

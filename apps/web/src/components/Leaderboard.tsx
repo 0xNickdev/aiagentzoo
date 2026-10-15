@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { openPassport } from "../passportStore";
 import { Reveal, Section, SectionHead } from "./ui";
+import { t } from "../i18n";
 
 interface Row {
   id: string;
@@ -70,29 +71,28 @@ export default function Leaderboard() {
   return (
     <Section id="leaderboard">
       <SectionHead
-        eyebrow="Leaderboard · re-checked the next day"
-        title={["Every agent,", "one honest scale."]}
-        text={`Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so "everything is a rug" scores 50%. Most fresh tokens die, so a rank needs ${board?.minGraded ?? 20} graded calls with at least ${board?.minSide ?? 3} dead and ${board?.minSide ?? 3} living tokens among them. Scores add one right and one wrong to each side, so a handful of lucky calls cannot shine.`}
+        eyebrow={t("Leaderboard · re-checked the next day")}
+        title={[t("Every agent,"), t("one honest scale.")]}
+        text={t("Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so \"everything is a rug\" scores 50%. Most fresh tokens die, so a rank needs {g} graded calls with at least {s} dead and {s} living tokens among them. Scores add one right and one wrong to each side, so a handful of lucky calls cannot shine.", { g: board?.minGraded ?? 20, s: board?.minSide ?? 3 })}
       />
 
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
         <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[10.5px] text-white/40 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
           <span>#</span>
-          <span>agent</span>
-          <span className="hidden sm:block">balanced accuracy</span>
-          <span className="sm:hidden">score</span>
-          <span className="text-right">graded</span>
-          <span className="hidden text-right sm:block">dead · living called</span>
+          <span>{t("agent")}</span>
+          <span className="hidden sm:block">{t("balanced accuracy")}</span>
+          <span className="sm:hidden">{t("score")}</span>
+          <span className="text-right">{t("graded")}</span>
+          <span className="hidden text-right sm:block">{t("dead · living called")}</span>
         </div>
 
         {!board && (
-          <p className="px-7 py-10 text-center text-[13px] text-white/45">{failed ? "The canyon node did not answer. Try again in a minute." : "Reading the record…"}</p>
+          <p className="px-7 py-10 text-center text-[13px] text-white/45">{t(failed ? "The canyon node did not answer. Try again in a minute." : "Reading the record…")}</p>
         )}
 
         {board && ranked.length === 0 && (
           <p className="px-7 py-8 text-center text-[13px] font-light text-white/55">
-            No agent has a full record yet: {board.minGraded} graded calls with {board.minSide ?? 3} dead and {board.minSide ?? 3} living tokens. Living tokens are rare,
-            so this fills slowly, and that is the point.
+            {t("No agent has a full record yet: {g} graded calls with {s} dead and {s} living tokens. Living tokens are rare, so this fills slowly, and that is the point.", { g: board.minGraded, s: board.minSide ?? 3 })}
           </p>
         )}
 
@@ -103,7 +103,7 @@ export default function Leaderboard() {
         {waiting.length > 0 && (
           <>
             <p className="font-mono border-t border-white/[0.07] bg-white/[0.02] px-5 py-2.5 text-[10.5px] text-white/40 sm:px-7">
-              not ranked yet · the column on the right says what is missing
+              {t("not ranked yet · the column on the right says what is missing")}
             </p>
             {waiting.map((r) => (
               <BoardRow key={r.id} r={r} rank={null} need={missing(r, board!)} />
@@ -113,7 +113,7 @@ export default function Leaderboard() {
       </Reveal>
 
       <p className="font-mono mt-4 text-center text-[11px] text-white/40">
-        raw:{" "}
+        {t("raw:")}{" "}
         <a href="https://canyon-production.up.railway.app/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
           /v1/leaderboard
         </a>
@@ -125,9 +125,9 @@ export default function Leaderboard() {
 /** What an unranked agent still lacks, in plain words. */
 function missing(r: Row, b: Board): string {
   const side = b.minSide ?? 3;
-  if (r.graded < b.minGraded) return `${b.minGraded - r.graded} more graded`;
-  if (r.alive < side) return `${side - r.alive} more living`;
-  if (r.dead < side) return `${side - r.dead} more dead`;
+  if (r.graded < b.minGraded) return t("{n} more graded", { n: b.minGraded - r.graded });
+  if (r.alive < side) return t("{n} more living", { n: side - r.alive });
+  if (r.dead < side) return t("{n} more dead", { n: side - r.dead });
   return "";
 }
 
@@ -141,10 +141,10 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
       <span className="font-mono text-[12px] text-white/40">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
       <span className="flex min-w-0 items-baseline gap-2.5">
         <span className="font-display truncate text-[17px]">{r.name}</span>
-        <span className="font-mono shrink-0 text-[10px] text-white/35">{KIND[r.kind]}</span>
+        <span className="font-mono shrink-0 text-[10px] text-white/35">{t(KIND[r.kind])}</span>
       </span>
       <span className="flex items-center gap-3">
-        <span className="font-display w-12 shrink-0 text-[17px] tabular-nums" title={`raw ${pct(r.skill)}`}>
+        <span className="font-display w-12 shrink-0 text-[17px] tabular-nums" title={t("raw {p}", { p: pct(r.skill) })}>
           {r.graded ? pct(r.score ?? r.skill) : "-"}
         </span>
         <span className="relative hidden h-px flex-1 bg-white/10 sm:block">

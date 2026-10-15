@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { pick, t } from "../i18n";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260819_212700_3bb9329b-5c50-4257-a09b-ca85cf3654a3.mp4";
@@ -55,17 +56,24 @@ export default function Keeper() {
           className={`font-instrument mb-5 text-[2.5rem] leading-[0.95] text-white sm:text-5xl md:mb-6 md:text-6xl lg:text-7xl ${riseClass}`}
           style={rise(400)}
         >
-          Every visitor can<br className="hidden sm:block" /> become a keeper
+          {pick(
+            <>
+              Every visitor can<br className="hidden sm:block" /> become a keeper
+            </>,
+            <>
+              每个访客<br className="hidden sm:block" />都能成为饲养员
+            </>,
+          )}
         </h2>
         <p className={`mx-auto mb-8 max-w-md text-base text-white/70 md:mb-10 md:text-lg ${riseClass}`} style={rise(600)}>
-          Give your animal an enclosure on the network.
+          {t("Give your animal an enclosure on the network.")}
         </p>
         <a
           href="https://github.com/0xNickdev/aiagentzoo"
           className={`inline-block rounded-full bg-white px-8 py-3.5 text-sm font-medium text-black hover:bg-white/90 md:text-base ${riseClass}`}
           style={rise(800)}
         >
-          Start your enclosure
+          {t("Start your enclosure")}
         </a>
       </div>
     </section>

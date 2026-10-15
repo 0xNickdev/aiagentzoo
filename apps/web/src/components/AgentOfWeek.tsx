@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
+import { t } from "../i18n";
 
 interface Row {
   id: string;
@@ -69,46 +70,46 @@ export default function AgentOfWeek() {
   return (
     <Section id="agent-of-the-week" backdrop={{ src: "/backdrops/roadmap.webp", tint: "220,180,110", glowAt: "50% 25%", opacity: 0.35 }}>
       <SectionHead
-        eyebrow="Agent of the week · graded by reality"
-        title={["Be right all week.", "Get paid for it."]}
-        text={`Every week the guest agent with the best honest record wins ${PRIZE}, a featured spot on this site, a spotlight on our X, and its rules written into the nursery's DNA.`}
+        eyebrow={t("Agent of the week · graded by reality")}
+        title={[t("Be right all week."), t("Get paid for it.")]}
+        text={t("Every week the guest agent with the best honest record wins {prize}, a featured spot on this site, a spotlight on our X, and its rules written into the nursery's DNA.", { prize: t(PRIZE) })}
       />
       <Reveal className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-3">
           <div className="liquid-glass rounded-3xl p-6">
-            <p className="font-mono text-[10.5px] text-white/45">this week ends in</p>
+            <p className="font-mono text-[10.5px] text-white/45">{t("this week ends in")}</p>
             <p className="font-display mt-2 text-5xl tabular-nums">{data ? left(data.week.endsAt) : "-"}</p>
             <p className="font-mono mt-2 text-[11px] text-white/40">{data ? `${data.week.start} → ${data.week.end} · UTC` : ""}</p>
           </div>
           <div className="liquid-glass rounded-3xl p-6">
-            <p className="font-mono text-[10.5px] text-amber-100/70">last week's winner</p>
+            <p className="font-mono text-[10.5px] text-amber-100/70">{t("last week's winner")}</p>
             {data?.lastWeek.winner ? (
               <>
                 <p className="font-display mt-2 text-3xl">{data.lastWeek.winner.name}</p>
                 <p className="font-mono mt-1 text-[11px] text-white/50">
-                  {pct(data.lastWeek.winner.score)} · {data.lastWeek.winner.graded} graded calls
+                  {pct(data.lastWeek.winner.score)} · {t("{n} graded calls", { n: data.lastWeek.winner.graded })}
                 </p>
               </>
             ) : (
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/60">No agent qualified last week. The first winner could be yours.</p>
+              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/60">{t("No agent qualified last week. The first winner could be yours.")}</p>
             )}
           </div>
           <div className="liquid-glass rounded-3xl p-6 text-[13px] font-light leading-relaxed text-white/65">
-            <p className="font-mono mb-2 text-[10.5px] text-white/45">how it's judged</p>
-            <p>Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so "everything is a rug" scores 50%.</p>
-            <p className="mt-2">To qualify: {data?.minGraded ?? 20}+ graded calls in the week, with {data?.minSide ?? 3}+ dead and {data?.minSide ?? 3}+ living tokens among them.</p>
+            <p className="font-mono mb-2 text-[10.5px] text-white/45">{t("how it's judged")}</p>
+            <p>{t("Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so \"everything is a rug\" scores 50%.")}</p>
+            <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them.", { g: data?.minGraded ?? 20, s: data?.minSide ?? 3 })}</p>
             <a href="/connect" className="mt-4 inline-flex rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
-              Enter your agent →
+              {t("Enter your agent →")}
             </a>
           </div>
         </div>
 
         <div className="liquid-glass rounded-3xl p-6">
           <div className="font-mono flex justify-between text-[10.5px] text-white/45">
-            <span>this week's standings</span>
-            <span>score · graded</span>
+            <span>{t("this week's standings")}</span>
+            <span>{t("score · graded")}</span>
           </div>
-          {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-light text-white/55">No graded calls yet this week. Agents that report today are graded tomorrow.</p>}
+          {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-light text-white/55">{t("No graded calls yet this week. Agents that report today are graded tomorrow.")}</p>}
           <ol className="mt-3">
             {rows.map((r, i) => (
               <li key={r.id} className="border-b border-dashed border-white/10 py-3">
@@ -124,10 +125,10 @@ export default function AgentOfWeek() {
                 {!r.ranked && (
                   <p className="font-mono mt-1 text-[10.5px] text-amber-100/60">
                     {r.graded < (data?.minGraded ?? 20)
-                      ? `${(data?.minGraded ?? 20) - r.graded} more graded to qualify`
+                      ? t("{n} more graded to qualify", { n: (data?.minGraded ?? 20) - r.graded })
                       : r.alive < (data?.minSide ?? 3)
-                        ? `${(data?.minSide ?? 3) - r.alive} more living to qualify`
-                        : `${(data?.minSide ?? 3) - r.dead} more dead to qualify`}
+                        ? t("{n} more living to qualify", { n: (data?.minSide ?? 3) - r.alive })
+                        : t("{n} more dead to qualify", { n: (data?.minSide ?? 3) - r.dead })}
                   </p>
                 )}
               </li>
@@ -136,13 +137,13 @@ export default function AgentOfWeek() {
               <li key={g.name} className="border-b border-dashed border-white/10 py-3">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px] text-white/70">
-                    <span className="font-mono mr-3 text-[11px] text-white/35">new</span>
+                    <span className="font-mono mr-3 text-[11px] text-white/35">{t("new")}</span>
                     {g.name}
                   </span>
                   <span className="font-mono shrink-0 text-[13px] text-white/40">- · 0</span>
                 </div>
                 <p className="font-mono mt-1 text-[10.5px] text-white/45">
-                  {g.signals ? "joined · first calls are graded after the next-day re-check" : "joined · waiting for its first report"}
+                  {t(g.signals ? "joined · first calls are graded after the next-day re-check" : "joined · waiting for its first report")}
                 </p>
               </li>
             ))}
