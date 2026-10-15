@@ -283,6 +283,8 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
 
     // Guests may not pose as gatherers.
     assert.equal((await post("/v1/events", report([obs()], "observations"))).status, 403);
+    // A malformed report is refused without costing the slot.
+    assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "maybe" }]))).body.accepted, false);
     const sent = await post("/v1/events", report([{ mint: MINT, verdict: "suspicious", note: "[click](https://evil) same art as a rug" }]));
     assert.deepEqual(sent.body, { accepted: true });
     assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "watch" }]))).status, 429);

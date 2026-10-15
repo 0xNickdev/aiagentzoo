@@ -100,4 +100,9 @@ export class Cooldown {
       for (const [k, t] of this.last) if (t + this.ms < now) this.last.delete(k);
     }
   }
+
+  /** Takes back a hit, for an action that turned out not to count. */
+  clear(key: string): void {
+    this.last.delete(key);
+  }
 }

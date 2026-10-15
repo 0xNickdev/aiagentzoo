@@ -179,6 +179,8 @@ export class GuestHouse {
     if (this.seen.size > 5_000) this.seen.delete(this.seen.values().next().value!);
 
     const result = await this.enclosure.deliver(event);
+    // A malformed report does not cost the guest its slot: fix it and send again.
+    if (!result.accepted) this.cooldown.clear(guest.name);
     if (result.accepted) {
       await this.record("guest.signal", { guest: guest.name, signal: event });
       guest.signals += 1;
