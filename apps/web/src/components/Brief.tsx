@@ -5,6 +5,7 @@ import NightCard, { type NightCardData } from "./NightCard";
 import { loadDirectory, shortAddress, useGuardian } from "../zoo";
 import { GuardianButton } from "./Guardian";
 import { Reveal, Section } from "./ui";
+import { lang, t as tr, tChain } from "../i18n";
 
 interface Market {
   liquidityUsd: number | null;
@@ -120,25 +121,25 @@ function Tables({ s }: { s: Sections }) {
               tab === t.key ? "border-white text-white" : "border-transparent text-white/45 hover:text-white/80"
             }`}
           >
-            {t.label}
+            {tr(t.label)}
             <span className="font-mono ml-1.5 text-[10.5px] text-white/35">{(s[t.key] ?? []).length}</span>
           </button>
         ))}
       </div>
       {rows.length === 0 ? (
-        <p className="px-6 py-10 text-center text-[13px] text-white/40">Nothing in this section tonight.</p>
+        <p className="px-6 py-10 text-center text-[13px] text-white/40">{tr("Nothing in this section tonight.")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
               <tr className="font-mono text-left text-[10px] tracking-[0.12em] text-white/35">
-                <th className="px-6 py-3 font-normal">TOKEN</th>
+                <th className="px-6 py-3 font-normal">{tr("TOKEN")}</th>
                 {reasons ? (
-                  <th className="px-6 py-3 font-normal">WHY IT IS FLAGGED</th>
+                  <th className="px-6 py-3 font-normal">{tr("WHY IT IS FLAGGED")}</th>
                 ) : (
                   <>
-                    <th className="px-3 py-3 text-right font-normal">VOLUME 24H</th>
-                    <th className="px-3 py-3 text-right font-normal">LIQUIDITY</th>
+                    <th className="px-3 py-3 text-right font-normal">{tr("VOLUME 24H")}</th>
+                    <th className="px-3 py-3 text-right font-normal">{tr("LIQUIDITY")}</th>
                     <th className="px-6 py-3 text-right font-normal">24H</th>
                   </>
                 )}
@@ -155,7 +156,7 @@ function Tables({ s }: { s: Sections }) {
                     </a>
                   </td>
                   {reasons ? (
-                    <td className="px-6 py-3 text-white/60">{clean((o.reasons ?? []).join(" · "))}</td>
+                    <td className="px-6 py-3 text-white/60">{clean((o.reasons ?? []).map(tChain).join(" · "))}</td>
                   ) : (
                     <>
                       <td className="font-mono px-3 py-3 text-right text-white/75">{money(o.market?.volume24hUsd)}</td>
@@ -186,14 +187,14 @@ function Calls({ calls }: { calls: Call[] }) {
   const shown = all ? calls : calls.slice(0, 6);
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">THE PACK'S CALLS · {calls.length}</p>
+      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("THE PACK'S CALLS")} · {calls.length}</p>
       {calls.length === 0 ? (
-        <p className="mt-4 text-[13px] text-white/40">No calls yet this night.</p>
+        <p className="mt-4 text-[13px] text-white/40">{tr("No calls yet this night.")}</p>
       ) : (
         <ul className="mt-3 divide-y divide-white/[0.06]">
           {shown.map((c) => (
             <li key={c.mint} className="flex items-start gap-3 py-3">
-              <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{c.verdict}</span>
+              <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
               <div className="min-w-0 flex-1">
                 <a href={`https://dexscreener.com/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-white/90 hover:text-white">
                   {c.symbol}
@@ -207,7 +208,7 @@ function Calls({ calls }: { calls: Call[] }) {
       )}
       {calls.length > 6 && (
         <button type="button" onClick={() => setAll((a) => !a)} className="font-mono mt-2 text-[11px] text-white/45 hover:text-white">
-          {all ? "show fewer" : `show all ${calls.length}`}
+          {all ? tr("show fewer") : tr("show all {n}", { n: calls.length })}
         </button>
       )}
     </div>
@@ -220,30 +221,28 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
   const scored = score ? score.hits + score.misses : 0;
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">WHAT THE PACK LEARNED</p>
+      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("WHAT THE PACK LEARNED")}</p>
       {scored > 0 && score!.skill !== undefined && score!.skill !== null ? (
         <>
           <p className="font-display mt-4 text-5xl">{Math.round(score!.skill * 100)}%</p>
           <p className="mt-2 text-[13.5px] font-light text-white/60">
-            balanced accuracy on yesterday's calls: half for calling the dead, half for calling the living. By the plain count, {score!.hits} right and{" "}
-            {score!.misses} wrong.
+            {tr("balanced accuracy on yesterday's calls: half for calling the dead, half for calling the living. By the plain count, {h} right and {m} wrong.", { h: score!.hits, m: score!.misses })}
           </p>
         </>
       ) : scored > 0 ? (
         <>
           <p className="font-display mt-4 text-5xl text-white/50">-</p>
           <p className="mt-2 text-[13.5px] font-light text-white/55">
-            This night was scored before balanced accuracy. By the plain count, {score!.hits} right and {score!.misses} wrong, which most fresh tokens dying makes
-            easy.
+            {tr("This night was scored before balanced accuracy. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.", { h: score!.hits, m: score!.misses })}
           </p>
         </>
       ) : (
-        <p className="mt-4 text-[13.5px] font-light text-white/55">Calls are re-checked the next night; the score lands here.</p>
+        <p className="mt-4 text-[13.5px] font-light text-white/55">{tr("Calls are re-checked the next night; the score lands here.")}</p>
       )}
       {learned && (
         <div className="mt-6 border-t border-white/[0.07] pt-4">
           <button type="button" onClick={() => setOpen((o) => !o)} className="font-mono flex w-full items-center justify-between text-[11px] tracking-[0.1em] text-white/55 hover:text-white">
-            <span>PLAYBOOK V{learned.playbook.version} · REWRITTEN BY THE BEAVER</span>
+            <span>{tr("PLAYBOOK V{v} · REWRITTEN BY THE BEAVER", { v: learned.playbook.version })}</span>
             <span>{open ? "−" : "+"}</span>
           </button>
           {open && (
@@ -262,15 +261,15 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
 /** The weekly contest as it stood that morning. */
 function WeekBoard({ week }: { week: Week }) {
   const need = (r: Week["rows"][number]) =>
-    r.ranked ? null : r.graded < week.minGraded ? `${week.minGraded - r.graded} more graded` : r.alive < week.minSide ? `${week.minSide - r.alive} more living` : `${week.minSide - r.dead} more dead`;
+    r.ranked ? null : r.graded < week.minGraded ? tr("{n} more graded", { n: week.minGraded - r.graded }) : r.alive < week.minSide ? tr("{n} more living", { n: week.minSide - r.alive }) : tr("{n} more dead", { n: week.minSide - r.dead });
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">
-        AGENT OF THE WEEK SO FAR · {week.start} → {week.end}
+        {tr("AGENT OF THE WEEK SO FAR")} · {week.start} → {week.end}
       </p>
       {!week.rows.length ? (
         <p className="mt-3 text-[13px] font-light text-white/55">
-          No guest agent graded this week yet. The first one leads: <a href="/connect" className="underline decoration-white/30 underline-offset-4 hover:text-white">connect an agent</a>.
+          {tr("No guest agent graded this week yet. The first one leads:")} <a href="/connect" className="underline decoration-white/30 underline-offset-4 hover:text-white">{tr("connect an agent")}</a>
         </p>
       ) : (
         <ol className="mt-3 divide-y divide-white/[0.06]">
@@ -282,7 +281,7 @@ function WeekBoard({ week }: { week: Week }) {
               </a>
               <span className="font-mono shrink-0 text-[12px] text-white/60">
                 {Math.round(r.score * 100)}% · {r.graded}
-                {need(r) && <span className="ml-2 text-amber-100/60">{need(r)} to qualify</span>}
+                {need(r) && <span className="ml-2 text-amber-100/60">{tr("{need} to qualify", { need: need(r)! })}</span>}
               </span>
             </li>
           ))}
@@ -295,17 +294,17 @@ function WeekBoard({ week }: { week: Week }) {
 function GuestReports({ reports }: { reports: GuestReport[] }) {
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">FROM THE GUEST ENCLOSURES · {reports.length}</p>
+      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("FROM THE GUEST ENCLOSURES")} · {reports.length}</p>
       <div className={`mt-3 grid gap-6 ${reports.length > 1 ? "md:grid-cols-2" : ""}`}>
         {reports.map((r) => (
           <div key={r.guest} className="min-w-0">
             <p className="text-[14px] text-white/90">
-              {r.guest} <span className="text-[12px] text-white/40">· {r.platform === "clawpump" ? "ClawPump wing · " : ""}{r.species}</span>
+              {r.guest} <span className="text-[12px] text-white/40">· {r.platform === "clawpump" ? `${tr("ClawPump wing")} · ` : ""}{tr(r.species)}</span>
             </p>
             <ul className="mt-2 divide-y divide-white/[0.06]">
               {r.items.slice(0, 5).map((i) => (
                 <li key={i.mint} className="flex items-start gap-3 py-2.5">
-                  <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{i.verdict}</span>
+                  <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{tr(i.verdict)}</span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-white/60" title={i.note}>
                     {clean(i.note) || shortAddress(i.mint)}
                   </span>
@@ -322,7 +321,7 @@ function GuestReports({ reports }: { reports: GuestReport[] }) {
 function Watched({ items }: { items: Obs[] }) {
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">GUARDIAN WATCH · {items.length}</p>
+      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("GUARDIAN WATCH")} · {items.length}</p>
       <ul className="mt-3 divide-y divide-white/[0.06]">
         {items.map((o) => (
           <li key={o.mint} className="flex items-baseline justify-between gap-3 py-2.5 text-[13px]">
@@ -357,7 +356,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
     if (!session) return;
     setMessage(null);
     const url = await nodeUrl("raven");
-    if (!url) return setMessage("The watch node is unreachable.");
+    if (!url) return setMessage(tr("The watch node is unreachable."));
     const res = await fetch(`${url}/v1/watchlist`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -367,7 +366,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
     if (!res.ok) return setMessage(body.error ?? `HTTP ${res.status}`);
     setMints(body.mints);
     setInput("");
-    setMessage(action === "add" ? "Added. The raven hands the watch to the hedgehog every hour." : "Removed.");
+    setMessage(tr(action === "add" ? "Added. The raven hands the watch to the hedgehog every hour." : "Removed."));
   };
 
   const mine = useMemo(
@@ -378,11 +377,10 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
   return (
     <div className="grid gap-8 rounded-3xl bg-gradient-to-br from-white/[0.04] to-transparent p-7 ring-1 ring-white/10 sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div>
-        <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">GUARDIAN WATCH · FREE</p>
-        <h3 className="font-display mt-3 text-4xl">Watch my token</h3>
+        <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("GUARDIAN WATCH · FREE")}</p>
+        <h3 className="font-display mt-3 text-4xl">{tr("Watch my token")}</h3>
         <p className="mt-3 max-w-md text-[14px] font-light leading-relaxed text-white/60">
-          Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour (liquidity, volume, sharp moves) and they get
-          your own section in the next Morning Brief.
+          {tr("Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour (liquidity, volume, sharp moves) and they get your own section in the next Morning Brief.")}
         </p>
       </div>
       <div className="flex flex-col justify-center">
@@ -400,11 +398,11 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Token mint address"
+              placeholder={tr("Token mint address")}
               className="min-w-0 flex-1 rounded-full bg-white/5 px-4 py-2.5 font-mono text-[12px] text-white placeholder:text-white/30 ring-1 ring-white/15 focus:outline-none focus:ring-white/40"
             />
             <button type="submit" className="rounded-full bg-white px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.15em] text-black hover:bg-white/90">
-              Add
+              {tr("Add")}
             </button>
           </form>
           {message && <p className="mt-2 text-[12px] font-light text-white/55">{message}</p>}
@@ -413,7 +411,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
               <li key={m} className="flex items-center justify-between gap-3 rounded-full bg-white/5 px-4 py-2 font-mono text-[12px] text-white/80">
                 <span className="truncate">{m}</span>
                 <button type="button" onClick={() => change(m, "remove")} className="shrink-0 text-white/40 hover:text-white">
-                  remove
+                  {tr("remove")}
                 </button>
               </li>
             ))}
@@ -443,7 +441,7 @@ export default function Brief() {
   useEffect(() => {
     (async () => {
       const url = await nodeUrl("tortoise");
-      if (!url) return setError("Brief node unreachable.");
+      if (!url) return setError(tr("Brief node unreachable."));
       const [list, agents] = await Promise.all([fetch(`${url}/v1/briefs`).then((r) => r.json()), fetch(`${url}/v1/agents`).then((r) => r.json())]);
       setRefs(list);
       setNextAt(agents.find((a: { name: string }) => a.name === "tortoise")?.nextRunAt ?? null);
@@ -504,12 +502,12 @@ export default function Brief() {
   const scored = s?.learned?.score ? s.learned.score.hits + s.learned.score.misses : 0;
   const figures: Array<[string, string]> = s
     ? [
-        ["TOKENS WATCHED", s.observed.toLocaleString("en-US")],
-        ["FRESH LAUNCHES", s.launches.toLocaleString("en-US")],
-        ["GRADUATED", String(s.graduated.length)],
-        ["WENT TO ZERO", String(s.wentToZero.length)],
-        ["FLAGGED", String(s.suspicious.length)],
-        ["BALANCED ACCURACY", accuracyLabel(s.learned?.score?.skill, scored)],
+        [tr("TOKENS WATCHED"), s.observed.toLocaleString("en-US")],
+        [tr("FRESH LAUNCHES"), s.launches.toLocaleString("en-US")],
+        [tr("GRADUATED"), String(s.graduated.length)],
+        [tr("WENT TO ZERO"), String(s.wentToZero.length)],
+        [tr("FLAGGED"), String(s.suspicious.length)],
+        [tr("BALANCED ACCURACY"), accuracyLabel(s.learned?.score?.skill, scored)],
       ]
     : [];
 
@@ -517,14 +515,14 @@ export default function Brief() {
     <Section id="brief" backdrop={{ tint: "235,190,120", glowAt: "50% 10%" }}>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">EVERY MORNING · 07:00 UTC · SIGNED</p>
-          <h1 className="font-display mt-3 text-5xl sm:text-7xl">The Morning Brief</h1>
+          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{tr("EVERY MORNING · 07:00 UTC · SIGNED")}</p>
+          <h1 className="font-display mt-3 text-5xl sm:text-7xl">{tr("The Morning Brief")}</h1>
           <p className="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
-            What launched overnight on pump.fun, what moved, what went to zero and what looks off. Assembled by the pack, no human in the loop.
+            {tr("What launched overnight on pump.fun, what moved, what went to zero and what looks off. Assembled by the pack, no human in the loop.")}
           </p>
         </div>
         {refs && refs.length > 0 && (
-          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Choose a night">
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={tr("Choose a night")}>
             {refs.slice(0, 7).map((r) => (
               <button
                 key={r.id}
@@ -534,7 +532,7 @@ export default function Brief() {
                   brief?.ref.id === r.id ? "bg-white text-black ring-white" : "text-white/60 ring-white/15 hover:text-white"
                 }`}
               >
-                {new Date(`${r.night}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+                {new Date(`${r.night}T00:00:00Z`).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
               </button>
             ))}
           </div>
@@ -544,9 +542,9 @@ export default function Brief() {
       {error && <p className="mt-10 text-sm text-white/50">{error}</p>}
       {refs && refs.length === 0 && (
         <div className="mt-10 rounded-3xl bg-black/40 p-10 text-center ring-1 ring-white/10">
-          <p className="font-display text-3xl">The first brief is being assembled</p>
+          <p className="font-display text-3xl">{tr("The first brief is being assembled")}</p>
           <p className="mt-3 text-sm font-light text-white/60">
-            The tortoise publishes it {nextAt ? `at ${new Date(nextAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}` : "at 07:00 UTC"}.
+            {tr("The tortoise publishes it {when}.", { when: nextAt ? new Date(nextAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }) : tr("at 07:00 UTC") })}
           </p>
         </div>
       )}
@@ -568,9 +566,9 @@ export default function Brief() {
 
           <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <div>
-              <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">NIGHT OF {s.night} · NIGHT IN REVIEW</p>
+              <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("NIGHT OF {n} · NIGHT IN REVIEW", { n: s.night })}</p>
               <p className="mt-4 text-[16px] font-light leading-[1.7] text-white/80 sm:text-[19px]">
-                {review ?? `${s.observed} tokens observed; ${s.graduated.length} graduated, ${s.wentToZero.length} went to zero, ${s.suspicious.length} flagged.`}
+                {(lang() === "zh" ? null : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.graduated.length, z: s.wentToZero.length, f: s.suspicious.length })}
               </p>
             </div>
             <div className="flex flex-col justify-end gap-3 lg:items-end">
@@ -579,13 +577,13 @@ export default function Brief() {
               </p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => void openCard()} className="rounded-full bg-white px-4 py-2 text-[12px] font-medium text-black hover:bg-white/90">
-                  Night card
+                  {tr("Night card")}
                 </button>
                 <button type="button" onClick={share} className="liquid-glass rounded-full px-4 py-2 text-[12px] text-white/85 hover:text-white">
-                  Copy link
+                  {tr("Copy link")}
                 </button>
                 <button type="button" onClick={download} className="liquid-glass rounded-full px-4 py-2 text-[12px] text-white/85 hover:text-white">
-                  Download .md
+                  {tr("Download .md")}
                 </button>
               </div>
             </div>
@@ -612,7 +610,7 @@ export default function Brief() {
               <WeekBoard week={s.week} />
             </div>
           )}
-          <p className="mt-4 text-[11px] font-light text-white/35">Observations from public data, not financial advice.</p>
+          <p className="mt-4 text-[11px] font-light text-white/35">{tr("Observations from public data, not financial advice.")}</p>
         </Reveal>
       )}
 
