@@ -56,9 +56,10 @@ export function Token() {
 }
 
 export function Footer() {
-  const link = "transition-colors hover:text-white";
+  const link = "text-white/75 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60";
   return (
-    <footer className="flex flex-col gap-4 border-t border-white/[0.06] px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/40 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    // Above the last section's backdrop, which bleeds downward to soften the seam and would otherwise cover it.
+    <footer className="relative z-20 flex flex-col gap-4 border-t border-white/[0.08] bg-black/60 px-5 py-8 text-[11px] font-light uppercase tracking-[0.2em] text-white/55 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <span>ZOOAI AGENCY · 2026 · MIT</span>
       <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <a href={X_URL} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${link}`}>
