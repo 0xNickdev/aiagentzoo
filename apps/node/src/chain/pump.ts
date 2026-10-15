@@ -526,6 +526,58 @@ export class PumpTape {
     }
   }
 
+  /**
+   * The whole tape, so a restart (a deploy) does not forget two days of launches, creators and pools.
+   * Maps become arrays; what can be rebuilt (creators' mints, pools) is rebuilt on load.
+   */
+  snapshot(): string {
+    const tokens = [...this.tokens.values()].map((t) => ({ ...t, buyers: [...t.buyers], launchBuys: [...t.launchBuys] }));
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen });
+  }
+
+  load(json: string, now = Date.now()): number {
+    try {
+      const saved = JSON.parse(json) as {
+        v?: number;
+        tokens?: Array<Omit<Tracked, "buyers" | "launchBuys" | "pool" | "poolSol" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, { sol: number; buys: number }][]; launchBuys: [string, number][] }>;
+        launchesBy?: [string, number[]][];
+        recent?: string[];
+        seen?: { launches: number; trades: number };
+      };
+      if (saved.v !== 1) return 0;
+      for (const s of saved.tokens ?? []) {
+        if (!s?.mint || now - s.createdAt > KEEP_MS || this.tokens.has(s.mint)) continue;
+        // Fields added after a snapshot was written start empty.
+        const t: Tracked = {
+          ...s,
+          pool: s.pool ?? null,
+          poolSol: s.poolSol ?? null,
+          ammBuys: s.ammBuys ?? 0,
+          ammSells: s.ammSells ?? 0,
+          ammSolIn: s.ammSolIn ?? 0,
+          ammSolOut: s.ammSolOut ?? 0,
+          buyers: new Map(s.buyers ?? []),
+          launchBuys: new Map(s.launchBuys ?? []),
+        };
+        this.tokens.set(t.mint, t);
+        const mine = this.byCreator.get(t.creator) ?? [];
+        mine.push(t.mint);
+        this.byCreator.set(t.creator, mine);
+        if (t.pool) this.pools.set(t.pool, t.mint);
+      }
+      for (const mints of this.byCreator.values()) mints.sort((a, b) => this.tokens.get(a)!.createdAt - this.tokens.get(b)!.createdAt);
+      for (const [creator, times] of saved.launchesBy ?? []) {
+        const kept = times.filter((x) => now - x < DAY_MS);
+        if (kept.length) this.launchesBy.set(creator, kept);
+      }
+      this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, 500);
+      if (saved.seen) this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades };
+      return this.tokens.size;
+    } catch {
+      return 0;
+    }
+  }
+
   prune(now = Date.now()): void {
     for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS) this.tokens.delete(mint);
     for (const [pool, mint] of this.pools) if (!this.tokens.has(mint)) this.pools.delete(pool);

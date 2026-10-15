@@ -73,8 +73,22 @@ enclosure.start();
 // The north node reads pump.fun straight from Solana when a Yellowstone stream is configured.
 // Loud chain moments outlive a restart, so anything a post names can still be checked.
 const momentsFile = join(config.dataDir, "chain-moments.json");
+// The whole tape too, every few minutes and on the way down, so a deploy does not cost two days of history.
+const tapeFile = join(config.dataDir, "chain-tape.json");
+const saveTape = () => {
+  writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
+  renameSync(`${tapeFile}.tmp`, tapeFile);
+};
 if (config.role === "north") {
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
+  if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
+  setInterval(() => {
+    try {
+      saveTape();
+    } catch (error) {
+      console.log(`[${config.id}] tape not saved: ${(error as Error).message}`);
+    }
+  }, 5 * 60_000).unref();
   setInterval(() => {
     writeFileSync(`${momentsFile}.tmp`, tape.dump());
     renameSync(`${momentsFile}.tmp`, momentsFile);
@@ -164,6 +178,13 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     enclosure.stop();
     stopStream?.();
+    if (config.role === "north") {
+      try {
+        saveTape();
+      } catch {
+        /* the last five-minute save stands */
+      }
+    }
     stopTelegram?.();
     server.close(() => {
       db.close();

@@ -1078,4 +1078,14 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   // The creator bought 10M on the curve and sold 6M on PumpSwap: a dump after graduation still counts.
   assert.equal(f.creatorSold, 0.6);
   assert.deepEqual(tape.pulseAfter(0).map((e) => e.kind), ["launch", "graduated", "dump"]);
+
+  // A deploy restarts the node: the tape comes back from its snapshot, pools and creators included.
+  const reborn = new PumpTape();
+  assert.equal(reborn.load(tape.snapshot(), now), 1);
+  assert.deepEqual(reborn.facts(GRAD, now), f);
+  assert.equal(reborn.creator(CREATOR, now)?.launches48h, 1);
+  reborn.apply(parsePumpLogs([swap(true, "11111111111111111111111111111111", 1n, 1_000_000_000n, 89_000_000_000n)])[0]!, now);
+  assert.equal(reborn.facts(GRAD, now)!.ammBuys, 2);
+  // Two days on, nothing old comes back.
+  assert.equal(new PumpTape().load(tape.snapshot(), now + 49 * 3_600_000), 0);
 });
