@@ -1,5 +1,6 @@
 import { Marked } from "marked";
 import { GITHUB_URL } from "../links";
+import { lang } from "../i18n";
 
 export interface Page {
   slug: string;
@@ -54,7 +55,7 @@ const slugify = (s: string) =>
   s
     .toLowerCase()
     .replace(/<[^>]+>/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/[^a-z0-9\u4e00-\u9fff\s-]/g, "")
     .trim()
     .replace(/\s+/g, "-");
 
@@ -77,8 +78,8 @@ function rewrite(href: string, page: Page): { href: string; external: boolean } 
   return { href: `${GITHUB_URL}/${/\.[a-z]+$/i.test(target) ? "blob" : "tree"}/main/${target}${hash ? `#${hash}` : ""}`, external: true };
 }
 
-/** The page's markdown, served as a static file so agents can read it without a browser. */
-export const markdownUrl = (page: Page) => `/docs/${page.slug}.md`;
+/** The page's markdown, served as a static file so agents can read it without a browser. Chinese copies live in /docs/zh. */
+export const markdownUrl = (page: Page, zh = lang() === "zh") => `/docs/${zh ? "zh/" : ""}${page.slug}.md`;
 
 export function render(page: Page, markdown: string): Rendered {
   const headings: Heading[] = [];

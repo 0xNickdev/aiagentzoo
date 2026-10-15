@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GITHUB_URL } from "../links";
 import SiteNav from "../components/SiteNav";
 import { GROUPS, markdownUrl, PAGES, type Page, render } from "./pages";
+import { lang, t } from "../i18n";
 
 const slugFromPath = () => location.pathname.replace(/^\/docs\/?/, "").replace(/\/$/, "") || PAGES[0]!.slug;
 
@@ -27,7 +28,7 @@ function Nav({ page, go }: { page: Page; go: (slug: string) => void }) {
     <nav className="space-y-8">
       {GROUPS.map((g) => (
         <div key={g.title}>
-          <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{g.title}</p>
+          <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{t(g.title)}</p>
           <ul className="space-y-1">
             {g.pages.map((p) => (
               <li key={p.slug}>
@@ -41,7 +42,7 @@ function Nav({ page, go }: { page: Page; go: (slug: string) => void }) {
                     p.slug === page.slug ? "bg-white/[0.07] text-white" : "text-white/55 hover:text-white"
                   }`}
                 >
-                  {p.title}
+                  {t(p.title)}
                 </a>
               </li>
             ))}
@@ -60,8 +61,10 @@ export default function DocsApp() {
   const [markdown, setMarkdown] = useState<{ slug: string; text: string } | null>(null);
   useEffect(() => {
     let live = true;
-    fetch(markdownUrl(page))
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+    const get = (url: string) => fetch(url).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))));
+    // A page not yet in Chinese falls back to the English one.
+    get(markdownUrl(page))
+      .catch((e) => (lang() === "zh" ? get(markdownUrl(page, false)) : Promise.reject(e)))
       .then((text) => live && setMarkdown({ slug: page.slug, text }))
       .catch(() => live && setMarkdown({ slug: page.slug, text: `# ${page.title}\n\nThis page could not be loaded. [Read it on GitHub](https://github.com/0xNickdev/aiagentzoo/blob/main/${page.source}).` }));
     return () => {
@@ -75,7 +78,7 @@ export default function DocsApp() {
   const next = PAGES[index + 1];
 
   useEffect(() => {
-    document.title = `${page.title} - ZOOAI AGENCY docs`;
+    document.title = `${t(page.title)} - ZOOAI AGENCY ${t("docs")}`;
     setMenu(false);
   }, [page]);
 
@@ -89,7 +92,7 @@ export default function DocsApp() {
       if (!a || !href || a.target === "_blank" || !href.startsWith("/docs/")) return;
       e.preventDefault();
       const [path, hash] = href.split("#");
-      go(path!.replace("/docs/", ""), hash ? `#${hash}` : "");
+      go(path!.replace("/docs/", ""), hash ? `#${decodeURIComponent(hash)}` : "");
     };
     root.addEventListener("click", onClick);
 
@@ -97,11 +100,11 @@ export default function DocsApp() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "copy";
-      button.textContent = "copy";
+      button.textContent = t("copy");
       button.onclick = () => {
         void navigator.clipboard?.writeText(pre.querySelector("code")?.textContent ?? "").then(() => {
-          button.textContent = "copied";
-          setTimeout(() => (button.textContent = "copy"), 1400);
+          button.textContent = t("copied");
+          setTimeout(() => (button.textContent = t("copy")), 1400);
         });
       };
       pre.appendChild(button);
@@ -115,7 +118,7 @@ export default function DocsApp() {
       { rootMargin: "-80px 0px -70% 0px" },
     );
     root.querySelectorAll("h2[id]").forEach((h) => spy.observe(h));
-    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
     return () => {
       root.removeEventListener("click", onClick);
       spy.disconnect();
@@ -127,7 +130,7 @@ export default function DocsApp() {
       <SiteNav active="/docs" />
       <div className="sticky top-[61px] z-30 border-b border-white/[0.07] bg-[#030504]/85 backdrop-blur-xl sm:top-[77px] lg:hidden">
         <button type="button" onClick={() => setMenu((m) => !m)} className="font-mono flex w-full items-center justify-between px-5 py-3 text-[11px] tracking-[0.12em] text-white/60 sm:px-8">
-          <span>CONTENTS · {page.title.toUpperCase()}</span>
+          <span>{t("CONTENTS")} · {t(page.title).toUpperCase()}</span>
           {menu ? <X size={15} /> : <Menu size={15} />}
         </button>
         {menu && (
@@ -143,12 +146,12 @@ export default function DocsApp() {
         </aside>
 
         <main className="min-w-0 py-10 sm:py-14">
-          <p className="font-mono text-[11px] text-white/40">{GROUPS.find((g) => g.pages.includes(page))?.title}</p>
+          <p className="font-mono text-[11px] text-white/40">{t(GROUPS.find((g) => g.pages.includes(page))?.title ?? "")}</p>
           {ready ? (
             <div ref={body} className="doc" dangerouslySetInnerHTML={{ __html: html }} />
           ) : (
             <div className="doc">
-              <h1>{page.title}</h1>
+              <h1>{t(page.title)}</h1>
             </div>
           )}
 
@@ -163,9 +166,9 @@ export default function DocsApp() {
                 className="group rounded-2xl p-5 ring-1 ring-white/10 transition hover:ring-white/25"
               >
                 <span className="font-mono flex items-center gap-1.5 text-[11px] text-white/40">
-                  <ArrowLeft size={12} /> previous
+                  <ArrowLeft size={12} /> {t("previous")}
                 </span>
-                <span className="mt-1 block text-[16px] text-white">{prev.title}</span>
+                <span className="mt-1 block text-[16px] text-white">{t(prev.title)}</span>
               </a>
             ) : (
               <span />
@@ -180,10 +183,10 @@ export default function DocsApp() {
                 className="group rounded-2xl p-5 text-right ring-1 ring-white/10 transition hover:ring-white/25"
               >
                 <span className="font-mono flex items-center justify-end gap-1.5 text-[11px] text-white/40">
-                  next <ArrowRight size={12} />
+                  {t("next")} <ArrowRight size={12} />
                 </span>
-                <span className="mt-1 block text-[16px] text-white">{next.title}</span>
-                <span className="mt-1 block text-[12.5px] text-white/45">{next.blurb}</span>
+                <span className="mt-1 block text-[16px] text-white">{t(next.title)}</span>
+                <span className="mt-1 block text-[12.5px] text-white/45">{t(next.blurb)}</span>
               </a>
             )}
           </div>
@@ -193,17 +196,17 @@ export default function DocsApp() {
             rel="noopener noreferrer"
             className="font-mono mt-8 inline-block text-[11px] text-white/35 hover:text-white"
           >
-            edit this page on GitHub ↗
+            {t("edit this page on GitHub ↗")}
           </a>
           <a href={markdownUrl(page)} className="font-mono ml-6 mt-8 inline-block text-[11px] text-white/35 hover:text-white">
-            raw markdown
+            {t("raw markdown")}
           </a>
         </main>
 
         <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-14 xl:block">
           {headings.length > 1 && (
             <>
-              <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">On this page</p>
+              <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{t("On this page")}</p>
               <ul className="space-y-2 border-l border-white/[0.08]">
                 {headings.map((h) => (
                   <li key={h.id}>
