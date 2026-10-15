@@ -29,6 +29,9 @@ export interface GeneVote {
   votes: Record<string, Ballot>;
   closed: { winner: Candidate | null; tally: Record<string, number>; at: number } | null;
 }
+/** Smallest balance that may vote on the holders' gene: lower than the other perks, so more holders have a say. */
+export const VOTE_MIN = Number(process.env.ZOO_VOTE_MIN ?? 500_000);
+
 const IDS: Candidate["id"][] = ["a", "b", "c"];
 const NAME = /^[A-Z][a-z]{2,13}$/;
 

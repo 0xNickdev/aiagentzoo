@@ -8,7 +8,7 @@ import { GUEST_SCORES, guestRecord, WATCH_PREFIX } from "./agents/nightWatch.ts"
 import type { AskDesk } from "./ask.ts";
 import { badgeSvg } from "./badge.ts";
 import { humansView, submitAnswers } from "./humans.ts";
-import { castVote, geneView, nameNewborn } from "./gene.ts";
+import { castVote, geneView, nameNewborn, VOTE_MIN } from "./gene.ts";
 import { weekOf } from "./stats.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
@@ -163,7 +163,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // One vote per wallet, weighed by its balance; the week's close reads every balance again.
         const balance = await balanceOf(check.address);
         if (balance === null) return json(res, 503, { error: "could not read your balance, try again in a minute" });
-        if (balance < HOLDER_MIN) return json(res, 403, { error: `hold ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY to vote` });
+        if (balance < VOTE_MIN) return json(res, 403, { error: `hold ${VOTE_MIN.toLocaleString("en-US")} $ZOOAGENCY to vote` });
         const week = weekOf(nightOf(Date.now(), evolution.briefAt));
         const cast = await castVote(enclosure.store, week, check.address, String(body?.pick ?? ""), balance);
         return cast.ok ? json(res, 200, { ok: true, weight: balance }) : json(res, cast.status, { error: cast.reason });

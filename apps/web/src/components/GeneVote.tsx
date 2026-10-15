@@ -101,7 +101,7 @@ export default function GeneVote() {
           )}
           {msg && <p className="mt-3 text-[13px] text-white/70">{msg}</p>}
           {!session && gene?.candidates.length ? (
-            <p className="mt-3 text-[12.5px] font-light text-white/50">Tap a rule to sign in and vote. Holders of 1,000,000+ $ZOOAGENCY only.</p>
+            <p className="mt-3 text-[12.5px] font-light text-white/50">Tap a rule to sign in and vote. Holders of 500,000+ $ZOOAGENCY only.</p>
           ) : null}
         </div>
 
