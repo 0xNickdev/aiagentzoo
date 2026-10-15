@@ -238,7 +238,7 @@ export default function Play() {
             </div>
             <div className="liquid-glass rounded-3xl p-6 text-[13px] font-light leading-relaxed text-white/65">
               <p className="font-mono mb-2 text-[10.5px] text-white/45">the rules</p>
-              <p>Hold 1,000,000+ $ZOOAGENCY and sign in. Answer tonight's tokens. Tomorrow the same re-check grades humans and AI.</p>
+              <p>Hold 500,000+ $ZOOAGENCY and sign in. Answer tonight's tokens. Tomorrow the same re-check grades humans and AI.</p>
               <p className="mt-2">Balanced accuracy: half for the dead, half for the living, so calling everything a rug scores 50%.</p>
               <p className="mt-2">To place: {view?.rules.minGraded ?? 15}+ graded answers in the week, with {view?.rules.minSide ?? 2}+ dead and {view?.rules.minSide ?? 2}+ living tokens among them.</p>
               <p className="mt-2">The week's best human also names the nursery's next newborn.</p>

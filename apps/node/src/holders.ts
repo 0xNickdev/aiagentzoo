@@ -5,7 +5,7 @@
 
 export const TOKEN_MINT = process.env.ZOO_TOKEN_MINT ?? "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
 /** Whole tokens a wallet must hold to count as a holder. */
-export const HOLDER_MIN = Number(process.env.ZOO_HOLDER_MIN ?? 1_000_000);
+export const HOLDER_MIN = Number(process.env.ZOO_HOLDER_MIN ?? 500_000);
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 const CACHE_MS = 10 * 60_000;
 

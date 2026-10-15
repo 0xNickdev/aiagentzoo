@@ -5,6 +5,7 @@ import { cleanText } from "./guests.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { weekOf } from "./stats.ts";
 import { weekWinner } from "./humans.ts";
+import { HOLDER_MIN } from "./holders.ts";
 
 /**
  * The holders' gene. Every week the heron puts three candidate rules to $ZOOAGENCY holders, each aimed at the
@@ -29,8 +30,8 @@ export interface GeneVote {
   votes: Record<string, Ballot>;
   closed: { winner: Candidate | null; tally: Record<string, number>; at: number } | null;
 }
-/** Smallest balance that may vote on the holders' gene: lower than the other perks, so more holders have a say. */
-export const VOTE_MIN = Number(process.env.ZOO_VOTE_MIN ?? 500_000);
+/** Smallest balance that may vote on the holders' gene: the holder line, unless set apart. */
+export const VOTE_MIN = Number(process.env.ZOO_VOTE_MIN ?? HOLDER_MIN);
 
 const IDS: Candidate["id"][] = ["a", "b", "c"];
 const NAME = /^[A-Z][a-z]{2,13}$/;

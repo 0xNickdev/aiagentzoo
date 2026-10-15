@@ -440,7 +440,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
   const token = (chat: number) =>
     send(
       chat,
-      ["<b>$ZOOAGENCY</b>", "", "Launched through ClawPump, graduated to PumpSwap.", "Holders who sign in on the site with a wallet holding 1,000,000+ ask the beaver 30 times an hour and watch 10 tokens.", "", `<code>${TOKEN_CA}</code>`].join("\n"),
+      ["<b>$ZOOAGENCY</b>", "", "Launched through ClawPump, graduated to PumpSwap.", `Holders who sign in on the site with a wallet holding ${HOLDER_MIN.toLocaleString("en-US")}+ ask the beaver 30 times an hour, watch 10 tokens and get alerts first (/link).`, "", `<code>${TOKEN_CA}</code>`].join("\n"),
       [[{ text: "Chart", url: `https://dexscreener.com/solana/${TOKEN_CA}` }, { text: "Website", url: SITE }]],
     );
 
