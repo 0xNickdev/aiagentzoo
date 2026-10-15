@@ -371,6 +371,14 @@ test("the beaver makes calls, checks them the next day and rewrites its playbook
 test("calls are scored against what happened", () => {
   assert.equal(outcomeOf(obs()), "dead");
   assert.equal(outcomeOf(obs({ market: null })), "unknown");
+  // On the bonding curve DexScreener gives no liquidity; the curve's cap in SOL decides.
+  const curve = (curveCapSol: number | null, priceChange24h = 0) =>
+    obs({ market: { priceUsd: null, liquidityUsd: null, curveCapSol, volume24hUsd: 0, priceChange24h, buys24h: 0, sells24h: 0, dex: "pumpfun", url: null } });
+  assert.equal(outcomeOf(curve(120)), "alive");
+  assert.equal(outcomeOf(curve(28)), "dead");
+  assert.equal(outcomeOf(curve(50)), "unknown");
+  assert.equal(outcomeOf(curve(120, -85)), "dead");
+  assert.equal(outcomeOf(curve(null)), "unknown");
   assert.equal(scoreCall("suspicious", "dead"), true);
   assert.equal(scoreCall("promising", "dead"), false);
   assert.equal(scoreCall("watch", "dead"), null);

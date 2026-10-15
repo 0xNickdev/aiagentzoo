@@ -16,6 +16,7 @@ import {
   type Verdict,
 } from "./agents/judgement.ts";
 import type { Observation } from "./agents/nightWatch.ts";
+import { curveCapSol } from "./sources.ts";
 
 /**
  * "Ask the beaver": anyone pastes a Solana token and gets the beaver's verdict, judged by its current playbook
@@ -69,6 +70,8 @@ interface DexPair {
   baseToken: { address: string; symbol?: string; name?: string };
   dexId?: string;
   url?: string;
+  priceNative?: string;
+  quoteToken?: { address?: string };
   liquidity?: { usd?: number };
   volume?: { h24?: number };
   priceChange?: { h24?: number };
@@ -143,6 +146,7 @@ export class AskDesk {
       market: {
         priceUsd: null,
         liquidityUsd: p.liquidity?.usd ?? null,
+        curveCapSol: curveCapSol(p),
         volume24hUsd: p.volume?.h24 ?? null,
         priceChange24h: p.priceChange?.h24 ?? null,
         buys24h: p.txns?.h24?.buys ?? 0,

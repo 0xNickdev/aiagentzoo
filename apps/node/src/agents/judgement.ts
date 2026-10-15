@@ -116,13 +116,22 @@ export const DEFAULT_PLAYBOOK: Playbook = {
   ].join("\n"),
 };
 
+/** A pump.fun token opens at about 28 SOL of market cap. Still under this a day later, nobody is holding it up. */
+export const CURVE_DEAD_SOL = 32;
+/** About three times the opening cap: a few thousand dollars of real buying, on par with $1,000 of pool liquidity. */
+export const CURVE_ALIVE_SOL = 85;
+
 /** What happened to a token, judged from a fresh market read a day later. */
 export function outcomeOf(o: Observation | undefined): Outcome {
   const m = o?.market;
   if (!m) return "unknown";
   if ((m.priceChange24h ?? 0) <= -80 || (m.liquidityUsd !== null && m.liquidityUsd < 100)) return "dead";
-  if ((m.liquidityUsd ?? 0) >= 1000) return "alive";
-  return "unknown";
+  if (m.liquidityUsd !== null) return m.liquidityUsd >= 1000 ? "alive" : "unknown";
+  // Still on the bonding curve: DexScreener reports no liquidity there, so the curve's market cap decides.
+  const cap = m.curveCapSol ?? null;
+  if (cap === null) return "unknown";
+  if (cap < CURVE_DEAD_SOL) return "dead";
+  return cap >= CURVE_ALIVE_SOL ? "alive" : "unknown";
 }
 
 export function scoreCall(verdict: Verdict, outcome: Outcome): boolean | null {

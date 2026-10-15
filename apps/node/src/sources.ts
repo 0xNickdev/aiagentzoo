@@ -23,6 +23,8 @@ export interface Market {
   name: string;
   priceUsd: number | null;
   liquidityUsd: number | null;
+  /** Market cap in SOL while the token is still on the pump.fun bonding curve, where DexScreener reports no liquidity. */
+  curveCapSol?: number | null;
   volume24hUsd: number | null;
   priceChange24h: number | null;
   buys24h: number;
@@ -78,15 +80,29 @@ export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
   },
 });
 
-interface DexPair {
+export interface DexPair {
   baseToken: { address: string; symbol?: string; name?: string };
   priceUsd?: string;
+  priceNative?: string;
+  quoteToken?: { address?: string };
   liquidity?: { usd?: number };
   volume?: { h24?: number };
   priceChange?: { h24?: number };
   txns?: { h24?: { buys: number; sells: number } };
   dexId?: string;
   url?: string;
+}
+
+const WSOL = "So11111111111111111111111111111111111111112";
+
+/**
+ * Every pump.fun token has a supply of one billion, so the curve price in SOL gives its market cap in SOL.
+ * Only for curves quoted in SOL: some pump.fun pairs trade against another token.
+ */
+export function curveCapSol(p: Pick<DexPair, "dexId" | "priceNative" | "quoteToken">): number | null {
+  if (p.dexId !== "pumpfun" || !p.priceNative || p.quoteToken?.address !== WSOL) return null;
+  const cap = Number(p.priceNative) * 1e9;
+  return Number.isFinite(cap) ? cap : null;
 }
 
 /** DexScreener market data for up to 30 mints at once. */
@@ -110,6 +126,7 @@ export const dexMarkets = defineTool<{ mints: string[] }, Market[]>({
       name: (p.baseToken.name ?? "").trim().slice(0, 64),
       priceUsd: p.priceUsd ? Number(p.priceUsd) : null,
       liquidityUsd: p.liquidity?.usd ?? null,
+      curveCapSol: curveCapSol(p),
       volume24hUsd: p.volume?.h24 ?? null,
       priceChange24h: p.priceChange?.h24 ?? null,
       buys24h: p.txns?.h24?.buys ?? 0,
