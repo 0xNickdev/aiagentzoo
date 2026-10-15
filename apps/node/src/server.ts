@@ -10,7 +10,7 @@ import { badgeSvg } from "./badge.ts";
 import { humansView, submitAnswers } from "./humans.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
-import { setWatch, verifyInitData } from "./telegram.ts";
+import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
@@ -302,6 +302,13 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
+      if (req.method === "POST" && path === "/v1/tg/link") {
+        if (!process.env.TELEGRAM_BOT_TOKEN) return json(res, 404, { error: "no telegram bot on this node" });
+        const body = (await readJson(req).catch(() => null)) as { guardian?: GuardianSession } | null;
+        const check = verifyGuardian(body?.guardian as GuardianSession);
+        if (!check.ok) return json(res, 401, { error: "sign in with your wallet first" });
+        return json(res, 200, { code: await linkCode(enclosure.store, check.address), holder: await isHolder(check.address) });
       }
       if (req.method === "POST" && path === "/v1/tg/watch") {
         const token = process.env.TELEGRAM_BOT_TOKEN;

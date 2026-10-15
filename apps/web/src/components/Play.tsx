@@ -82,6 +82,20 @@ export default function Play() {
 
   const answered = Object.keys(picks).length;
 
+  // Holders get chain alerts first in Telegram: a one-time code ties the bot chat to this wallet.
+  const [tg, setTg] = useState<{ code: string; holder: boolean } | null>(null);
+  const linkTelegram = async () => {
+    if (!session) return void signIn();
+    const n = await nodeOf("beaver");
+    const r = await fetch(`${n!.url}/v1/tg/link`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ guardian: { publicKey: session.publicKey, message: session.message, signature: session.signature } }),
+    }).catch(() => null);
+    if (r?.ok) setTg((await r.json()) as { code: string; holder: boolean });
+    else setMsg("Could not make a code. Try again in a minute.");
+  };
+
   return (
     <>
       <Section className="!pb-8" backdrop={{ src: "/backdrops/play.jpg", tint: "120,160,200", glowAt: "50% 40%", opacity: 0.6 }}>
@@ -108,9 +122,26 @@ export default function Play() {
               {signing ? "Signing…" : "Sign in with your wallet"}
             </button>
           ) : (
-            <p className="font-mono text-[11px] text-white/50">signed in · {session.publicKey.slice(0, 4)}…{session.publicKey.slice(-4)}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="font-mono text-[11px] text-white/50">signed in · {session.publicKey.slice(0, 4)}…{session.publicKey.slice(-4)}</p>
+              {tg ? (
+                <a href={`https://t.me/zooaiagency_bot?start=link-${tg.code}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
+                  Open the bot to link ↗
+                </a>
+              ) : (
+                <button type="button" onClick={() => void linkTelegram()} className="rounded-full px-5 py-2.5 text-[13px] text-white/85 ring-1 ring-white/20 hover:ring-white/40">
+                  Get alerts first in Telegram
+                </button>
+              )}
+            </div>
           )}
         </div>
+        {tg && (
+          <p className="mb-3 text-[13px] font-light text-white/60">
+            {tg.holder ? "You hold enough: alerts on tokens you watch reach you 10 minutes before everyone else." : "This wallet holds less than the minimum, so alerts arrive with everyone else's until you top up."}{" "}
+            Or send <span className="font-mono text-white/85">/link {tg.code}</span> to the bot. The code lasts 15 minutes.
+          </p>
+        )}
         {signError && <p className="mb-3 text-[13px] text-[#ff9a8f]">{signError}</p>}
         {!view ? (
           <p className="text-[13px] text-white/45">Loading tonight's exam…</p>

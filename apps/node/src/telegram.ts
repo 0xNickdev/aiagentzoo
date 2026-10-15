@@ -1,8 +1,9 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
 import type { Ask, AskDesk } from "./ask.ts";
 import type { CleanLaunch, CreatorRecord, PulseEvent } from "./chain/pump.ts";
 import type { BoardRow } from "./stats.ts";
+import { HOLDER_MIN, isHolder as holds } from "./holders.ts";
 
 /**
  * The beaver in Telegram: the zoo where traders already are. A welcome with a picture and buttons, a three-step
@@ -62,6 +63,55 @@ export interface TelegramOptions {
   data?: TelegramData;
   log?: (m: string) => void;
   fetchFn?: typeof fetch;
+  /** Whether a wallet holds enough $ZOOAGENCY for alerts first. */
+  isHolder?: (wallet: string) => Promise<boolean>;
+}
+
+/** Holders get chain alerts this much sooner than everyone else. */
+export const HOLDER_HEAD_START_MS = 10 * 60_000;
+const CODE_TTL_MS = 15 * 60_000;
+
+/**
+ * A one-time code that ties a Telegram chat to a wallet: the site makes it for a wallet that signed in, the bot
+ * takes it with /link. Nothing about the wallet is shown in the chat.
+ */
+export async function linkCode(store: StateStore, wallet: string, now = Date.now()): Promise<string> {
+  const code = randomBytes(5).toString("base64url").replace(/[-_]/g, "x").slice(0, 6).toUpperCase();
+  await store.set(`tg:code:${code}`, { wallet, exp: now + CODE_TTL_MS });
+  return code;
+}
+
+export interface PlannedAlert {
+  chat: number;
+  mint: string;
+  text: string;
+  /** When to send: now for holders, after the head start for everyone else. */
+  at: number;
+}
+
+/** Who hears about which chain moment, and when: holders at once, everyone else after the head start. */
+export async function planAlerts(events: PulseEvent[], watchers: Record<string, number[]>, isHolderChat: (chat: number) => Promise<boolean>, now: number): Promise<PlannedAlert[]> {
+  const out: PlannedAlert[] = [];
+  for (const e of events) {
+    if (e.kind === "launch") continue;
+    for (const chat of watchers[e.mint] ?? []) {
+      out.push(
+        (await isHolderChat(chat))
+          ? { chat, mint: e.mint, at: now, text: `⚡ ${alertMessage(e)}` }
+          : { chat, mint: e.mint, at: now + HOLDER_HEAD_START_MS, text: `${alertMessage(e)}\n<i>Holders saw this ${HOLDER_HEAD_START_MS / 60_000} min ago. /link to see alerts first.</i>` },
+      );
+    }
+  }
+  return out;
+}
+
+export async function redeemCode(store: StateStore, chat: number, code: string, now = Date.now()): Promise<string | null> {
+  const key = `tg:code:${code.trim().toUpperCase()}`;
+  const found = await store.get<{ wallet: string; exp: number }>(key);
+  if (!found || found.exp < now) return null;
+  await store.delete(key);
+  await store.set(`tg:wallet:${chat}`, found.wallet);
+  return found.wallet;
 }
 
 /**
@@ -148,7 +198,8 @@ const HELP = [
   "/dev &lt;wallet&gt; · a creator's last 48h: launches, dumps, how fast",
   "/rugs · the latest creator dumps, with transactions",
   "/clean · fresh launches that passed the basic checks",
-  `/watch &lt;token&gt; · alert on dumps, graduation, big buys (up to ${WATCH_MAX})`,
+  `/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to ${WATCH_MAX})`,
+  `/link &lt;code&gt; · holders of ${HOLDER_MIN.toLocaleString("en-US")}+ $ZOOAGENCY get alerts ${HOLDER_HEAD_START_MS / 60_000} minutes first`,
   "/unwatch &lt;token&gt; · /list",
   "/live · pump.fun right now: launches and trades a minute",
   "/nursery · the evolving judges",
@@ -169,6 +220,7 @@ export const COMMANDS = [
   { command: "watch", description: "Alert when a token's creator dumps" },
   { command: "unwatch", description: "Stop watching a token" },
   { command: "list", description: "Tokens you watch" },
+  { command: "link", description: "Holders: get alerts first" },
   { command: "live", description: "pump.fun right now" },
   { command: "nursery", description: "The evolving judges" },
   { command: "leaderboard", description: "Every agent on one honest scale" },
@@ -243,7 +295,7 @@ function askKeyboard(a: Ask): Keyboard {
 }
 
 export function alertMessage(e: PulseEvent): string {
-  const icon = e.kind === "dump" ? "🔴" : e.kind === "graduated" ? "🟢" : "⚪️";
+  const icon = e.kind === "dump" || e.kind === "drained" ? "🔴" : e.kind === "graduated" ? "🟢" : "⚪️";
   const tx = e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : "";
   return `${icon} <b>$${esc(e.symbol)}</b>: ${esc(e.text)}${tx}\n<code>${e.mint}</code>`;
 }
@@ -431,6 +483,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
 
     switch (cmd) {
       case "/start":
+        // t.me/<bot>?start=link-<code> from the site links the chat in one tap.
+        if (arg.startsWith("link-")) return link(chat, arg.slice(5));
         return welcome(chat, msg.from?.first_name);
       case "/app":
         return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);
@@ -463,6 +517,12 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return address ? watch(chat, address, cmd === "/watch") : void send(chat, `Send ${cmd} with a token address.`);
       case "/list":
         return list(chat);
+      case "/link":
+        return link(chat, arg);
+      case "/unlink":
+        await opts.store.delete(`tg:wallet:${chat}`);
+        holderOf.delete(chat);
+        return void send(chat, "Unlinked. Alerts now arrive with everyone else's.");
       default:
         // In a private chat, a pasted address is a question.
         if (isPrivate && address) return ask(chat, who, address);
@@ -537,7 +597,37 @@ export function startTelegram(opts: TelegramOptions): () => void {
     }
   };
 
-  // Alerts: follow north's pulse and tell every chat that watches the token.
+  /* ----- holders first ----- */
+
+  const holderOf = new Map<number, { holder: boolean; at: number }>();
+  const checkHolder = opts.isHolder ?? ((w: string) => holds(w, f));
+  const isHolderChat = async (chat: number, now = Date.now()) => {
+    const cached = holderOf.get(chat);
+    if (cached && now - cached.at < 30 * 60_000) return cached.holder;
+    const wallet = await opts.store.get<string>(`tg:wallet:${chat}`);
+    const holder = wallet ? await checkHolder(wallet).catch(() => cached?.holder ?? false) : false;
+    holderOf.set(chat, { holder, at: now });
+    return holder;
+  };
+  const link = async (chat: number, code: string) => {
+    if (!code.trim()) {
+      return void send(chat, `Sign in with your wallet at ${SITE}/play, tap "Get alerts first", and send me the code: /link ABC123`);
+    }
+    const wallet = await redeemCode(opts.store, chat, code);
+    if (!wallet) return void send(chat, "That code is unknown or expired. Make a new one on the site; codes last 15 minutes.");
+    holderOf.delete(chat);
+    const holder = await isHolderChat(chat);
+    await send(
+      chat,
+      holder
+        ? `Linked. You hold ${HOLDER_MIN.toLocaleString("en-US")}+ $ZOOAGENCY: alerts on tokens you /watch reach you ${HOLDER_HEAD_START_MS / 60_000} minutes before everyone else.`
+        : `Linked, but this wallet holds less than ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY, so alerts arrive with everyone else's. Top up and they come first, no need to link again.`,
+    );
+  };
+  // Alerts for everyone else wait here until the holders' head start is over.
+  const later: PlannedAlert[] = [];
+
+  // Alerts: follow north's pulse and tell every chat that watches the token, holders first.
   let cursor = -1;
   const alerts = async () => {
     if (stopped || !opts.northUrl) return;
@@ -547,15 +637,19 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (body.events.length) cursor = body.events[body.events.length - 1]!.seq;
     else if (first) cursor = 0;
     if (first) return;
-    const all = await watchers();
-    for (const e of body.events) {
-      if (e.kind === "launch") continue;
-      for (const chat of all[e.mint] ?? []) await send(chat, alertMessage(e), [[{ text: "Ask the beaver now", callback_data: `ask:${e.mint}` }]]);
+    later.push(...(await planAlerts(body.events, await watchers(), (chat) => isHolderChat(chat), Date.now())));
+    later.sort((a, b) => a.at - b.at);
+  };
+  const flush = async () => {
+    const now = Date.now();
+    while (later.length && later[0]!.at <= now) {
+      const a = later.shift()!;
+      await send(a.chat, a.text, [[{ text: "Ask the beaver now", callback_data: `ask:${a.mint}` }]]);
     }
   };
 
   void poll();
-  const timer = setInterval(() => void alerts(), 10_000);
+  const timer = setInterval(() => void alerts().then(flush), 10_000);
   timer.unref?.();
   return () => {
     stopped = true;

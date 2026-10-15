@@ -1086,6 +1086,32 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   assert.equal(reborn.creator(CREATOR, now)?.launches48h, 1);
   reborn.apply(parsePumpLogs([swap(true, "11111111111111111111111111111111", 1n, 1_000_000_000n, 89_000_000_000n)])[0]!, now);
   assert.equal(reborn.facts(GRAD, now)!.ammBuys, 2);
+  // The pool falls from 90 SOL to 5: drained, announced once.
+  for (const lamports of [5_000_000_000n, 4_000_000_000n]) reborn.apply(parsePumpLogs([swap(false, "11111111111111111111111111111111", 1n, 1n, lamports)])[0]!, now);
+  assert.deepEqual(reborn.pulseAfter(0).filter((e) => e.kind === "drained").map((e) => e.text), ["pool drained to 5.0 SOL after graduation"]);
   // Two days on, nothing old comes back.
   assert.equal(new PumpTape().load(tape.snapshot(), now + 49 * 3_600_000), 0);
+});
+
+test("holders hear about a watched token's dump first, everyone else after the head start", async () => {
+  const { planAlerts, linkCode, redeemCode, HOLDER_HEAD_START_MS } = await import("../src/telegram.ts");
+  const state = new Map<string, unknown>();
+  const store = { get: async (k: string) => state.get(k) ?? null, set: async (k: string, v: unknown) => void state.set(k, v), delete: async (k: string) => void state.delete(k) } as any;
+  const now = 1_800_000_000_000;
+  // The site makes a code for a signed-in wallet; the bot ties the chat to it once.
+  const code = await linkCode(store, "HolderWallet111", now);
+  assert.match(code, /^[A-Z0-9X]{6}$/);
+  assert.equal(await redeemCode(store, 1, code.toLowerCase(), now), "HolderWallet111");
+  assert.equal(await redeemCode(store, 2, code, now), null, "used once");
+  assert.equal(await redeemCode(store, 2, await linkCode(store, "W", now), now + 16 * 60_000), null, "expired");
+
+  const dump = { seq: 5, at: now, kind: "dump" as const, mint: MINT, symbol: "SILK", text: "creator sold 90% after 3 min", creator: "c" };
+  const launch = { ...dump, seq: 4, kind: "launch" as const };
+  const plan = await planAlerts([launch, dump], { [MINT]: [1, 2] }, async (chat) => state.get(`tg:wallet:${chat}`) === "HolderWallet111", now);
+  assert.equal(plan.length, 2);
+  const [holder, other] = [plan.find((p) => p.chat === 1)!, plan.find((p) => p.chat === 2)!];
+  assert.equal(holder.at, now);
+  assert.match(holder.text, /^⚡/);
+  assert.equal(other.at, now + HOLDER_HEAD_START_MS);
+  assert.match(other.text, /Holders saw this 10 min ago/);
 });
