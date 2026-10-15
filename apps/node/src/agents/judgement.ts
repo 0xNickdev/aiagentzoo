@@ -123,17 +123,39 @@ export const CURVE_DEAD_SOL = 32;
 /** About three times the opening cap: a few thousand dollars of real buying, on par with $1,000 of pool liquidity. */
 export const CURVE_ALIVE_SOL = 85;
 
+/** A token younger than this is never called dead by its curve or pool: every launch opens under the dead line. */
+export const CURVE_MIN_AGE_MS = 6 * 3_600_000;
+/** On PumpSwap, about $100 and $1,000 of pool liquidity, counted in the pool's SOL side. */
+export const POOL_DEAD_SOL = 0.4;
+export const POOL_ALIVE_SOL = 4;
+
+/** A bonding curve's market cap in SOL from the real SOL in it (30 SOL virtual at the start, 1.073B virtual tokens). */
+export const curveCapOf = (realSol: number) => (30 + realSol) ** 2 / 32.19;
+
+const byCap = (cap: number, young: boolean): Outcome => (cap >= CURVE_ALIVE_SOL ? "alive" : cap < CURVE_DEAD_SOL && !young ? "dead" : "unknown");
+
 /** What happened to a token, judged from a fresh market read a day later. */
 export function outcomeOf(o: Observation | undefined): Outcome {
-  const m = o?.market;
-  if (!m) return "unknown";
-  if ((m.priceChange24h ?? 0) <= -80 || (m.liquidityUsd !== null && m.liquidityUsd < 100)) return "dead";
-  if (m.liquidityUsd !== null) return m.liquidityUsd >= 1000 ? "alive" : "unknown";
-  // Still on the bonding curve: DexScreener reports no liquidity there, so the curve's market cap decides.
-  const cap = m.curveCapSol ?? null;
-  if (cap === null) return "unknown";
-  if (cap < CURVE_DEAD_SOL) return "dead";
-  return cap >= CURVE_ALIVE_SOL ? "alive" : "unknown";
+  if (!o) return "unknown";
+  const m = o.market;
+  const ageMs = o.chain ? o.chain.ageMin * 60_000 : o.createdAt ? o.seenAt - o.createdAt : null;
+  const young = ageMs !== null && ageMs < CURVE_MIN_AGE_MS;
+  if (m) {
+    if ((m.priceChange24h ?? 0) <= -80 || (m.liquidityUsd !== null && m.liquidityUsd < 100)) return "dead";
+    if (m.liquidityUsd !== null) return m.liquidityUsd >= 1000 ? "alive" : "unknown";
+    // Still on the bonding curve: DexScreener reports no liquidity there, so the curve's market cap decides.
+    if (m.curveCapSol != null) return byCap(m.curveCapSol, young);
+  }
+  // DexScreener never listed most small launches: our own read of the chain decides then.
+  const c = o.chain;
+  if (!c) return "unknown";
+  if (c.graduated) {
+    if (c.poolSol === null) return "unknown";
+    return c.poolSol >= POOL_ALIVE_SOL ? "alive" : c.poolSol < POOL_DEAD_SOL && !young ? "dead" : "unknown";
+  }
+  // Nobody ever bought: the curve is where it opened.
+  const real = c.curveSol ?? (c.buys === 0 ? 0 : null);
+  return real === null ? "unknown" : byCap(curveCapOf(real), young);
 }
 
 export function scoreCall(verdict: Verdict, outcome: Outcome): boolean | null {

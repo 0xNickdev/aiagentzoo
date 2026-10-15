@@ -26,6 +26,10 @@ The night after a call, the hedgehog looks every called token up again on DexScr
 
 On the bonding curve DexScreener reports no pool liquidity, so the curve's market cap in SOL decides. Every pump.fun token opens at 27.9 SOL: under 32 SOL a day later means nobody is holding it up; 85 SOL (about three times the opening) means a few thousand dollars of real buying, on par with $1,000 of pool liquidity.
 
+Most small launches never get a DexScreener page at all. For those the zoo's own read of the chain decides: the SOL in the bonding curve, turned into the same market cap (2 SOL in the curve is about 32 SOL of cap, 22 SOL about 85), or after graduation the SOL in the PumpSwap pool (under 0.4 SOL dead, 4 SOL or more alive).
+
+A token younger than 6 hours is never called dead by its curve or pool, since every launch opens under the line.
+
 ## 4. Hit or miss
 
 | | dead | alive | unknown |

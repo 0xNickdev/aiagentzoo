@@ -337,7 +337,7 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
 });
 
 import { EchoProvider, type Transport } from "@aiagentzoo/sdk";
-import { cleanPlaybook, outcomeOf, scoreCall } from "../src/agents/judgement.ts";
+import { cleanPlaybook, curveCapOf, outcomeOf, scoreCall } from "../src/agents/judgement.ts";
 
 test("the beaver makes calls, checks them the next day and rewrites its playbook", async () => {
   const canyon = { id: "canyon.zoo", identity: Identity.generate(), operator: "op" };
@@ -401,13 +401,26 @@ test("calls are scored against what happened", () => {
   assert.equal(outcomeOf(obs()), "dead");
   assert.equal(outcomeOf(obs({ market: null })), "unknown");
   // On the bonding curve DexScreener gives no liquidity; the curve's cap in SOL decides.
-  const curve = (curveCapSol: number | null, priceChange24h = 0) =>
-    obs({ market: { priceUsd: null, liquidityUsd: null, curveCapSol, volume24hUsd: 0, priceChange24h, buys24h: 0, sells24h: 0, dex: "pumpfun", url: null } });
+  const DAY = 24 * 3_600_000;
+  const curve = (curveCapSol: number | null, priceChange24h = 0, seenAt = DAY) =>
+    obs({ seenAt, market: { priceUsd: null, liquidityUsd: null, curveCapSol, volume24hUsd: 0, priceChange24h, buys24h: 0, sells24h: 0, dex: "pumpfun", url: null } });
   assert.equal(outcomeOf(curve(120)), "alive");
   assert.equal(outcomeOf(curve(28)), "dead");
   assert.equal(outcomeOf(curve(50)), "unknown");
   assert.equal(outcomeOf(curve(120, -85)), "dead");
   assert.equal(outcomeOf(curve(null)), "unknown");
+  // Every launch opens under the dead line, so a token minutes old is not dead by its curve.
+  assert.equal(outcomeOf(curve(28, 0, 60_000)), "unknown");
+  // DexScreener never listed it: the chain tape decides, by the SOL in the curve or the pool.
+  const chain = (over: Record<string, unknown>) => obs({ market: null, chain: { ageMin: 1440, buys: 5, curveSol: 0.5, graduated: false, poolSol: null, ...over } as never });
+  assert.equal(outcomeOf(chain({})), "dead");
+  assert.equal(outcomeOf(chain({ curveSol: 30 })), "alive");
+  assert.equal(outcomeOf(chain({ curveSol: 10 })), "unknown");
+  assert.equal(outcomeOf(chain({ curveSol: null, buys: 0 })), "dead");
+  assert.equal(outcomeOf(chain({ ageMin: 20 })), "unknown");
+  assert.equal(outcomeOf(chain({ graduated: true, poolSol: 0.1 })), "dead");
+  assert.equal(outcomeOf(chain({ graduated: true, poolSol: 60 })), "alive");
+  assert.equal(Math.round(curveCapOf(0) * 10) / 10, 28);
   assert.equal(scoreCall("suspicious", "dead"), true);
   assert.equal(scoreCall("promising", "dead"), false);
   assert.equal(scoreCall("watch", "dead"), null);
