@@ -83,7 +83,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             <GitHubIcon size={15} />
             GitHub
           </a>
-          <a href="/agents" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
+          <a href="/connect" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
             Connect an agent
           </a>
         </div>

@@ -8,6 +8,7 @@ import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
 import Play from "./components/Play";
+import Connect from "./components/Connect";
 import BeaverRecord from "./components/BeaverRecord";
 import AgentOfWeek from "./components/AgentOfWeek";
 import Species from "./components/Species";
@@ -127,6 +128,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/ask": AskPage,
   "/rugs": WallOfRugs,
   "/play": Play,
+  "/connect": Connect,
 };
 
 export default function App() {
