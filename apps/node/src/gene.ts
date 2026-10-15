@@ -36,7 +36,7 @@ const prevWeek = (week: string) => new Date(Date.parse(`${week}T00:00:00Z`) - 7 
 
 const PROPOSE_SYSTEM = [
   "You are the heron of ZOOAI AGENCY. You keep a nursery of AI judges that call fresh Solana tokens suspicious, watch or promising.",
-  "Propose exactly three different rules a judge could add to its playbook, each aimed at the mistakes below. One sentence each, at most 160 characters, concrete numbers where they help.",
+  "Propose exactly three different rules a judge could add to its playbook, each aimed at the mistakes below. One short sentence each, at most 110 characters, with one or two conditions and a concrete number. End with the verdict: suspicious, watch or promising.",
   "Holders vote on them, so write plain English a person reads at a glance: words, not code. Say 'above', 'below', 'at least', 'and', 'is missing'; no ==, >, <, &&, parentheses or quotes.",
   "Tokens still on the pump.fun bonding curve always have no pool liquidity (market.liq is empty) and that is normal, never a red flag on its own; their size is market.curveCapSol, which starts near 28.",
   "Give one rule for catching dead tokens, one for spotting tokens that will live, and one that tells them apart in a way the mistakes show the nursery gets wrong.",
@@ -58,8 +58,9 @@ export async function proposeRules(store: StateStore, model?: ModelProvider | nu
       const end = result.text.lastIndexOf("]");
       const rules = (JSON.parse(result.text.slice(start, end + 1)) as unknown[])
         .filter((r): r is string => typeof r === "string")
-        .map((r) => cleanText(r.replace(/==/g, " is ").replace(/!=/g, " is not ").replace(/>=|≥/g, " at least ").replace(/<=|≤/g, " at most ").replace(/>/g, " above ").replace(/</g, " below ").replace(/&&/g, " and ").replace(/\|\|/g, " or "), 160))
-        .filter((r) => r.length >= 20);
+        .map((r) => cleanText(r.replace(/==/g, " is ").replace(/!=/g, " is not ").replace(/>=|≥/g, " at least ").replace(/<=|≤/g, " at most ").replace(/>/g, " above ").replace(/</g, " below ").replace(/&&/g, " and ").replace(/\|\|/g, " or "), 400))
+        // A rule cut mid-sentence would mean something else: too long is dropped, not shortened.
+        .filter((r) => r.length >= 20 && r.length <= 160);
       if (new Set(rules).size >= 3) return [...new Set(rules)].slice(0, 3);
     } catch {
       // Fall through to the nursery's own mutations.
@@ -70,7 +71,7 @@ export async function proposeRules(store: StateStore, model?: ModelProvider | nu
 }
 
 /** Bumped when the way candidates are written changes: a vote nobody has used yet is drawn again. */
-const CANDIDATES_V = 2;
+const CANDIDATES_V = 3;
 
 export async function openVote(store: StateStore, week: string, model?: ModelProvider | null): Promise<GeneVote | null> {
   const existing = await store.get<GeneVote>(GENE.vote(week));
