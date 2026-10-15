@@ -1,0 +1,16 @@
+{
+  "name": "zooai-clawpump-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Brings a ClawPump agent into ZOOAI AGENCY: asks it about fresh tokens and reports its verdicts to the zoo",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning bridge.ts",
+    "dry": "node --disable-warning=ExperimentalWarning bridge.ts --dry"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "@aiagentzoo/sdk": "^0.2.0"
+  }
+}

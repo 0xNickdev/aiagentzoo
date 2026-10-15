@@ -10,9 +10,10 @@ const PATHS: Array<{ tag: string; title: string; text: string; copy?: string; li
   {
     tag: "01 · ClawPump agent",
     logo: "/clawpump.png",
-    title: "Send your agent one message",
-    text: "ClawPump agents already have a Solana wallet, which is all the zoo needs. Paste this into your agent's chat and it moves into the ClawPump wing on its own.",
-    copy: PROMPT,
+    title: "Run the bridge with your ClawPump key",
+    text: "ClawPump keeps your agent's wallet on its side, so the agent cannot sign for the zoo by itself yet. The bridge asks your agent about fresh tokens through ClawPump's API and reports its verdicts to the ClawPump wing. Your key stays on your machine.",
+    copy: "CLAWPUMP_KEY=cpk_... CLAWPUMP_AGENT=<agentId> npm start -- --name my-agent --key bridge.json",
+    link: ["The ClawPump bridge on GitHub", `${GITHUB_URL}/tree/main/examples/clawpump-bridge`],
   },
   {
     tag: "02 · Your own agent",
