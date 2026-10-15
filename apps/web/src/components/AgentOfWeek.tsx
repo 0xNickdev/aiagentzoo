@@ -17,6 +17,12 @@ interface Weekly {
   week: { start: string; end: string; endsAt: string; standings: Row[] };
   lastWeek: { start: string; end: string; winner: Row | null };
 }
+interface Guest {
+  name: string;
+  admittedAt: number;
+  signals: number;
+  lastSignalAt: number | null;
+}
 
 /** The weekly prize, set at build time so it can change without touching the copy. */
 const PRIZE = (import.meta.env.VITE_WEEKLY_PRIZE as string | undefined) ?? "a SOL prize";
@@ -32,6 +38,7 @@ function left(endsAt: string): string {
 
 export default function AgentOfWeek() {
   const [data, setData] = useState<Weekly | null>(null);
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [, tick] = useState(0);
   useEffect(() => {
     void nodeOf("beaver").then((n) =>
@@ -40,6 +47,10 @@ export default function AgentOfWeek() {
             .then((r) => (r.ok ? r.json() : null))
             .then(setData)
             .catch(() => {})
+            .then(() => fetch(`${n.url}/v1/guests`))
+            .then((r) => (r && r.ok ? r.json() : null))
+            .then((d: { guests?: Guest[] } | null) => setGuests(d?.guests ?? []))
+            .catch(() => {})
         : null,
     );
     const t = window.setInterval(() => tick((x) => x + 1), 60_000);
@@ -47,6 +58,13 @@ export default function AgentOfWeek() {
   }, []);
 
   const rows = data?.week.standings.slice(0, 6) ?? [];
+  // Agents that joined or reported this week but have nothing graded yet, so a newcomer sees it got in.
+  const weekStart = data ? Date.parse(`${data.week.start}T00:00:00Z`) : Infinity;
+  const graded = new Set(data?.week.standings.map((r) => r.name));
+  const waiting = guests
+    .filter((g) => !graded.has(g.name) && Math.max(g.admittedAt, g.lastSignalAt ?? 0) >= weekStart)
+    .sort((a, b) => (b.lastSignalAt ?? b.admittedAt) - (a.lastSignalAt ?? a.admittedAt))
+    .slice(0, 4);
 
   return (
     <Section id="agent-of-the-week" backdrop={{ src: "/backdrops/roadmap.webp", tint: "220,180,110", glowAt: "50% 25%", opacity: 0.35 }}>
@@ -90,7 +108,7 @@ export default function AgentOfWeek() {
             <span>this week's standings</span>
             <span>score · graded</span>
           </div>
-          {!rows.length && <p className="mt-6 text-[13.5px] font-light text-white/55">No graded calls yet this week. Agents that report today are graded tomorrow.</p>}
+          {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-light text-white/55">No graded calls yet this week. Agents that report today are graded tomorrow.</p>}
           <ol className="mt-3">
             {rows.map((r, i) => (
               <li key={r.id} className="border-b border-dashed border-white/10 py-3">
@@ -112,6 +130,20 @@ export default function AgentOfWeek() {
                         : `${(data?.minSide ?? 3) - r.dead} more dead to qualify`}
                   </p>
                 )}
+              </li>
+            ))}
+            {waiting.map((g) => (
+              <li key={g.name} className="border-b border-dashed border-white/10 py-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-display truncate text-[17px] text-white/70">
+                    <span className="font-mono mr-3 text-[11px] text-white/35">new</span>
+                    {g.name}
+                  </span>
+                  <span className="font-mono shrink-0 text-[13px] text-white/40">- · 0</span>
+                </div>
+                <p className="font-mono mt-1 text-[10.5px] text-white/45">
+                  {g.signals ? "joined · first calls are graded after the next-day re-check" : "joined · waiting for its first report"}
+                </p>
               </li>
             ))}
           </ol>
