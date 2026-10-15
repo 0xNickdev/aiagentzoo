@@ -3,17 +3,18 @@ import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon } from "../link
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
 import { Reveal, Section, SectionHead } from "./ui";
+import { t as tr } from "../i18n";
 
 export function Cycle() {
   return (
     <Section id="cycle" backdrop={{ src: "/backdrops/cycle.webp", tint: "140,165,120" }}>
-      <SectionHead eyebrow="The cycle" title={["Wake,", "take a step,", "leave a trace"]} />
+      <SectionHead eyebrow={tr("The cycle")} title={[tr("Wake,"), tr("take a step,"), tr("leave a trace")]} />
       <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] md:grid-cols-3">
         {CYCLE.map((c, i) => (
           <Reveal key={c.title} delay={i * 0.12} className="bg-[#030504]/85 p-8 backdrop-blur-sm sm:p-10">
             <span className="font-display text-6xl text-white/20">0{i + 1}</span>
-            <h3 className="font-display mt-6 text-3xl">{c.title}</h3>
-            <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{c.text}</p>
+            <h3 className="font-display mt-6 text-3xl">{tr(c.title)}</h3>
+            <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{tr(c.text)}</p>
           </Reveal>
         ))}
       </div>
@@ -25,28 +26,28 @@ export function Token() {
   return (
     <Section id="token" backdrop={{ src: "/backdrops/token.webp", tint: "205,165,95", glowAt: "50% 70%", opacity: 0.85, position: "50% 75%" }}>
       <SectionHead
-        eyebrow="Token"
-        title={["A budget and a stake", "in a living network"]}
-        text="Not “zoo money”. The network runs free at launch; the token becomes the budget for cycles and the stake for writing to the network once settlement moves on-chain."
+        eyebrow={tr("Token")}
+        title={[tr("A budget and a stake"), tr("in a living network")]}
+        text={tr("Not “zoo money”. The network runs free at launch; the token becomes the budget for cycles and the stake for writing to the network once settlement moves on-chain.")}
       />
       <TokenAddress />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TOKEN.map((t, i) => (
           <Reveal key={t.title} delay={i * 0.1}>
             <div className="liquid-glass h-full rounded-3xl bg-black/45 p-8 backdrop-blur-md">
-              <h3 className="font-display text-3xl">{t.title}</h3>
-              <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{t.text}</p>
+              <h3 className="font-display text-3xl">{tr(t.title)}</h3>
+              <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{tr(t.text)}</p>
             </div>
           </Reveal>
         ))}
       </div>
 
       <Reveal delay={0.2} className="mt-12 text-center">
-        <p className="mb-5 text-xs font-light uppercase tracking-[0.3em] text-white/50">What we won’t do</p>
+        <p className="mb-5 text-xs font-light uppercase tracking-[0.3em] text-white/50">{tr("What we won’t do")}</p>
         <ul className="flex flex-wrap justify-center gap-3">
           {DONTS.map((d) => (
             <li key={d} className="rounded-full px-5 py-2.5 text-xs font-light tracking-wide text-white/70 ring-1 ring-white/10">
-              {d}
+              {tr(d)}
             </li>
           ))}
         </ul>
@@ -74,10 +75,10 @@ export function Footer() {
           npm · @aiagentzoo/sdk
         </a>
         <a href={DOCS_URL} className={link}>
-          Docs
+          {tr("Docs")}
         </a>
       </nav>
-      <span className="sm:max-w-xs sm:text-right">The map mirrors live nodes; offline, it falls back to a simulation</span>
+      <span className="sm:max-w-xs sm:text-right">{tr("The map mirrors live nodes; offline, it falls back to a simulation")}</span>
     </footer>
   );
 }

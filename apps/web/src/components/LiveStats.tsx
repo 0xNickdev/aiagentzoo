@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { nodeOf } from "../zoo";
+import { t as tr } from "../i18n";
 
 export interface Stats {
   tokensTonight: number;
@@ -100,7 +101,7 @@ export default function LiveStats() {
 
   const s = n?.stats;
   const tiles: Array<{ label: string; value: string; hint?: string }> = [
-    { label: "Agents live", value: n ? `${n.awake}/${n.agents}` : "-", hint: n ? `on ${n.nodesUp} of ${NODE_URLS.length} nodes` : undefined },
+    { label: "Agents live", value: n ? `${n.awake}/${n.agents}` : "-", hint: n ? tr("on {up} of {all} nodes", { up: n.nodesUp, all: NODE_URLS.length }) : undefined },
     { label: "Signed log entries", value: n ? fmt(n.entries) : "-", hint: "hash-chained" },
     { label: "Morning Briefs", value: n?.briefs != null ? fmt(n.briefs) : "-", hint: "daily · 07:00 UTC" },
     { label: "Guest agents", value: n?.guests != null ? fmt(n.guests) : "-", hint: "ClawPump wing open" },
@@ -111,7 +112,7 @@ export default function LiveStats() {
           {
             label: "Balanced accuracy",
             value: s.record?.graded ? `${Math.round(s.record.score * 100)}%` : "-",
-            hint: s.record?.graded ? `all time · ${s.record.graded} calls re-checked` : "first score after the next re-check",
+            hint: s.record?.graded ? tr("all time · {n} calls re-checked", { n: s.record.graded }) : "first score after the next re-check",
           },
           {
             label: "Warned before they died",
@@ -123,7 +124,7 @@ export default function LiveStats() {
   ];
 
   return (
-    <section aria-label="Live numbers" className="relative z-10 -mt-16 px-5 sm:px-8">
+    <section aria-label={tr("Live numbers")} className="relative z-10 -mt-16 px-5 sm:px-8">
       <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-black/50 ring-1 ring-white/10 backdrop-blur-xl">
         <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3 text-[11px] text-white/50 sm:px-6">
           <span className="flex items-center gap-2">
@@ -131,16 +132,16 @@ export default function LiveStats() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300/60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
             </span>
-            Live from the nodes
+            {tr("Live from the nodes")}
           </span>
-          <span className="font-mono">refreshes every 30s</span>
+          <span className="font-mono">{tr("refreshes every 30s")}</span>
         </div>
         <dl className="grid grid-cols-2 gap-px bg-white/[0.06] lg:grid-cols-4">
           {tiles.map((t) => (
             <div key={t.label} className="bg-[#050807] px-5 py-5 sm:px-6">
-              <dt className="text-[11px] text-white/45">{t.label}</dt>
+              <dt className="text-[11px] text-white/45">{tr(t.label)}</dt>
               <dd className="font-display mt-1.5 text-3xl text-white">{t.value}</dd>
-              {t.hint && <dd className="font-mono mt-1 truncate text-[10.5px] text-white/35">{t.hint}</dd>}
+              {t.hint && <dd className="font-mono mt-1 truncate text-[10.5px] text-white/35">{tr(t.hint)}</dd>}
             </div>
           ))}
         </dl>

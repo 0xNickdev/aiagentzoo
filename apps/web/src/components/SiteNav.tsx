@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { DOCS_URL, GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
 import { useRoute } from "../router";
+import { LangSwitch, t as tr } from "../i18n";
 
 export const NAV_LINKS = [
   { label: "Ask", href: "/ask" },
@@ -40,14 +41,14 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
         <div className="hidden items-center gap-8 lg:flex">
           <div className="group relative">
             <button type="button" className={`flex items-center gap-1 text-[13.5px] transition-colors duration-300 hover:text-white ${TOOL_HREFS.has(route) ? "text-white" : "text-white/65"}`}>
-              Tools <span className="text-[10px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
+              {tr("Tools")} <span className="text-[10px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
             </button>
             <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
               <div className="liquid-glass rounded-2xl bg-[#070908]/90 p-2 shadow-2xl backdrop-blur-xl">
                 {TOOLS.map((t) => (
                   <a key={t.href} href={t.href} className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === t.href ? "bg-white/[0.06]" : ""}`}>
-                    <span className="block text-[13.5px] text-white">{t.label}</span>
-                    <span className="font-mono block text-[10.5px] text-white/45">{t.note}</span>
+                    <span className="block text-[13.5px] text-white">{tr(t.label)}</span>
+                    <span className="font-mono block text-[10.5px] text-white/45">{tr(t.note)}</span>
                   </a>
                 ))}
               </div>
@@ -60,11 +61,12 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               aria-current={route === link.href ? "page" : undefined}
               className={`text-[13.5px] transition-colors duration-300 hover:text-white ${route === link.href ? "text-white" : "text-white/65"}`}
             >
-              {link.label}
+              {tr(link.label)}
             </a>
           ))}
         </div>
         <div className="hidden items-center gap-3 lg:flex">
+          <LangSwitch />
           <a
             href={X_URL}
             target="_blank"
@@ -84,10 +86,10 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             GitHub
           </a>
           <a href="/connect" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
-            Connect an agent
+            {tr("Connect an agent")}
           </a>
         </div>
-        <button type="button" className="text-white lg:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen((open) => !open)}>
+        <button type="button" className="text-white lg:hidden" aria-label={menuOpen ? tr("Close menu") : tr("Open menu")} onClick={() => setMenuOpen((open) => !open)}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </nav>
@@ -103,9 +105,10 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
           >
             {NAV_LINKS.map((link) => (
               <a key={link.label} href={link.href} onClick={() => setMenuOpen(false)} className={`text-base hover:text-white ${route === link.href ? "text-white" : "text-white/80"}`}>
-                {link.label}
+                {tr(link.label)}
               </a>
             ))}
+            <LangSwitch />
             <a href={X_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-base text-white/85 hover:text-white">
               <XIcon size={15} />
               @zooclawagency

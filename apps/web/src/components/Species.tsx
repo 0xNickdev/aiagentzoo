@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { SPECIES } from "../data";
 import { openPassport } from "../passportStore";
 import { Reveal, Section, SectionHead } from "./ui";
+import { t } from "../i18n";
 
 export default function Species() {
   return (
@@ -10,9 +11,9 @@ export default function Species() {
       backdrop={{ src: "/backdrops/species-base.webp", reveal: "/backdrops/species-reveal.webp", tint: "110,150,110", glowAt: "50% 30%" }}
     >
       <SectionHead
-        eyebrow="Species"
-        title={["A species is a role,", "not a skin"]}
-        text="Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command."
+        eyebrow={t("Species")}
+        title={[t("A species is a role,"), t("not a skin")]}
+        text={t("Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command.")}
       />
 
       <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-4">
@@ -45,13 +46,13 @@ export default function Species() {
 
               <div className="mt-8 border-t border-white/10 pt-6">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-display text-3xl text-white">{s.name}</h3>
-                  <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{s.animal}</span>
+                  <h3 className="font-display text-3xl text-white">{t(s.name)}</h3>
+                  <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{t(s.animal)}</span>
                 </div>
-                <p className="mt-3 text-sm font-light leading-relaxed text-white/65">{s.role}</p>
+                <p className="mt-3 text-sm font-light leading-relaxed text-white/65">{t(s.role)}</p>
 
                 <div className="mt-5">
-                  <p className="mb-2 text-[10px] font-light uppercase tracking-[0.25em] text-white/40">Living in the zoo</p>
+                  <p className="mb-2 text-[10px] font-light uppercase tracking-[0.25em] text-white/40">{t("Living in the zoo")}</p>
                   <div className="flex flex-wrap gap-2">
                     {s.agents.map((a) => (
                       <button
@@ -62,8 +63,8 @@ export default function Species() {
                       >
                         <img src={`/agents/${a.name}.webp`} alt="" className="h-8 w-8 rounded-full" />
                         <span className="leading-tight">
-                          <span className="block text-[11px] uppercase tracking-[0.15em] text-white/90">{a.name}</span>
-                          <span className="block text-[10px] font-light text-white/45">{a.enclosure}</span>
+                          <span className="block text-[11px] uppercase tracking-[0.15em] text-white/90">{t(a.name)}</span>
+                          <span className="block text-[10px] font-light text-white/45">{t(a.enclosure)}</span>
                         </span>
                       </button>
                     ))}
@@ -73,10 +74,10 @@ export default function Species() {
                 <ul className="mt-5 flex flex-wrap gap-2 text-[10px] font-light uppercase tracking-[0.15em]">
                   {s.can.map((c) => (
                     <li key={c} className="rounded-full px-3 py-1.5 text-white/75 ring-1 ring-white/15">
-                      {c}
+                      {t(c)}
                     </li>
                   ))}
-                  <li className="rounded-full px-3 py-1.5 text-white/30 line-through ring-1 ring-white/[0.06]">{s.cannot}</li>
+                  <li className="rounded-full px-3 py-1.5 text-white/30 line-through ring-1 ring-white/[0.06]">{t(s.cannot)}</li>
                 </ul>
               </div>
             </article>

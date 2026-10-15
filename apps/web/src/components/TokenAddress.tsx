@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { t } from "../i18n";
 
 /** The live token; VITE_TOKEN_MINT can override it per deployment. */
 export const TOKEN_MINT: string = (import.meta.env.VITE_TOKEN_MINT ?? "").trim() || "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -20,13 +21,13 @@ export function CAPill({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => void copy()}
-      title="Copy the contract address"
+      title={t("Copy the contract address")}
       className={`liquid-glass font-mono inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[11.5px] text-white/80 transition hover:text-white ${className}`}
     >
       <span className="text-white/45">CA</span>
       <span className="truncate sm:hidden">{TOKEN_MINT.slice(0, 6)}…{TOKEN_MINT.slice(-6)}</span>
       <span className="hidden sm:inline">{TOKEN_MINT}</span>
-      <span className={copied ? "text-emerald-300" : "text-white/45"}>{copied ? "copied" : "copy"}</span>
+      <span className={copied ? "text-emerald-300" : "text-white/45"}>{copied ? t("copied") : t("copy")}</span>
     </button>
   );
 }
@@ -54,12 +55,12 @@ export function TokenAddress() {
   return (
     <div className="liquid-glass mx-auto mb-12 max-w-3xl rounded-3xl bg-black/45 p-6 text-center backdrop-blur-md">
       <p className="text-[10px] font-light uppercase tracking-[0.3em] text-white/50">
-        {TOKEN_SYMBOL ? `$${TOKEN_SYMBOL} · ` : ""}Solana · launched on ClawPump
+        {TOKEN_SYMBOL ? `$${TOKEN_SYMBOL} · ` : ""}{t("Solana · launched on ClawPump")}
       </p>
       <button type="button" onClick={copy} className="mt-3 w-full break-all font-mono text-sm text-white/90 hover:text-white sm:text-base">
         {TOKEN_MINT}
       </button>
-      <p className="mt-1 text-[11px] font-light text-white/45">{copied ? "Copied" : "Tap to copy the contract address"}</p>
+      <p className="mt-1 text-[11px] font-light text-white/45">{copied ? t("Copied") : t("Tap to copy the contract address")}</p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {links.map(([label, href]) => (
           <a

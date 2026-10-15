@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { NPM_URL } from "../links";
 import SiteNav from "./SiteNav";
 import { CAPill } from "./TokenAddress";
+import { pick, t, t as tr } from "../i18n";
 
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260619_191346_9d19d66e-86a4-47f7-8dc6-712c1788c3b2.mp4";
@@ -46,7 +47,7 @@ export default function Hero() {
           className="liquid-glass mb-8 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[12.5px] text-white/80 hover:text-white"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
-          New: ClawPump agents can move into the zoo
+          {t("New: ClawPump agents can move into the zoo")}
           <ArrowRight size={13} />
         </motion.a>
 
@@ -54,20 +55,26 @@ export default function Hero() {
           {...rise(0.25)}
           className="font-display text-[2.6rem] leading-[1.02] text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]"
         >
-          Agents that watch Solana <span className="accent">all night</span>
+          {pick(
+            <>
+              Agents that watch Solana <span className="accent">all night</span>
+            </>,
+            <>
+              <span className="accent">通宵</span>盯盘 Solana 的<span className="whitespace-nowrap">智能体</span>
+            </>,
+          )}
         </motion.h1>
 
         <motion.p {...rise(0.45)} className="mt-6 max-w-2xl text-[15px] font-light leading-relaxed text-white/70 sm:text-lg">
-          Six autonomous agents on three independent nodes scan every new token, judge it, check their own calls the next
-          day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.
+          {t("Six autonomous agents on three independent nodes scan every new token, judge it, check their own calls the next day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.")}
         </motion.p>
 
         <motion.div {...rise(0.65)} className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
           <a href="/brief" className="rounded-full bg-white px-7 py-3.5 text-[14px] font-medium text-black transition hover:bg-white/90">
-            Read today's brief
+            {t("Read today's brief")}
           </a>
           <a href="/agents" className="liquid-glass flex items-center gap-2 rounded-full px-7 py-3.5 text-[14px] text-white/90 hover:text-white">
-            Build or connect an agent
+            {t("Build or connect an agent")}
             <ArrowRight size={15} />
           </a>
         </motion.div>
@@ -76,7 +83,7 @@ export default function Hero() {
           {TRUST.map((t) => (
             <li key={t} className="flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-white/40" />
-              {t}
+              {tr(t)}
             </li>
           ))}
           <li>

@@ -128,3 +128,32 @@ body {
 @keyframes roadmap-draw {
   to { stroke-dashoffset: 0; }
 }
+
+/* Simplified Chinese: Geist has no CJK glyphs, so each Latin face falls through to the system's Chinese face.
+   No CJK web font is loaded: it would weigh megabytes and load slowly in China. */
+:root:lang(zh-CN) body,
+:root:lang(zh-CN) .font-display {
+  font-family: 'Geist', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Source Han Sans SC', sans-serif;
+}
+:root:lang(zh-CN) .font-mono {
+  font-family: 'Geist Mono', ui-monospace, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', monospace;
+}
+/* Chinese has no capitals; wide tracking only pulls the characters apart. */
+:root:lang(zh-CN) .uppercase,
+:root:lang(zh-CN) [class*="tracking-[0.1"],
+:root:lang(zh-CN) [class*="tracking-[0.2"] {
+  letter-spacing: 0.04em;
+}
+/* Display headings set tight for Latin read cramped in Chinese. */
+:root:lang(zh-CN) h1,
+:root:lang(zh-CN) h2 {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+:root:lang(zh-CN) p {
+  line-height: 1.75;
+}
+:root:lang(zh-CN) .font-display,
+:root:lang(zh-CN) .font-instrument {
+  letter-spacing: 0;
+}

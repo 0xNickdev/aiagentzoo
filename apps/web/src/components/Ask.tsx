@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import { X_URL, XIcon } from "../links";
 import { nodeOf, useGuardian } from "../zoo";
 import { Reveal, Section } from "./ui";
+import { lang, pick, t, t as tr } from "../i18n";
 
 type Verdict = "promising" | "watch" | "suspicious";
 type Outcome = "dead" | "alive" | "unknown";
@@ -92,7 +93,7 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
   const m = a.facts.market;
   if (c?.creatorSold !== null && c?.creatorSold !== undefined) out.push(["creator sold", pctOf(c.creatorSold), c.creatorSold >= 0.5]);
   const r = a.facts.creator;
-  if (r) out.push(["creator dumped (48h)", `${r.dumped} of ${r.launches48h}`, r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
+  if (r) out.push(["creator dumped (48h)", t("{a} of {b}", { a: r.dumped, b: r.launches48h }), r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2)]);
   if (c) out.push(["creator's launches today", String(c.creatorLaunches24h), c.creatorLaunches24h >= 5]);
   const h = a.facts.holders;
   if (h) {
@@ -100,7 +101,7 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
     if (h.creatorShare !== null) out.push(["dev still holds", pctOf(h.creatorShare), h.creatorShare >= 0.1]);
   }
   const b = a.facts.bundle;
-  if (b) out.push(["bundle at launch", `${b.wallets} wallets · ${pctOf(b.share)}${b.linked >= 2 ? ` · ${b.linked} same funder` : ""}`, b.wallets >= 3 || b.linked >= 2]);
+  if (b) out.push(["bundle at launch", `${t("{n} wallets", { n: b.wallets })} · ${pctOf(b.share)}${b.linked >= 2 ? ` · ${t("{n} same funder", { n: b.linked })}` : ""}`, b.wallets >= 3 || b.linked >= 2]);
   else if (c?.top5Share !== null && c?.top5Share !== undefined) out.push(["top 5 buyers' share", pctOf(c.top5Share), c.top5Share >= 0.6]);
   if (c && !r) out.push(["buyers · repeat", `${c.buyers} · ${c.repeatBuyers}`, false]);
   if (m) {
@@ -109,19 +110,19 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
     out.push(["buys · sells 24h", `${m.buys24h} · ${m.sells24h}`, m.sells24h > m.buys24h * 3]);
     out.push(["change 24h", m.priceChange24h === null ? "-" : `${m.priceChange24h > 0 ? "+" : ""}${Math.round(m.priceChange24h)}%`, (m.priceChange24h ?? 0) <= -80]);
   }
-  out.push(["socials", a.facts.hasSocials === null ? "unknown" : a.facts.hasSocials ? "yes" : "none", a.facts.hasSocials === false]);
+  out.push(["socials", t(a.facts.hasSocials === null ? "unknown" : a.facts.hasSocials ? "yes" : "none"), a.facts.hasSocials === false]);
   // Nine cells fill the grid when the chain is there; without it, graduation fills the gap.
-  if (!c) out.push(["graduated", a.facts.graduated ? "yes" : "no", false]);
+  if (!c) out.push(["graduated", t(a.facts.graduated ? "yes" : "no"), false]);
   return out;
 }
 
 const gradeDue = (a: Ask) => new Date(a.at + 24 * 3_600_000);
-const when = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
+const when = (d: Date) => d.toLocaleString(lang() === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
 
 function graded(a: Ask): string {
-  if (!a.graded) return a.already ? "already dead when asked · not scored" : `re-checked against reality ${when(gradeDue(a))}`;
-  const o = a.graded.outcome === "unknown" ? "outcome unclear" : `it ${a.graded.outcome === "dead" ? "died" : "lived"}`;
-  return a.graded.hit === null ? `${o} · not scored` : `${o} · the beaver was ${a.graded.hit ? "right" : "wrong"}`;
+  if (!a.graded) return a.already ? t("already dead when asked · not scored") : t("re-checked against reality {when}", { when: when(gradeDue(a)) });
+  const o = t(a.graded.outcome === "unknown" ? "outcome unclear" : a.graded.outcome === "dead" ? "it died" : "it lived");
+  return a.graded.hit === null ? `${o} · ${t("not scored")}` : `${o} · ${t(a.graded.hit ? "the beaver was right" : "the beaver was wrong")}`;
 }
 
 /* ---------- the shareable card ---------- */
@@ -162,7 +163,7 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
   const mono = (s: number) => `400 ${s}px "Geist Mono", ui-monospace, monospace`;
   ctx.font = mono(15);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText("ZOOAI AGENCY · ASK THE BEAVER", L, 86);
+  ctx.fillText(t("ZOOAI AGENCY · ASK THE BEAVER"), L, 86);
 
   ctx.font = '500 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
@@ -173,10 +174,10 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
 
   ctx.font = '500 92px "Geist", sans-serif';
   ctx.fillStyle = tone.color;
-  ctx.fillText(tone.label, L - 4, 310);
+  ctx.fillText(t(tone.label), L - 4, 310);
   ctx.font = mono(15);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(`confidence ${Math.round(a.confidence * 100)}% · playbook v${a.playbookVersion}`, L, 344);
+  ctx.fillText(t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion }), L, 344);
 
   // The reason, wrapped to two lines.
   ctx.font = '300 27px "Geist", sans-serif';
@@ -209,12 +210,12 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
     ctx.fillText(v, x, top + 40);
     ctx.font = mono(11);
     ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText(k.toUpperCase(), x, top + 62);
+    ctx.fillText(t(k).toUpperCase(), x, top + 62);
   });
 
   ctx.font = mono(14);
   ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.fillText(`graded against reality on ${when(gradeDue(a))} · zooaiagency.com/ask`, L, H - 40);
+  ctx.fillText(t("graded against reality on {when} · zooaiagency.com/ask", { when: when(gradeDue(a)) }), L, H - 40);
 }
 
 /* ---------- the page ---------- */
@@ -340,15 +341,15 @@ export default function AskPage() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "200,170,110", glowAt: "50% 35%", opacity: 0.35 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="font-mono text-[12px] text-white/50">Ask the beaver · graded by reality tomorrow</p>
+          <p className="font-mono text-[12px] text-white/50">{t("Ask the beaver · graded by reality tomorrow")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
-            Is it a rug?
+            {t("Is it a rug?")}
             <br />
-            <span className="accent">Ask the beaver.</span>
+            <span className="accent">{t("Ask the beaver.")}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
-            Paste any Solana token, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.
-            Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.
+            {t("Paste any Solana token, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.")}{" "}
+            {t("Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.")}
           </p>
         </Reveal>
 
@@ -357,36 +358,36 @@ export default function AskPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="token, creator wallet, or pump.fun link"
+              placeholder={t("token, creator wallet, or pump.fun link")}
               spellCheck={false}
               autoComplete="off"
               className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-white/35"
-              aria-label="Token address"
+              aria-label={t("Token address")}
             />
             <button
               type="submit"
               disabled={busy}
               className="rounded-full bg-white px-7 py-3 text-[14px] font-medium text-black transition hover:bg-white/90 disabled:opacity-60"
             >
-              {busy ? "The beaver is reading…" : "Ask"}
+              {busy ? t("The beaver is reading…") : t("Ask")}
             </button>
           </form>
           {error && <p className="mt-4 text-center text-[13px] text-[#ff9a8f]">{error}</p>}
           <p className="font-mono mt-4 text-center text-[11px] text-white/45">
             {!session ? (
               <>
-                holding $ZOOAGENCY?{" "}
+                {t("holding $ZOOAGENCY?")}{" "}
                 <button type="button" onClick={() => void signIn()} disabled={signing} className="text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100">
-                  sign in with your wallet
+                  {t("sign in with your wallet")}
                 </button>{" "}
-                for 30 questions an hour instead of 6
+                {t("for 30 questions an hour instead of 6")}
               </>
             ) : holder?.holder ? (
-              <span className="text-amber-100/80">● holder · 30 questions an hour · 10 tokens under watch</span>
+              <span className="text-amber-100/80">{t("● holder · 30 questions an hour · 10 tokens under watch")}</span>
             ) : holder ? (
-              <>signed in · hold {holder.min.toLocaleString("en-US")} $ZOOAGENCY for 30 questions an hour</>
+              <>{t("signed in · hold {n} $ZOOAGENCY for 30 questions an hour", { n: holder.min.toLocaleString("en-US") })}</>
             ) : (
-              <>signed in · checking your wallet…</>
+              <>{t("signed in · checking your wallet…")}</>
             )}
           </p>
         </Reveal>
@@ -405,27 +406,27 @@ export default function AskPage() {
 
       <Section className="!pb-6 !pt-6">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="font-display text-2xl">Passed the basic checks</h2>
-          <p className="font-mono text-[11px] text-white/45">fresh pump.fun launches · live from the chain</p>
+          <h2 className="font-display text-2xl">{t("Passed the basic checks")}</h2>
+          <p className="font-mono text-[11px] text-white/45">{t("fresh pump.fun launches · live from the chain")}</p>
         </div>
         <p className="mb-5 max-w-3xl text-[13px] font-light leading-relaxed text-white/50">
-          10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.
-          That only means the usual rug signs are absent so far. It is not a call and not advice; most of these still die. Ask the beaver before anything else.
+          {t("10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.")}{" "}
+          {t("That only means the usual rug signs are absent so far. It is not a call and not advice; most of these still die. Ask the beaver before anything else.")}
         </p>
         {!clean ? (
-          <p className="text-[13px] text-white/45">Reading the chain…</p>
+          <p className="text-[13px] text-white/45">{t("Reading the chain…")}</p>
         ) : clean.length === 0 ? (
-          <p className="text-[13px] text-white/45">Nothing passes right now. On pump.fun that is a normal hour.</p>
+          <p className="text-[13px] text-white/45">{t("Nothing passes right now. On pump.fun that is a normal hour.")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {clean.map((c) => (
               <li key={c.mint} className="rounded-2xl bg-black/40 px-4 py-3 ring-1 ring-white/10">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">${c.symbol}</span>
-                  <span className="font-mono shrink-0 text-[10.5px] text-white/40">{c.ageMin} min old</span>
+                  <span className="font-mono shrink-0 text-[10.5px] text-white/40">{t("{n} min old", { n: c.ageMin })}</span>
                 </div>
                 <p className="font-mono mt-1 text-[10.5px] text-white/50">
-                  {c.buyers >= 100 ? "100+" : c.buyers} buyers · {c.repeatBuyers} came back · top 5 hold {pctOf(c.top5Share)}
+                  {t("{b} buyers · {r} came back · top 5 hold {p}", { b: c.buyers >= 100 ? "100+" : c.buyers, r: c.repeatBuyers, p: pctOf(c.top5Share) })}
                 </p>
                 <button
                   type="button"
@@ -437,7 +438,7 @@ export default function AskPage() {
                   }}
                   className="font-mono mt-2 text-[11px] text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100 disabled:opacity-50"
                 >
-                  ask the beaver →
+                  {t("ask the beaver →")}
                 </button>
               </li>
             ))}
@@ -447,16 +448,16 @@ export default function AskPage() {
 
       <Section className="!pt-6">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="font-display text-2xl">Recent questions</h2>
+          <h2 className="font-display text-2xl">{t("Recent questions")}</h2>
           {recent && (
             <p className="font-mono text-[11px] text-white/45">
-              {recent.asked.toLocaleString("en-US")} asked · beaver on asks:{" "}
-              {recent.record.graded ? `${pctOf(recent.record.skill)} balanced · ${recent.record.graded} graded` : "first grades after a day"}
+              {t("{n} asked · beaver on asks:", { n: recent.asked.toLocaleString("en-US") })}{" "}
+              {recent.record.graded ? t("{p} balanced · {n} graded", { p: pctOf(recent.record.skill), n: recent.record.graded }) : t("first grades after a day")}
             </p>
           )}
         </div>
         {!recent?.asks.length ? (
-          <p className="text-[13px] text-white/45">No questions yet. Be the first.</p>
+          <p className="text-[13px] text-white/45">{t("No questions yet. Be the first.")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {recent.asks.map((a) => (
@@ -472,7 +473,7 @@ export default function AskPage() {
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="font-display truncate text-[17px]">${a.symbol}</span>
-                    <span className={`font-mono shrink-0 text-[11px] ${TONE[a.verdict].text}`}>{TONE[a.verdict].label}</span>
+                    <span className={`font-mono shrink-0 text-[11px] ${TONE[a.verdict].text}`}>{t(TONE[a.verdict].label)}</span>
                   </div>
                   <p className="font-mono mt-1 truncate text-[10.5px] text-white/40">{graded(a)}</p>
                 </button>
@@ -498,7 +499,10 @@ function Answer({ a }: { a: Ask }) {
 
   const link = `zooaiagency.com/ask#${a.id}`;
   const tweet = encodeURIComponent(
-    [`asked the beaver about $${a.symbol}: ${tone.label.toLowerCase()}.`, a.why, "", `graded against reality tomorrow: ${link}`].join("\n"),
+    pick(
+      [`asked the beaver about $${a.symbol}: ${tone.label.toLowerCase()}.`, a.why, "", `graded against reality tomorrow: ${link}`],
+      [`问了海狸 $${a.symbol}：${t(tone.label)}。`, a.why, "", `明天由市场打分：${link}`],
+    ).join("\n"),
   );
 
   return (
@@ -515,24 +519,24 @@ function Answer({ a }: { a: Ask }) {
             </div>
             {a.facts.url && (
               <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
-                chart ↗
+                {t("chart ↗")}
               </a>
             )}
           </div>
 
           <p className="font-display mt-6 text-6xl leading-none sm:text-7xl" style={{ color: tone.color }}>
-            {tone.label}
+            {t(tone.label)}
           </p>
           <p className="font-mono mt-3 text-[11px] text-white/45">
-            confidence {Math.round(a.confidence * 100)}% · playbook v{a.playbookVersion}
-            {a.by === "rules" ? " · rules only, the model was busy" : ""}
+            {t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion })}
+            {a.by === "rules" ? t(" · rules only, the model was busy") : ""}
           </p>
           <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-white/85">{a.why}</p>
 
           <dl className="font-mono mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] sm:grid-cols-3">
             {evidence(a).map(([k, v, bad]) => (
               <div key={k} className="bg-[#070908] px-4 py-3">
-                <dt className="text-white/40">{k}</dt>
+                <dt className="text-white/40">{t(k)}</dt>
                 <dd className={`mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-white/85"}`}>{v}</dd>
               </div>
             ))}
@@ -543,7 +547,7 @@ function Answer({ a }: { a: Ask }) {
             </div>
           )}
           {!a.facts.chain && (
-            <p className="mt-3 text-[12px] font-light text-white/40">No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.</p>
+            <p className="mt-3 text-[12px] font-light text-white/40">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
           )}
 
           <p className={`font-mono mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#9df3b0]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-amber-100/70"}`}>
@@ -555,7 +559,7 @@ function Answer({ a }: { a: Ask }) {
         <div className="flex flex-col gap-3">
           <canvas ref={canvas} className="hidden" />
           <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-black ring-1 ring-white/10">
-            {png ? <img src={png} alt={`Card: the beaver on $${a.symbol}`} className="h-full w-full" /> : <div className="h-full w-full animate-pulse bg-white/[0.03]" />}
+            {png ? <img src={png} alt={t("Card: the beaver on ${s}", { s: a.symbol })} className="h-full w-full" /> : <div className="h-full w-full animate-pulse bg-white/[0.03]" />}
           </div>
           <div className="flex flex-wrap gap-2">
             <a
@@ -563,7 +567,7 @@ function Answer({ a }: { a: Ask }) {
               download={`beaver-${a.symbol}-${a.id}.png`}
               className={`inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black ${png ? "hover:bg-white/90" : "pointer-events-none opacity-50"}`}
             >
-              <Download size={14} /> Download card
+              <Download size={14} /> {t("Download card")}
             </a>
             <a
               href={`https://x.com/intent/post?text=${tweet}`}
@@ -572,13 +576,13 @@ function Answer({ a }: { a: Ask }) {
               className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-white/90 hover:text-white"
               title={`Follow ${X_URL.replace("https://x.com/", "@")}`}
             >
-              <XIcon size={13} /> Post on X
+              <XIcon size={13} /> {t("Post on X")}
             </a>
           </div>
           <p className="font-mono text-[11px] text-white/40">
-            share: <span className="text-white/70">{link}</span>
+            {t("share:")} <span className="text-white/70">{link}</span>
           </p>
-          <p className="text-[11.5px] font-light text-white/35">Not financial advice. A verdict from public data, checked in public a day later.</p>
+          <p className="text-[11.5px] font-light text-white/35">{t("Not financial advice. A verdict from public data, checked in public a day later.")}</p>
         </div>
       </div>
     </motion.section>
@@ -591,22 +595,22 @@ function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boolean }) {
   return (
     <div>
       <p className="font-mono text-[11px] text-white/40">
-        creator wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h on pump.fun
+        {t("creator wallet · {w} · last 48h on pump.fun", { w: `${r.wallet.slice(0, 6)}…${r.wallet.slice(-6)}` })}
       </p>
       <p className={`font-display mt-2 ${big ? "text-4xl sm:text-5xl" : "text-2xl"} ${serial ? "text-[#ff8a7e]" : "text-white"}`}>
-        {r.launches48h} {r.launches48h === 1 ? "launch" : "launches"}, dumped {r.dumped}
-        {r.medianDumpMin !== null ? `, median ${r.medianDumpMin} min` : ""}
+        {t(r.launches48h === 1 ? "{n} launch, dumped {d}" : "{n} launches, dumped {d}", { n: r.launches48h, d: r.dumped })}
+        {r.medianDumpMin !== null ? t(", median {m} min", { m: r.medianDumpMin }) : ""}
       </p>
       <p className="font-mono mt-2 text-[11px] text-white/45">
-        {r.launches24h} in the last 24h · {r.graduated} graduated{serial ? " · a serial dumper" : ""}
+        {t("{a} in the last 24h · {g} graduated", { a: r.launches24h, g: r.graduated })}{serial ? t(" · a serial dumper") : ""}
       </p>
       {big && r.recent.length > 0 && (
         <ul className="font-mono mt-5 grid gap-1.5 text-[12px] sm:grid-cols-2">
-          {r.recent.map((t) => (
-            <li key={t.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
-              <span className="truncate text-white/80">${t.symbol}</span>
-              <span className={t.dumpedAfterMin !== null ? "text-[#ff8a7e]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}>
-                {t.dumpedAfterMin !== null ? `dumped after ${t.dumpedAfterMin} min` : t.graduated ? "graduated" : "creator holding"}
+          {r.recent.map((x) => (
+            <li key={x.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
+              <span className="truncate text-white/80">${x.symbol}</span>
+              <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#9df3b0]" : "text-white/45"}>
+                {x.dumpedAfterMin !== null ? tr("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? tr("graduated") : tr("creator holding")}
               </span>
             </li>
           ))}

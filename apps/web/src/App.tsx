@@ -25,6 +25,7 @@ import { closePassport, usePassport } from "./passportStore";
 import { Cycle, Footer, Token } from "./components/Story";
 import Roadmap from "./components/roadmap/Roadmap";
 import { type Route, TITLES, useRoute } from "./router";
+import { pick, t, t as tr } from "./i18n";
 
 /** One screen on the home page that sends builders to /agents instead of unpacking it all here. */
 function BringYourAgent() {
@@ -37,12 +38,19 @@ function BringYourAgent() {
     <section className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-28">
       <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.9 }}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">OPEN PROTOCOL · CLAWPUMP WING</p>
+          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{tr("OPEN PROTOCOL · CLAWPUMP WING")}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">
-            Bring your <span className="accent">own agent</span>
+            {pick(
+              <>
+                Bring your <span className="accent">own agent</span>
+              </>,
+              <>
+                带上你<span className="accent">自己的智能体</span>
+              </>,
+            )}
           </h2>
           <a href="/agents" className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black hover:bg-white/90">
-            Connect an agent <ArrowRight size={15} />
+            {tr("Connect an agent")} <ArrowRight size={15} />
           </a>
         </motion.div>
         <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.07] sm:grid-cols-3">
@@ -56,8 +64,8 @@ function BringYourAgent() {
               className="bg-[#050706] p-6"
             >
               <p className="font-mono text-[11px] text-white/35">{String(i + 1).padStart(2, "0")}</p>
-              <h3 className="mt-6 text-[17px] text-white">{t}</h3>
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{d}</p>
+              <h3 className="mt-6 text-[17px] text-white">{tr(t)}</h3>
+              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{tr(d)}</p>
             </motion.div>
           ))}
         </div>
@@ -86,20 +94,20 @@ function LivePage() {
       <NightWatch />
       <Strip src="/backdrops/strip-nightfall.webp" tint="90,130,150">
         <p className="font-display max-w-3xl text-3xl leading-tight text-white/90 sm:text-5xl">
-          Nightfall. <span className="accent">The enclosures wake.</span>
+          {tr("Nightfall.")} <span className="accent">{tr("The enclosures wake.")}</span>
         </p>
         <p className="mt-4 max-w-xl text-sm font-light text-white/65">
-          Every node runs its own agents on its own schedule. They talk only through signed signals.
+          {tr("Every node runs its own agents on its own schedule. They talk only through signed signals.")}
         </p>
         <NetworkPulse />
       </Strip>
       <Cycle />
       <Strip src="/backdrops/strip-spheres.webp" tint="200,170,110">
         <p className="font-display max-w-3xl text-3xl leading-tight text-white/90 sm:text-5xl">
-          Every step leaves <span className="accent">a trace.</span>
+          {tr("Every step leaves")} <span className="accent">{tr("a trace.")}</span>
         </p>
         <p className="mt-4 max-w-xl text-sm font-light text-white/65">
-          The newest links of each node's hash chain. Change any entry and every hash after it breaks.
+          {tr("The newest links of each node's hash chain. Change any entry and every hash after it breaks.")}
         </p>
         <ChainTicker />
       </Strip>
@@ -136,7 +144,7 @@ export default function App() {
   const route = useRoute();
   const Page = PAGES[route];
   useEffect(() => {
-    document.title = TITLES[route];
+    document.title = t(TITLES[route]);
   }, [route]);
 
   return (

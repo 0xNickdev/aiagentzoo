@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
+import { t } from "../i18n";
 
 interface Numbers {
   launchesSeen: number | null;
@@ -116,7 +117,7 @@ export default function Doors() {
       focus: "50% 64%",
       stats: [
         ["alive · fallen", n?.alive === null || n?.alive === undefined ? "-" : `${n.alive} · ${n.fallen}`],
-        ["next turn", n?.nextTurnIn === null || n?.nextTurnIn === undefined ? "-" : n.nextTurnIn === 0 ? "tonight" : `in ${n.nextTurnIn} night${n.nextTurnIn === 1 ? "" : "s"}`],
+        ["next turn", n?.nextTurnIn === null || n?.nextTurnIn === undefined ? "-" : n.nextTurnIn === 0 ? t("tonight") : t(n.nextTurnIn === 1 ? "in {n} night" : "in {n} nights", { n: n.nextTurnIn })],
       ],
       cta: "Enter the nursery",
     },
@@ -132,11 +133,11 @@ export default function Doors() {
         className="flex flex-wrap items-end justify-between gap-6"
       >
         <div>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">THREE WAYS IN</p>
-          <h2 className="font-display mt-3 text-5xl sm:text-6xl">See it work</h2>
+          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{t("THREE WAYS IN")}</p>
+          <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("See it work")}</h2>
         </div>
         <p className="max-w-sm text-[14px] font-light leading-relaxed text-white/55">
-          Everything below is live: read from the nodes and the chain as you look at it.
+          {t("Everything below is live: read from the nodes and the chain as you look at it.")}
         </p>
       </motion.div>
 
@@ -164,22 +165,22 @@ export default function Doors() {
                 {d.live !== undefined && (
                   <span className={`h-1.5 w-1.5 rounded-full ${d.live ? "animate-pulse bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" : "bg-white/30"}`} />
                 )}
-                {d.eyebrow}
+                {t(d.eyebrow)}
               </p>
             </div>
             <div className="relative flex flex-1 flex-col px-7 pb-7 pt-2">
-              <h3 className="font-display text-4xl">{d.title}</h3>
-              <p className="mt-3 max-w-xs text-[14px] font-light leading-relaxed text-white/60">{d.line}</p>
+              <h3 className="font-display text-4xl">{t(d.title)}</h3>
+              <p className="mt-3 max-w-xs text-[14px] font-light leading-relaxed text-white/60">{t(d.line)}</p>
               <dl className="font-mono mt-auto grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
                 {d.stats.map(([k, v]) => (
                   <div key={k}>
                     <dd className="text-xl text-white">{v}</dd>
-                    <dt className="mt-1 text-[10px] tracking-[0.06em] text-white/45">{k}</dt>
+                    <dt className="mt-1 text-[10px] tracking-[0.06em] text-white/45">{t(k)}</dt>
                   </div>
                 ))}
               </dl>
               <span className="mt-6 inline-flex items-center gap-2 text-[13.5px] text-white/80 transition group-hover:gap-3 group-hover:text-white">
-                {d.cta} <ArrowRight size={14} />
+                {t(d.cta)} <ArrowRight size={14} />
               </span>
             </div>
           </motion.a>
