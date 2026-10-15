@@ -292,6 +292,7 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     await (enclosure as any).agents.get("beaver").queue;
     await enclosure.wake("tortoise");
     assert.match(briefs[0]!, /## From the guest enclosures/);
+    assert.match(briefs[0]!, /## Agent of the week so far\n_No guest agent graded in the week of/);
     assert.match(briefs[0]!, /\*\*crab\*\* \(ClawPump wing, sentinel, token/);
     assert.match(briefs[0]!, /suspicious `6ReK\w+` - click https:\/\/evil same art as a rug/);
 
@@ -1160,4 +1161,19 @@ test("holders vote the nursery's next gene with their balance, and the week's be
   assert.equal((await nameNewborn(store, "winner", "ember fire")).ok, false);
   assert.equal((await nameNewborn(store, "winner", "Ember")).ok, true);
   assert.equal((state.get(GENE.name) as any).name, "Ember");
+});
+
+test("the morning brief tells the weekly contest: the leader, and what the rest still need", async () => {
+  const { weekText } = await import("../src/agents/nightWatch.ts");
+  const w = { start: "2026-10-19", end: "2026-10-25", minGraded: 20, minSide: 3, rows: [
+    { name: "crabby", score: 0.72, graded: 31, dead: 22, alive: 9, ranked: true },
+    { name: "zhu-dd", score: 0.61, graded: 12, dead: 12, alive: 0, ranked: false },
+    { name: "owlet", score: 0.55, graded: 25, dead: 24, alive: 1, ranked: false },
+  ] };
+  const text = weekText(w);
+  assert.match(text, /^\*\*crabby\*\* leads the week of 2026-10-19 to 2026-10-25\./);
+  assert.match(text, /1\. \*\*crabby\*\* - 72% over 31 graded calls\n/);
+  assert.match(text, /zhu-dd\*\* - 61% over 12 graded calls · 8 more graded to qualify/);
+  assert.match(text, /owlet\*\* - 55% over 25 graded calls · 2 more living to qualify/);
+  assert.match(weekText({ ...w, rows: [w.rows[1]!] }), /^Nobody qualifies yet/);
 });

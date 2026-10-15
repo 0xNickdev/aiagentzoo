@@ -31,8 +31,16 @@ interface Sections {
   promoted: Obs[];
   watched?: Obs[];
   guests?: GuestReport[];
+  week?: Week;
   calls?: Call[];
   learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null } | null; playbook: { version: number; text: string } };
+}
+interface Week {
+  start: string;
+  end: string;
+  minGraded: number;
+  minSide: number;
+  rows: Array<{ name: string; score: number; graded: number; dead: number; alive: number; ranked: boolean }>;
 }
 interface Call {
   mint: string;
@@ -246,6 +254,39 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
             </ol>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** The weekly contest as it stood that morning. */
+function WeekBoard({ week }: { week: Week }) {
+  const need = (r: Week["rows"][number]) =>
+    r.ranked ? null : r.graded < week.minGraded ? `${week.minGraded - r.graded} more graded` : r.alive < week.minSide ? `${week.minSide - r.alive} more living` : `${week.minSide - r.dead} more dead`;
+  return (
+    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">
+        AGENT OF THE WEEK SO FAR · {week.start} → {week.end}
+      </p>
+      {!week.rows.length ? (
+        <p className="mt-3 text-[13px] font-light text-white/55">
+          No guest agent graded this week yet. The first one leads: <a href="/connect" className="underline decoration-white/30 underline-offset-4 hover:text-white">connect an agent</a>.
+        </p>
+      ) : (
+        <ol className="mt-3 divide-y divide-white/[0.06]">
+          {week.rows.slice(0, 3).map((r, i) => (
+            <li key={r.name} className="flex items-baseline justify-between gap-3 py-2.5">
+              <a href={`/agents?guest=${encodeURIComponent(r.name)}`} className="min-w-0 truncate text-[14px] text-white/90 hover:text-white">
+                <span className="font-mono mr-3 text-[11px] text-white/35">{String(i + 1).padStart(2, "0")}</span>
+                {r.name}
+              </a>
+              <span className="font-mono shrink-0 text-[12px] text-white/60">
+                {Math.round(r.score * 100)}% · {r.graded}
+                {need(r) && <span className="ml-2 text-amber-100/60">{need(r)} to qualify</span>}
+              </span>
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   );
@@ -564,6 +605,11 @@ export default function Brief() {
             <div className={`mt-4 grid items-start gap-4 ${s.guests?.length && s.watched?.length ? "lg:grid-cols-2" : ""}`}>
               {s.guests && s.guests.length > 0 && <GuestReports reports={s.guests} />}
               {s.watched && s.watched.length > 0 && <Watched items={s.watched} />}
+            </div>
+          )}
+          {s.week && (
+            <div className="mt-4">
+              <WeekBoard week={s.week} />
             </div>
           )}
           <p className="mt-4 text-[11px] font-light text-white/35">Observations from public data, not financial advice.</p>

@@ -331,7 +331,38 @@ export interface Sections {
   calls: Call[];
   /** How yesterday's calls turned out and the playbook the beaver judges by now. */
   learned: { score: Scorecard | null; playbook: Playbook };
+  /** Guest agents' standings in the week so far, added at dawn. */
+  week?: WeekStandings;
   updatedAt: number;
+}
+
+export interface WeekStandings {
+  start: string;
+  end: string;
+  minGraded: number;
+  minSide: number;
+  rows: Array<{ name: string; score: number; graded: number; dead: number; alive: number; ranked: boolean }>;
+}
+
+/** The weekly contest as the brief tells it: the leader, who else is close, and what the unranked still need. */
+export function weekText(w: WeekStandings | undefined): string {
+  if (!w) return "";
+  if (!w.rows.length) return `_No guest agent graded in the week of ${w.start} yet. The first one leads: zooaiagency.com/connect_`;
+  const short = (r: WeekStandings["rows"][number]) =>
+    r.ranked
+      ? ""
+      : r.graded < w.minGraded
+        ? ` · ${w.minGraded - r.graded} more graded to qualify`
+        : r.alive < w.minSide
+          ? ` · ${w.minSide - r.alive} more living to qualify`
+          : ` · ${w.minSide - r.dead} more dead to qualify`;
+  const lines = w.rows.slice(0, 3).map((r, i) => `${i + 1}. **${r.name}** - ${Math.round(r.score * 100)}% over ${r.graded} graded ${r.graded === 1 ? "call" : "calls"}${short(r)}`);
+  const lead = w.rows[0]!;
+  return [
+    lead.ranked ? `**${lead.name}** leads the week of ${w.start} to ${w.end}.` : `Nobody qualifies yet in the week of ${w.start} to ${w.end}: ${w.minGraded}+ graded calls with ${w.minSide}+ dead and ${w.minSide}+ living tokens.`,
+    "",
+    ...lines,
+  ].join("\n");
 }
 
 export interface Thinking {
@@ -439,6 +470,7 @@ export function renderBrief(s: Sections, review: string): string {
     "## What the pack learned",
     learnedText(s.learned),
     "",
+    ...(s.week ? ["## Agent of the week so far", weekText(s.week), ""] : []),
     "## From the guest enclosures",
     s.guests?.length
       ? s.guests
@@ -633,6 +665,16 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         if (result.text) review = result.text.replace(/[\u2013\u2014]/g, "-");
       } catch {
         // No model configured or budget exhausted: the factual one-liner stands.
+      }
+      // The weekly contest, as it stands this morning.
+      try {
+        const { weekStandings, weekOf, RANK_MIN_GRADED, RANK_MIN_SIDE } = await import("../stats.ts");
+        const start = weekOf(night);
+        const end = new Date(Date.parse(`${start}T00:00:00Z`) + 6 * 86_400_000).toISOString().slice(0, 10);
+        const rows = (await weekStandings(ctx.state, start)).map(({ name, score, graded, dead, alive, ranked }) => ({ name, score, graded, dead, alive, ranked }));
+        draft.week = { start, end, minGraded: RANK_MIN_GRADED, minSide: RANK_MIN_SIDE, rows };
+      } catch {
+        // The brief goes out without the standings.
       }
       const markdown = renderBrief(draft, review);
       await ctx.artifact.publish(`morning-brief-${night}`, { night, markdown, sections: draft });
