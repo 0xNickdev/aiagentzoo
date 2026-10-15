@@ -5,7 +5,7 @@ import { GUEST_SCORES, nightOf } from "./agents/nightWatch.ts";
 import type { GuestHouse } from "./guests.ts";
 
 /** The numbers the site shows up top, read from the canyon's state. */
-export function canyonStats(enclosure: Enclosure, briefAt: string, model: string | null, guests?: GuestHouse) {
+export function canyonStats(enclosure: Enclosure, briefAt: string, guests?: GuestHouse) {
   return async () => {
     const night = nightOf(Date.now(), briefAt);
     const obs = (await enclosure.store.get<Record<string, unknown>>(`obs:${night}`)) ?? {};
@@ -30,7 +30,6 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, model: string
       playbookVersion: playbook?.version ?? 0,
       guests: all.length,
       clawpumpGuests: all.filter((g) => g.platform === "clawpump").length,
-      model,
     };
   };
 }

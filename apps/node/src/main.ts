@@ -112,7 +112,7 @@ const stopTelegram =
         log: (m) => console.log(`[${config.id}] ${m}`),
         data: {
           board: leaderboard(enclosure, config.briefAt) as never,
-          stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests) as never,
+          stats: canyonStats(enclosure, config.briefAt, guests) as never,
           evolution: (() => evolutionView(enclosure.store, config.briefAt)) as never,
           latestBrief: async () => {
             const ref = briefs.list(1)[0];
@@ -129,11 +129,11 @@ const server = createNodeServer({
   enclosure,
   adminToken: config.adminToken,
   corsOrigin: config.corsOrigin,
-  meta: { role: config.role, model: model?.id ?? null, visitorAgents },
+  meta: { role: config.role, ai: Boolean(model), visitorAgents },
   passports: await PassportIndex.build(enclosure),
   briefs,
   guests,
-  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, model?.id ?? null, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   visitor: {
     agents: visitorAgents,
