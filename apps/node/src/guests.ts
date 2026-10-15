@@ -30,6 +30,8 @@ export interface Guest {
   /** The guest's own token mint, if it has one. */
   token: string | null;
   homepage: string | null;
+  /** Where the zoo posts a signed `guest.graded` event when the guest's calls are graded. Never shown publicly. */
+  webhook?: string | null;
   admittedAt: number;
   updatedAt: number;
   signals: number;
@@ -127,6 +129,7 @@ export class GuestHouse {
     }
     if (p.token !== undefined && p.token !== null && (typeof p.token !== "string" || !MINT.test(p.token))) return fail(400, "token must be a mint address");
     if (p.homepage !== undefined && p.homepage !== null && !isHttpsUrl(p.homepage)) return fail(400, "homepage must be an https URL");
+    if (p.webhook !== undefined && p.webhook !== null && !isWebhookUrl(p.webhook)) return fail(400, "webhook must be a public https URL");
 
     const wallet = p.wallet as string;
     const existing = this.guests.get(name);
@@ -144,6 +147,7 @@ export class GuestHouse {
       about,
       token: (p.token as string | undefined) ?? null,
       homepage: (p.homepage as string | undefined) ?? null,
+      webhook: (p.webhook as string | undefined) ?? null,
       admittedAt: existing?.admittedAt ?? now,
       updatedAt: event.ts,
       signals: existing?.signals ?? 0,
@@ -223,6 +227,20 @@ function walletKey(wallet: unknown): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** A guest as anyone may see it: everything but its webhook. */
+export function publicGuest({ webhook: _w, ...guest }: Guest): Omit<Guest, "webhook"> {
+  return guest;
+}
+
+/** An https URL on a public host: the node will POST to it, so no local names, internal hosts or bare IPs. */
+export function isWebhookUrl(value: unknown): boolean {
+  if (!isHttpsUrl(value)) return false;
+  const host = new URL(value as string).hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local")) return false;
+  if (/^[\d.]+$/.test(host) || host.includes(":") || host.startsWith("[")) return false;
+  return host.includes(".");
 }
 
 function isHttpsUrl(value: unknown): boolean {

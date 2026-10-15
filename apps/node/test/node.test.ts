@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { createEvent, Enclosure, FeedLedger, Identity, PeerDirectory, signEvent, verifyChain } from "@aiagentzoo/sdk";
+import { assertSigned, createEvent, Enclosure, FeedLedger, Identity, PeerDirectory, signEvent, verifyChain } from "@aiagentzoo/sdk";
 import { buildSections, nightOf, nightWatch, type Observation, renderBrief } from "../src/agents/nightWatch.ts";
 import { createNodeServer } from "../src/server.ts";
 
@@ -298,6 +298,34 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     const log = await (await fetch(`${base}/v1/log?limit=1000`)).json();
     assert.equal(verifyChain(log), null);
     assert.ok(log.some((e: any) => e.event.type === "guest.signal" && e.event.payload.signal.sig));
+
+    // A webhook to hear about grades: public hosts only, and never shown to anyone else.
+    assert.equal((await post("/v1/guests", register({ about: "x", webhook: "https://localhost/hook" }))).status, 400);
+    assert.equal((await post("/v1/guests", register({ about: "x", webhook: "https://canyon.railway.internal/x" }))).status, 400);
+    assert.equal((await post("/v1/guests", register({ about: "Watches ClawPump launches", webhook: "https://hooks.example.com/zoo" }))).status, 200);
+    assert.equal("webhook" in (await (await fetch(`${base}/v1/guests/crab`)).json()), false);
+    const { notifyGraded } = await import("../src/notify.ts");
+    const { nightOf } = await import("../src/agents/nightWatch.ts");
+    const { previousNight } = await import("../src/agents/judgement.ts");
+    const at = Date.UTC(2026, 9, 16, 12);
+    const graded = previousNight(nightOf(at, "07:00"));
+    await enclosure.store.set(`score:${graded}`, {
+      night: graded, checked: 1, hits: 0, misses: 0, accuracy: null, cases: [],
+      guests: { crab: { hits: 1, misses: 0, dead: 1, deadRight: 1, alive: 0, aliveRight: 0 } },
+      guestCases: { crab: [{ mint: MINT, symbol: "SILK", verdict: "suspicious", outcome: "dead", hit: true }] },
+    });
+    const hooks: any[] = [];
+    const hook = (async (url: string, init: RequestInit) => {
+      hooks.push({ url, event: JSON.parse(String(init.body)) });
+      return new Response("ok");
+    }) as typeof fetch;
+    assert.equal(await notifyGraded(enclosure, guests, "07:00", at, hook), 1);
+    assert.equal(hooks[0].url, "https://hooks.example.com/zoo");
+    assert.equal(hooks[0].event.type, "guest.graded");
+    assert.equal(hooks[0].event.payload.cases[0].hit, true);
+    assertSigned(hooks[0].event, canyon.identity.publicKey);
+    // Told once per batch of grades.
+    assert.equal(await notifyGraded(enclosure, guests, "07:00", at, hook), 0);
 
     assert.equal((await post("/v1/guests/crab/evict", {})).status, 401);
     assert.equal((await post("/v1/guests/crab/evict", {}, { authorization: "Bearer t" })).status, 200);

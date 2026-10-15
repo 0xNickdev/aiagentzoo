@@ -20,6 +20,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools } from "./sources.ts";
 import { startPumpStream, tape } from "./chain/pump.ts";
+import { notifyGraded } from "./notify.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 
 const config = loadConfig();
@@ -97,6 +98,9 @@ const guests =
         signalCooldownMs: Number(process.env.ZOO_GUEST_COOLDOWN_MS ?? 10 * 60_000),
       })
     : undefined;
+
+// Guests with a webhook hear when their calls are graded.
+if (guests) setInterval(() => void notifyGraded(enclosure, guests, config.briefAt).catch(() => {}), 10 * 60_000);
 
 // The beaver answers anyone's question about a token, on the canyon where it lives.
 const northUrl = config.peers.find((p) => p.id === "north.zoo")?.url;

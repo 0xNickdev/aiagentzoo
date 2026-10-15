@@ -16,7 +16,7 @@ import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
 import { tape } from "./chain/pump.ts";
-import { type GuestHouse, isGuestNode } from "./guests.ts";
+import { type GuestHouse, isGuestNode, publicGuest } from "./guests.ts";
 
 export interface ServerOptions {
   enclosure: Enclosure;
@@ -267,7 +267,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           policy: guests.policy,
           guests: guests.list().map((g) => {
             const score = scores[g.name];
-            return { ...g, score: score ? { ...score, skill: skillOf(score) } : null };
+            return { ...publicGuest(g), score: score ? { ...score, skill: skillOf(score) } : null };
           }),
         });
       }
@@ -372,7 +372,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       const guestOf = /^\/v1\/guests\/([a-z0-9-]+)$/.exec(path);
       if (req.method === "GET" && guestOf) {
         const found = guests?.get(guestOf[1]!);
-        return found ? json(res, 200, found) : json(res, 404, { error: "no such guest" });
+        return found ? json(res, 200, publicGuest(found)) : json(res, 404, { error: "no such guest" });
       }
       if (req.method === "POST" && path === "/v1/guests") {
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
