@@ -1,4 +1,5 @@
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
+import type { HolderReport } from "./holders.ts";
 import type { ChainFacts, CreatorRecord } from "./pump.ts";
 
 /**
@@ -7,60 +8,86 @@ import type { ChainFacts, CreatorRecord } from "./pump.ts";
  */
 export type CheckVerdict = "avoid" | "caution" | "pass" | "unknown";
 
+export const CHECK_VERSION = 2;
+/** Under this age a token has had no time to show anything but its creator's history: the check says so. */
+export const EARLY_MIN = 10;
+
 export interface TokenCheck {
+  version: number;
   mint: string;
   symbol: string | null;
   verdict: CheckVerdict;
-  /** true only on pass; null when the tape never saw the token, so the caller decides with its other tools. */
+  /** true on pass; null when the tape never saw the token, so the caller decides with its other tools. */
   proceed: boolean | null;
+  /** Why the verdict, in plain words: every avoid reason first, then every caution reason. */
   reasons: string[];
+  /** Worth knowing, never a reason to refuse: "too early to tell", "holders not checked". */
+  notes: string[];
   facts: {
     ageMin: number;
     buyers: number;
+    buys: number;
+    sells: number;
     creatorSoldPct: number | null;
     creatorLaunches24h: number;
     creatorDumped48h: number | null;
+    creatorMedianDumpMin: number | null;
     bundleWallets: number | null;
     bundleSharePct: number | null;
-    top5SharePct: number | null;
+    top5BuyingPct: number | null;
     graduated: boolean;
-    /** The token it trades against when not SOL. */
+    /** The token it trades against when not SOL; then curveSol is null. */
     quote: string | null;
     curveSol: number | null;
     poolSol: number | null;
   } | null;
+  /** Only with ?holders=1: who holds it right now, from Solana RPC. */
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
+  /** How fresh the chain stream behind this answer is. */
+  stream: { live: boolean; lastEventSecAgo: number | null };
   checkedAt: number;
   more: string;
 }
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? null : Math.round(x * 100));
 
+export interface CheckInput {
+  symbol: string;
+  facts: ChainFacts;
+  creatorRecord: CreatorRecord | null;
+}
+
 export function checkToken(
   mint: string,
-  found: { symbol: string; facts: ChainFacts; creatorRecord: CreatorRecord | null } | null,
-  now = Date.now(),
+  found: CheckInput | null,
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null } = {},
 ): TokenCheck {
-  const more = `https://zooaiagency.com/ask`;
+  const now = opts.now ?? Date.now();
+  const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
+  const base = { version: CHECK_VERSION, mint, checkedAt: now, more: "https://zooaiagency.com/skill.md", stream };
   if (!found) {
     return {
-      mint,
+      ...base,
       symbol: null,
       verdict: "unknown",
       proceed: null,
       reasons: ["not a pump.fun launch from the last two days, so there is no chain record to check"],
+      notes: stream.live ? [] : ["the chain stream is down right now: a fresh launch may be missing for that reason"],
       facts: null,
-      checkedAt: now,
-      more,
     };
   }
   const f = found.facts;
   const c = found.creatorRecord;
   const avoid: string[] = [];
   const caution: string[] = [];
+  const notes: string[] = [];
+  const early = f.ageMin < EARLY_MIN;
 
+  // The creator selling their own bag is the pump.fun rug.
   if (f.creatorSold !== null && f.creatorSold >= 0.5) avoid.push(`the creator sold ${pct(Math.min(1, f.creatorSold))}% of their own bag`);
   else if (f.creatorSold !== null && f.creatorSold > 0.1) caution.push(`the creator has sold ${pct(f.creatorSold)}% of their own bag`);
 
+  // Their history, from every launch of theirs the tape saw in two days.
   if (c && c.dumped >= 3 && c.dumped / Math.max(1, c.launches48h) >= 0.5) {
     const speed = c.medianDumpMin === null ? "" : `, usually ${c.medianDumpMin} min after launch`;
     avoid.push(`this creator dumped ${c.dumped} of their ${c.launches48h} launches in 48 hours${speed}`);
@@ -68,6 +95,7 @@ export function checkToken(
     caution.push(`the creator launched ${f.creatorLaunches24h} tokens in the last 24 hours`);
   }
 
+  // Wallets other than the creator buying in the launch block: the supply was split up before anyone could see it.
   if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) {
     avoid.push(`${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`);
   }
@@ -79,34 +107,80 @@ export function checkToken(
     if (real !== null && curveCapOf(real) < CURVE_DEAD_SOL) avoid.push(`${Math.round(f.ageMin / 60)} hours old and the curve is back where it opened: nobody is holding it`);
   }
 
-  if (f.top5Share !== null && f.top5Share > 0.5) caution.push(`the top 5 buyers took ${pct(f.top5Share)}% of all buying`);
-  if (f.ageMin < 10) caution.push(`only ${Math.max(0, Math.round(f.ageMin))} min old, too early to tell`);
-  else if (f.buyers === 0) caution.push("nobody has bought it");
-  else if (f.buyers < 10) caution.push(`only ${f.buyers} wallets have bought it`);
-  if (f.sells > f.buys * 2 && f.sells >= 10) caution.push(`sells outnumber buys ${f.sells} to ${f.buys}`);
+  if (early) {
+    // Minutes in, a handful of buyers is normal; only the creator's own record can speak yet.
+    notes.push(`only ${Math.max(0, Math.round(f.ageMin))} min old: no red flags yet, so check again before adding`);
+  } else {
+    if (f.top5Share !== null && f.top5Share > 0.5) caution.push(`the top 5 buyers took ${pct(f.top5Share)}% of all buying`);
+    if (f.buyers === 0) caution.push("nobody has bought it");
+    else if (f.buyers < 10) caution.push(`only ${f.buyers} wallets have bought it`);
+    if (f.sells > f.buys * 2 && f.sells >= 10) caution.push(`sells outnumber buys ${f.sells} to ${f.buys}`);
+  }
+
+  // Who holds it now catches what trades cannot: a creator who moved the bag to other wallets instead of selling.
+  let holders: TokenCheck["holders"];
+  if (opts.holders !== undefined) {
+    const h = opts.holders;
+    holders = h ? { top10Pct: pct(h.top10Share)!, topWalletPct: pct(h.topShare)!, creatorHoldsPct: pct(h.creatorShare) } : null;
+    if (!h) notes.push("holders could not be read from Solana right now");
+    else {
+      if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
+      else if (h.top10Share >= 0.5) caution.push(`the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`);
+      const bought = f.creatorSold !== null;
+      if (bought && (f.creatorSold ?? 0) < 0.5 && h.creatorShare !== null && h.creatorShare < 0.001) {
+        caution.push("the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets");
+      }
+    }
+  }
 
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
+  if (verdict === "pass") notes.push("pass means no creator dump, bundle, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
+  if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");
   return {
-    mint,
+    ...base,
     symbol: found.symbol,
     verdict,
     proceed: verdict === "pass",
-    reasons: verdict === "pass" ? ["no creator dump, bundle, serial launcher or dead curve seen on chain"] : [...avoid, ...caution],
+    reasons: [...avoid, ...caution],
+    notes,
     facts: {
       ageMin: Math.round(f.ageMin),
       buyers: f.buyers,
+      buys: f.buys,
+      sells: f.sells,
       creatorSoldPct: pct(f.creatorSold === null ? null : Math.min(1, f.creatorSold)),
       creatorLaunches24h: f.creatorLaunches24h,
       creatorDumped48h: c ? c.dumped : null,
+      creatorMedianDumpMin: c ? c.medianDumpMin : null,
       bundleWallets: f.bundleWallets,
       bundleSharePct: pct(f.bundleShare),
-      top5SharePct: pct(f.top5Share),
+      top5BuyingPct: pct(f.top5Share),
       graduated: f.graduated,
       quote: f.quote ?? null,
       curveSol: f.curveSol,
       poolSol: f.poolSol,
     },
-    checkedAt: now,
-    more,
+    ...(holders !== undefined ? { holders } : {}),
   };
+}
+
+/** A sliding one-minute window per caller: cheap protection for a public endpoint agents may call in a loop. */
+export class RateGate {
+  private readonly hits = new Map<string, number[]>();
+  private readonly perMinute: number;
+  constructor(perMinute: number) {
+    this.perMinute = perMinute;
+  }
+  /** Milliseconds to wait, 0 when the call may go ahead (and is counted). */
+  take(key: string, now = Date.now()): number {
+    const recent = (this.hits.get(key) ?? []).filter((t) => now - t < 60_000);
+    if (recent.length >= this.perMinute) {
+      this.hits.set(key, recent);
+      return 60_000 - (now - recent[0]!);
+    }
+    recent.push(now);
+    this.hits.set(key, recent);
+    if (this.hits.size > 50_000) for (const [k, v] of this.hits) if (!v.some((t) => now - t < 60_000)) this.hits.delete(k);
+    return 0;
+  }
 }

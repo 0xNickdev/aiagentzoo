@@ -7,6 +7,7 @@
  * their bag, and once it graduates, how its PumpSwap pool is doing.
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
+import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
 /** PumpSwap, where a token's pool lives once it graduates from the curve. */
@@ -745,6 +746,48 @@ export class PumpTape {
       out.push({ mint, symbol: t.symbol.slice(0, 16), name: t.name.slice(0, 40), ageMin: Math.round(age), buyers: f.buyers, repeatBuyers: f.repeatBuyers, top5Share: f.top5Share, creatorSold: f.creatorSold, curveSol: f.curveSol, graduated: f.graduated });
     }
     return out;
+  }
+
+  /**
+   * The creator check's own track record: for every SOL-paired launch 24 to 48 hours old, what the check would have
+   * said five minutes after launch (from the creator's dumps and launches up to then, and the launch-block bundle),
+   * against where the token stands now (its curve or its pool, the same lines the zoo grades by).
+   */
+  checkRecord(now = Date.now(), atMin = 5) {
+    type Side = { n: number; dead: number; alive: number; unknown: number };
+    const side = (): Side => ({ n: 0, dead: 0, alive: 0, unknown: 0 });
+    const flagged = side();
+    const clear = side();
+    const why = { dumped: 0, serial: 0, bundle: 0 };
+    for (const t of this.tokens.values()) {
+      const age = now - t.createdAt;
+      if (age < DAY_MS || age > KEEP_MS || t.quote) continue;
+      const at = t.createdAt + atMin * 60_000;
+      const dumpedEarly = t.dumped && t.dumpedAt !== null && t.dumpedAt <= at;
+      const before = (this.byCreator.get(t.creator) ?? [])
+        .map((m) => this.tokens.get(m))
+        .filter((o): o is Tracked => Boolean(o) && o!.mint !== t.mint && o!.createdAt < at && at - o!.createdAt <= KEEP_MS);
+      const dumpedBefore = before.filter((o) => o.dumped && o.dumpedAt !== null && o.dumpedAt <= at).length;
+      const serial = dumpedBefore >= 3 && dumpedBefore / (before.length + 1) >= 0.5;
+      const bundle = t.createSlot !== null && t.launchBuys.size >= 3 && [...t.launchBuys.values()].reduce((a, b) => a + b, 0) / SUPPLY >= 0.15;
+      let outcome: "dead" | "alive" | "unknown" = "unknown";
+      if (t.graduated) {
+        if (t.poolSol !== null) outcome = t.poolSol >= POOL_ALIVE_SOL ? "alive" : t.poolSol < POOL_DEAD_SOL ? "dead" : "unknown";
+      } else {
+        const real = t.curveSol ?? (t.buys === 0 ? 0 : null);
+        if (real !== null) {
+          const cap = curveCapOf(real);
+          outcome = cap >= CURVE_ALIVE_SOL ? "alive" : cap < CURVE_DEAD_SOL ? "dead" : "unknown";
+        }
+      }
+      const s = dumpedEarly || serial || bundle ? flagged : clear;
+      s.n += 1;
+      s[outcome] += 1;
+      if (dumpedEarly) why.dumped += 1;
+      if (serial) why.serial += 1;
+      if (bundle) why.bundle += 1;
+    }
+    return { window: "launched 24 to 48 hours ago", checkedAtMin: atMin, flaggedAvoid: flagged, notFlagged: clear, avoidBecause: why, computedAt: now };
   }
 
   /** One token as the tape knows it, for questions about a single mint. */

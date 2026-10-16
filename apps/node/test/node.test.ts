@@ -1240,7 +1240,7 @@ test("the beaver's reasons come back from one numbered translation, missing line
 });
 
 test("the pre-trade check says avoid, caution or pass in plain words, and never vouches for a token it never saw", async () => {
-  const { checkToken } = await import("../src/chain/check.ts");
+  const { checkToken, RateGate } = await import("../src/chain/check.ts");
   const facts = (over: Record<string, unknown> = {}) => ({
     ageMin: 45, buys: 80, sells: 30, buyers: 60, solIn: 20, solOut: 5, curveSol: 15, creatorSold: 0, creatorLaunches24h: 1, graduated: false,
     top5Share: 0.3, repeatBuyers: 8, trades15m: 50, bundleWallets: 0, bundleShare: 0, poolSol: null, ammBuys: 0, ammSells: 0, ammSolIn: 0, ammSolOut: 0, ...over,
@@ -1249,6 +1249,8 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   const clean = checkToken("M", { symbol: "OK", facts: facts(), creatorRecord: rec() });
   assert.equal(clean.verdict, "pass");
   assert.equal(clean.proceed, true);
+  assert.deepEqual(clean.reasons, []);
+  assert.match(clean.notes.join(" "), /not a call that the price goes up/);
 
   const dumped = checkToken("M", { symbol: "D", facts: facts({ creatorSold: 1 }), creatorRecord: rec() });
   assert.equal(dumped.verdict, "avoid");
@@ -1257,21 +1259,66 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
 
   const serial = checkToken("M", { symbol: "S", facts: facts({ creatorLaunches24h: 40 }), creatorRecord: rec({ launches48h: 40, dumped: 38, medianDumpMin: 0 }) });
   assert.equal(serial.verdict, "avoid");
-  assert.match(serial.reasons[0]!, /dumped 38 of their 40 launches/);
+  assert.match(serial.reasons[0]!, /dumped 38 of their 40 launches in 48 hours, usually 0 min after launch/);
 
-  const bundled = checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4 }), creatorRecord: rec() });
-  assert.equal(bundled.verdict, "avoid");
+  assert.equal(checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4 }), creatorRecord: rec() }).verdict, "avoid");
+  assert.equal(checkToken("M", { symbol: "Z", facts: facts({ ageMin: 600, curveSol: 0.2 }), creatorRecord: rec() }).verdict, "avoid");
+  // Paired with another token, the curve is not in SOL: no dead-curve call.
+  assert.equal(checkToken("M", { symbol: "Q", facts: facts({ ageMin: 600, curveSol: null, quote: "Q1" }), creatorRecord: rec() }).verdict, "pass");
 
-  const fresh = checkToken("M", { symbol: "F", facts: facts({ ageMin: 3 }), creatorRecord: rec() });
-  assert.equal(fresh.verdict, "caution");
-  assert.equal(fresh.proceed, false);
+  // Minutes in, a sniper hears pass with a note, unless the creator's own record already speaks.
+  const fresh = checkToken("M", { symbol: "F", facts: facts({ ageMin: 2, buyers: 3, top5Share: 1 }), creatorRecord: rec() });
+  assert.equal(fresh.verdict, "pass");
+  assert.match(fresh.notes[0]!, /only 2 min old/);
+  assert.equal(checkToken("M", { symbol: "F", facts: facts({ ageMin: 2 }), creatorRecord: rec({ launches48h: 9, dumped: 8, medianDumpMin: 1 }) }).verdict, "avoid");
 
-  const deadCurve = checkToken("M", { symbol: "Z", facts: facts({ ageMin: 600, curveSol: 0.2 }), creatorRecord: rec() });
-  assert.equal(deadCurve.verdict, "avoid");
+  // Holders on request: a creator who never sold but holds nothing moved the bag.
+  const moved = checkToken("M", { symbol: "H", facts: facts({ creatorSold: 0 }), creatorRecord: rec() }, { holders: { top10Share: 0.3, topShare: 0.05, programShare: 0.6, creator: "c", creatorShare: 0 } });
+  assert.equal(moved.verdict, "caution");
+  assert.match(moved.reasons[0]!, /bag moved to other wallets/);
+  assert.deepEqual(moved.holders, { top10Pct: 30, topWalletPct: 5, creatorHoldsPct: 0 });
+  const whale = checkToken("M", { symbol: "W", facts: facts(), creatorRecord: rec() }, { holders: { top10Share: 0.6, topShare: 0.35, programShare: 0.2, creator: null, creatorShare: null } });
+  assert.match(whale.reasons[0]!, /one wallet holds 35%/);
+  const noRpc = checkToken("M", { symbol: "N", facts: facts(), creatorRecord: rec() }, { holders: null });
+  assert.equal(noRpc.verdict, "pass");
+  assert.match(noRpc.notes.join(" "), /holders could not be read/);
 
-  const unseen = checkToken("M", null);
+  const unseen = checkToken("M", null, { stream: { live: false, lastEventSecAgo: 300 } });
   assert.equal(unseen.verdict, "unknown");
   assert.equal(unseen.proceed, null);
+  assert.match(unseen.notes[0]!, /stream is down/);
+
+  const gate = new RateGate(2);
+  assert.equal(gate.take("a", 0), 0);
+  assert.equal(gate.take("a", 1), 0);
+  assert.ok(gate.take("a", 2) > 0);
+  assert.equal(gate.take("b", 2), 0);
+  assert.equal(gate.take("a", 60_001), 0);
+});
+
+test("the creator check keeps its own record: what it would have said five minutes in, against the next day", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const now = 1_792_200_000_000;
+  const born = now - 30 * 3_600_000;
+  const BAD = "So11111111111111111111111111111111111111112";
+  const GOOD = "11111111111111111111111111111112";
+  const create = (mint: string, creator: string, at: number) => tape.apply({ kind: "create", name: mint, symbol: mint.slice(0, 4), mint, creator, ts: at }, at);
+  const trade = (mint: string, user: string, isBuy: boolean, tokens: number, at: number, curveSol: number) =>
+    tape.apply({ kind: "trade", mint, sol: 1, tokens, isBuy, user, ts: at, curveSol }, at);
+  // A creator who dumped in the first minute and is back at the opening line a day later.
+  create("Bad1111111111111111111111111111111111111111", BAD, born);
+  trade("Bad1111111111111111111111111111111111111111", BAD, true, 1_000_000, born, 1);
+  trade("Bad1111111111111111111111111111111111111111", BAD, false, 1_000_000, born + 60_000, 0.1);
+  // A clean launch that ends the day far up the curve.
+  create("Good111111111111111111111111111111111111111", GOOD, born);
+  trade("Good111111111111111111111111111111111111111", "Buyer11111111111111111111111111111111111111", true, 5_000_000, born + 30 * 60_000, 40);
+  // Too young to grade.
+  create("Young11111111111111111111111111111111111111", GOOD, now - 3_600_000);
+  const r = tape.checkRecord(now);
+  assert.deepEqual(r.flaggedAvoid, { n: 1, dead: 1, alive: 0, unknown: 0 });
+  assert.deepEqual(r.notFlagged, { n: 1, dead: 0, alive: 1, unknown: 0 });
+  assert.equal(r.avoidBecause.dumped, 1);
 });
 
 test("a pump.fun launch paired with another token is tracked, but its amounts are never read as SOL", async () => {

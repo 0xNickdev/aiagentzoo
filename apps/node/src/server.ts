@@ -13,7 +13,7 @@ import { weekOf } from "./stats.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
-import { checkToken } from "./chain/check.ts";
+import { checkToken, RateGate } from "./chain/check.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
@@ -76,6 +76,9 @@ const MAX_STREAMS = 500;
 export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
+  // The creator check: generous per caller, since agents behind one proxy share an address.
+  const checkGate = new RateGate(120);
+  let checkRecord: { at: number; body: unknown } | null = null;
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
   const streams = new Set<ServerResponse>();
   enclosure.log.subscribe((entry) => {
@@ -306,10 +309,32 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
       }
       // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
+      if (req.method === "GET" && path === "/v1/check/record") {
+        if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
+        if (!checkRecord || Date.now() - checkRecord.at > 10 * 60_000) checkRecord = { at: Date.now(), body: tape.checkRecord() };
+        res.setHeader("cache-control", "public, max-age=300");
+        return json(res, 200, checkRecord.body);
+      }
       const checkOf = /^\/v1\/check\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && checkOf) {
-        if (!tape.connected && tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
-        return json(res, 200, checkToken(checkOf[1]!, tape.token(checkOf[1]!)));
+        if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
+        // Behind the site's proxy every caller shares its address, so the gate keys on the first forwarded hop.
+        const first = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
+        const wait = checkGate.take(first || clientIp(req));
+        if (wait > 0) {
+          res.setHeader("retry-after", String(Math.ceil(wait / 1000)));
+          return json(res, 429, { error: "slow down: 120 checks a minute per caller", retryAfterMs: wait });
+        }
+        const mint = checkOf[1]!;
+        const deep = url.searchParams.get("holders") === "1";
+        const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
+        const found = tape.token(mint);
+        // Who holds it now costs RPC calls, so only on request, and never longer than four seconds.
+        const holders = deep && found && holdersEnabled()
+          ? await Promise.race([holderReport(mint).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 4_000))])
+          : undefined;
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}) }));
       }
       const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && creatorOf) {
