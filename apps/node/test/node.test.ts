@@ -1238,3 +1238,57 @@ test("the beaver's reasons come back from one numbered translation, missing line
   assert.equal(numberedLines(["creator sold  90%", "no socials"]), "1. creator sold 90%\n2. no socials");
   assert.deepEqual(parseNumbered("1. 开发者砸盘 90%\n2) no socials\n3、 越界", 2), ["开发者砸盘 90%", null]);
 });
+
+test("the pre-trade check says avoid, caution or pass in plain words, and never vouches for a token it never saw", async () => {
+  const { checkToken } = await import("../src/chain/check.ts");
+  const facts = (over: Record<string, unknown> = {}) => ({
+    ageMin: 45, buys: 80, sells: 30, buyers: 60, solIn: 20, solOut: 5, curveSol: 15, creatorSold: 0, creatorLaunches24h: 1, graduated: false,
+    top5Share: 0.3, repeatBuyers: 8, trades15m: 50, bundleWallets: 0, bundleShare: 0, poolSol: null, ammBuys: 0, ammSells: 0, ammSolIn: 0, ammSolOut: 0, ...over,
+  }) as never;
+  const rec = (over: Record<string, unknown> = {}) => ({ wallet: "w", launches24h: 1, launches48h: 1, dumped: 0, medianDumpMin: null, graduated: 0, recent: [], ...over }) as never;
+  const clean = checkToken("M", { symbol: "OK", facts: facts(), creatorRecord: rec() });
+  assert.equal(clean.verdict, "pass");
+  assert.equal(clean.proceed, true);
+
+  const dumped = checkToken("M", { symbol: "D", facts: facts({ creatorSold: 1 }), creatorRecord: rec() });
+  assert.equal(dumped.verdict, "avoid");
+  assert.equal(dumped.proceed, false);
+  assert.match(dumped.reasons[0]!, /creator sold 100%/);
+
+  const serial = checkToken("M", { symbol: "S", facts: facts({ creatorLaunches24h: 40 }), creatorRecord: rec({ launches48h: 40, dumped: 38, medianDumpMin: 0 }) });
+  assert.equal(serial.verdict, "avoid");
+  assert.match(serial.reasons[0]!, /dumped 38 of their 40 launches/);
+
+  const bundled = checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4 }), creatorRecord: rec() });
+  assert.equal(bundled.verdict, "avoid");
+
+  const fresh = checkToken("M", { symbol: "F", facts: facts({ ageMin: 3 }), creatorRecord: rec() });
+  assert.equal(fresh.verdict, "caution");
+  assert.equal(fresh.proceed, false);
+
+  const deadCurve = checkToken("M", { symbol: "Z", facts: facts({ ageMin: 600, curveSol: 0.2 }), creatorRecord: rec() });
+  assert.equal(deadCurve.verdict, "avoid");
+
+  const unseen = checkToken("M", null);
+  assert.equal(unseen.verdict, "unknown");
+  assert.equal(unseen.proceed, null);
+});
+
+test("a pump.fun launch paired with another token is tracked, but its amounts are never read as SOL", async () => {
+  const { parsePumpLogs, PumpTape } = await import("../src/chain/pump.ts");
+  // Real CreateV2 event from mainnet: META, paired with OTC (MukLD...pump) instead of SOL.
+  const createV2 =
+    "Program data: G3KpTd7rY3YEAAAATWV0YQQAAABNRVRBUAAAAGh0dHBzOi8vaXBmcy5pby9pcGZzL2JhZmtyZWllNTZidjRqMnBxZWh5c2RnbnAzZ2podW5ueDNqb2dlYXR5YW5rNzdqdHJ4cHY2eG1sd3d1QWxz18ddr7sq/rsjufRrIG4CLndr7j7MzZJFIX4pr1J9HnyOhQVUy0f/k4+Vsl7znVnVVk/QM2AY/chxCvLvNavK85lK16L4NnmZGte9MB+mlla1dsuwqdB7XMw4/pNeq8rzmUrXovg2eZka170wH6aWVrV2y7Cp0HtczDj+k17cJNFqAAAAAAAQ2EfjzwMAQDKin1YAAAAAeMX7UdECAACAxqR+jQMABt324e51j94YQl285GzN2rYa/E2DuQ0n/r35KNihi/wAAAVbQewvE0/oSDZZk1EOc+yvWUFcu1gGKlY2RWejfTXPQDKin1YAAAAsAQAAAAAAAAAA";
+  const [ev] = parsePumpLogs([createV2]) as any[];
+  assert.equal(ev.kind, "create");
+  assert.equal(ev.mint, "5QPR9T9ZMwKcGLWwGWWajRLuEyasNEZxLkaCmRwWeoGV");
+  assert.equal(ev.quote, "MukLDtJ8Cx9DxLbeyLRSWPSposTMWuwHANbuaudpump");
+  const tape = new PumpTape();
+  const now = 1_792_091_400_000;
+  tape.apply(ev, now);
+  tape.apply({ kind: "trade", mint: ev.mint, sol: 500, tokens: 1e6, isBuy: true, user: "11111111111111111111111111111111", ts: now, curveSol: 400 }, now);
+  const f = tape.facts(ev.mint, now)!;
+  assert.equal(f.quote, "MukLDtJ8Cx9DxLbeyLRSWPSposTMWuwHANbuaudpump");
+  assert.equal(f.curveSol, null);
+  assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "whale").length, 0);
+});

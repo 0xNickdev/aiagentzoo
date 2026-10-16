@@ -24,7 +24,8 @@ const DISC = {
 };
 
 export type PumpEvent =
-  | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null }
+  /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
+  | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null; quote?: string | null }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
@@ -140,7 +141,16 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
         // Newer versions add the creator and a timestamp; older ones stop at the user, who is the creator.
         const creator = r.left() >= 32 ? r.key() : user;
         const ts = r.left() >= 8 ? Number(r.i64()) * 1000 : null;
-        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts });
+        // CreateV2 goes on: four reserves, the token program, two flags, then the quote mint.
+        let quote: string | null = null;
+        if (r.left() >= 4 * 8 + 32 + 2 + 32) {
+          for (let i = 0; i < 4; i++) r.u64();
+          r.key(); // token program
+          r.skip(2);
+          const q = base58(r.key());
+          if (q !== WSOL && !/^1+$/.test(q)) quote = q;
+        }
+        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}) });
       } else if (head.equals(DISC.trade)) {
         const mint = r.key();
         const sol = Number(r.u64()) / LAMPORTS;
@@ -193,6 +203,8 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
 export interface ChainFacts {
   /** Minutes since launch. */
   ageMin: number;
+  /** The token it trades against when not SOL; then solIn, solOut and curveSol are not in SOL (curveSol stays null). */
+  quote?: string | null;
   buys: number;
   sells: number;
   /** Distinct wallets that bought, capped at 100 to bound memory across tens of thousands of tokens. */
@@ -231,6 +243,8 @@ const BUNDLE_SLOTS = 1;
 
 interface Tracked {
   mint: string;
+  /** The token it trades against when not SOL; its amounts below are then in that token, not SOL. */
+  quote?: string | null;
   name: string;
   symbol: string;
   creator: string;
@@ -429,6 +443,7 @@ export class PumpTape {
       const createdAt = ev.ts ?? now;
       this.tokens.set(ev.mint, {
         mint: ev.mint,
+        quote: ev.quote ?? null,
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -500,13 +515,14 @@ export class PumpTape {
       else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
       }
-      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`, tx);
+      // Paired with another token, the amount is in that token, not SOL: no whale call on it.
+      if (!t.quote && ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`, tx);
     } else {
       t.sells += 1;
       t.solOut += ev.sol;
       if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
     }
-    if (ev.curveSol !== null) t.curveSol = ev.curveSol;
+    if (ev.curveSol !== null && !t.quote) t.curveSol = ev.curveSol;
   }
 
   private creatorSold(t: Tracked, tokens: number, ts: number, now: number, tx?: string): void {
@@ -624,6 +640,7 @@ export class PumpTape {
     const round = (n: number) => Math.round(n * 1000) / 1000;
     return {
       ageMin: Math.max(0, Math.round((now - t.createdAt) / 60_000)),
+      ...(t.quote ? { quote: t.quote } : {}),
       buys: t.buys,
       sells: t.sells,
       buyers: t.buyers.size,

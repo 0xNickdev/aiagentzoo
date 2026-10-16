@@ -13,6 +13,7 @@ import { weekOf } from "./stats.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
+import { checkToken } from "./chain/check.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
@@ -303,6 +304,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && chainToken) {
         const found = tape.token(chainToken[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
+      }
+      // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
+      const checkOf = /^\/v1\/check\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && checkOf) {
+        if (!tape.connected && tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
+        return json(res, 200, checkToken(checkOf[1]!, tape.token(checkOf[1]!)));
       }
       const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && creatorOf) {

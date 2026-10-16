@@ -153,6 +153,8 @@ export function outcomeOf(o: Observation | undefined): Outcome {
     if (c.poolSol === null) return "unknown";
     return c.poolSol >= POOL_ALIVE_SOL ? "alive" : c.poolSol < POOL_DEAD_SOL && !young ? "dead" : "unknown";
   }
+  // Paired with another token: its curve is not counted in SOL, so the SOL lines do not apply.
+  if (c.quote) return "unknown";
   // Nobody ever bought: the curve is where it opened.
   const real = c.curveSol ?? (c.buys === 0 ? 0 : null);
   return real === null ? "unknown" : byCap(curveCapOf(real), young);
