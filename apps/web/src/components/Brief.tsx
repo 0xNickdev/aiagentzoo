@@ -35,6 +35,7 @@ interface Sections {
   week?: Week;
   calls?: Call[];
   reviewZh?: string;
+  counts?: { graduated: number; wentToZero: number; suspicious: number };
   learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null } | null; playbook: { version: number; text: string } };
 }
 interface Week {
@@ -491,8 +492,8 @@ export default function Brief() {
       night: sec.night,
       observed: sec.observed,
       launches: sec.launches,
-      graduated: sec.graduated.length,
-      wentToZero: sec.wentToZero.length,
+      graduated: sec.counts?.graduated ?? sec.graduated.length,
+      wentToZero: sec.counts?.wentToZero ?? sec.wentToZero.length,
       highlight: tell ? clean(`$${tell.symbol}: ${(tell.reasons ?? []).join(", ")}.`) : null,
       nursery,
       skill: sec.learned?.score?.skill ?? null,
@@ -506,9 +507,9 @@ export default function Brief() {
     ? [
         [tr("TOKENS WATCHED"), s.observed.toLocaleString("en-US")],
         [tr("FRESH LAUNCHES"), s.launches.toLocaleString("en-US")],
-        [tr("GRADUATED"), String(s.graduated.length)],
-        [tr("WENT TO ZERO"), String(s.wentToZero.length)],
-        [tr("FLAGGED"), String(s.suspicious.length)],
+        [tr("GRADUATED"), String(s.counts?.graduated ?? s.graduated.length)],
+        [tr("WENT TO ZERO"), String(s.counts?.wentToZero ?? s.wentToZero.length)],
+        [tr("FLAGGED"), String(s.counts?.suspicious ?? s.suspicious.length)],
         [tr("BALANCED ACCURACY"), accuracyLabel(s.learned?.score?.skill, scored)],
       ]
     : [];
@@ -570,7 +571,7 @@ export default function Brief() {
             <div>
               <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("NIGHT OF {n} · NIGHT IN REVIEW", { n: s.night })}</p>
               <p className="mt-4 text-[16px] font-light leading-[1.7] text-white/80 sm:text-[19px]">
-                {(lang() === "zh" ? (s.reviewZh ?? null) : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.graduated.length, z: s.wentToZero.length, f: s.suspicious.length })}
+                {(lang() === "zh" ? (s.reviewZh ?? null) : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.counts?.graduated ?? s.graduated.length, z: s.counts?.wentToZero ?? s.wentToZero.length, f: s.counts?.suspicious ?? s.suspicious.length })}
               </p>
             </div>
             <div className="flex flex-col justify-end gap-3 lg:items-end">

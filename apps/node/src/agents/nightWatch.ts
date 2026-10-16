@@ -19,6 +19,7 @@ import {
   previousNight,
   REFLECT_SYSTEM,
   ruleCalls,
+  ruleFlags,
   type Scorecard,
   scoreNight,
   VERDICTS,
@@ -303,7 +304,15 @@ function marshAgents(cfg: NightWatchConfig): AgentDefinition[] {
     budget: { steps: 10, signals: 2 },
     async onWake(ctx) {
       const seen = new Set((await ctx.state.get<string[]>("owl:seen")) ?? []);
-      const mints = (await ctx.use<string[]>("dex.profiles")).filter((m) => isMint(m) && !seen.has(m)).slice(0, MAX_BATCH);
+      let profiles: string[];
+      try {
+        profiles = await ctx.use<string[]>("dex.profiles");
+      } catch (error) {
+        // DexScreener says slow down: skip this scan quietly, the next one catches up.
+        if (/responded 429/.test((error as Error).message)) return;
+        throw error;
+      }
+      const mints = profiles.filter((m) => isMint(m) && !seen.has(m)).slice(0, MAX_BATCH);
       if (mints.length === 0) {
         // Nothing new: leave no output, so quiet scans are not mistaken for a loop.
         return;
@@ -323,6 +332,8 @@ export interface Sections {
   topVolume: Observation[];
   wentToZero: Observation[];
   suspicious: Array<Observation & { reasons: string[] }>;
+  /** The whole night's numbers; the lists above show at most ten each. */
+  counts?: { graduated: number; wentToZero: number; suspicious: number };
   promoted: Observation[];
   /** Tokens guardians asked the zoo to watch, with who asked. */
   watched: Observation[];
@@ -383,25 +394,23 @@ export function buildSections(
 ): Sections {
   const usd = (n: number | null | undefined) => n ?? 0;
   const pump = obs.filter((o) => o.source === "pump");
-  const suspicious = obs
-    .map((o) => {
-      const reasons: string[] = [];
-      const m = o.market;
-      if (o.hasSocials === false) reasons.push("no socials");
-      if (m && m.sells24h > 0 && m.sells24h > m.buys24h * 3) reasons.push("sells outnumber buys 3:1");
-      if (m && usd(m.liquidityUsd) > 0 && usd(m.volume24hUsd) > usd(m.liquidityUsd) * 50) reasons.push("volume 50x liquidity");
-      return { ...o, reasons };
-    })
+  // The same flags the beaver's rules use, chain facts included: socials are unknown for most launches read from the chain.
+  const flaggedAll = obs
+    .map((o) => ({ ...o, reasons: ruleFlags(o) }))
     .filter((o) => o.reasons.length >= 2)
-    .slice(0, 10);
+    .sort((a, b) => b.reasons.length - a.reasons.length);
+  const suspicious = flaggedAll.slice(0, 10);
+  const graduatedAll = obs.filter((o) => o.complete);
+  const zeroAll = obs.filter((o) => o.market && (usd(o.market.priceChange24h) <= -90 || (o.market.liquidityUsd !== null && o.market.liquidityUsd < 100)));
   return {
     night,
     observed: obs.length,
     launches: pump.length,
-    graduated: obs.filter((o) => o.complete).slice(0, 10),
+    graduated: graduatedAll.slice(0, 10),
     topVolume: [...obs].filter((o) => o.market).sort((a, b) => usd(b.market!.volume24hUsd) - usd(a.market!.volume24hUsd)).slice(0, 10),
-    wentToZero: obs.filter((o) => o.market && (usd(o.market.priceChange24h) <= -90 || (o.market.liquidityUsd !== null && o.market.liquidityUsd < 100))).slice(0, 10),
+    wentToZero: zeroAll.slice(0, 10),
     suspicious,
+    counts: { graduated: graduatedAll.length, wentToZero: zeroAll.length, suspicious: flaggedAll.length },
     promoted: obs.filter((o) => o.source === "dex-profile" && !o.watchedBy?.length).slice(0, 10),
     watched: obs.filter((o) => o.watchedBy?.length).slice(0, 100),
     guests: [...guests].sort((a, b) => a.at - b.at).slice(0, MAX_GUESTS_PER_BRIEF),
@@ -672,14 +681,15 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         await ctx.trace("brief.skipped", { night, reason: "no drafts" });
         return;
       }
-      let review = `${draft.observed} tokens observed; ${draft.graduated.length} graduated, ${draft.wentToZero.length} went to zero, ${draft.suspicious.length} flagged.`;
+      const n = draft.counts ?? { graduated: draft.graduated.length, wentToZero: draft.wentToZero.length, suspicious: draft.suspicious.length };
+      let review = `${draft.observed} tokens observed; ${n.graduated} graduated, ${n.wentToZero} went to zero, ${n.suspicious} flagged.`;
       try {
         const result = await ctx.think({
           system:
             "You are the Archivist of ZOOAI AGENCY. Write the 'Night in review' paragraph of a factual morning brief about new Solana tokens. " +
             "3-5 sentences, plain English, numbers over adjectives, no hype, no investment advice, no names of people. " +
             "Use the headline figures exactly as given, never recount them from the lists. Write any accuracy or share as a percentage (75%, not 0.75 or 1).",
-          prompt: `Summarise the night from these aggregated sections. Headline figures, to use exactly: ${draft.observed} tokens observed, ${draft.launches} fresh launches, ${draft.graduated.length} graduated, ${draft.wentToZero.length} went to zero, ${draft.suspicious.length} flagged as suspicious.`,
+          prompt: `Summarise the night from these aggregated sections. Headline figures, to use exactly: ${draft.observed} tokens observed, ${draft.launches} fresh launches, ${n.graduated} graduated, ${n.wentToZero} went to zero, ${n.suspicious} flagged as suspicious.`,
           untrusted: draft,
           maxTokens: 600,
         });

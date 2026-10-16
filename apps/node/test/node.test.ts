@@ -1360,3 +1360,60 @@ test("clean launches leave out bundled launch blocks", async () => {
   assert.deepEqual(make("Clean11111111111111111111111111111111111111", "Dev11111111111111111111111111111", false), ["Clean11111111111111111111111111111111111111"]);
   assert.deepEqual(make("Bundle1111111111111111111111111111111111111", "Dev11111111111111111111111111111", true), []);
 });
+
+test("the watchdog speaks once when something breaks and once when it heals", async () => {
+  const { Watchdog } = await import("../src/watchdog.ts");
+  const dog = new Watchdog({ briefAt: "07:00" });
+  const t0 = Date.parse("2026-10-16T00:24:00Z");
+  const entry = (type: string, payload: Record<string, unknown>, agent = "beaver") => ({ seq: 1, prevHash: "", hash: "", event: { v: 1, id: "x", kind: "trace", type, from: { node: "canyon.zoo", agent }, payload, ts: t0 } }) as never;
+  const fail = entry("judge.fallback", { reason: "OpenAI 429: You have no credits remaining." });
+  assert.deepEqual(dog.onEntry(fail, t0), []);
+  assert.deepEqual(dog.onEntry(fail, t0 + 60_000), []);
+  const alert = dog.onEntry(fail, t0 + 120_000);
+  assert.equal(alert.length, 1);
+  assert.match(alert[0]!, /model is not answering: 3 failures/);
+  assert.match(alert[0]!, /no credits remaining/);
+  // Said once, not on every failure after.
+  assert.deepEqual(dog.onEntry(fail, t0 + 180_000), []);
+  // A rule call is not a recovery; a model call is.
+  assert.deepEqual(dog.onEntry(entry("calls.made", { by: "rules" }), t0 + 200_000), []);
+  assert.match(dog.onEntry(entry("calls.made", { by: "model" }), t0 + 40 * 60_000)[0]!, /model is answering again, after 38 min\./);
+  // A playbook kept because nothing changed is not a failure.
+  assert.deepEqual(dog.onEntry(entry("playbook.kept", { reason: "no new cases" }), t0), []);
+
+  // The stream: silent for over five minutes, then back.
+  assert.deepEqual(dog.onStream({ connected: true, lastEventAt: t0 - 60_000 }, t0), []);
+  assert.match(dog.onStream({ connected: true, lastEventAt: t0 - 9 * 60_000 }, t0)[0]!, /silent: no event for 9 min/);
+  assert.deepEqual(dog.onStream({ connected: false, lastEventAt: t0 - 20 * 60_000 }, t0 + 60_000), []);
+  assert.match(dog.onStream({ connected: true, lastEventAt: t0 + 4 * 60_000 }, t0 + 4 * 60_000)[0]!, /flowing again/);
+  assert.deepEqual(dog.onStream(null, t0), []);
+
+  // A node: three misses in a row before anyone is woken.
+  assert.deepEqual(dog.onNode("marsh.zoo", false, t0), []);
+  assert.deepEqual(dog.onNode("marsh.zoo", false, t0), []);
+  assert.match(dog.onNode("marsh.zoo", false, t0)[0]!, /marsh.zoo is not answering/);
+  assert.match(dog.onNode("marsh.zoo", true, t0 + 10 * 60_000)[0]!, /marsh.zoo is back up/);
+
+  // The brief: due 07:00, late after 07:20, and quiet once it is out.
+  const day = "2026-10-16";
+  assert.deepEqual(dog.onClock(Date.parse(`${day}T07:10:00Z`)), []);
+  assert.match(dog.onClock(Date.parse(`${day}T07:25:00Z`))[0]!, /brief for 2026-10-16 is not out, 25 min after 07:00/);
+  assert.deepEqual(dog.onClock(Date.parse(`${day}T07:27:00Z`)), []);
+  const out = entry("artifact.published", { content: { night: day } }, "tortoise");
+  assert.match(dog.onEntry(out, Date.parse(`${day}T07:30:00Z`))[0]!, /brief is out/);
+  assert.deepEqual(dog.onClock(Date.parse(`${day + "T08:00:00Z"}`)), []);
+});
+
+test("the brief counts the whole night, and flags tokens from chain facts when socials are unknown", async () => {
+  const { buildSections } = await import("../src/agents/nightWatch.ts");
+  const now = 1_792_300_000_000;
+  const items = Array.from({ length: 25 }, (_, i) => ({
+    ...obs({ mint: `M${String(i).padStart(43, "1")}`, symbol: `T${i}`, hasSocials: null, complete: i < 14, seenAt: now }),
+    chain: { ageMin: 30, buys: 5, sells: 9, buyers: 4, solIn: 1, solOut: 1, curveSol: 0.1, creatorSold: 1, creatorLaunches24h: 12, graduated: false, top5Share: 1, repeatBuyers: 0, trades15m: 3, bundleWallets: 0, bundleShare: 0, poolSol: null, ammBuys: 0, ammSells: 0, ammSolIn: 0, ammSolOut: 0 },
+  }));
+  const s = buildSections("2026-10-17", items as never, now);
+  assert.equal(s.graduated.length, 10);
+  assert.deepEqual(s.counts, { graduated: 14, wentToZero: 25, suspicious: 25 });
+  assert.equal(s.suspicious.length, 10);
+  assert.match(s.suspicious[0]!.reasons.join(", "), /creator sold 100% of their bag, creator launched 12 tokens today/);
+});
