@@ -21,9 +21,22 @@
           "value": "text/markdown; charset=utf-8"
         }
       ]
+    },
+    {
+      "source": "/skill.md",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/check/:mint",
+      "destination": "https://north-production-3f77.up.railway.app/v1/check/:mint"
+    },
     {
       "source": "/docs",
       "destination": "/docs.html"
