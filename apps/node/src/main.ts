@@ -15,6 +15,7 @@ import { GuestHouse } from "./guests.ts";
 import { AskDesk } from "./ask.ts";
 import { evolutionView } from "./agents/evolution.ts";
 import { startTelegram } from "./telegram.ts";
+import { startWatchdog } from "./watchdog.ts";
 import { agentOfWeek, beaverRecord, canyonStats, leaderboard } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
@@ -144,10 +145,25 @@ const stopTelegram =
             const ref = briefs.list(1)[0];
             if (!ref) return null;
             const entry = await briefs.get(ref.id);
-            const sec = (entry?.event.payload as { content?: { sections?: { launches?: number; graduated?: unknown[]; wentToZero?: unknown[] } } } | undefined)?.content?.sections;
-            return { id: ref.id, night: ref.night, launches: sec?.launches, graduated: sec?.graduated?.length, wentToZero: sec?.wentToZero?.length };
+            const sec = (entry?.event.payload as { content?: { sections?: { launches?: number; graduated?: unknown[]; wentToZero?: unknown[]; counts?: { graduated: number; wentToZero: number } } } } | undefined)?.content?.sections;
+            return { id: ref.id, night: ref.night, launches: sec?.launches, graduated: sec?.counts?.graduated ?? sec?.graduated?.length, wentToZero: sec?.counts?.wentToZero ?? sec?.wentToZero?.length };
           },
         },
+      })
+    : null;
+
+// The zoo watching itself: model failures, a silent stream, a node down, a late brief, straight to the operators.
+const alertChats = String(process.env.ZOO_ALERT_CHAT ?? "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n !== 0);
+const stopWatchdog =
+  config.role === "canyon" && process.env.TELEGRAM_BOT_TOKEN && alertChats.length
+    ? startWatchdog({
+        token: process.env.TELEGRAM_BOT_TOKEN,
+        chats: alertChats,
+        briefAt: config.briefAt,
+        subscribe: (fn) => void enclosure.log.subscribe(fn),
+        northUrl,
+        peers: config.peers.map((p) => ({ name: p.id, url: p.url })),
+        log: (m) => console.log(`[${config.id}] ${m}`),
       })
     : null;
 
@@ -194,6 +210,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       }
     }
     stopTelegram?.();
+    stopWatchdog?.();
     server.close(() => {
       db.close();
       process.exit(0);

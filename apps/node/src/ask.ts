@@ -301,7 +301,7 @@ export class AskDesk {
     const recent = (await this.store.get<string[]>("ask:recent")) ?? [];
     await this.store.set("ask:recent", [ask.id, ...recent].slice(0, RECENT_MAX));
     this.perIp.get(ip)!.push(now);
-    await this.log("ask.answered", { id: ask.id, mint, symbol: ask.symbol, verdict: ask.verdict, confidence: ask.confidence, why: ask.why, playbook: ask.playbookVersion });
+    await this.log("ask.answered", { id: ask.id, mint, symbol: ask.symbol, verdict: ask.verdict, confidence: ask.confidence, why: ask.why, playbook: ask.playbookVersion, by: call.by });
     return { ok: true, ask, reused: false };
   }
 

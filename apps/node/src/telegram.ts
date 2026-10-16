@@ -517,6 +517,9 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return void send(chat, T("What next?"), menu());
       case "/help":
         return void send(chat, helpText(), menu());
+      case "/id":
+        // For operators: the number to put in ZOO_ALERT_CHAT so the zoo's own alerts land here.
+        return void send(chat, `This chat's id: <code>${chat}</code>`);
       case "/tour":
         return void send(chat, tourPage(0), tourKeyboard(0));
       case "/ask":
