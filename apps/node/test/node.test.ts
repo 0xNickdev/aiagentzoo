@@ -1339,3 +1339,24 @@ test("a pump.fun launch paired with another token is tracked, but its amounts ar
   assert.equal(f.curveSol, null);
   assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "whale").length, 0);
 });
+
+test("clean launches leave out bundled launch blocks", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const now = 1_792_300_000_000;
+  const born = now - 30 * 60_000;
+  const make = (mint: string, creator: string, bundled: boolean) => {
+    const tape = new PumpTape();
+    tape.apply({ kind: "create", name: mint, symbol: mint.slice(0, 4), mint, creator, ts: born }, born, undefined, 100);
+    // Three wallets in the launch block take 30% of the supply between them.
+    if (bundled) for (const w of ["Aa111111111111111111111111111111", "Bb111111111111111111111111111111", "Cc111111111111111111111111111111"]) {
+      tape.apply({ kind: "trade", mint, sol: 1, tokens: 100_000_000, isBuy: true, user: w, ts: born, curveSol: 3 }, born, undefined, 101);
+    }
+    for (let i = 0; i < 30; i++) {
+      const w = `Buyer${String(i).padStart(2, "0")}${"1".repeat(27)}`;
+      for (let k = 0; k < 2; k++) tape.apply({ kind: "trade", mint, sol: 0.5, tokens: 1_000_000, isBuy: true, user: w, ts: born + 60_000 * (i + 1), curveSol: 10 }, born, undefined, 500 + i);
+    }
+    return tape.clean(20, now).map((c) => c.mint);
+  };
+  assert.deepEqual(make("Clean11111111111111111111111111111111111111", "Dev11111111111111111111111111111", false), ["Clean11111111111111111111111111111111111111"]);
+  assert.deepEqual(make("Bundle1111111111111111111111111111111111111", "Dev11111111111111111111111111111", true), []);
+});

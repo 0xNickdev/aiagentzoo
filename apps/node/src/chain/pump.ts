@@ -743,6 +743,10 @@ export class PumpTape {
       if (f.buyers < 25 || f.repeatBuyers < 3) continue;
       if (f.top5Share === null || f.top5Share > 0.5) continue;
       if (f.buys <= f.sells) continue;
+      // A few wallets taking the supply in the launch block, or a creator who dumps most of what they launch.
+      if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) continue;
+      const rec = this.creator(t.creator, now);
+      if (rec && rec.dumped >= 3 && rec.dumped / Math.max(1, rec.launches48h) >= 0.5) continue;
       out.push({ mint, symbol: t.symbol.slice(0, 16), name: t.name.slice(0, 40), ageMin: Math.round(age), buyers: f.buyers, repeatBuyers: f.repeatBuyers, top5Share: f.top5Share, creatorSold: f.creatorSold, curveSol: f.curveSol, graduated: f.graduated });
     }
     return out;

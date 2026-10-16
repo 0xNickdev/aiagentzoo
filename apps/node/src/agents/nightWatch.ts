@@ -497,7 +497,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
   const beaver = defineAgent({
     name: "beaver",
     species: species.builder,
-    budget: { steps: 24, signals: 1, modelTokens: 24_000 },
+    // One signal per batch of 30 re-checks: with a single signal the night's re-checks stopped after the first batch.
+    budget: { steps: 24, signals: Math.ceil(FOLLOWUP_MAX / 30), modelTokens: 24_000 },
     accepts: { observations: listOf("items", isObservation), "guest.report": isGuestReport },
     async onWake(ctx) {
       if (ctx.reason.type !== "signal") return;
