@@ -375,6 +375,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const found = tape.creator(creatorOf[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
       }
+      const sniperOf = /^\/v1\/chain\/sniper\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && sniperOf) {
+        const found = tape.sniper(sniperOf[1]!);
+        return found ? json(res, 200, found) : json(res, 404, { error: "this wallet sniped no launch in the last two days" });
+      }
       const bundleOf = /^\/v1\/chain\/bundle\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && bundleOf) {
         const t = tape.token(bundleOf[1]!);

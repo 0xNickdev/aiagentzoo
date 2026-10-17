@@ -48,6 +48,10 @@ export interface TokenCheck {
     churnPct: number | null;
     /** Buy-and-sell in one transaction: bump bots. */
     bumps: number | null;
+    /** First-second wallets that keep sniping this creator's launches, that snipe together, that snipe everything. */
+    creatorCrew: number | null;
+    ringWallets: number | null;
+    serialSnipers: number | null;
   } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
@@ -116,6 +120,13 @@ export function checkToken(
     else if (f.earlyHeld >= 0.25) caution.push(who);
   }
 
+  // Who those first-second wallets are, from every launch the tape saw them snipe in two days.
+  if ((f.creatorCrew ?? 0) >= 2) {
+    avoid.push(`${f.creatorCrew} of the wallets in the first 5 seconds keep sniping this creator's other launches: they are the creator's own wallets`);
+  }
+  if ((f.ringWallets ?? 0) >= 3) caution.push(`${f.ringWallets} of the first-second wallets have sniped launches together before: one operator`);
+  else if ((f.serialSnipers ?? 0) >= 3) caution.push(`${f.serialSnipers} serial snipers got in first: wallets that buy launches in the first seconds to sell to whoever comes next`);
+
   if (f.graduated) {
     if (f.poolSol !== null && f.poolSol < POOL_DEAD_SOL) avoid.push(`graduated, but the pool is down to ${f.poolSol.toFixed(2)} SOL`);
   } else if (f.ageMin >= 360 && !f.quote) {
@@ -154,7 +165,7 @@ export function checkToken(
   }
 
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
-  if (verdict === "pass") notes.push("pass means no creator dump, bundle, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
+  if (verdict === "pass") notes.push("pass means no creator dump, bundle, creator's crew, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
   if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");
   return {
     ...base,
@@ -184,6 +195,9 @@ export function checkToken(
       earlyHeldPct: pct(f.earlyHeld),
       churnPct: pct(f.washShare),
       bumps: f.bumps ?? null,
+      creatorCrew: f.creatorCrew ?? null,
+      ringWallets: f.ringWallets ?? null,
+      serialSnipers: f.serialSnipers ?? null,
     },
     ...(holders !== undefined ? { holders } : {}),
   };

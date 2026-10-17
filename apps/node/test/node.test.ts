@@ -1576,3 +1576,43 @@ test("a Mayhem Mode launch is read from the create event and its shares are of t
   assert.equal(f.mayhem, true);
   assert.equal(f.earlyHeld, 0.3);
 });
+
+test("first-second wallets that keep sniping one creator are the creator's crew; bots that snipe everything are not", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  const tape = new PumpTape();
+  const t0 = Date.now() - 60 * 60_000;
+  const dev = `Dev${"1".repeat(41)}`;
+  const w = (n: string) => `${n}${"1".repeat(44 - n.length)}`;
+  const crew = [w("CrewA"), w("CrewB"), w("CrewC")];
+  const bot = w("Bot");
+  let i = 0;
+  const launch = (creator: string, buyers: string[]) => {
+    const mint = `M${i}z`.padEnd(44, "z");
+    const at = t0 + i * 60_000;
+    i += 1;
+    tape.apply({ kind: "create", name: "x", symbol: `X${i}`, mint, creator, ts: at }, at);
+    for (const b of buyers) tape.apply({ kind: "trade", mint, sol: 0.5, tokens: 10_000_000, isBuy: true, user: b, ts: at + 1_000, curveSol: 2 }, at);
+    return mint;
+  };
+  // The bot snipes twenty strangers' launches, and the dev's too.
+  for (let k = 0; k < 20; k++) launch(w(`Other${k}`), [bot]);
+  for (let k = 0; k < 3; k++) launch(dev, [...crew, bot]);
+  const last = launch(dev, [...crew, bot]);
+  const f = tape.facts(last)!;
+  assert.equal(f.creatorCrew, 3);
+  assert.equal(f.ringWallets, 3);
+  assert.equal(f.serialSnipers, 1);
+  const check = checkToken(last, { symbol: "X", facts: f, creatorRecord: tape.creator(dev) });
+  assert.equal(check.verdict, "avoid");
+  assert.match(check.reasons.join(" "), /creator's own wallets/);
+  // A stranger's launch sniped only by the bot has no crew and no ring.
+  const g = tape.facts(launch(w("Fresh"), [bot]))!;
+  assert.equal(g.creatorCrew, 0);
+  assert.equal(g.ringWallets, 0);
+  assert.equal(tape.sniper(bot)!.snipes48h, 25);
+  // Rebuilt after a restart.
+  const reborn = new PumpTape();
+  reborn.load(tape.snapshot());
+  assert.equal(reborn.facts(last)!.creatorCrew, 3);
+});
