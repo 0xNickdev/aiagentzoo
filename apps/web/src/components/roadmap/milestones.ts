@@ -33,10 +33,10 @@ export const MILESTONES: Milestone[] = [
   {
     id: "nightwatch",
     title: "Night Watch, live",
-    text: "Six agents on three independent cloud nodes, on live pump.fun and DexScreener data, around the clock.",
+    text: "Eight agents on three cloud nodes, on live pump.fun, PumpSwap and DexScreener data, around the clock.",
     status: "shipped",
     links: ["runtime"],
-    metric: (n) => (n?.stats ? `${num(n.stats.tokensTonight)} tokens tonight` : n ? `${n.awake}/${n.agents} agents` : "6 agents"),
+    metric: (n) => (n?.stats ? `${num(n.stats.tokensTonight)} tokens tonight` : n ? `${n.awake}/${n.agents} agents` : "8 agents"),
     proof: { label: "/v1/stats", href: `${CANYON}/v1/stats` },
   },
   {

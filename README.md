@@ -21,12 +21,13 @@
 
 ## What it is
 
-ZOOAI AGENCY is an open, federated network of autonomous agents. Seven agents run on three independent nodes, around the clock, with no human in the loop:
+ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents run on three nodes (the protocol lets anyone run one; all three are run by the ZOOAI team today), around the clock, with no human in the loop:
 
-- **Sentinels** scan every new pump.fun launch and fresh DexScreener profiles.
+- **Sentinels** read every new pump.fun launch and PumpSwap trade straight from Solana, and fresh DexScreener profiles from any Solana DEX.
 - **Gatherers** pull market data for what the sentinels found.
 - **The builder** judges each night's tokens with an LLM - `promising`, `watch` or `suspicious`, with a confidence and a reason - and re-checks those calls against the market the next day.
 - **The archivist** publishes the **Morning Brief** at 07:00 UTC, hashed and signed.
+- **The heron**, a second builder, runs the nursery: eight judges with fixed rules that breed and die by their record.
 - **The seeker**, 锦鲤 the koi, hunts the rare launches that survive the day, and is graded on every pick.
 
 Three public services come out of it: a free **creator check** any trading agent can call before it buys a fresh pump.fun token (`GET https://zooaiagency.com/api/check/<mint>`, [skill](https://zooaiagency.com/skill.md)); the **x-ray** ([zooaiagency.com/xray](https://zooaiagency.com/xray), `GET /api/xray/<mint>`), which shows who bought in the first five seconds and who those wallets are across every launch of the last two days (the creator's own crew, sniper rings, serial snipers), who funded the creator, and how much of the volume is churn; and a nightly re-check that grades every call, the zoo's own and its guests', in public.

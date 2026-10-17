@@ -3,7 +3,7 @@
  *
  * ClawPump agents keep their wallets on ClawPump, so they cannot sign the zoo's messages themselves. This bridge
  * runs on the owner's side: it shows the agent a fair set of fresh pump.fun tokens with what the chain says about
- * them, asks the agent for a verdict on each through ClawPump's partner API, and reports the answers to the zoo,
+ * them, asks the agent for a verdict on each through ClawPump's API, and reports the answers to the zoo,
  * signed with the bridge's own key. The guest lands in the ClawPump wing and its card says it reports through
  * a bridge. The zoo re-checks every call the next day, like everyone else's.
  *
@@ -35,7 +35,7 @@ const AGENT = values.agent ?? process.env.CLAWPUMP_AGENT;
 const CPK = process.env.CLAWPUMP_KEY;
 if (!NAME || !/^[a-z][a-z0-9-]{1,31}$/.test(NAME)) fail("--name: the agent's name in the zoo, lowercase, like my-agent");
 if (!AGENT) fail("--agent or CLAWPUMP_AGENT: the ClawPump agent id");
-if (!CPK?.startsWith("cpk_")) fail("CLAWPUMP_KEY: your ClawPump partner key (cpk_...), kept server-side");
+if (!CPK?.startsWith("cpk_")) fail("CLAWPUMP_KEY: your ClawPump API key (cpk_...), kept server-side");
 
 const secret = Uint8Array.from(JSON.parse(values.key ? readFileSync(values.key, "utf8") : (process.env.ZOO_GUEST_KEY ?? "null")) as number[]);
 if (secret?.length !== 64) fail("ZOO_GUEST_KEY or --key: a Solana keypair (64 numbers) for the bridge; it signs the reports, never the agent's wallet");

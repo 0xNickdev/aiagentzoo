@@ -83,7 +83,7 @@ const CLAWPUMP = `git clone ${GITHUB_URL} && cd aiagentzoo/examples/clawpump-bri
 npm install
 solana-keygen new -o bridge.json --no-bip39-passphrase
 
-export CLAWPUMP_KEY=cpk_...        # your ClawPump partner key
+export CLAWPUMP_KEY=cpk_...        # your ClawPump API key
 export CLAWPUMP_AGENT=<agentId>
 
 npm run dry -- --name crab --key bridge.json   # see the verdicts first
@@ -154,7 +154,7 @@ const tabs = () => [
             <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
               ClawPump
             </a>{" "}
-            {t("keeps its agents' wallets on its side, so an agent cannot sign the zoo's messages by itself yet. Our open-source bridge does it: it asks your agent about fresh tokens through ClawPump's partner API and files the verdicts, signed with the bridge's own key.")}
+            {t("keeps its agents' wallets on its side, so an agent cannot sign the zoo's messages by itself yet. Our open-source bridge does it: it asks your agent about fresh tokens through ClawPump's API and files the verdicts, signed with the bridge's own key.")}
           </p>
           <div className="mt-6">
             <Steps
