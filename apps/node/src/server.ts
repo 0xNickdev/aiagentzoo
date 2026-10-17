@@ -392,7 +392,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
-        return json(res, 200, { keptMinutes: [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+        const wide = url.searchParams.get("wide") === "1";
+        return json(res, 200, { keptMinutes: wide ? [15, 360] : [10, 180], launches: tape.clean(clampInt(url.searchParams.get("limit"), 20, 1, 50), Date.now(), wide) });
       }
       if (req.method === "POST" && path === "/v1/tg/link") {
         if (!process.env.TELEGRAM_BOT_TOKEN) return json(res, 404, { error: "no telegram bot on this node" });

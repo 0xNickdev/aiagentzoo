@@ -29,6 +29,7 @@ export const KOI = {
   calls: (night: string) => `koi:calls:${night}`,
   score: (night: string) => `koi:score:${night}`,
   tally: "koi:tally",
+  look: "koi:look",
 };
 /** Picks a night, at most: a koi that says yes often is not a koi. */
 export const KOI_PER_NIGHT = 8;
@@ -61,7 +62,7 @@ export interface KoiTally {
 /** Of the launches that already passed the basic checks, the ones with the most life: many buyers, many coming back. */
 export function koiCandidates(clean: CleanLaunch[], picked: Set<string>, max = 10): CleanLaunch[] {
   return clean
-    .filter((c) => !picked.has(c.mint) && c.ageMin >= 20 && c.buyers >= 30 && c.repeatBuyers >= 5 && (c.graduated || (c.curveSol ?? 0) >= 10))
+    .filter((c) => !picked.has(c.mint) && c.ageMin >= 20 && c.buyers >= 20 && c.repeatBuyers >= 3 && (c.graduated || (c.curveSol ?? 0) >= 5))
     .sort((a, b) => b.buyers * (1 + b.repeatBuyers) - a.buyers * (1 + a.repeatBuyers))
     .slice(0, max);
 }
@@ -155,6 +156,8 @@ export function koiAgent(cfg: { briefAt: string; everyMs?: number }): AgentDefin
         return;
       }
       const asked = koiCandidates(clean, new Set(picks.map((p) => p.mint)));
+      // When it last looked and at how many, so an empty night reads as "looked, nothing convinced it", not as silence.
+      await ctx.state.set(KOI.look, { at: ctx.now, candidates: asked.length });
       // Nothing worth a look: leave no output, so a quiet hour is never mistaken for a loop.
       if (!asked.length) return;
       let fresh: KoiPick[] = [];
@@ -196,5 +199,6 @@ export async function koiView(store: StateStore, briefAt: string, now = Date.now
     if (!picks.length) continue;
     nights.push({ night: n, picks, score: (await store.get<KoiScore>(KOI.score(n))) ?? null });
   }
-  return { night, tonight, tally, nights, perNight: KOI_PER_NIGHT };
+  const lastLook = (await store.get<{ at: number; candidates: number }>(KOI.look)) ?? null;
+  return { night, tonight, tally, nights, perNight: KOI_PER_NIGHT, lastLook };
 }

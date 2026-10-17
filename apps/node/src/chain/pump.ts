@@ -338,6 +338,11 @@ const DRAIN_SHARE = 0.2;
 const WHALE_SOL = 10;
 
 const KEEP_MS = 48 * 3_600_000;
+/**
+ * Newest launches kept in order: six hours and more even at a busy 50 a minute. It was 500 (about 20 minutes),
+ * which left the clean list and the koi looking at nothing older than that.
+ */
+const RECENT_KEEP = 20_000;
 const DAY_MS = 24 * 3_600_000;
 const MAX_TRACKED = 30_000;
 
@@ -479,7 +484,7 @@ export class PumpTape {
       times.push(createdAt);
       this.launchesBy.set(ev.creator, times);
       this.recent.unshift(ev.mint);
-      if (this.recent.length > 500) this.recent.length = 500;
+      if (this.recent.length > RECENT_KEEP) this.recent.length = RECENT_KEEP;
       this.seen.launches += 1;
       this.count(now, "launches");
       if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`, tx);
@@ -611,7 +616,7 @@ export class PumpTape {
         const kept = times.filter((x) => now - x < DAY_MS);
         if (kept.length) this.launchesBy.set(creator, kept);
       }
-      this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, 500);
+      this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
       if (saved.seen) this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades };
       return this.tokens.size;
     } catch {
@@ -729,18 +734,22 @@ export class PumpTape {
    * launcher, the buying is spread across many wallets and some came back for more. It says nothing about whether
    * a token is worth anything, only that the usual rug signs are absent so far.
    */
-  clean(limit = 20, now = Date.now()): CleanLaunch[] {
+  /**
+   * Launches that passed the basic checks. `wide` is the koi's net: up to six hours old and a smaller crowd, because
+   * the koi's own judgement does the strict part; the default is the stricter list people see.
+   */
+  clean(limit = 20, now = Date.now(), wide = false): CleanLaunch[] {
     const out: CleanLaunch[] = [];
     for (const mint of this.recent) {
       if (out.length >= limit) break;
       const t = this.tokens.get(mint);
       if (!t) continue;
       const age = (now - t.createdAt) / 60_000;
-      if (age < 10 || age > 180) continue;
+      if (age < (wide ? 15 : 10) || age > (wide ? 360 : 180)) continue;
       const f = this.facts(mint, now)!;
-      if (f.creatorSold !== null && f.creatorSold > 0.1) continue;
-      if (f.creatorLaunches24h > 2) continue;
-      if (f.buyers < 25 || f.repeatBuyers < 3) continue;
+      if (f.creatorSold !== null && f.creatorSold > (wide ? 0.2 : 0.1)) continue;
+      if (f.creatorLaunches24h > (wide ? 3 : 2)) continue;
+      if (f.buyers < (wide ? 15 : 25) || f.repeatBuyers < (wide ? 2 : 3)) continue;
       if (f.top5Share === null || f.top5Share > 0.5) continue;
       if (f.buys <= f.sells) continue;
       // A few wallets taking the supply in the launch block, or a creator who dumps most of what they launch.

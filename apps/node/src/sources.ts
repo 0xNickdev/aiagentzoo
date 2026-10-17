@@ -191,9 +191,9 @@ export function chainClean(northUrl?: string) {
     capability: "sources:read",
     description: "Fresh pump.fun launches with a holding creator, returning buyers and no bundle, with their chain facts",
     async run({ limit = 30 } = {}, { signal }) {
-      if (tape.lastEventAt > 0) return tape.clean(limit);
+      if (tape.lastEventAt > 0) return tape.clean(limit, Date.now(), true);
       if (!northUrl) return [];
-      const res = await fetch(`${northUrl}/v1/chain/clean?limit=${Math.min(50, limit)}`, { signal });
+      const res = await fetch(`${northUrl}/v1/chain/clean?limit=${Math.min(50, limit)}&wide=1`, { signal });
       if (!res.ok) throw new Error(`north responded ${res.status}`);
       return ((await res.json()) as { launches: CleanLaunch[] }).launches;
     },

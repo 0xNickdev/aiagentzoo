@@ -1430,10 +1430,10 @@ test("the koi hunts survivors among clean launches, picks few, and is graded on 
   });
   const clean = [
     launch("Busy11111111111111111111111111111111111111", { buyers: 200, repeatBuyers: 40 }),
-    launch("Quiet1111111111111111111111111111111111111", { buyers: 31, repeatBuyers: 5 }),
+    launch("Quiet1111111111111111111111111111111111111", { buyers: 21, repeatBuyers: 3 }),
     launch("Young1111111111111111111111111111111111111", { ageMin: 12 }),
-    launch("Thin11111111111111111111111111111111111111", { buyers: 20 }),
-    launch("Flat11111111111111111111111111111111111111", { curveSol: 4 }),
+    launch("Thin11111111111111111111111111111111111111", { buyers: 19 }),
+    launch("Flat11111111111111111111111111111111111111", { curveSol: 3 }),
     launch("Grad11111111111111111111111111111111111111", { curveSol: null, graduated: true }),
   ] as never[];
   const asked = koiCandidates(clean, new Set(["Grad11111111111111111111111111111111111111"]));
