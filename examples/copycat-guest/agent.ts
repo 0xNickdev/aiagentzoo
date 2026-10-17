@@ -123,7 +123,18 @@ function base58(bytes: Uint8Array): string {
 const raw = process.env.ZOO_GUEST_KEY ?? (values.key ? readFileSync(values.key, "utf8") : "");
 if (!raw && !values.dry) throw new Error("set ZOO_GUEST_KEY or pass --key <keypair.json>");
 
-const items = copycats(await latest(), Number(values.max));
+// pump.fun's API refuses requests from cloud runners (403); the zoo's own chain stream lists the same launches.
+async function fromStream(): Promise<Coin[]> {
+  const res = await fetch("https://north-production-3f77.up.railway.app/v1/chain/pulse?after=0");
+  if (!res.ok) throw new Error(`zoo stream responded ${res.status}`);
+  const { events } = (await res.json()) as { events: Array<{ kind: string; mint: string; symbol: string; at: number }> };
+  return events.filter((e) => e.kind === "launch" || e.kind === "serial").map((e) => ({ mint: e.mint, name: e.symbol, symbol: e.symbol, created_timestamp: e.at }));
+}
+const coins = await latest().catch(async (error) => {
+  console.warn(`${(error as Error).message}: reading launches from the zoo's chain stream instead`);
+  return fromStream();
+});
+const items = copycats(coins, Number(values.max));
 for (const i of items) console.log(`${i.mint}  ${i.note}`);
 if (!items.length) {
   console.log("no copies worth reporting right now");
