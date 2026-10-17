@@ -981,7 +981,9 @@ test("holder report leaves pools out of wallet shares and finds what the creator
     if (method === "getTokenLargestAccounts") return ok({ value: [{ address: "ta-pool", uiAmount: 400 }, { address: "ta-w1", uiAmount: 150 }, { address: "ta-w2", uiAmount: 50 }] });
     if (method === "getMultipleAccounts") {
       const keys = params[0] as string[];
-      if (keys[0]!.startsWith("ta-")) return ok({ value: keys.map((k) => ({ data: { parsed: { info: { owner: k === "ta-pool" ? "Pool" : k.slice(3) } } } })) });
+      // Real wallet addresses: a holder has to be a point on the curve.
+      const wallet: Record<string, string> = { "ta-w1": "CogH8XVFdLBkYpdJH8CHoJKrBZxwuU95LFvQCeWYbm6N", "ta-w2": "8TPACXaKotSZ7WXktfmKDRhgoypyGXNzo1ctr2YBzxLc" };
+      if (keys[0]!.startsWith("ta-")) return ok({ value: keys.map((k) => ({ data: { parsed: { info: { owner: k === "ta-pool" ? "Pool" : wallet[k] } } } })) });
       return ok({ value: keys.map((k) => (k === "Pool" ? { owner: "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA" } : { owner: "11111111111111111111111111111111" })) });
     }
     if (method === "getTokenAccountsByOwner") return ok({ value: [{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: 120 } } } } } }] });
@@ -1813,4 +1815,15 @@ test("the stream's own transaction format reads the same as the RPC's", async ()
     };
     assert.deepEqual(parseLaunchpads(fromYellowstone(ys)!, 5), parseLaunchpads(fromRpc(tx, fromBase58), 5), what);
   }
+});
+
+test("a wallet is a point on the curve; a launchpad's authority, owning its vault, is not", async () => {
+  const { isOnCurve } = await import("../src/chain/curve.ts");
+  const { fromBase58 } = await import("../src/chain/pump.ts");
+  // Meteora's and LaunchLab's pool authorities, from the mainnet fixtures: they own the curves' vaults.
+  assert.equal(isOnCurve(fromBase58("FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM")), false);
+  assert.equal(isOnCurve(fromBase58("WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh")), false);
+  // Traders' wallets.
+  assert.equal(isOnCurve(fromBase58("CogH8XVFdLBkYpdJH8CHoJKrBZxwuU95LFvQCeWYbm6N")), true);
+  assert.equal(isOnCurve(fromBase58("8TPACXaKotSZ7WXktfmKDRhgoypyGXNzo1ctr2YBzxLc")), true);
 });

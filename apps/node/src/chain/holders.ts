@@ -1,3 +1,5 @@
+import { isOnCurve } from "./curve.ts";
+import { fromBase58 } from "./pump.ts";
 /**
  * Eyes for tokens the stream did not see launch: anything already graduated to PumpSwap, or older than the tape.
  * From an RPC it reads the largest holders, sets aside accounts owned by programs (the liquidity pool, a lock),
@@ -33,6 +35,14 @@ async function rpc<T>(method: string, params: unknown[], f: typeof fetch): Promi
   }
 }
 
+const onCurve = (address: string) => {
+  try {
+    return isOnCurve(fromBase58(address));
+  } catch {
+    return false;
+  }
+};
+
 export const holdersEnabled = () => Boolean(RPC());
 
 export async function holderReport(mint: string, f: typeof fetch = fetch, now = Date.now()): Promise<HolderReport | null> {
@@ -60,8 +70,9 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   const owners = (tokenAccounts?.value ?? []).map((a) => a?.data?.parsed?.info?.owner ?? null);
   const uniq = [...new Set(owners.filter((o): o is string => Boolean(o)))];
   const ownerInfo = uniq.length ? await rpc<{ value: Array<{ owner: string } | null> }>("getMultipleAccounts", [uniq, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }], f) : null;
-  // A plain wallet is owned by the system program, or does not exist as an account at all.
-  const isWallet = new Map(uniq.map((o, i) => [o, !ownerInfo?.value[i] || ownerInfo.value[i]!.owner === SYSTEM]));
+  // A plain wallet is owned by the system program, or does not exist as an account at all, and is a point on the
+  // curve: a launchpad's vault is owned by an authority with no account of its own, but that authority is off the curve.
+  const isWallet = new Map(uniq.map((o, i) => [o, onCurve(o) && (!ownerInfo?.value[i] || ownerInfo.value[i]!.owner === SYSTEM)]));
 
   let programAmount = 0;
   const byWallet = new Map<string, number>();
