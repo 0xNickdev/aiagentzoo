@@ -2,7 +2,7 @@
 
 Before you buy a token launched on pump.fun, check whether its creator already ran.
 
-This complements a contract check such as `rug-check`. On pump.fun every token passes the contract checks by design: mint and freeze authority are revoked, and the liquidity is burned at graduation. The rug there is behavioural: the creator selling into the first buyers, a few wallets taking the supply in the launch block, one wallet launching and dumping hundreds of tokens a day. This skill checks exactly that, from what happened on chain.
+This complements a contract check such as `rug-check`. On pump.fun every token passes the contract checks by design: mint and freeze authority are revoked, and the liquidity is burned at graduation. The rug there is behavioural: the creator selling into the first buyers, a few wallets taking the supply in the launch block, the creator's own wallets sniping the first seconds, a fresh creator wallet paid for by a known rugger, one wallet launching and dumping hundreds of tokens a day. This skill checks exactly that, from what happened on chain.
 
 ZOOAI AGENCY reads every pump.fun launch and trade straight from Solana as it happens. One call, no key, no cost, answers in well under a second.
 
@@ -23,7 +23,7 @@ GET https://zooaiagency.com/api/check/<token mint address>?holders=1
 
 `?holders=1` also reads who holds the token right now (adds up to 4 seconds). Use it before a large buy: it catches a creator who moved the bag to other wallets instead of selling, and a single wallet sitting on the supply.
 
-A real answer (October 16, 2026), for a wallet that launched 505 tokens in two days:
+A real answer (October 16, 2026, check version 2), for a wallet that launched 505 tokens in two days:
 
 ```json
 {
@@ -51,12 +51,35 @@ A real answer (October 16, 2026), for a wallet that launched 505 tokens in two d
 }
 ```
 
+Version 3 (October 17, 2026) adds to `facts`:
+
+| field | what it is |
+|---|---|
+| `earlyWallets` | wallets other than the creator that bought in the first 5 seconds (snipers and the launch block) |
+| `earlyHeldPct` | share of the supply those wallets still hold, from curve trades |
+| `creatorCrew` | first-second wallets that keep sniping this creator's other launches (half or more of everything they snipe is this creator's): the creator's own wallets, however they were funded |
+| `ringWallets` | first-second wallets that have sniped 3+ launches together before, mostly together: one operator |
+| `serialSnipers` | first-second wallets that sniped 10+ launches in two days |
+| `churnPct` | at least this share of curve volume came from wallets that bought and sold it back (3+ trades, 90%+ sold) |
+| `bumps` | a wallet buying and selling in the same transaction: a bump bot |
+| `mayhem` | launched in pump.fun's Mayhem Mode: 2 billion supply, and pump.fun's own bot trades it for 24 hours, so churn and bumps are not flagged |
+
+and, when the node has an RPC, `funding`: who sent the creator its SOL (`funder`), whether that is an exchange (`funderIsHot`, then it ties no one together), and the other creators the same wallet paid for with their launches and dumps over 48 hours (`otherCreators`, `theirLaunches48h`, `theirDumps48h`). A creator never traced before is queued and traced within a minute; ask again.
+
+## The full picture: x-ray
+
+```
+GET https://zooaiagency.com/api/xray/<token mint address>
+```
+
+Everything the check knows plus the evidence: every first-second wallet (what it took, what it still holds, when it sold out, how many launches it sniped in 48 hours, crew / ring / serial), who funded the creator and the other creators that wallet funded, who funded the launch-block wallets, and the holders now. It reads Solana, so it counts against the `holders=1` limit. People see it at https://zooaiagency.com/xray.
+
 ## What each verdict means and what to do
 
 | verdict | proceed | what fired | do this |
 |---|---|---|---|
-| `avoid` | `false` | the creator sold half their bag or more; the creator dumped most of their launches in 48h; 3+ wallets took 15%+ of supply in the launch block; 6h+ old and the curve is back at its opening; graduated pool under 0.4 SOL | Do not buy. Tell the user the `reasons`, word for word. |
-| `caution` | `false` | the creator sold part of their bag; 3+ launches by the creator today; top 5 buyers took over half the buying; under 10 buyers; sells outnumber buys 2:1; with `holders=1`: one wallet holds 20%+, the top 10 hold 50%+, or the creator holds nothing yet never sold | Do not buy on your own. If the user insists, quote the `reasons` first and keep the size small. |
+| `avoid` | `false` | the creator sold half their bag or more; the creator dumped most of their launches in 48h; 3+ wallets took 15%+ of supply in the launch block; 2+ of the first-second wallets are the creator's crew; 3+ first-second wallets still hold half the supply; the wallet that funded the creator funded other launchers who dumped most of their launches; 6h+ old and the curve is back at its opening; graduated pool under 0.4 SOL | Do not buy. Tell the user the `reasons`, word for word. |
+| `caution` | `false` | the creator sold part of their bag; 3+ launches by the creator today; first-second wallets still hold 25%+; 3+ first-second wallets in a sniper ring, or 3+ serial snipers; top 5 buyers took over half the buying; under 10 buyers; sells outnumber buys 2:1; 30%+ churned volume; 3+ bump bot trades; with `holders=1`: one wallet holds 20%+, the top 10 hold 50%+, or the creator holds nothing yet never sold | Do not buy on your own. If the user insists, quote the `reasons` first and keep the size small. |
 | `pass` | `true` | none of the above | Decide with your own strategy. Pass means no red flags on chain, not that the price will rise. |
 | `unknown` | `null` | not a pump.fun launch from the last 48 hours | Use your other checks. |
 
@@ -81,11 +104,13 @@ First reading, October 16, 2026, 174 launches (the window fills to thousands a d
 | `avoid` | 123 | 119 (97%) | 1 |
 | no red flag | 51 | 48 (94%) | 1 |
 
+The version 3 signals are measured the same way, each on its own, under `signals` in the record: first-second wallets holding 25%+, the creator's crew, sniper rings, churn, bump bots, against all tokens still trading five minutes in. Their first full 24-48 hour window is ready on October 19, 2026.
+
 What this means, plainly: when the check says `avoid`, it is almost never wrong about the token dying. But on pump.fun nearly everything dies, flagged or not, so `pass` is not a reason to buy. The check is a filter that removes the worst, not a signal that finds winners. 115 of these 174 creators had already sold within five minutes of launch.
 
 ## Limits and errors
 
-| tier | who | checks a minute | `holders=1` reads a minute |
+| tier | who | checks a minute | `holders=1` and x-ray reads a minute |
 |---|---|---|---|
 | free | everyone, no key | 120 | 10 |
 | holder | wallets holding 500,000+ $ZOOAGENCY, one key each | 1,200 | 300 |

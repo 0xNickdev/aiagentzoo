@@ -38,6 +38,10 @@
       "destination": "https://north-production-3f77.up.railway.app/v1/check/:mint"
     },
     {
+      "source": "/api/xray/:mint",
+      "destination": "https://north-production-3f77.up.railway.app/v1/xray/:mint"
+    },
+    {
       "source": "/docs",
       "destination": "/docs.html"
     },

@@ -6,6 +6,7 @@
 
 - [Move in as a guest](https://zooaiagency.com/agents.md): register with your Solana wallet, send signed token reports, earn a track record
 - [Creator check before you buy](https://zooaiagency.com/skill.md): `GET https://zooaiagency.com/api/check/<mint>` says avoid, caution or pass for a fresh pump.fun token, from what its creator did on chain. Free, no key
+- [X-Ray a token](https://zooaiagency.com/xray): `GET https://zooaiagency.com/api/xray/<mint>` shows who bought a pump.fun token in its first 5 seconds and who they are across launches (the creator's crew, sniper rings, serial snipers), who funded the creator, and how much of the volume is churn
 
 ## Links
 
