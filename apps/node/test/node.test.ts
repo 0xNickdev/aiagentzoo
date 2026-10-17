@@ -1748,3 +1748,69 @@ test("a sniper who sells in the PumpSwap pool after graduation no longer counts 
   assert.equal(tape.facts(mint)!.earlyHeld, 0.15);
   assert.ok(tape.earlyOf(mint)!.find((e) => e.wallet === sniper)!.exitSec! > 0);
 });
+
+test("LaunchLab and Meteora's curve are read from real mainnet transactions: the trader, the token, what moved", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fromRpc, parseLaunchpads } = await import("../src/chain/launchpads.ts");
+  const { fromBase58, PumpTape } = await import("../src/chain/pump.ts");
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/launchpads.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const parse = (what: string, ts = 0) => parseLaunchpads(fromRpc(fixtures.find((f) => f.what === what)!.tx, fromBase58), ts) as any[];
+
+  // LaunchLab, a token with a 1% transfer fee: the seller paid 3,013,119 from their account, the curve got 1% less.
+  const [sell] = parse("ll:sell");
+  assert.equal(sell.kind, "trade");
+  assert.equal(sell.isBuy, false);
+  assert.equal(sell.user, "CogH8XVFdLBkYpdJH8CHoJKrBZxwuU95LFvQCeWYbm6N");
+  assert.equal(sell.mint, "F69v8Ah1uTejFJwUDzZFoJkkH3J1QmDeEyJzvaTK2KLV");
+  assert.ok(Math.abs(sell.tokens - 3_013_119.18) < 0.01);
+  // Paired with a token other than SOL: no curve in SOL.
+  assert.equal(sell.curveSol, null);
+  const [buy] = parse("ll:buy");
+  assert.equal(buy.isBuy, true);
+  assert.equal(buy.user, "9mNmRTg3BLRtXrsM3pxAvqEFU5uh9ZtrVU6jDAf6gfhs");
+  assert.ok(Math.abs(buy.tokens - 9_506_726.22) < 0.01);
+
+  // Meteora: the launch, then the first buy, routed through a temporary account closed in the same transaction.
+  const [create] = parse("dbc:create", 1_000);
+  assert.deepEqual(create, { kind: "create", venue: "dbc", name: "VAK", symbol: "VAK", mint: "3UNs3RobwhxDqRcYAgNV5fKKdCf4sJPCfeh3CSDBRYbt", creator: "GDEUpEgzz3w6uff4pLAHjt94QdaWnn5jWaehU2G7yruo", ts: 1_000, supply: 1_000_000_000 });
+  const [first] = parse("dbc:buy", 3_000);
+  assert.equal(first.user, "8TPACXaKotSZ7WXktfmKDRhgoypyGXNzo1ctr2YBzxLc");
+  assert.equal(first.sol, 0.5);
+  assert.ok(Math.abs(first.curveSol - 0.5213) < 0.001);
+
+  // On the tape: an x-ray like any pump.fun launch, but kept out of the judges' pump.fun-only night and record.
+  const tape = new PumpTape();
+  const now = Date.now();
+  tape.apply({ ...(create as any), ts: now - 60_000 }, now);
+  tape.apply({ ...first, ts: now - 58_000 }, now);
+  const f = tape.facts(create.mint, now)!;
+  assert.equal(f.venue, "dbc");
+  assert.equal(f.buyers, 1);
+  assert.equal(f.earlyWallets, 1);
+  assert.equal(f.curveSol, null);
+  assert.equal(tape.launches(10, now).length, 0);
+  assert.equal(tape.token(create.mint, now)!.creator, "GDEUpEgzz3w6uff4pLAHjt94QdaWnn5jWaehU2G7yruo");
+});
+
+test("the stream's own transaction format reads the same as the RPC's", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fromRpc, fromYellowstone, parseLaunchpads } = await import("../src/chain/launchpads.ts");
+  const { fromBase58 } = await import("../src/chain/pump.ts");
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/launchpads.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  for (const { what, tx } of fixtures) {
+    // The same transaction as Yellowstone sends it: keys and data as bytes, address-table keys apart.
+    const ix = (i: any) => ({ programIdIndex: i.programIdIndex, accounts: Uint8Array.from(i.accounts), data: new Uint8Array(fromBase58(i.data)) });
+    const bal = (b: any) => ({ accountIndex: b.accountIndex, mint: b.mint, owner: b.owner, uiTokenAmount: { decimals: b.uiTokenAmount.decimals, uiAmount: b.uiTokenAmount.uiAmount ?? 0 } });
+    const ys = {
+      transaction: { message: { accountKeys: tx.transaction.message.accountKeys.map((k: string) => new Uint8Array(fromBase58(k))), instructions: tx.transaction.message.instructions.map(ix) } },
+      meta: {
+        innerInstructions: (tx.meta.innerInstructions ?? []).map((g: any) => ({ index: g.index, instructions: g.instructions.map(ix) })),
+        loadedWritableAddresses: (tx.meta.loadedAddresses?.writable ?? []).map((k: string) => new Uint8Array(fromBase58(k))),
+        loadedReadonlyAddresses: (tx.meta.loadedAddresses?.readonly ?? []).map((k: string) => new Uint8Array(fromBase58(k))),
+        preTokenBalances: (tx.meta.preTokenBalances ?? []).map(bal),
+        postTokenBalances: (tx.meta.postTokenBalances ?? []).map(bal),
+      },
+    };
+    assert.deepEqual(parseLaunchpads(fromYellowstone(ys)!, 5), parseLaunchpads(fromRpc(tx, fromBase58), 5), what);
+  }
+});

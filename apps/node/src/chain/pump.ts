@@ -7,12 +7,13 @@
  * their bag, and once it graduates, how its PumpSwap pool is doing.
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
+import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
 /** PumpSwap, where a token's pool lives once it graduates from the curve. */
 export const PUMP_AMM_PROGRAM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
-const WSOL = "So11111111111111111111111111111111111111112";
+export const WSOL = "So11111111111111111111111111111111111111112";
 
 const DISC = {
   create: Buffer.from([27, 114, 169, 77, 222, 235, 99, 118]),
@@ -24,9 +25,25 @@ const DISC = {
   ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
 };
 
+/** Where a token was launched, when not pump.fun. */
+export type Venue = "launchlab" | "dbc";
+
 export type PumpEvent =
   /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
-  | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null; quote?: string | null; mayhem?: boolean }
+  | {
+      kind: "create";
+      name: string;
+      symbol: string;
+      mint: string;
+      creator: string;
+      ts: number | null;
+      quote?: string | null;
+      mayhem?: boolean;
+      /** Launched somewhere other than pump.fun: Raydium LaunchLab or Meteora's bonding curve. */
+      venue?: Venue;
+      /** The whole supply, when it is not pump.fun's billion. */
+      supply?: number;
+    }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
@@ -74,7 +91,7 @@ const LAMPORTS = 1e9;
 /** pump.fun tokens have 6 decimals. */
 const TOKEN_UNITS = 1e6;
 
-class Reader {
+export class Reader {
   o = 0;
   private readonly b: Buffer;
   constructor(b: Buffer) {
@@ -111,6 +128,10 @@ class Reader {
   }
   bool() {
     return this.b[this.o++] === 1;
+  }
+  b8() {
+    if (this.o >= this.b.length) throw new Error("short");
+    return this.b[this.o++]!;
   }
 }
 
@@ -208,6 +229,8 @@ export interface ChainFacts {
   ageMin: number;
   /** Launched in Mayhem Mode: pump.fun's bot trades it for its first 24 hours, so its volume and churn are partly that bot. */
   mayhem?: boolean;
+  /** Launched on Raydium LaunchLab or Meteora's bonding curve; absent for pump.fun. */
+  venue?: Venue;
   /** The token it trades against when not SOL; then solIn, solOut and curveSol are not in SOL (curveSol stays null). */
   quote?: string | null;
   buys: number;
@@ -262,7 +285,7 @@ export interface ChainFacts {
 /** pump.fun mints a billion tokens. */
 const SUPPLY = 1_000_000_000;
 /** In Mayhem Mode pump.fun's own bot mints a second billion to trade with for the first 24 hours. */
-const supplyOf = (t: { mayhem?: boolean }) => (t.mayhem ? 2 * SUPPLY : SUPPLY);
+const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.mayhem ? 2 * SUPPLY : SUPPLY);
 /** A buy this many slots after the create still counts as part of the launch bundle. */
 const BUNDLE_SLOTS = 1;
 
@@ -289,6 +312,10 @@ interface Tracked {
   quote?: string | null;
   /** Launched in Mayhem Mode: two billion supply, and pump.fun's bot trades it for a day. */
   mayhem?: boolean;
+  /** Launched on Raydium LaunchLab or Meteora's bonding curve instead of pump.fun. */
+  venue?: Venue;
+  /** The whole supply, when it is not pump.fun's billion. */
+  supply?: number;
   name: string;
   symbol: string;
   creator: string;
@@ -428,7 +455,7 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen = { launches: 0, trades: 0 };
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number } = { launches: 0, trades: 0 };
   private pulse: PulseEvent[] = [];
   private pulseSeq = 0;
   /** Mints each creator launched, newest last, for as long as the tokens are kept. */
@@ -526,6 +553,8 @@ export class PumpTape {
         mint: ev.mint,
         quote: ev.quote ?? null,
         ...(ev.mayhem ? { mayhem: true } : {}),
+        ...(ev.venue ? { venue: ev.venue } : {}),
+        ...(ev.supply ? { supply: ev.supply } : {}),
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -562,6 +591,7 @@ export class PumpTape {
       this.recent.unshift(ev.mint);
       if (this.recent.length > RECENT_KEEP) this.recent.length = RECENT_KEEP;
       this.seen.launches += 1;
+      if (ev.venue) this.seen[ev.venue] = (this.seen[ev.venue] ?? 0) + 1;
       this.count(now, "launches");
       if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`, tx);
       else this.emit(now, "launch", ev, "new launch", tx);
@@ -625,7 +655,8 @@ export class PumpTape {
       }
       if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
     }
-    if (ev.curveSol !== null && !t.quote) t.curveSol = ev.curveSol;
+    // The curve lines the zoo grades by are pump.fun's; another launchpad's curve is not read against them.
+    if (ev.curveSol !== null && !t.quote && !t.venue) t.curveSol = ev.curveSol;
   }
 
   private creatorSold(t: Tracked, tokens: number, ts: number, now: number, tx?: string): void {
@@ -702,7 +733,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number };
       };
       if (saved.v !== 1) return 0;
       for (const s of saved.tokens ?? []) {
@@ -744,7 +775,10 @@ export class PumpTape {
         if (kept.length) this.launchesBy.set(creator, kept);
       }
       this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
-      if (saved.seen) this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades };
+      if (saved.seen) {
+        const add = (k: "launchlab" | "dbc") => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
+        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc") };
+      }
       return this.tokens.size;
     } catch {
       return 0;
@@ -919,6 +953,19 @@ export class PumpTape {
   }
 
   /** `light` leaves out the crew and ring counts, for scans over thousands of tokens. */
+  /**
+   * The early numbers as facts. After another launchpad's token graduates, its trading moves to a Raydium or Meteora
+   * pool the tape does not follow, so what the first wallets still hold is no longer known and is left out.
+   */
+  private earlyFacts(t: Tracked) {
+    const e = this.early(t);
+    if (t.venue && t.graduated) {
+      const { earlyHeld: _held, ...rest } = e;
+      return rest;
+    }
+    return e;
+  }
+
   facts(mint: string, now = Date.now(), light = false): ChainFacts | null {
     const t = this.tokens.get(mint);
     if (!t) return null;
@@ -927,6 +974,7 @@ export class PumpTape {
       ageMin: Math.max(0, Math.round((now - t.createdAt) / 60_000)),
       ...(t.quote ? { quote: t.quote } : {}),
       ...(t.mayhem ? { mayhem: true } : {}),
+      ...(t.venue ? { venue: t.venue } : {}),
       buys: t.buys,
       sells: t.sells,
       buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
@@ -956,7 +1004,7 @@ export class PumpTape {
       ammSells: t.ammSells,
       ammSolIn: round(t.ammSolIn),
       ammSolOut: round(t.ammSolOut),
-      ...this.early(t),
+      ...this.earlyFacts(t),
       ...(light ? {} : this.crewOf(t, now)),
     };
   }
@@ -1026,7 +1074,7 @@ export class PumpTape {
     for (const mint of this.recent) {
       if (out.length >= limit) break;
       const t = this.tokens.get(mint);
-      if (!t) continue;
+      if (!t || t.venue) continue;
       const age = (now - t.createdAt) / 60_000;
       if (age < (wide ? 15 : 10) || age > (wide ? 360 : 180)) continue;
       const f = this.facts(mint, now, true)!;
@@ -1062,7 +1110,8 @@ export class PumpTape {
     const signals = { stillTrading: side(), insidersHold25: side(), churn30: side(), bumped3: side(), creatorCrew2: side(), ring3: side() };
     for (const t of this.tokens.values()) {
       const age = now - t.createdAt;
-      if (age < DAY_MS || age > KEEP_MS || t.quote) continue;
+      // The record is pump.fun's: its dead and alive lines are pump.fun's curve and PumpSwap pool.
+      if (age < DAY_MS || age > KEEP_MS || t.quote || t.venue) continue;
       const at = t.createdAt + atMin * 60_000;
       const dumpedEarly = t.dumped && t.dumpedAt !== null && t.dumpedAt <= at;
       const before = (this.byCreator.get(t.creator) ?? [])
@@ -1122,7 +1171,9 @@ export class PumpTape {
 
   /** The newest launches, as the sentinels expect them, each with its chain facts attached. */
   launches(limit: number, now = Date.now()) {
-    return this.recent.slice(0, limit).flatMap((mint) => {
+    // The night's judges are graded by pump.fun's curve lines, so they see pump.fun launches only.
+    const pump = this.recent.filter((m) => !this.tokens.get(m)?.venue);
+    return pump.slice(0, limit).flatMap((mint) => {
       const t = this.tokens.get(mint);
       if (!t) return [];
       return [
@@ -1182,18 +1233,24 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
         const stream = await client.subscribe();
         current = stream;
         await new Promise<void>((resolve, reject) => {
-          stream.on("data", (update: { transaction?: { slot?: string | number; transaction?: { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
+          stream.on("data", (update: { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
             const logs = update.transaction?.transaction?.meta?.logMessages;
             if (!logs) return;
             if (!t.connected) {
               t.connected = true;
               delay = 1_000;
-              log("[chain] pump.fun stream live");
+              log("[chain] pump.fun, LaunchLab and Meteora stream live");
             }
             const sig = update.transaction?.transaction?.signature;
             const tx = sig && sig.length ? base58(sig) : undefined;
             const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
-            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, Number.isFinite(slot) ? slot : undefined);
+            const at = Number.isFinite(slot) ? slot : undefined;
+            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, at);
+            // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
+            if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
+              const raw = fromYellowstone(update.transaction!.transaction!);
+              if (raw) for (const ev of parseLaunchpads(raw, Date.now())) t.apply(ev, Date.now(), tx, at);
+            }
           });
           stream.on("error", reject);
           stream.on("end", resolve);
@@ -1205,6 +1262,8 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
               transactions: {
                 pump: { vote: false, failed: false, accountInclude: [PUMP_PROGRAM], accountExclude: [], accountRequired: [] },
                 amm: { vote: false, failed: false, accountInclude: [PUMP_AMM_PROGRAM], accountExclude: [], accountRequired: [] },
+                launchlab: { vote: false, failed: false, accountInclude: [LAUNCHLAB_PROGRAM], accountExclude: [], accountRequired: [] },
+                dbc: { vote: false, failed: false, accountInclude: [DBC_PROGRAM], accountExclude: [], accountRequired: [] },
               },
               transactionsStatus: {},
               blocks: {},
