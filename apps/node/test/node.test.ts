@@ -1616,3 +1616,71 @@ test("first-second wallets that keep sniping one creator are the creator's crew;
   reborn.load(tape.snapshot());
   assert.equal(reborn.facts(last)!.creatorCrew, 3);
 });
+
+test("a creator funded by the wallet that funded a row of ruggers is called out; an exchange funding everyone is not", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { Lineage } = await import("../src/chain/lineage.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  const tape = new PumpTape();
+  const t0 = Date.now() - 3 * 3_600_000;
+  const pad = (n: string) => n.padEnd(44, "z");
+  let i = 0;
+  const launch = (creator: string, dump: boolean) => {
+    const mint = pad(`L${i++}x`);
+    const at = t0 + i * 60_000;
+    tape.apply({ kind: "create", name: "x", symbol: "X", mint, creator, ts: at }, at);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: creator, ts: at, curveSol: 1 }, at);
+    if (dump) tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: false, user: creator, ts: at + 30_000, curveSol: 0.1 }, at);
+    return mint;
+  };
+  const boss = pad("Boss");
+  const exchange = pad("Exchange");
+  const fundedBy: Record<string, string> = {};
+  for (const r of ["RugA", "RugB"]) {
+    fundedBy[pad(r)] = boss;
+    for (let k = 0; k < 3; k++) launch(pad(r), true);
+  }
+  const fresh = pad("Fresh");
+  fundedBy[fresh] = boss;
+  const mint = launch(fresh, false);
+  // Two strangers who withdrew from the same exchange.
+  fundedBy[pad("StrangerA")] = exchange;
+  fundedBy[pad("StrangerB")] = exchange;
+  for (let k = 0; k < 3; k++) launch(pad("StrangerA"), true);
+  const other = launch(pad("StrangerB"), false);
+  // A fake RPC: each wallet's one signature is the transfer that funded it; the exchange has a thousand a day.
+  const fetchFn = (async (_url: string, init: { body: string }) => {
+    const { method, params } = JSON.parse(init.body);
+    const now = Math.floor(Date.now() / 1000);
+    if (method === "getSignaturesForAddress") {
+      const w = params[0] as string;
+      if (w === exchange) return Response.json({ result: Array.from({ length: 1000 }, () => ({ signature: "s", blockTime: now - 60 })) });
+      if (w === boss) return Response.json({ result: [{ signature: "b", blockTime: now - 60 }] });
+      return Response.json({ result: [{ signature: `sig:${w}`, blockTime: now - 600 }] });
+    }
+    if (method === "getTransaction") {
+      const w = String(params[0]).slice(4);
+      const source = fundedBy[w];
+      return Response.json({ result: { transaction: { message: { instructions: [{ program: "system", parsed: { type: "transfer", info: { source, destination: w, lamports: 1e9 } } }] } } } });
+    }
+    return Response.json({ result: null });
+  }) as unknown as typeof fetch;
+  const lin = new Lineage(tape, fetchFn);
+  for (const w of Object.keys(fundedBy)) await lin.trace(w);
+  const v = lin.view(fresh)!;
+  assert.equal(v.funder, boss);
+  assert.equal(v.funderIsHot, false);
+  assert.equal(v.siblings.length, 2);
+  assert.equal(v.siblingDumped48h, 6);
+  const c = checkToken(mint, { symbol: "X", facts: tape.facts(mint)!, creatorRecord: tape.creator(fresh) }, { lineage: v });
+  assert.equal(c.verdict, "avoid");
+  assert.match(c.reasons[0]!, /funded 2 other launchers; they dumped 6 of their 6 launches/);
+  const s = lin.view(pad("StrangerB"))!;
+  assert.equal(s.funderIsHot, true);
+  assert.equal(s.siblings.length, 0);
+  assert.notEqual(checkToken(other, { symbol: "X", facts: tape.facts(other)!, creatorRecord: tape.creator(pad("StrangerB")) }, { lineage: s }).verdict, "avoid");
+  // Kept across a restart.
+  const again = new Lineage(tape, fetchFn);
+  again.load(lin.snapshot());
+  assert.equal(again.view(fresh)!.siblings.length, 2);
+});

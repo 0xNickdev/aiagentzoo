@@ -12,6 +12,7 @@ import { castVote, geneView, nameNewborn, VOTE_MIN } from "./gene.ts";
 import { weekOf } from "./stats.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
+import { lineage, type LineageView } from "./chain/lineage.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { checkToken, RateGate } from "./chain/check.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
@@ -337,7 +338,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return json(res, 200, { key, wallet: signed.address, perMinute: HOLDER_PER_MIN, deepPerMinute: HOLDER_DEEP_PER_MIN, note: "shown once: keep it safe. A new key replaces this one." });
       }
       const checkOf = /^\/v1\/check\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
-      if (req.method === "GET" && checkOf) {
+      const xrayOf = /^\/v1\/xray\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && (checkOf || xrayOf)) {
         if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
         // A key lifts the limits while its wallet still holds; without one, everyone gets the free tier.
         const key = keyFrom(req.headers, url.searchParams);
@@ -350,25 +352,49 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // Behind the site's proxy every caller shares its address, so the free gate keys on the first forwarded hop.
         const first = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
         const caller = holder ? `key:${wallet}` : first || clientIp(req);
-        const deep = url.searchParams.get("holders") === "1";
+        // The x-ray reads Solana for holders and funders, so it always counts as a deep read.
+        const deep = Boolean(xrayOf) || url.searchParams.get("holders") === "1";
         const tier = holder
           ? { tier: "holder" as const, perMinute: HOLDER_PER_MIN, deepPerMinute: HOLDER_DEEP_PER_MIN }
           : { tier: "free" as const, perMinute: FREE_PER_MIN, deepPerMinute: FREE_DEEP_PER_MIN };
         const wait = (holder ? holderGate : checkGate).take(caller) || (deep ? (holder ? holderDeepGate : deepGate).take(caller) : 0);
         if (wait > 0) {
           res.setHeader("retry-after", String(Math.ceil(wait / 1000)));
-          const what = deep ? `${tier.deepPerMinute} holder reads` : `${tier.perMinute} checks`;
+          const what = deep ? `${tier.deepPerMinute} deep reads` : `${tier.perMinute} checks`;
           return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
-        const mint = checkOf[1]!;
+        const mint = (checkOf ?? xrayOf)![1]!;
         const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
         const found = tape.token(mint);
-        // Who holds it now costs RPC calls, so only on request, and never longer than four seconds.
-        const holders = deep && found && holdersEnabled()
-          ? await Promise.race([holderReport(mint).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 4_000))])
-          : undefined;
+        const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+        // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
+        const [holders] = await Promise.all([
+          deep && found && holdersEnabled() ? within(holderReport(mint)) : Promise.resolve(undefined),
+          deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
+        ]);
+        let funding: LineageView | null | undefined;
+        if (found && fundersEnabled()) {
+          funding = lineage.view(found.creator);
+          if (!funding) lineage.enqueue(found.creator, true);
+        }
+        const check = checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}) });
         res.setHeader("cache-control", "no-store");
-        return json(res, 200, { ...checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}) }), access: tier });
+        if (checkOf) return json(res, 200, { ...check, access: tier });
+        if (!found) return json(res, 404, { error: "not a pump.fun launch the stream saw in the last two days", check });
+        const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
+        return json(res, 200, {
+          mint,
+          symbol: found.symbol,
+          name: found.name,
+          creator: found.creator,
+          createdAt: found.createdAt,
+          check,
+          early: tape.earlyOf(mint),
+          creatorRecord: found.creatorRecord,
+          funding: funding ?? null,
+          bundle: { wallets: found.bundle, funding: bundle },
+          access: tier,
+        });
       }
       const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && creatorOf) {

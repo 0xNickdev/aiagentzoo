@@ -22,6 +22,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, tape } from "./chain/pump.ts";
+import { lineage } from "./chain/lineage.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
 import { balanceOf } from "./holders.ts";
@@ -82,13 +83,20 @@ enclosure.start();
 const momentsFile = join(config.dataDir, "chain-moments.json");
 // The whole tape too, every few minutes and on the way down, so a deploy does not cost two days of history.
 const tapeFile = join(config.dataDir, "chain-tape.json");
+// Who funded which creator: slow to learn (RPC calls), so it is kept too.
+const lineageFile = join(config.dataDir, "chain-lineage.json");
 const saveTape = () => {
   writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
   renameSync(`${tapeFile}.tmp`, tapeFile);
+  writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
+  renameSync(`${lineageFile}.tmp`, lineageFile);
 };
 if (config.role === "north") {
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
+  if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
+  // One creator traced every 30 s by default: about 3 RPC calls each, a few hundred thousand a month.
+  lineage.start(Number(process.env.ZOO_TRACE_EVERY_SEC ?? 30) * 1000);
   setInterval(() => {
     try {
       saveTape();

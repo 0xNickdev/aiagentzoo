@@ -267,6 +267,7 @@ const supplyOf = (t: { mayhem?: boolean }) => (t.mayhem ? 2 * SUPPLY : SUPPLY);
 const BUNDLE_SLOTS = 1;
 
 type Crew = { creatorCrew: number; ringWallets: number; serialSnipers: number };
+type CrewMembers = { crew: Set<string>; ring: Set<string>; serial: Set<string> };
 
 /** One of a token's first 100 buyers, as the tape saw them trade it. */
 interface Buyer {
@@ -329,7 +330,7 @@ interface Tracked {
   /** The early and churn numbers as they stood five minutes in, for the check's own record. */
   at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number };
   /** Crew and ring counts, worked out at most once a minute. Not saved. */
-  crew?: { at: number; counts: Crew };
+  crew?: { at: number; counts: Crew; members: CrewMembers };
 }
 
 /** What the tape knows about one creator wallet over the last two days. */
@@ -782,16 +783,16 @@ export class PumpTape {
     const early = this.earlyWalletsOf(t);
     const theirs = new Set((this.byCreator.get(t.creator) ?? []).filter((m) => m !== t.mint));
     const others = new Map(early.map((w) => [w, new Set((this.earlyBy.get(w) ?? []).filter((m) => m !== t.mint))]));
-    let creatorCrew = 0;
-    let serialSnipers = 0;
+    const crewSet = new Set<string>();
+    const serialSet = new Set<string>();
     const inRing = new Set<string>();
     for (const w of early) {
       const mints = others.get(w)!;
       let mine = 0;
       for (const m of mints) if (theirs.has(m)) mine += 1;
       // A bot that snipes everything lands on a busy creator's launches by chance; a crew wallet snipes mostly theirs.
-      if (mine >= 2 && mine / mints.size >= 0.5) creatorCrew += 1;
-      if (mints.size >= SERIAL_SNIPES) serialSnipers += 1;
+      if (mine >= 2 && mine / mints.size >= 0.5) crewSet.add(w);
+      if (mints.size >= SERIAL_SNIPES) serialSet.add(w);
     }
     // Pairs only among the first 30, to keep this cheap on a crowded launch.
     const head = early.slice(0, 30);
@@ -811,8 +812,38 @@ export class PumpTape {
         }
       }
     }
-    t.crew = { at: now, counts: { creatorCrew, ringWallets: inRing.size, serialSnipers } };
+    t.crew = { at: now, counts: { creatorCrew: crewSet.size, ringWallets: inRing.size, serialSnipers: serialSet.size }, members: { crew: crewSet, ring: inRing, serial: serialSet } };
     return t.crew.counts;
+  }
+
+  /** Every first-second wallet of a token: what it took, what it still holds, how often it snipes and whose launches. */
+  earlyOf(mint: string, now = Date.now()) {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    this.crewOf(t, now);
+    const m = t.crew!.members;
+    const supply = supplyOf(t);
+    const r = (n: number) => Math.round(n * 10_000) / 10_000;
+    return this.earlyWalletsOf(t)
+      .map((wallet) => {
+        const b = t.buyers.get(wallet)!;
+        const tok = b.tok ?? 0;
+        const sold = Math.min(tok, b.sold ?? 0);
+        return {
+          wallet,
+          bought: r(tok / supply),
+          held: r((tok - sold) / supply),
+          afterSec: Math.max(0, Math.round(((b.at ?? t.createdAt) - t.createdAt) / 1000)),
+          exitSec: b.exitAt !== undefined && b.at !== undefined ? Math.max(0, Math.round((b.exitAt - b.at) / 1000)) : null,
+          bundle: t.launchBuys.has(wallet),
+          snipes48h: (this.earlyBy.get(wallet) ?? []).length,
+          crew: m.crew.has(wallet),
+          ring: m.ring.has(wallet),
+          serial: m.serial.has(wallet),
+        };
+      })
+      .sort((a, b) => b.bought - a.bought)
+      .slice(0, 30);
   }
 
   /** One wallet's first-second buys over two days, and how fast it sold out of them. */

@@ -20,7 +20,7 @@ const cache = new Map<string, { at: number; report: FundingReport }>();
 
 export const fundersEnabled = () => Boolean(RPC);
 
-async function rpc<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<T | null> {
+export async function rpc<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<T | null> {
   try {
     const r = await fetchFn(RPC, {
       method: "POST",
@@ -41,7 +41,7 @@ interface ParsedTx {
 }
 
 /** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
-async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<string | null> {
+export async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<string | null> {
   const sigs = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 15 }], fetchFn);
   if (!sigs?.length) return null;
   // Oldest first: the funding usually comes just before the first buy.

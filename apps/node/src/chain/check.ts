@@ -1,5 +1,6 @@
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
+import type { LineageView } from "./lineage.ts";
 import type { ChainFacts, CreatorRecord } from "./pump.ts";
 
 /**
@@ -53,6 +54,8 @@ export interface TokenCheck {
     ringWallets: number | null;
     serialSnipers: number | null;
   } | null;
+  /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
+  funding?: { funder: string | null; funderIsHot: boolean; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
   /** How fresh the chain stream behind this answer is. */
@@ -72,7 +75,7 @@ export interface CheckInput {
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -106,6 +109,16 @@ export function checkToken(
   } else if (f.creatorLaunches24h >= 3) {
     caution.push(`the creator launched ${f.creatorLaunches24h} tokens in the last 24 hours`);
   }
+
+  // Who paid for the creator: a fresh wallet funded by the same hand as a row of ruggers is that rugger again.
+  const lin = opts.lineage;
+  if (lin && lin.funder && !lin.funderIsHot && lin.siblings.length) {
+    const n = lin.siblings.length;
+    const they = `the wallet that funded this creator also funded ${n} other launcher${n === 1 ? "" : "s"}`;
+    if (lin.siblingDumped48h >= 3 && lin.siblingDumped48h / Math.max(1, lin.siblingLaunches48h) >= 0.5) {
+      avoid.push(`${they}; they dumped ${lin.siblingDumped48h} of their ${lin.siblingLaunches48h} launches in 48 hours`);
+    } else notes.push(`${they} the zoo has traced`);
+  } else if (opts.lineage === null) notes.push("who funded the creator is not traced yet: it is queued");
 
   // Wallets other than the creator buying in the launch block: the supply was split up before anyone could see it.
   if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) {
@@ -200,6 +213,9 @@ export function checkToken(
       serialSnipers: f.serialSnipers ?? null,
     },
     ...(holders !== undefined ? { holders } : {}),
+    ...(lin !== undefined
+      ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
+      : {}),
   };
 }
 
