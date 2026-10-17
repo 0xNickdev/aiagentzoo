@@ -40,6 +40,8 @@ export interface TokenCheck {
     /** The token it trades against when not SOL; then curveSol is null. */
     quote: string | null;
     mayhem: boolean;
+    /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
+    venue: "pump.fun" | "launchlab" | "dbc";
     curveSol: number | null;
     poolSol: number | null;
     /** Wallets that bought in the first 5 seconds, and the share of the supply they still hold (curve trades). */
@@ -86,7 +88,7 @@ export function checkToken(
       symbol: null,
       verdict: "unknown",
       proceed: null,
-      reasons: ["not a pump.fun launch from the last two days, so there is no chain record to check"],
+      reasons: ["not a launch from pump.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check"],
       notes: stream.live ? [] : ["the chain stream is down right now: a fresh launch may be missing for that reason"],
       facts: null,
     };
@@ -206,6 +208,7 @@ export function checkToken(
       graduated: f.graduated,
       quote: f.quote ?? null,
       mayhem: Boolean(f.mayhem),
+      venue: f.venue ?? "pump.fun",
       curveSol: f.curveSol,
       poolSol: f.poolSol,
       earlyWallets: f.earlyWallets ?? null,

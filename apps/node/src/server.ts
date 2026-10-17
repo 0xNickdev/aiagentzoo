@@ -382,7 +382,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const check = checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}) });
         res.setHeader("cache-control", "no-store");
         if (checkOf) return json(res, 200, { ...check, access: tier });
-        if (!found) return json(res, 404, { error: "not a pump.fun launch the stream saw in the last two days", check });
+        if (!found) return json(res, 404, { error: "not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)", check });
         const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
         return json(res, 200, {
           mint,

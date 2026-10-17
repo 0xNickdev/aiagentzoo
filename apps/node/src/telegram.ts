@@ -293,7 +293,7 @@ export interface XRayReply {
     verdict: "avoid" | "caution" | "pass" | "unknown";
     reasons: string[];
     notes: string[];
-    facts: { ageMin: number; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
+    facts: { ageMin: number; venue?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
   early: Array<{ bought: number }>;
   funding: { funder: string | null; funderIsHot: boolean; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
@@ -305,7 +305,8 @@ export function xrayMessage(x: XRayReply): string {
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ""];
+  const venue = { launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.venue ?? ""] ?? "pump.fun";
+  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
   if (f) {
@@ -432,7 +433,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
     try {
       const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
-      if (r.status === 404) return void send(chat, T("Not a pump.fun launch the stream saw in the last two days."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
+      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
@@ -563,7 +564,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
   };
 
   const prompt = (chat: number, what: "ask" | "dev" | "xray") =>
-    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a pump.fun token to x-ray." : "Send me a token address or a pump.fun link."), undefined, {
+    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a token to x-ray: pump.fun, LaunchLab or Meteora." : "Send me a token address or a pump.fun link."), undefined, {
       reply_markup: { force_reply: true, input_field_placeholder: T(what === "dev" ? "wallet address" : "token address or link") },
     });
 

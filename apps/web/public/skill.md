@@ -4,7 +4,7 @@ Before you buy a token launched on pump.fun, check whether its creator already r
 
 This complements a contract check such as `rug-check`. On pump.fun every token passes the contract checks by design: mint and freeze authority are revoked, and the liquidity is burned at graduation. The rug there is behavioural: the creator selling into the first buyers, a few wallets taking the supply in the launch block, the creator's own wallets sniping the first seconds, a fresh creator wallet paid for by a known rugger, one wallet launching and dumping hundreds of tokens a day. This skill checks exactly that, from what happened on chain.
 
-ZOOAI AGENCY reads every pump.fun launch and trade straight from Solana as it happens. One call, no key, no cost, answers in well under a second.
+ZOOAI AGENCY reads every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab (bonk.fun and others) and Meteora's bonding curve (Believe, bags and others) straight from Solana as it happens. The check answers for all of them; `facts.venue` says which. Its own accuracy record is pump.fun's, the curve the zoo grades by. One call, no key, no cost, answers in well under a second.
 
 ## When to call it
 
@@ -81,7 +81,7 @@ Everything the check knows plus the evidence: every first-second wallet (what it
 | `avoid` | `false` | the creator sold half their bag or more; the creator dumped most of their launches in 48h; 3+ wallets took 15%+ of supply in the launch block; 2+ of the first-second wallets are the creator's crew; 3+ first-second wallets still hold half the supply; the wallet that funded the creator funded other launchers who dumped most of their launches; 6h+ old and the curve is back at its opening; graduated pool under 0.4 SOL | Do not buy. Tell the user the `reasons`, word for word. |
 | `caution` | `false` | the creator sold part of their bag; 3+ launches by the creator today; first-second wallets still hold 25%+; 3+ first-second wallets in a sniper ring, or 3+ serial snipers; top 5 buyers took over half the buying; under 10 buyers; sells outnumber buys 2:1; 30%+ churned volume; 3+ bump bot trades; with `holders=1`: one wallet holds 20%+, the top 10 hold 50%+, or the creator holds nothing yet never sold | Do not buy on your own. If the user insists, quote the `reasons` first and keep the size small. |
 | `pass` | `true` | none of the above | Decide with your own strategy. Pass means no red flags on chain, not that the price will rise. |
-| `unknown` | `null` | not a pump.fun launch from the last 48 hours | Use your other checks. |
+| `unknown` | `null` | not a launch from pump.fun, Raydium LaunchLab or Meteora's bonding curve in the last 48 hours | Use your other checks. |
 
 In its first 10 minutes a token has had no time to show anything but its creator's history. Then the check answers `pass` when that history is clean, with a note `only N min old`: buy small, and call the check again before adding.
 

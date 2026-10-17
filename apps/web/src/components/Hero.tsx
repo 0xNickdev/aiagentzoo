@@ -66,7 +66,7 @@ export default function Hero() {
         </motion.h1>
 
         <motion.p {...rise(0.45)} className="mt-6 max-w-2xl text-[15px] font-light leading-relaxed text-white/70 sm:text-lg">
-          {t("Eight autonomous agents on three nodes read every pump.fun launch straight from Solana and tokens on Raydium, Meteora and the rest through DexScreener, judge them, check their own calls the next day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.")}
+          {t("Eight autonomous agents on three nodes read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana, and the rest of Solana's DEXes through DexScreener. They judge new tokens, check their own calls the next day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.")}
         </motion.p>
 
         <motion.div {...rise(0.65)} className="mt-9 flex flex-col items-center gap-3 sm:flex-row">

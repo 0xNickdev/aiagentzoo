@@ -36,6 +36,7 @@ interface Check {
     bundleSharePct: number | null;
     graduated: boolean;
     mayhem?: boolean;
+    venue?: "pump.fun" | "launchlab" | "dbc";
     earlyWallets: number | null;
     earlyHeldPct: number | null;
     churnPct: number | null;
@@ -69,6 +70,8 @@ interface XRayReport {
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
+/** Where the token was launched, as people know the places. */
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
@@ -176,13 +179,14 @@ function Report({ r }: { r: XRayReport }) {
             <div>
               <p className="font-mono text-[11px] text-white/45">
                 ${r.symbol} · {r.name} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
+                {` · ${VENUE[f?.venue ?? "pump.fun"]}`}
                 {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
               </p>
               <p className="font-display mt-2 text-4xl sm:text-5xl" style={{ color: tone.color }}>
                 {t(tone.label)}
               </p>
             </div>
-            <a href={`https://pump.fun/coin/${r.mint}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
+            <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
               {short(r.mint)} ↗
             </a>
           </div>
@@ -321,7 +325,7 @@ export default function XRay() {
       const r = await fetch(`${NORTH}/v1/xray/${mint}`);
       const body = (await r.json()) as XRayReport & { error?: string };
       if (r.status === 429) throw new Error(t("Ten x-rays a minute on the free tier. Try again in a minute."));
-      if (!r.ok) throw new Error(body.error ? t("Not a pump.fun launch the stream saw in the last two days.") : t("Something went wrong."));
+      if (!r.ok) throw new Error(body.error ? t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
       setReport(body);
       history.replaceState(null, "", `/xray?mint=${mint}`);
     } catch (err) {
@@ -343,7 +347,7 @@ export default function XRay() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const mint = mintIn(input);
-    if (!mint) return setError(t("Paste a pump.fun token address or link."));
+    if (!mint) return setError(t("Paste a token address or link."));
     void run(mint);
   };
 
@@ -351,7 +355,7 @@ export default function XRay() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="font-mono text-[12px] text-white/50">{t("X-Ray · every pump.fun trade, read live from Solana")}</p>
+          <p className="font-mono text-[12px] text-white/50">{t("X-Ray · every pump.fun, LaunchLab and Meteora trade, read live from Solana")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
             <br />
@@ -366,7 +370,7 @@ export default function XRay() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t("pump.fun token address or link")}
+              placeholder={t("token address: pump.fun, LaunchLab, Meteora")}
               spellCheck={false}
               autoComplete="off"
               className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-white/35"
