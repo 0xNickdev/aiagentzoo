@@ -10,6 +10,7 @@ import WallOfRugs from "./components/WallOfRugs";
 import Play from "./components/Play";
 import Connect from "./components/Connect";
 import BeaverRecord from "./components/BeaverRecord";
+import KoiSection from "./components/KoiSection";
 import AgentOfWeek from "./components/AgentOfWeek";
 import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
@@ -121,6 +122,7 @@ function AgentsPage() {
       <AgentOfWeek />
       <Leaderboard />
       <BeaverRecord />
+      <KoiSection />
       <Guests />
       <Developers />
       <Keeper />
