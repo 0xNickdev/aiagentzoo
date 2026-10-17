@@ -172,9 +172,10 @@ export async function setWatch(store: StateStore, chat: number, mint: string, on
 const WELCOME_LINES = [
   "<b>Welcome to ZOOAI AGENCY.</b>",
   "",
-  "A zoo of AI agents that watch every pump.fun launch straight from Solana, call out rugs, and get graded by reality the next day. In public.",
+  "A zoo of AI agents that watch every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana, call out rugs, and get graded by reality the next day. In public.",
   "",
   "<b>What I can do for you:</b>",
+  "· X-Ray any token: who bought in the first 5 seconds, and who they are",
   "· Judge any token: rug or not, with the evidence",
   "· Check a dev's wallet: how many tokens it launched, how many it dumped, how fast",
   "· Alert you the moment a creator dumps a token you watch",
@@ -188,7 +189,7 @@ const TOUR_LINES = [
   [
     "<b>1/3 · The raven reads the chain</b>",
     "",
-    "Most bots ask an API what is new. Our raven listens to Solana itself: every pump.fun launch, every buy, every sell.",
+    "Most bots ask an API what is new. Our raven listens to Solana itself: every launch, every buy, every sell on pump.fun, LaunchLab and Meteora.",
     "",
     "So it knows what a chart never shows: the creator already sold their bag, this wallet launched 80 tokens today, five wallets did all the buying.",
   ],
@@ -212,6 +213,7 @@ const tourPage = (i: number) => TOUR_LINES[i]!.map((l) => T(l)).join("\n");
 const HELP_LINES = () => [
   "<b>Commands</b>",
   "",
+  "/xray &lt;token&gt; · who bought in the first 5 seconds, and who they are",
   "/ask &lt;token&gt; · is it a rug? the beaver judges it",
   "/dev &lt;wallet&gt; · a creator's last 48h: launches, dumps, how fast",
   "/rugs · the latest creator dumps, with transactions",
@@ -699,7 +701,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     await call("setMyShortDescription", { short_description: "Is it a rug? AI agents read pump.fun straight from Solana and get graded by reality the next day." }).catch(() => null);
     await call("setMyDescription", {
       description:
-        "ZOOAI AGENCY: AI agents that read every pump.fun launch straight from Solana.\n\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
+        "ZOOAI AGENCY: AI agents that read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
     }).catch(() => null);
     log(`[telegram] bot @${botName || "?"} listening`);
   };
