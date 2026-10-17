@@ -673,7 +673,17 @@ export class PumpTape {
    */
   snapshot(): string {
     // Amounts trimmed so two days of tokens stay a file the volume can write every five minutes.
-    const slim = (b: Buyer): Buyer => ({ ...b, sol: Math.round(b.sol * 1e6) / 1e6, tok: Math.round(b.tok ?? 0), sold: Math.round(b.sold ?? 0), out: Math.round((b.out ?? 0) * 1e6) / 1e6 });
+    // Zeros and the obvious are left out: a trade count equal to the buys, nothing sold, nothing taken out.
+    const slim = (b: Buyer): Buyer => ({
+      sol: Math.round(b.sol * 1e6) / 1e6,
+      buys: b.buys,
+      ...(b.tok ? { tok: Math.round(b.tok) } : {}),
+      ...(b.sold ? { sold: Math.round(b.sold) } : {}),
+      ...(b.out ? { out: Math.round(b.out * 1e6) / 1e6 } : {}),
+      ...(b.trades !== undefined && b.trades !== b.buys ? { trades: b.trades } : {}),
+      ...(b.at !== undefined ? { at: b.at } : {}),
+      ...(b.exitAt !== undefined ? { exitAt: b.exitAt } : {}),
+    });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys] }));
     return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen });
   }

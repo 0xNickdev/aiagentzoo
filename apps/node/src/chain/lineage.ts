@@ -38,6 +38,7 @@ export class Lineage {
   private readonly queue: string[] = [];
   private readonly busy = new Map<string, Promise<string | null>>();
   private timer: NodeJS.Timeout | null = null;
+  private refilledAt = 0;
 
   private readonly tape: PumpTape;
   private readonly fetchFn: typeof fetch;
@@ -121,13 +122,27 @@ export class Lineage {
   }
 
   /**
-   * Traces one creator every `everyMs`: whoever is asked about first, then the wall of rugs (serial dumpers), so the
-   * index fills with the hands that rug most. Off without an RPC.
+   * Who to trace when nobody is asking: fresh wallets that just dumped their launch. A rugger who rotates wallets
+   * leaves exactly these, and a fresh wallet's funding is its first transaction. Old serial launchers are skipped:
+   * their recent history is all launches, so the transfer that funded them is out of reach.
    */
+  refill(now = Date.now()): void {
+    this.refilledAt = now;
+    const seen = new Set<string>();
+    for (const e of this.tape.momentsMatching({ kind: "dump", limit: 400 })) {
+      const c = e.creator;
+      if (!c || seen.has(c) || this.creators.has(c)) continue;
+      seen.add(c);
+      const r = this.tape.creator(c, now);
+      if (r && r.launches48h <= 5) this.enqueue(c);
+    }
+  }
+
+  /** Traces one creator every `everyMs`: whoever is asked about first, then fresh dumpers. Off without an RPC. */
   start(everyMs: number): void {
     if (!fundersEnabled() || this.timer) return;
     this.timer = setInterval(() => {
-      if (!this.queue.length) for (const r of this.tape.ruggers(50)) this.enqueue(r.wallet);
+      if (!this.queue.length && Date.now() - this.refilledAt > 10 * 60_000) this.refill();
       const next = this.queue.shift();
       if (next) void this.trace(next).catch(() => null);
     }, everyMs);
