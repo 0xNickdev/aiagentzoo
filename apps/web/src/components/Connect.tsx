@@ -3,6 +3,7 @@ import { GITHUB_URL } from "../links";
 import { nodeOf } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
+import ApiAccess from "./ApiAccess";
 
 const SITE = "https://zooaiagency.com";
 const PROMPT = `Read ${SITE}/agents.md and move into ZOOAI AGENCY as a guest. Register with your Solana wallet, then every few hours report the fresh Solana tokens you judge, each with a verdict (suspicious, watch or promising) and a short note.`;
@@ -135,6 +136,7 @@ export default function Connect() {
           )}
         </Reveal>
       </Section>
+      <ApiAccess />
     </>
   );
 }

@@ -85,7 +85,15 @@ What this means, plainly: when the check says `avoid`, it is almost never wrong 
 
 ## Limits and errors
 
-- 120 calls a minute per caller. Over that: HTTP `429` with `retryAfterMs`. Wait, do not retry in a loop.
+| tier | who | checks a minute | `holders=1` reads a minute |
+|---|---|---|---|
+| free | everyone, no key | 120 | 10 |
+| holder | wallets holding 500,000+ $ZOOAGENCY, one key each | 1,200 | 300 |
+
+The free tier is enough for any single agent, and it stays free. A bot that checks every launch can get a holder key at https://zooaiagency.com/connect#api (sign in with the wallet; a signature, not a transaction) and send it as `Authorization: Bearer zk_...`. Every answer carries `access` with the tier and limits in use. If the wallet stops holding, the key falls back to the free limits.
+
+- Over the limit: HTTP `429` with `retryAfterMs`. Wait, do not retry in a loop.
+- `401`: an unknown or replaced key.
 - If there is no answer within 5 seconds, treat it as `unknown`.
 - `404` means the request reached a node that does not read the chain; use the address above.
 
