@@ -60,6 +60,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^the 10 largest wallets hold (\d+)% of the supply$/, (m) => `前十大钱包持有 ${m[1]}% 的供应`],
   [/^the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets$/, () => "开发者已经不持有，但从没在内盘卖过：筹码转去了别的钱包"],
   [/^only (\d+) min old: no red flags yet, so check again before adding$/, (m) => `才发币 ${m[1]} 分钟：暂无危险信号，加仓前再查一次`],
+  [/^only (\d+) min old: more can show up, check again before adding$/, (m) => `才发币 ${m[1]} 分钟：还可能出现更多信号，加仓前再查一次`],
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^pass means .*$/, () => "通过只代表链上没看到开发者砸盘、捆绑、开发者小号、狙击手囤货、连环发币或内盘归零，不代表会涨"],
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],

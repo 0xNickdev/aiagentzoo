@@ -151,7 +151,7 @@ export function checkToken(
 
   if (early) {
     // Minutes in, a handful of buyers is normal; only the creator's own record can speak yet.
-    notes.push(`only ${Math.max(0, Math.round(f.ageMin))} min old: no red flags yet, so check again before adding`);
+    // Said once the verdict is known: "no red flags yet" next to an avoid would contradict it.
   } else {
     if (f.top5Share !== null && f.top5Share > 0.5) caution.push(`the top 5 buyers took ${pct(f.top5Share)}% of all buying`);
     if (f.buyers === 0) caution.push("nobody has bought it");
@@ -178,6 +178,10 @@ export function checkToken(
   }
 
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
+  if (early) {
+    const age = Math.max(0, Math.round(f.ageMin));
+    notes.unshift(verdict === "pass" ? `only ${age} min old: no red flags yet, so check again before adding` : `only ${age} min old: more can show up, check again before adding`);
+  }
   if (verdict === "pass") notes.push("pass means no creator dump, bundle, creator's crew, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
   if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");
   return {
