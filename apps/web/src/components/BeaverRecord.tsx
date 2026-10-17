@@ -57,7 +57,7 @@ export default function BeaverRecord() {
           <p className="font-mono mt-8 text-[10.5px] text-white/45">{t("balanced accuracy, night by night")}</p>
           <div className="mt-3 flex h-28 items-end gap-1.5">
             {nights.map((n) => (
-              <div key={n.night} className="group relative flex flex-1 flex-col items-center justify-end" title={t("{night}: {p} over {n}", { night: n.night, p: n.skill === null ? "-" : Math.round(n.skill * 100) + "%", n: n.graded })}>
+              <div key={n.night} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={t("{night}: {p} over {n}", { night: n.night, p: n.skill === null ? "-" : Math.round(n.skill * 100) + "%", n: n.graded })}>
                 <div className="w-full rounded-t bg-amber-100/70" style={{ height: `${Math.max(4, (n.skill ?? 0) * 100)}%`, opacity: n.graded >= 10 ? 1 : 0.45 }} />
                 <span className="font-mono mt-1.5 text-[9px] text-white/35">{n.night.slice(5)}</span>
               </div>
