@@ -38,6 +38,7 @@ export interface TokenCheck {
     graduated: boolean;
     /** The token it trades against when not SOL; then curveSol is null. */
     quote: string | null;
+    mayhem: boolean;
     curveSol: number | null;
     poolSol: number | null;
     /** Wallets that bought in the first 5 seconds, and the share of the supply they still hold (curve trades). */
@@ -110,7 +111,8 @@ export function checkToken(
   // Wallets in before anyone could see the token, still sitting on a big share: they decide when it dies.
   if (f.earlyWallets !== undefined && f.earlyHeld !== undefined && f.earlyWallets >= 2) {
     const who = `${f.earlyWallets} wallets that bought in the first 5 seconds still hold ${pct(f.earlyHeld)}% of the supply`;
-    if (f.earlyWallets >= 3 && f.earlyHeld >= 0.5) avoid.push(who);
+    // In Mayhem Mode pump.fun's own bot trades from the first second, so an early crowd may be partly that bot.
+    if (f.earlyWallets >= 3 && f.earlyHeld >= 0.5 && !f.mayhem) avoid.push(who);
     else if (f.earlyHeld >= 0.25) caution.push(who);
   }
 
@@ -121,6 +123,8 @@ export function checkToken(
     if (real !== null && curveCapOf(real) < CURVE_DEAD_SOL) avoid.push(`${Math.round(f.ageMin / 60)} hours old and the curve is back where it opened: nobody is holding it`);
   }
 
+  if (f.mayhem) notes.push("launched in Mayhem Mode: two billion supply, and pump.fun's own bot trades it for the first 24 hours, so its volume is partly that bot");
+
   if (early) {
     // Minutes in, a handful of buyers is normal; only the creator's own record can speak yet.
     notes.push(`only ${Math.max(0, Math.round(f.ageMin))} min old: no red flags yet, so check again before adding`);
@@ -129,8 +133,8 @@ export function checkToken(
     if (f.buyers === 0) caution.push("nobody has bought it");
     else if (f.buyers < 10) caution.push(`only ${f.buyers} wallets have bought it`);
     if (f.sells > f.buys * 2 && f.sells >= 10) caution.push(`sells outnumber buys ${f.sells} to ${f.buys}`);
-    if (f.washShare !== undefined && f.washShare >= 0.3) caution.push(`at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`);
-    if (f.bumps !== undefined && f.bumps >= 3) caution.push(`a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`);
+    if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem) caution.push(`at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`);
+    if (f.bumps !== undefined && f.bumps >= 3 && !f.mayhem) caution.push(`a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`);
   }
 
   // Who holds it now catches what trades cannot: a creator who moved the bag to other wallets instead of selling.
@@ -173,6 +177,7 @@ export function checkToken(
       top5BuyingPct: pct(f.top5Share),
       graduated: f.graduated,
       quote: f.quote ?? null,
+      mayhem: Boolean(f.mayhem),
       curveSol: f.curveSol,
       poolSol: f.poolSol,
       earlyWallets: f.earlyWallets ?? null,

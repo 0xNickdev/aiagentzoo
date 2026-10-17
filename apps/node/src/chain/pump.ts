@@ -26,7 +26,7 @@ const DISC = {
 
 export type PumpEvent =
   /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
-  | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null; quote?: string | null }
+  | { kind: "create"; name: string; symbol: string; mint: string; creator: string; ts: number | null; quote?: string | null; mayhem?: boolean }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
@@ -142,16 +142,18 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
         // Newer versions add the creator and a timestamp; older ones stop at the user, who is the creator.
         const creator = r.left() >= 32 ? r.key() : user;
         const ts = r.left() >= 8 ? Number(r.i64()) * 1000 : null;
-        // CreateV2 goes on: four reserves, the token program, two flags, then the quote mint.
+        // CreateV2 goes on: four reserves, the token program, is_mayhem_mode, is_cashback_enabled, then the quote mint.
         let quote: string | null = null;
+        let mayhem = false;
         if (r.left() >= 4 * 8 + 32 + 2 + 32) {
           for (let i = 0; i < 4; i++) r.u64();
           r.key(); // token program
-          r.skip(2);
+          mayhem = r.bool();
+          r.skip(1);
           const q = base58(r.key());
           if (q !== WSOL && !/^1+$/.test(q)) quote = q;
         }
-        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}) });
+        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}), ...(mayhem ? { mayhem } : {}) });
       } else if (head.equals(DISC.trade)) {
         const mint = r.key();
         const sol = Number(r.u64()) / LAMPORTS;
@@ -204,6 +206,8 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
 export interface ChainFacts {
   /** Minutes since launch. */
   ageMin: number;
+  /** Launched in Mayhem Mode: pump.fun's bot trades it for its first 24 hours, so its volume and churn are partly that bot. */
+  mayhem?: boolean;
   /** The token it trades against when not SOL; then solIn, solOut and curveSol are not in SOL (curveSol stays null). */
   quote?: string | null;
   buys: number;
@@ -251,6 +255,8 @@ export interface ChainFacts {
 
 /** pump.fun mints a billion tokens. */
 const SUPPLY = 1_000_000_000;
+/** In Mayhem Mode pump.fun's own bot mints a second billion to trade with for the first 24 hours. */
+const supplyOf = (t: { mayhem?: boolean }) => (t.mayhem ? 2 * SUPPLY : SUPPLY);
 /** A buy this many slots after the create still counts as part of the launch bundle. */
 const BUNDLE_SLOTS = 1;
 
@@ -270,6 +276,8 @@ interface Tracked {
   mint: string;
   /** The token it trades against when not SOL; its amounts below are then in that token, not SOL. */
   quote?: string | null;
+  /** Launched in Mayhem Mode: two billion supply, and pump.fun's bot trades it for a day. */
+  mayhem?: boolean;
   name: string;
   symbol: string;
   creator: string;
@@ -495,6 +503,7 @@ export class PumpTape {
       this.tokens.set(ev.mint, {
         mint: ev.mint,
         quote: ev.quote ?? null,
+        ...(ev.mayhem ? { mayhem: true } : {}),
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -724,7 +733,7 @@ export class PumpTape {
     }
     const volume = t.solIn + t.solOut;
     const r = (n: number) => Math.round(n * 1000) / 1000;
-    return { earlyWallets, earlyShare: r(bought / SUPPLY), earlyHeld: r(held / SUPPLY), washShare: volume > 0 ? r(Math.min(1, churn / volume)) : 0, bumps: t.bumps ?? 0 };
+    return { earlyWallets, earlyShare: r(bought / supplyOf(t)), earlyHeld: r(held / supplyOf(t)), washShare: volume > 0 ? r(Math.min(1, churn / volume)) : 0, bumps: t.bumps ?? 0 };
   }
 
   facts(mint: string, now = Date.now()): ChainFacts | null {
@@ -734,6 +743,7 @@ export class PumpTape {
     return {
       ageMin: Math.max(0, Math.round((now - t.createdAt) / 60_000)),
       ...(t.quote ? { quote: t.quote } : {}),
+      ...(t.mayhem ? { mayhem: true } : {}),
       buys: t.buys,
       sells: t.sells,
       buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
@@ -757,7 +767,7 @@ export class PumpTape {
       repeatBuyers: [...t.buyers.values()].filter((b) => b.buys >= 2).length,
       trades15m: t.trades15m,
       bundleWallets: t.createSlot === null ? null : t.launchBuys.size,
-      bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / SUPPLY),
+      bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supplyOf(t)),
       poolSol: t.poolSol === null ? null : round(t.poolSol),
       ammBuys: t.ammBuys,
       ammSells: t.ammSells,
@@ -873,7 +883,7 @@ export class PumpTape {
         .filter((o): o is Tracked => Boolean(o) && o!.mint !== t.mint && o!.createdAt < at && at - o!.createdAt <= KEEP_MS);
       const dumpedBefore = before.filter((o) => o.dumped && o.dumpedAt !== null && o.dumpedAt <= at).length;
       const serial = dumpedBefore >= 3 && dumpedBefore / (before.length + 1) >= 0.5;
-      const bundle = t.createSlot !== null && t.launchBuys.size >= 3 && [...t.launchBuys.values()].reduce((a, b) => a + b, 0) / SUPPLY >= 0.15;
+      const bundle = t.createSlot !== null && t.launchBuys.size >= 3 && [...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supplyOf(t) >= 0.15;
       let outcome: "dead" | "alive" | "unknown" = "unknown";
       if (t.graduated) {
         if (t.poolSol !== null) outcome = t.poolSol >= POOL_ALIVE_SOL ? "alive" : t.poolSol < POOL_DEAD_SOL ? "dead" : "unknown";
@@ -917,7 +927,7 @@ export class PumpTape {
       facts: this.facts(mint, now)!,
       creatorRecord: this.creator(t.creator, now),
       // The biggest launch-block buyers, for anyone checking who funded them.
-      bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / SUPPLY) * 10_000) / 10_000 })),
+      bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / supplyOf(t)) * 10_000) / 10_000 })),
     };
   }
 

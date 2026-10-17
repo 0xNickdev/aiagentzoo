@@ -1552,3 +1552,27 @@ test("tape sees snipers still holding, wallets churning the volume, and bump bot
   reborn.load(tape.snapshot());
   assert.equal(reborn.facts(mint)!.earlyHeld, 0.25);
 });
+
+test("a Mayhem Mode launch is read from the create event and its shares are of two billion", async () => {
+  const { parsePumpLogs, PumpTape, fromBase58 } = await import("../src/chain/pump.ts");
+  // The same real CreateV2 event as above, with is_mayhem_mode (the byte two before the quote mint) switched on.
+  const raw = Buffer.from(
+    "G3KpTd7rY3YEAAAATWV0YQQAAABNRVRBUAAAAGh0dHBzOi8vaXBmcy5pby9pcGZzL2JhZmtyZWllNTZidjRqMnBxZWh5c2RnbnAzZ2podW5ueDNqb2dlYXR5YW5rNzdqdHJ4cHY2eG1sd3d1QWxz18ddr7sq/rsjufRrIG4CLndr7j7MzZJFIX4pr1J9HnyOhQVUy0f/k4+Vsl7znVnVVk/QM2AY/chxCvLvNavK85lK16L4NnmZGte9MB+mlla1dsuwqdB7XMw4/pNeq8rzmUrXovg2eZka170wH6aWVrV2y7Cp0HtczDj+k17cJNFqAAAAAAAQ2EfjzwMAQDKin1YAAAAAeMX7UdECAACAxqR+jQMABt324e51j94YQl285GzN2rYa/E2DuQ0n/r35KNihi/wAAAVbQewvE0/oSDZZk1EOc+yvWUFcu1gGKlY2RWejfTXPQDKin1YAAAAsAQAAAAAAAAAA",
+    "base64",
+  );
+  const at = raw.indexOf(Buffer.from(fromBase58("MukLDtJ8Cx9DxLbeyLRSWPSposTMWuwHANbuaudpump")));
+  assert.ok(at > 0);
+  assert.equal(raw[at - 2], 0);
+  const [plain] = parsePumpLogs([`Program data: ${raw.toString("base64")}`]) as any[];
+  assert.equal(plain.mayhem, undefined);
+  raw[at - 2] = 1;
+  const [ev] = parsePumpLogs([`Program data: ${raw.toString("base64")}`]) as any[];
+  assert.equal(ev.mayhem, true);
+  const tape = new PumpTape();
+  const now = 1_792_091_400_000;
+  tape.apply(ev, now);
+  for (const n of ["A", "B", "C"]) tape.apply({ kind: "trade", mint: ev.mint, sol: 1, tokens: 200_000_000, isBuy: true, user: `${n}${"1".repeat(43)}`, ts: ev.ts ?? now, curveSol: 3 }, now);
+  const f = tape.facts(ev.mint, now)!;
+  assert.equal(f.mayhem, true);
+  assert.equal(f.earlyHeld, 0.3);
+});
