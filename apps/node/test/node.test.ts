@@ -1457,3 +1457,32 @@ test("the koi's picks are re-checked first, next to the nursery's exam", async (
   assert.deepEqual(picked.slice(0, 3), ["E1", "E2", "K1"]);
   assert.equal(picked.length, 10);
 });
+
+test("holder keys: shown once, stored as a hash, replaced by a new one, and lifting limits only while the wallet holds", async () => {
+  const { issueKey, walletOfKey, keyFrom, isKeyShaped, HoldingCache, HOLDING_TTL_MS } = await import("../src/chain/keys.ts");
+  const { MemoryStore } = await import("@aiagentzoo/sdk");
+  const store = new MemoryStore();
+  const W = "So11111111111111111111111111111111111111112";
+  const k1 = await issueKey(store, W);
+  assert.ok(isKeyShaped(k1));
+  assert.equal(await walletOfKey(store, k1), W);
+  // The key itself is never stored.
+  assert.ok(!(await store.keys()).some((k: string) => k.includes(k1.slice(3))));
+  const k2 = await issueKey(store, W);
+  assert.equal(await walletOfKey(store, k1), null);
+  assert.equal(await walletOfKey(store, k2), W);
+  assert.equal(await walletOfKey(store, "zk_nope"), null);
+
+  assert.equal(keyFrom({ authorization: `Bearer ${k2}` }, new URLSearchParams()), k2);
+  assert.equal(keyFrom({}, new URLSearchParams(`key=${k2}`)), k2);
+  assert.equal(keyFrom({ authorization: "Bearer other" }, new URLSearchParams()), null);
+
+  let balance = true;
+  let reads = 0;
+  const cache = new HoldingCache(async () => (reads++, balance));
+  assert.equal(await cache.holds(W, 0), true);
+  balance = false;
+  assert.equal(await cache.holds(W, 1000), true);
+  assert.equal(reads, 1);
+  assert.equal(await cache.holds(W, HOLDING_TTL_MS + 1), false);
+});

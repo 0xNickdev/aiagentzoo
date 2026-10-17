@@ -14,6 +14,7 @@ import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { checkToken, RateGate } from "./chain/check.ts";
+import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
@@ -78,7 +79,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
-  const checkGate = new RateGate(120);
+  const checkGate = new RateGate(FREE_PER_MIN);
+  const holderGate = new RateGate(HOLDER_PER_MIN);
+  const deepGate = new RateGate(FREE_DEEP_PER_MIN);
+  const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
+  const keyGate = new RateGate(1);
+  const holding = new HoldingCache((w) => isHolder(w));
   let checkRecord: { at: number; body: unknown } | null = null;
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
   const streams = new Set<ServerResponse>();
@@ -316,18 +322,45 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         res.setHeader("cache-control", "public, max-age=300");
         return json(res, 200, checkRecord.body);
       }
+      // A holder's key for the check: sign in with the wallet, get a key once. Only its hash is kept.
+      if (req.method === "POST" && path === "/v1/check/key") {
+        if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
+        const body = (await readJson(req).catch(() => null)) as { guardian?: GuardianSession } | null;
+        const signed = verifyGuardian(body?.guardian as GuardianSession);
+        if (!signed.ok) return json(res, 401, { error: "sign in with your wallet first" });
+        const wait = keyGate.take(signed.address);
+        if (wait > 0) return json(res, 429, { error: "one new key a minute", retryAfterMs: wait });
+        if (!(await isHolder(signed.address).catch(() => false))) {
+          return json(res, 403, { error: `hold ${HOLDER_MIN.toLocaleString("en-US")} $ZOOAGENCY for a key; the free tier needs none`, min: HOLDER_MIN, mint: TOKEN_MINT });
+        }
+        const key = await issueKey(enclosure.store, signed.address);
+        return json(res, 200, { key, wallet: signed.address, perMinute: HOLDER_PER_MIN, deepPerMinute: HOLDER_DEEP_PER_MIN, note: "shown once: keep it safe. A new key replaces this one." });
+      }
       const checkOf = /^\/v1\/check\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && checkOf) {
         if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
-        // Behind the site's proxy every caller shares its address, so the gate keys on the first forwarded hop.
+        // A key lifts the limits while its wallet still holds; without one, everyone gets the free tier.
+        const key = keyFrom(req.headers, url.searchParams);
+        let wallet: string | null = null;
+        if (key) {
+          wallet = await walletOfKey(enclosure.store, key);
+          if (!wallet) return json(res, 401, { error: "unknown or replaced key" });
+        }
+        const holder = wallet ? await holding.holds(wallet) : false;
+        // Behind the site's proxy every caller shares its address, so the free gate keys on the first forwarded hop.
         const first = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
-        const wait = checkGate.take(first || clientIp(req));
+        const caller = holder ? `key:${wallet}` : first || clientIp(req);
+        const deep = url.searchParams.get("holders") === "1";
+        const tier = holder
+          ? { tier: "holder" as const, perMinute: HOLDER_PER_MIN, deepPerMinute: HOLDER_DEEP_PER_MIN }
+          : { tier: "free" as const, perMinute: FREE_PER_MIN, deepPerMinute: FREE_DEEP_PER_MIN };
+        const wait = (holder ? holderGate : checkGate).take(caller) || (deep ? (holder ? holderDeepGate : deepGate).take(caller) : 0);
         if (wait > 0) {
           res.setHeader("retry-after", String(Math.ceil(wait / 1000)));
-          return json(res, 429, { error: "slow down: 120 checks a minute per caller", retryAfterMs: wait });
+          const what = deep ? `${tier.deepPerMinute} holder reads` : `${tier.perMinute} checks`;
+          return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
         const mint = checkOf[1]!;
-        const deep = url.searchParams.get("holders") === "1";
         const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
         const found = tape.token(mint);
         // Who holds it now costs RPC calls, so only on request, and never longer than four seconds.
@@ -335,7 +368,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           ? await Promise.race([holderReport(mint).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 4_000))])
           : undefined;
         res.setHeader("cache-control", "no-store");
-        return json(res, 200, checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}) }));
+        return json(res, 200, { ...checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}) }), access: tier });
       }
       const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && creatorOf) {
