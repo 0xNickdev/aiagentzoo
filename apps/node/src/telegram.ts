@@ -234,6 +234,7 @@ const helpText = () => HELP_LINES().map((l) => T(l)).join("\n");
 
 export const COMMANDS = [
   { command: "app", description: "Open the zoo" },
+  { command: "xray", description: "Who you are buying from: insiders, crews, funders" },
   { command: "ask", description: "Is it a rug? The beaver judges any token" },
   { command: "dev", description: "A creator wallet's launches and dumps" },
   { command: "rugs", description: "Latest creator dumps, with transactions" },
@@ -255,9 +256,10 @@ export const COMMANDS = [
 const menu = (): Keyboard => [
   [{ text: T("Open the zoo"), web_app: { url: APP_URL } }],
   [
+    { text: T("X-Ray a token"), callback_data: "prompt:xray" },
     { text: T("Ask the beaver"), callback_data: "prompt:ask" },
-    { text: T("Check a dev"), callback_data: "prompt:dev" },
   ],
+  [{ text: T("Check a dev"), callback_data: "prompt:dev" }],
   [
     { text: T("Live rugs"), callback_data: "rugs" },
     { text: T("Clean launches"), callback_data: "clean" },
@@ -282,6 +284,44 @@ const tourKeyboard = (i: number): Keyboard => [
 ];
 
 /* ---------- formatting ---------- */
+
+/** What /v1/xray answers, as much of it as the bot shows. */
+export interface XRayReply {
+  mint: string;
+  symbol: string;
+  check: {
+    verdict: "avoid" | "caution" | "pass" | "unknown";
+    reasons: string[];
+    notes: string[];
+    facts: { ageMin: number; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
+  };
+  early: Array<{ bought: number }>;
+  funding: { funder: string | null; funderIsHot: boolean; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
+}
+
+/** The x-ray as a Telegram message: the verdict with every reason, then the first seconds, the money, the churn. */
+export function xrayMessage(x: XRayReply): string {
+  const c = x.check;
+  const f = c.facts;
+  const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
+  const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
+  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ""];
+  for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
+  if (c.reasons.length) lines.push("");
+  if (f) {
+    const took = x.early.reduce((n, e) => n + e.bought, 0);
+    lines.push(T("<b>First 5 seconds:</b> {n} wallets took {t}, still hold {h}", { n: f.earlyWallets ?? 0, t: pct(took), h: `${f.earlyHeldPct ?? 0}%` }));
+    lines.push(T("creator's crew {c} · sniper ring {r} · serial snipers {s}", { c: f.creatorCrew ?? 0, r: f.ringWallets ?? 0, s: f.serialSnipers ?? 0 }));
+    lines.push(T("<b>Volume:</b> at least {p}% churn · {b} bump bot trades", { p: f.churnPct ?? 0, b: f.bumps ?? 0 }));
+  }
+  const fu = x.funding;
+  if (!fu) lines.push(T("<b>Who paid for the creator:</b> not traced yet, queued"));
+  else if (!fu.funder) lines.push(T("<b>Who paid for the creator:</b> no funding transfer found"));
+  else if (fu.funderIsHot) lines.push(T("<b>Who paid for the creator:</b> an exchange, ties no one together"));
+  else lines.push(T("<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h", { w: `${fu.funder.slice(0, 4)}…${fu.funder.slice(-4)}`, n: fu.siblings.length, d: fu.siblingDumped48h }));
+  if (c.notes.length) lines.push("", `<i>${esc(c.notes.map(TC).join(" · "))}</i>`);
+  return lines.join("\n");
+}
 
 function creatorLine(r: CreatorRecord): string {
   return T("{n} launches in 48h, dumped {d}", { n: r.launches48h, d: r.dumped }) + (r.medianDumpMin !== null ? T(", median {m} min", { m: r.medianDumpMin }) : "");
@@ -385,6 +425,27 @@ export function startTelegram(opts: TelegramOptions): () => void {
       if (dev) return void send(chat, devMessage(dev), [[{ text: T("Open on the site"), url: `${SITE}/ask` }]]);
     }
     return void send(chat, `${esc(result.reason)}`);
+  };
+
+  const xray = async (chat: number, mint: string) => {
+    await call("sendChatAction", { chat_id: chat, action: "typing" }).catch(() => null);
+    if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
+    try {
+      const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
+      if (r.status === 404) return void send(chat, T("Not a pump.fun launch the stream saw in the last two days."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
+      if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
+      if (!r.ok) throw new Error(String(r.status));
+      const x = (await r.json()) as XRayReply;
+      return void send(chat, xrayMessage(x), [
+        [{ text: T("Open the map"), url: `${SITE}/xray?mint=${mint}` }],
+        [
+          { text: T("Watch it"), callback_data: `watch:${mint}` },
+          { text: T("Ask the beaver"), callback_data: `ask:${mint}` },
+        ],
+      ]);
+    } catch {
+      return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
+    }
   };
 
   const dev = async (chat: number, wallet: string) => {
@@ -501,9 +562,9 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(chat, [T("<b>Under watch</b>"), "", ...mine.map((m) => `<code>${m}</code>`)].join("\n"), mine.map((m) => [{ text: T("Stop {m}", { m: short(m) }), callback_data: `unwatch:${m}` }]));
   };
 
-  const prompt = (chat: number, what: "ask" | "dev") =>
-    send(chat, T(what === "ask" ? "Send me a token address or a pump.fun link." : "Send me the creator's wallet address."), undefined, {
-      reply_markup: { force_reply: true, input_field_placeholder: T(what === "ask" ? "token address or link" : "wallet address") },
+  const prompt = (chat: number, what: "ask" | "dev" | "xray") =>
+    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a pump.fun token to x-ray." : "Send me a token address or a pump.fun link."), undefined, {
+      reply_markup: { force_reply: true, input_field_placeholder: T(what === "dev" ? "wallet address" : "token address or link") },
     });
 
   const switchLang = async (chat: number) => {
@@ -528,6 +589,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
 
     // An answer to "send me the creator's wallet".
     if (!cmd && /creator's wallet|开发者钱包/.test(msg.reply_to_message?.text ?? "") && address) return dev(chat, address);
+    if (!cmd && /to x-ray|透视/.test(msg.reply_to_message?.text ?? "") && address) return xray(chat, address);
 
     switch (cmd) {
       case "/start":
@@ -545,6 +607,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return void send(chat, `This chat's id: <code>${chat}</code>`);
       case "/tour":
         return void send(chat, tourPage(0), tourKeyboard(0));
+      case "/xray":
+        return address ? xray(chat, address) : prompt(chat, "xray");
       case "/ask":
         return address ? ask(chat, who, address) : prompt(chat, "ask");
       case "/dev":
@@ -606,7 +670,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return;
       }
       case "prompt":
-        return prompt(chat, value === "dev" ? "dev" : "ask");
+        return prompt(chat, value === "dev" ? "dev" : value === "xray" ? "xray" : "ask");
       case "ask":
         return MINT.test(value) ? ask(chat, `tg:${q.from.id}`, value) : undefined;
       case "watch":

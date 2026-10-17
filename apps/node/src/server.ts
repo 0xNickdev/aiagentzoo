@@ -348,10 +348,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           wallet = await walletOfKey(enclosure.store, key);
           if (!wallet) return json(res, 401, { error: "unknown or replaced key" });
         }
-        const holder = wallet ? await holding.holds(wallet) : false;
+        // The bot on a sibling node asks for all its users at once: it gets the holder allowance.
+        const peer = fromPeer(req);
+        const holder = peer || (wallet ? await holding.holds(wallet) : false);
         // Behind the site's proxy every caller shares its address, so the free gate keys on the first forwarded hop.
         const first = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim();
-        const caller = holder ? `key:${wallet}` : first || clientIp(req);
+        const caller = peer ? "peer" : holder ? `key:${wallet}` : first || clientIp(req);
         // The x-ray reads Solana for holders and funders, so it always counts as a deep read.
         const deep = Boolean(xrayOf) || url.searchParams.get("holders") === "1";
         const tier = holder
@@ -576,6 +578,16 @@ async function latestArtifact(enclosure: Enclosure): Promise<LogEntry | undefine
  * left-most X-Forwarded-For values, so trust X-Real-IP or the right-most hop
  * (added by our own proxy) instead.
  */
+/**
+ * A sibling node on the private network (the bot on canyon asking north): no proxy in between, so no forwarding
+ * headers, and a private source address. Anything from the internet comes through the platform's proxy with them.
+ */
+function fromPeer(req: IncomingMessage): boolean {
+  if (req.headers["x-forwarded-for"] || req.headers["x-real-ip"]) return false;
+  const ip = (req.socket.remoteAddress ?? "").replace(/^::ffff:/, "");
+  return /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.|::1$|f[cd][0-9a-f]{2}:)/i.test(ip);
+}
+
 function clientIp(req: IncomingMessage): string {
   const real = String(req.headers["x-real-ip"] ?? "").trim();
   if (real) return real;

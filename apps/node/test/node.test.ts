@@ -1684,3 +1684,51 @@ test("a creator funded by the wallet that funded a row of ruggers is called out;
   again.load(lin.snapshot());
   assert.equal(again.view(fresh)!.siblings.length, 2);
 });
+
+test("the bot's x-ray reads the same in English and Chinese, every reason translated", async () => {
+  const { xrayMessage } = await import("../src/telegram.ts");
+  const { inLang } = await import("../src/tg-i18n.ts");
+  const x = {
+    mint: "M",
+    symbol: "LOB",
+    check: {
+      verdict: "avoid" as const,
+      reasons: ["3 of the wallets in the first 5 seconds keep sniping this creator's other launches: they are the creator's own wallets", "at least 41% of the trading is wallets selling back what they just bought: volume, not holders"],
+      notes: ["who funded the creator is not traced yet: it is queued"],
+      facts: { ageMin: 20, earlyWallets: 8, earlyHeldPct: 23, churnPct: 41, bumps: 12, creatorCrew: 3, ringWallets: 2, serialSnipers: 3 },
+    },
+    early: [{ bought: 0.2 }, { bought: 0.12 }],
+    funding: { funder: "Boss1111111111111111111111111111111111111111", funderIsHot: false, siblings: [1, 2, 3, 4], siblingLaunches48h: 19, siblingDumped48h: 17 },
+  };
+  const en = inLang("en", () => xrayMessage(x));
+  assert.match(en, /🔴 <b>\$LOB<\/b> · <b>AVOID<\/b>/);
+  assert.match(en, /8 wallets took 32%, still hold 23%/);
+  assert.match(en, /funded 4 other creators, 17 dumps in 48h/);
+  const zh = inLang("zh", () => xrayMessage(x));
+  assert.match(zh, /远离/);
+  assert.match(zh, /它们就是开发者自己的小号/);
+  assert.match(zh, /刷量/);
+  assert.match(zh, /已排队/);
+  assert.doesNotMatch(zh, /wallets|creator/);
+});
+
+test("a sibling node on the private network gets the holder allowance for the check; the internet does not", async () => {
+  const { tape } = await import("../src/chain/pump.ts");
+  const enclosure = new Enclosure({ node: { id: "north.zoo", identity: Identity.generate(), operator: "op" }, keeper: "keeper", tools: [], agents: [] });
+  const server = createNodeServer({ enclosure });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const mint = "Peer".padEnd(44, "z");
+  tape.apply({ kind: "create", name: "p", symbol: "P", mint, creator: "Dev".padEnd(44, "z"), ts: Date.now() });
+  try {
+    const peer = (await (await fetch(`${base}/v1/check/${mint}`)).json()) as { access: { tier: string }; verdict: string };
+    assert.equal(peer.access.tier, "holder");
+    const outside = (await (await fetch(`${base}/v1/check/${mint}`, { headers: { "x-forwarded-for": "203.0.113.9" } })).json()) as { access: { tier: string } };
+    assert.equal(outside.access.tier, "free");
+    const xray = (await (await fetch(`${base}/v1/xray/${mint}`)).json()) as { symbol: string; early: unknown[]; check: { verdict: string } };
+    assert.equal(xray.symbol, "P");
+    assert.deepEqual(xray.early, []);
+  } finally {
+    server.close();
+  }
+});
