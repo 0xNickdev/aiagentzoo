@@ -13,10 +13,10 @@ export default function Species() {
       <SectionHead
         eyebrow={t("Species")}
         title={[t("A species is a role,"), t("not a skin")]}
-        text={t("Four species, six live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command.")}
+        text={t("Five species, seven live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command.")}
       />
 
-      <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {SPECIES.map((s, i) => (
           <Reveal key={s.id} delay={i * 0.1}>
             <article className="group">
@@ -45,9 +45,9 @@ export default function Species() {
               </div>
 
               <div className="mt-8 border-t border-white/10 pt-6">
-                <div className="flex items-baseline justify-between">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <h3 className="font-display text-3xl text-white">{t(s.name)}</h3>
-                  <span className="text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{t(s.animal)}</span>
+                  <span className="whitespace-nowrap text-[11px] font-light uppercase tracking-[0.3em] text-white/40">{t(s.animal)}</span>
                 </div>
                 <p className="mt-3 text-sm font-light leading-relaxed text-white/65">{t(s.role)}</p>
 

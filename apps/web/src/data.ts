@@ -1,10 +1,11 @@
-export type SpeciesId = "sentinel" | "gatherer" | "builder" | "archivist";
+export type SpeciesId = "sentinel" | "gatherer" | "builder" | "archivist" | "seeker";
 
 export const SPECIES_COLOR: Record<SpeciesId, string> = {
   sentinel: "#f1dfb8",
   gatherer: "#c3d3ad",
   builder: "#aecfca",
   archivist: "#ffffff",
+  seeker: "#ffb59a",
 };
 
 export const SPECIES: {
@@ -67,6 +68,16 @@ export const SPECIES: {
     can: ["final commit", "publish to log"],
     cannot: "outbound signals",
     agents: [{ name: "tortoise", enclosure: "Stone Canyon" }],
+  },
+  {
+    id: "seeker",
+    name: "Seeker",
+    animal: "Koi · 锦鲤",
+    image: "/animals/koi.webp",
+    role: "Looks for the rare token that will still be alive tomorrow, and is graded on every pick.",
+    can: ["read the chain", "think"],
+    cannot: "signal or publish",
+    agents: [{ name: "koi", enclosure: "Stone Canyon" }],
   },
 ];
 

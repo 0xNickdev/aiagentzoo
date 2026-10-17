@@ -85,7 +85,7 @@ export default function Doors() {
       href: "/live",
       eyebrow: "LIVE",
       title: "The Night Watch",
-      line: "Three nodes, six agents and the chain itself, as it happens.",
+      line: "Three nodes, seven agents and the chain itself, as it happens.",
       image: "/doors/live.webp",
       focus: "50% 24%",
       live: n?.chainLive,
