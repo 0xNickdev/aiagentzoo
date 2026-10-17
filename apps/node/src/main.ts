@@ -16,10 +16,11 @@ import { AskDesk } from "./ask.ts";
 import { evolutionView } from "./agents/evolution.ts";
 import { startTelegram } from "./telegram.ts";
 import { startWatchdog } from "./watchdog.ts";
+import { koiView } from "./agents/koi.ts";
 import { agentOfWeek, beaverRecord, canyonStats, leaderboard } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
-import { allTools } from "./sources.ts";
+import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, tape } from "./chain/pump.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
@@ -48,6 +49,9 @@ ledger?.deposit(config.keeper, config.feedGrant, "boot-grant");
 const briefsDir = join(config.dataDir, "briefs");
 mkdirSync(briefsDir, { recursive: true });
 
+// The north node streams the chain; others read its fresh clean launches over the private network.
+const northPeerUrl = config.peers.find((p) => p.id === "north.zoo")?.url;
+
 const enclosure = new Enclosure({
   node: { id: config.id, identity: config.identity, operator: config.operator },
   name: config.name,
@@ -58,7 +62,7 @@ const enclosure = new Enclosure({
   model,
   peers: new PeerDirectory(config.peers),
   transport: new HttpTransport(),
-  tools: allTools,
+  tools: [...allTools, chainClean(northPeerUrl)],
   agents: nightWatch({
     role: config.role,
     nodes: config.nodes,
@@ -141,6 +145,7 @@ const stopTelegram =
           board: leaderboard(enclosure, config.briefAt) as never,
           stats: canyonStats(enclosure, config.briefAt, guests) as never,
           evolution: (() => evolutionView(enclosure.store, config.briefAt)) as never,
+          koi: (() => koiView(enclosure.store, config.briefAt)) as never,
           latestBrief: async () => {
             const ref = briefs.list(1)[0];
             if (!ref) return null;

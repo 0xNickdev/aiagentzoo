@@ -1,5 +1,5 @@
 import { defineTool } from "@aiagentzoo/sdk";
-import { type ChainFacts, tape } from "./chain/pump.ts";
+import { type ChainFacts, type CleanLaunch, tape } from "./chain/pump.ts";
 
 /** A token launch as reported by pump.fun. */
 export interface Launch {
@@ -180,5 +180,24 @@ export const chainFacts = defineTool<{ mints: string[] }, Record<string, ChainFa
     return out;
   },
 });
+
+/**
+ * Fresh launches that passed the basic on-chain checks, newest first: read from the tape where this node streams,
+ * otherwise from the north node that does.
+ */
+export function chainClean(northUrl?: string) {
+  return defineTool<{ limit?: number }, CleanLaunch[]>({
+    name: "chain.clean",
+    capability: "sources:read",
+    description: "Fresh pump.fun launches with a holding creator, returning buyers and no bundle, with their chain facts",
+    async run({ limit = 30 } = {}, { signal }) {
+      if (tape.lastEventAt > 0) return tape.clean(limit);
+      if (!northUrl) return [];
+      const res = await fetch(`${northUrl}/v1/chain/clean?limit=${Math.min(50, limit)}`, { signal });
+      if (!res.ok) throw new Error(`north responded ${res.status}`);
+      return ((await res.json()) as { launches: CleanLaunch[] }).launches;
+    },
+  });
+}
 
 export const allTools = [pumpLatest, dexMarkets, dexNewProfiles, chainFacts];

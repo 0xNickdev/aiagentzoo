@@ -18,6 +18,7 @@ import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
 import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
+import { koiView } from "./agents/koi.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
 import { tape } from "./chain/pump.ts";
 import { type GuestHouse, isGuestNode, publicGuest } from "./guests.ts";
@@ -417,6 +418,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const after = clampInt(url.searchParams.get("after"), 0, 0, Number.MAX_SAFE_INTEGER);
         const now = Date.now();
         return json(res, 200, { live: tape.live(now), perMinute: tape.perMinute(now), events: tape.pulseAfter(after) });
+      }
+      // The koi's record and tonight's picks; it lives where the nursery does.
+      if (req.method === "GET" && path === "/v1/koi") {
+        if (!evolution) return json(res, 404, { error: "no koi on this node" });
+        return json(res, 200, await koiView(enclosure.store, evolution.briefAt));
       }
       if (req.method === "GET" && path === "/v1/evolution") {
         if (!evolution) return json(res, 404, { error: "no nursery on this node" });

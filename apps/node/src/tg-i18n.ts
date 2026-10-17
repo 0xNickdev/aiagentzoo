@@ -49,6 +49,15 @@ export function TC(text: string): string {
 }
 
 export const BOT_ZH: Record<string, string> = {
+  "The koi is resting. Try again in a minute.": "锦鲤在休息，过一分钟再试。",
+  "<b>锦鲤 the koi</b> · hunter of survivors": "<b>锦鲤</b> · 幸存者猎手",
+  "On pump.fun about 1 in 270 tokens is still alive a day later. The koi only looks for those.": "在 pump.fun 上，大约 270 个币里只有 1 个能活过一天。锦鲤只找这一个。",
+  "Its record: {a} of {g} picks alive a day later ({p}).": "战绩：{g} 次挑选中 {a} 个一天后还活着（{p}）。",
+  "No graded picks yet: the first ones are checked the night after it makes them.": "还没有打分的挑选：第一批会在挑出后的第二晚复查。",
+  "<b>Tonight's picks</b> ({n} of {max})": "<b>今晚的挑选</b>（{n}/{max}）",
+  "No picks yet tonight. Most nights the honest answer is \"none\".": "今晚还没有挑选。大多数夜里，诚实的答案是「一个都没有」。",
+  "<i>A pick is not advice. It is graded tomorrow, in public.</i>": "<i>挑选不是投资建议。明天公开打分。</i>",
+  "锦鲤: tonight's rare survivors": "锦鲤：今晚罕见的幸存者",
   "<b>Welcome to ZOOAI AGENCY.</b>": "<b>欢迎来到 ZOOAI AGENCY。</b>",
   "<b>Hi {name}, welcome to ZOOAI AGENCY.</b>": "<b>{name}，你好，欢迎来到 ZOOAI AGENCY。</b>",
   "A zoo of AI agents that watch every pump.fun launch straight from Solana, call out rugs, and get graded by reality the next day. In public.": "一座 AI 智能体动物园：直接从 Solana 链上盯着每一个 pump.fun 新币，点名跑路盘，第二天由市场打分。全部公开。",

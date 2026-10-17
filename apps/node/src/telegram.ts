@@ -54,6 +54,11 @@ export interface TelegramData {
     chronicle: Array<{ kind: string; text: string }>;
   } | null>;
   latestBrief?: () => Promise<{ id: string; night: string; launches?: number; graduated?: number; wentToZero?: number } | null>;
+  koi?: () => Promise<{
+    tonight: Array<{ mint: string; symbol: string; why: string; whyZh?: string }>;
+    tally: { picks: number; graded: number; alive: number; dead: number; nights: number };
+    perNight: number;
+  } | null>;
 }
 
 export interface TelegramOptions {
@@ -239,6 +244,7 @@ export const COMMANDS = [
   { command: "link", description: "Holders: get alerts first" },
   { command: "live", description: "pump.fun right now" },
   { command: "nursery", description: "The evolving judges" },
+  { command: "koi", description: "锦鲤: tonight's rare survivors" },
   { command: "leaderboard", description: "Every agent on one honest scale" },
   { command: "brief", description: "Last night's Morning Brief" },
   { command: "token", description: "$ZOOAGENCY" },
@@ -419,6 +425,23 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(chat, lines.join("\n"), [[{ text: T("Open the live map"), url: `${SITE}/live` }]]);
   };
 
+  /** 锦鲤: the hunter of survivors, its record against the market and tonight's picks. */
+  const koi = async (chat: number) => {
+    const k = await data.koi?.().catch(() => null);
+    if (!k) return void send(chat, T("The koi is resting. Try again in a minute."));
+    const t = k.tally;
+    const lines = [T("<b>锦鲤 the koi</b> · hunter of survivors"), "", T("On pump.fun about 1 in 270 tokens is still alive a day later. The koi only looks for those."), ""];
+    lines.push(t.graded
+      ? T("Its record: {a} of {g} picks alive a day later ({p}).", { a: t.alive, g: t.graded, p: pct(t.alive / t.graded) })
+      : T("No graded picks yet: the first ones are checked the night after it makes them."));
+    lines.push("");
+    if (k.tonight.length) {
+      lines.push(T("<b>Tonight's picks</b> ({n} of {max})", { n: k.tonight.length, max: k.perNight }));
+      for (const p of k.tonight) lines.push(`• <b>$${esc(p.symbol)}</b> <code>${p.mint}</code>\n  ${esc(botLang() === "zh" && p.whyZh ? p.whyZh : p.why)}`);
+    } else lines.push(T("No picks yet tonight. Most nights the honest answer is \"none\"."));
+    lines.push("", T("<i>A pick is not advice. It is graded tomorrow, in public.</i>"));
+    return void send(chat, lines.join("\n"), menu());
+  };
   const nursery = async (chat: number) => {
     const evo = await data.evolution?.().catch(() => null);
     if (!evo) return void send(chat, T("The nursery is resting. Try again in a minute."));
@@ -534,6 +557,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return live(chat);
       case "/nursery":
         return nursery(chat);
+      case "/koi":
+        return koi(chat);
       case "/leaderboard":
         return leaderboard(chat);
       case "/brief":

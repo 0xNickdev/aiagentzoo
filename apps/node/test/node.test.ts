@@ -1417,3 +1417,43 @@ test("the brief counts the whole night, and flags tokens from chain facts when s
   assert.equal(s.suspicious.length, 10);
   assert.match(s.suspicious[0]!.reasons.join(", "), /creator sold 100% of their bag, creator launched 12 tokens today/);
 });
+
+test("the koi hunts survivors among clean launches, picks few, and is graded on them the next night", async () => {
+  const { koiCandidates, parseKoi, scoreKoi, KOI_PER_NIGHT, seeker } = await import("../src/agents/koi.ts");
+  const launch = (mint: string, over: Record<string, unknown> = {}) => ({
+    mint, symbol: mint.slice(0, 4), name: mint, ageMin: 60, buyers: 80, repeatBuyers: 12, top5Share: 0.3, creatorSold: 0, curveSol: 25, graduated: false, ...over,
+  });
+  const clean = [
+    launch("Busy11111111111111111111111111111111111111", { buyers: 200, repeatBuyers: 40 }),
+    launch("Quiet1111111111111111111111111111111111111", { buyers: 31, repeatBuyers: 5 }),
+    launch("Young1111111111111111111111111111111111111", { ageMin: 12 }),
+    launch("Thin11111111111111111111111111111111111111", { buyers: 20 }),
+    launch("Flat11111111111111111111111111111111111111", { curveSol: 4 }),
+    launch("Grad11111111111111111111111111111111111111", { curveSol: null, graduated: true }),
+  ] as never[];
+  const asked = koiCandidates(clean, new Set(["Grad11111111111111111111111111111111111111"]));
+  assert.deepEqual(asked.map((c: { mint: string }) => c.mint.slice(0, 5)), ["Busy1", "Quiet"]);
+
+  // Only mints it was shown, at most two a wake, reasons cleaned.
+  const reply = '[{"mint":"Busy11111111111111111111111111111111111111","why":"200 buyers, 40 came back, creator holds"},{"mint":"Nope1111111111111111111111111111111111111","why":"x"},{"mint":"Quiet1111111111111111111111111111111111111","why":"steady"},{"mint":"Busy11111111111111111111111111111111111111","why":"dup"}]';
+  const picks = parseKoi(reply, asked, 5);
+  assert.deepEqual(picks.map((p: { mint: string }) => p.mint.slice(0, 5)), ["Busy1", "Quiet"]);
+  assert.equal(parseKoi("[]", asked, 5).length, 0);
+  assert.equal(parseKoi("no idea", asked, 5).length, 0);
+  assert.ok(KOI_PER_NIGHT <= 8);
+
+  const score = scoreKoi("2026-10-17", picks, { [picks[0]!.mint]: { symbol: "Busy", outcome: "alive" }, [picks[1]!.mint]: { symbol: "Quie", outcome: "dead" } });
+  assert.deepEqual({ alive: score.alive, dead: score.dead, unknown: score.unknown }, { alive: 1, dead: 0 + 1, unknown: 0 });
+
+  // A seeker reads and thinks; it cannot signal, fetch the open web or publish.
+  assert.ok(seeker.capabilities.has("model:think") && seeker.capabilities.has("sources:read"));
+  assert.ok(!seeker.capabilities.has("signal:send") && !seeker.capabilities.has("net:fetch") && !seeker.capabilities.has("artifact:publish"));
+});
+
+test("the koi's picks are re-checked first, next to the nursery's exam", async () => {
+  const { followupMints } = await import("../src/agents/judgement.ts");
+  const calls = Array.from({ length: 40 }, (_, i) => ({ mint: `C${i}`, symbol: "C", verdict: "suspicious", confidence: 0.6, why: "", by: "model", at: 0 })) as never;
+  const picked = followupMints(calls, [], ["E1", "E2", "K1"], 10);
+  assert.deepEqual(picked.slice(0, 3), ["E1", "E2", "K1"]);
+  assert.equal(picked.length, 10);
+});

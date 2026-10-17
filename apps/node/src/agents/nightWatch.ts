@@ -25,6 +25,7 @@ import {
   VERDICTS,
 } from "./judgement.ts";
 import { EVO, type EvolutionConfig, type Exam, evolutionAgent, FOLLOWUP, type Followup } from "./evolution.ts";
+import { KOI, koiAgent, type KoiPick } from "./koi.ts";
 
 /**
  * The Night Watch: four species on three nodes assemble the Morning Brief
@@ -54,6 +55,8 @@ export interface NightWatchConfig {
   onBrief?: (id: string, markdown: string) => void | Promise<void>;
   /** The nursery on the canyon: its pacing, or false to leave it out. */
   evolution?: false | Omit<EvolutionConfig, "briefAt">;
+  /** The koi, hunter of survivors; on by default on the canyon. */
+  koi?: false;
 }
 
 export interface Observation {
@@ -607,8 +610,10 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const pastCalls = (await ctx.state.get<Call[]>(`calls:${yesterday}`)) ?? [];
         const pastReports = Object.values((await ctx.state.get<Record<string, GuestReport>>(`reports:${yesterday}`)) ?? {});
         const exam = (await ctx.state.get<Exam>(EVO.exam(yesterday)))?.tokens.map((t) => t.mint) ?? [];
+        // The koi's few picks are re-checked first too: it is graded on them and nothing else.
+        const koi = ((await ctx.state.get<KoiPick[]>(KOI.calls(yesterday))) ?? []).map((p) => p.mint);
         // Up to 90 re-checks a night, so guests (who get half the room after the nursery's exam) can build a record in a week.
-        const mints = followupMints(pastCalls, pastReports, exam, FOLLOWUP_MAX);
+        const mints = followupMints(pastCalls, pastReports, [...new Set([...exam, ...koi])], FOLLOWUP_MAX);
         await ctx.state.set("beaver:followedUp", yesterday);
         for (let i = 0; i < mints.length; i += 30) await ctx.signal(hedgehog, "followup.check", { mints: mints.slice(i, i + 30) });
       }
@@ -721,7 +726,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
     },
   });
   // The nursery lives on the canyon too: it needs the night's observations and the beaver's re-checks.
-  return cfg.evolution === false ? [beaver, tortoise] : [beaver, tortoise, evolutionAgent({ briefAt: cfg.briefAt, ...cfg.evolution })];
+  const residents = [beaver, tortoise, ...(cfg.koi === false ? [] : [koiAgent({ briefAt: cfg.briefAt })])];
+  return cfg.evolution === false ? residents : [...residents, evolutionAgent({ briefAt: cfg.briefAt, ...cfg.evolution })];
 }
 
 export function nightWatch(cfg: NightWatchConfig): AgentDefinition[] {
