@@ -677,7 +677,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
     name: "tortoise",
     species: species.archivist,
     schedule: { dailyAt: cfg.briefAt },
-    budget: { steps: 6, modelTokens: 20_000 },
+    // The review, its Chinese twin and the week's standings: room for all three on a busy night.
+    budget: { steps: 10, modelTokens: 40_000 },
     async onWake(ctx) {
       // At dawn the night that is ending is the one dated today.
       const night = nightOf(ctx.now - 60_000, cfg.briefAt);
@@ -707,8 +708,9 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         const zh = await ctx.think({ system: ZH_SYSTEM, prompt: "Translate this paragraph of the morning brief.", untrusted: review, maxTokens: 700 });
         const text = zh.text.replace(/[\u2013\u2014]/g, "-").trim();
         if (/[\u4e00-\u9fff]/.test(text)) draft.reviewZh = text.slice(0, 1500);
-      } catch {
-        // The page shows the factual line instead.
+      } catch (error) {
+        // The page shows the factual line instead; the log says why.
+        await ctx.trace("review.zh.failed", { reason: (error as Error).message.slice(0, 200) }).catch(() => undefined);
       }
       // The weekly contest, as it stands this morning.
       try {

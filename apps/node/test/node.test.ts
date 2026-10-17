@@ -1402,6 +1402,11 @@ test("the watchdog speaks once when something breaks and once when it heals", as
   const out = entry("artifact.published", { content: { night: day } }, "tortoise");
   assert.match(dog.onEntry(out, Date.parse(`${day}T07:30:00Z`))[0]!, /brief is out/);
   assert.deepEqual(dog.onClock(Date.parse(`${day + "T08:00:00Z"}`)), []);
+
+  // Restarted after dawn: the brief already out is known from the index, no false alarm.
+  const restarted = new Watchdog({ briefAt: "07:00" });
+  restarted.seenBrief(day);
+  assert.deepEqual(restarted.onClock(Date.parse(`${day}T07:36:00Z`)), []);
 });
 
 test("the brief counts the whole night, and flags tokens from chain facts when socials are unknown", async () => {

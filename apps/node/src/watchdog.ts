@@ -30,6 +30,11 @@ export class Watchdog {
     this.opts = opts;
   }
 
+  /** The latest brief already out when the watchdog starts, so a restart after dawn does not cry wolf. */
+  seenBrief(night: string | null | undefined): void {
+    if (night) this.lastBriefNight = night;
+  }
+
   /** Feed every new entry of this node's log; returns messages to send. */
   onEntry(entry: LogEntry, now = Date.now()): string[] {
     const ev = entry.event;
@@ -111,6 +116,8 @@ export function startWatchdog(opts: {
   chats: number[];
   briefAt: string;
   subscribe: (fn: (entry: LogEntry) => void) => void;
+  /** The night of the latest brief already published. */
+  latestBriefNight?: string | null;
   northUrl?: string;
   peers: Array<{ name: string; url: string }>;
   log?: (m: string) => void;
@@ -119,6 +126,7 @@ export function startWatchdog(opts: {
   const f = opts.fetchFn ?? fetch;
   const log = opts.log ?? console.log;
   const dog = new Watchdog({ briefAt: opts.briefAt });
+  dog.seenBrief(opts.latestBriefNight);
   const send = (texts: string[]) => {
     for (const text of texts) {
       log(`[watchdog] ${text.split("\n")[0]}`);

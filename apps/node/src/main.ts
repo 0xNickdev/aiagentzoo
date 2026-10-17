@@ -166,6 +166,7 @@ const stopWatchdog =
         chats: alertChats,
         briefAt: config.briefAt,
         subscribe: (fn) => void enclosure.log.subscribe(fn),
+        latestBriefNight: briefs.list(1)[0]?.night ?? null,
         northUrl,
         peers: config.peers.map((p) => ({ name: p.id, url: p.url })),
         log: (m) => console.log(`[${config.id}] ${m}`),
