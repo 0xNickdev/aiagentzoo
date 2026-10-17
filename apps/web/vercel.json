@@ -87,7 +87,7 @@
     },
     {
       "source": "/xray",
-      "destination": "/index.html"
+      "destination": "/xray.html"
     }
   ]
 }

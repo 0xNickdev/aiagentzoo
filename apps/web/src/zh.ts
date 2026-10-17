@@ -803,4 +803,5 @@ export const ZH: Record<string, string> = {
   "{m} min old": "已发币 {m} 分钟",
   "{n} snipes in 48h": "48 小时内狙击 {n} 次",
   "{n} wallets · {p}%": "{n} 个钱包 · {p}%",
+  "New: X-Ray, see who you're buying from": "新功能：透视，看清你从谁手里买",
 };

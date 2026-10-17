@@ -42,12 +42,12 @@ export default function Hero() {
           <CAPill />
         </motion.div>
         <motion.a
-          href="/agents#guests"
+          href="/xray"
           {...rise(0.1)}
           className="liquid-glass mb-8 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[12.5px] text-white/80 hover:text-white"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
-          {t("New: ClawPump agents can move into the zoo")}
+          {t("New: X-Ray, see who you're buying from")}
           <ArrowRight size={13} />
         </motion.a>
 
