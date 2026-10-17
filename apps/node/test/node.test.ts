@@ -1510,3 +1510,45 @@ test("tape counts every buyer past the first 100 and keeps the count across a re
   reborn.load(tape.snapshot(), now);
   assert.equal(reborn.facts(mint, now)!.buyers, 250);
 });
+
+test("tape sees snipers still holding, wallets churning the volume, and bump bots", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const t0 = Date.now() - 20 * 60_000;
+  const tape = new PumpTape();
+  const mint = "Snipe1111111111111111111111111111111111111";
+  const dev = "Dev1111111111111111111111111111111111111111";
+  const w = (n: string) => `${n}${"1".repeat(44 - n.length)}`;
+  const trade = (user: string, isBuy: boolean, sol: number, tokens: number, at: number, tx?: string) =>
+    tape.apply({ kind: "trade", mint, sol, tokens, isBuy, user, ts: at, curveSol: 10 }, at, tx);
+  tape.apply({ kind: "create", name: "s", symbol: "S", mint, creator: dev, ts: t0 }, t0);
+  trade(dev, true, 1, 30_000_000, t0);
+  // Three snipers in the first seconds take 30% of the supply; one sells half of theirs later.
+  trade(w("SnipA"), true, 2, 100_000_000, t0 + 1_000);
+  trade(w("SnipB"), true, 2, 100_000_000, t0 + 2_000);
+  trade(w("SnipC"), true, 2, 100_000_000, t0 + 4_000);
+  trade(w("SnipC"), false, 1, 50_000_000, t0 + 60_000);
+  // A late buyer is not early.
+  trade(w("Late"), true, 1, 20_000_000, t0 + 30_000);
+  // A churner buys and sells back three times.
+  for (let i = 0; i < 3; i++) {
+    trade(w("Churn"), true, 1, 10_000_000, t0 + 90_000 + i * 1000);
+    trade(w("Churn"), false, 1, 10_000_000, t0 + 90_500 + i * 1000);
+  }
+  // A bump bot buys and sells in one transaction, twice.
+  trade(w("Bump"), true, 0.01, 1000, t0 + 100_000, "tx1");
+  trade(w("Bump"), false, 0.01, 1000, t0 + 100_000, "tx1");
+  trade(w("Bump"), true, 0.01, 1000, t0 + 110_000, "tx2");
+  trade(w("Bump"), false, 0.01, 1000, t0 + 110_000, "tx2");
+  // Six minutes in, a trade writes down the five-minute numbers.
+  trade(w("Late"), true, 0.5, 1_000_000, t0 + 6 * 60_000);
+  const f = tape.facts(mint)!;
+  assert.equal(f.earlyWallets, 3);
+  assert.equal(f.earlyShare, 0.3);
+  assert.equal(f.earlyHeld, 0.25);
+  assert.equal(f.bumps, 2);
+  // The churner's 6 SOL and the bump bot's 0.04 of 15.54 SOL traded both ways.
+  assert.equal(f.washShare, 0.389);
+  const reborn = new PumpTape();
+  reborn.load(tape.snapshot());
+  assert.equal(reborn.facts(mint)!.earlyHeld, 0.25);
+});

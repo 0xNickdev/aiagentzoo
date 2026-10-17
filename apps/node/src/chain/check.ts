@@ -8,7 +8,7 @@ import type { ChainFacts, CreatorRecord } from "./pump.ts";
  */
 export type CheckVerdict = "avoid" | "caution" | "pass" | "unknown";
 
-export const CHECK_VERSION = 2;
+export const CHECK_VERSION = 3;
 /** Under this age a token has had no time to show anything but its creator's history: the check says so. */
 export const EARLY_MIN = 10;
 
@@ -40,6 +40,13 @@ export interface TokenCheck {
     quote: string | null;
     curveSol: number | null;
     poolSol: number | null;
+    /** Wallets that bought in the first 5 seconds, and the share of the supply they still hold (curve trades). */
+    earlyWallets: number | null;
+    earlyHeldPct: number | null;
+    /** At least this share of the trading is wallets selling back what they bought. */
+    churnPct: number | null;
+    /** Buy-and-sell in one transaction: bump bots. */
+    bumps: number | null;
   } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
@@ -100,6 +107,13 @@ export function checkToken(
     avoid.push(`${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`);
   }
 
+  // Wallets in before anyone could see the token, still sitting on a big share: they decide when it dies.
+  if (f.earlyWallets !== undefined && f.earlyHeld !== undefined && f.earlyWallets >= 2) {
+    const who = `${f.earlyWallets} wallets that bought in the first 5 seconds still hold ${pct(f.earlyHeld)}% of the supply`;
+    if (f.earlyWallets >= 3 && f.earlyHeld >= 0.5) avoid.push(who);
+    else if (f.earlyHeld >= 0.25) caution.push(who);
+  }
+
   if (f.graduated) {
     if (f.poolSol !== null && f.poolSol < POOL_DEAD_SOL) avoid.push(`graduated, but the pool is down to ${f.poolSol.toFixed(2)} SOL`);
   } else if (f.ageMin >= 360 && !f.quote) {
@@ -115,6 +129,8 @@ export function checkToken(
     if (f.buyers === 0) caution.push("nobody has bought it");
     else if (f.buyers < 10) caution.push(`only ${f.buyers} wallets have bought it`);
     if (f.sells > f.buys * 2 && f.sells >= 10) caution.push(`sells outnumber buys ${f.sells} to ${f.buys}`);
+    if (f.washShare !== undefined && f.washShare >= 0.3) caution.push(`at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`);
+    if (f.bumps !== undefined && f.bumps >= 3) caution.push(`a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`);
   }
 
   // Who holds it now catches what trades cannot: a creator who moved the bag to other wallets instead of selling.
@@ -134,7 +150,7 @@ export function checkToken(
   }
 
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
-  if (verdict === "pass") notes.push("pass means no creator dump, bundle, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
+  if (verdict === "pass") notes.push("pass means no creator dump, bundle, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
   if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");
   return {
     ...base,
@@ -159,6 +175,10 @@ export function checkToken(
       quote: f.quote ?? null,
       curveSol: f.curveSol,
       poolSol: f.poolSol,
+      earlyWallets: f.earlyWallets ?? null,
+      earlyHeldPct: pct(f.earlyHeld),
+      churnPct: pct(f.washShare),
+      bumps: f.bumps ?? null,
     },
     ...(holders !== undefined ? { holders } : {}),
   };
