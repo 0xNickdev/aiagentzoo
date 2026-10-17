@@ -245,7 +245,7 @@ export interface ChainFacts {
   earlyWallets?: number;
   /** Share of the supply those wallets bought, 0..1. */
   earlyShare?: number;
-  /** Share of the supply they still hold from the curve trades the tape saw, 0..1 (tokens moved out by transfer still count). */
+  /** Share of the supply they still hold from the curve and pool trades the tape saw, 0..1 (tokens moved out by transfer still count). */
   earlyHeld?: number;
   /** Share of curve volume (SOL in and out) from wallets that bought and sold it back, three trades or more: churn, not holders. 0..1, a floor. */
   washShare?: number;
@@ -656,13 +656,20 @@ export class PumpTape {
       t.drained = true;
       this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} SOL after graduation`, tx);
     }
+    // A first buyer still trading it in the pool: what they hold moves, the curve's churn numbers do not.
+    const b = t.buyers.get(ev.user);
     if (ev.isBuy) {
       t.ammBuys += 1;
       t.ammSolIn += ev.sol;
+      if (b) b.tok = (b.tok ?? 0) + ev.tokens;
       if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy after graduation`, tx);
     } else {
       t.ammSells += 1;
       t.ammSolOut += ev.sol;
+      if (b) {
+        b.sold = (b.sold ?? 0) + ev.tokens;
+        if (b.exitAt === undefined && (b.tok ?? 0) > 0 && b.sold >= (b.tok ?? 0) * 0.9) b.exitAt = ev.ts;
+      }
       if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
     }
   }

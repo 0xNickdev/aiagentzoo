@@ -1732,3 +1732,19 @@ test("a sibling node on the private network gets the holder allowance for the ch
     server.close();
   }
 });
+
+test("a sniper who sells in the PumpSwap pool after graduation no longer counts as holding", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const t0 = Date.now() - 60 * 60_000;
+  const mint = "Grad".padEnd(44, "z");
+  const sniper = "Snipe".padEnd(44, "z");
+  const pool = "Pool".padEnd(44, "z");
+  tape.apply({ kind: "create", name: "g", symbol: "G", mint, creator: "Dev".padEnd(44, "z"), ts: t0 }, t0);
+  for (const u of [sniper, "Other".padEnd(44, "z")]) tape.apply({ kind: "trade", mint, sol: 3, tokens: 150_000_000, isBuy: true, user: u, ts: t0 + 1_000, curveSol: 6 }, t0);
+  assert.equal(tape.facts(mint)!.earlyHeld, 0.3);
+  tape.apply({ kind: "pool", mint, pool }, t0 + 30 * 60_000);
+  tape.apply({ kind: "swap", pool, isBuy: false, sol: 9, tokens: 150_000_000, user: sniper, ts: t0 + 31 * 60_000, poolSol: 80 }, t0 + 31 * 60_000);
+  assert.equal(tape.facts(mint)!.earlyHeld, 0.15);
+  assert.ok(tape.earlyOf(mint)!.find((e) => e.wallet === sniper)!.exitSec! > 0);
+});
