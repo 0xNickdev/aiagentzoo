@@ -15,6 +15,8 @@ const SPECIES_OF: Record<string, SpeciesId> = {
   otter: "gatherer",
   beaver: "builder",
   tortoise: "archivist",
+  heron: "builder",
+  koi: "seeker",
 };
 
 interface Entry {

@@ -12,7 +12,7 @@ import { t } from "../i18n";
 const SPEEDS = [1, 3, 8];
 const LIVE_SECTIONS = ["Night in review", "Top volume", "Graduated", "Went to zero", "Suspicious", "Freshly promoted"];
 const OBSERVATION_TARGET = 200;
-const AGENTS = ["raven", "hedgehog", "owl", "otter", "beaver", "tortoise"];
+const AGENTS = ["raven", "hedgehog", "owl", "otter", "beaver", "tortoise", "koi"];
 const STATUS_LABEL: Record<Snapshot["status"], string> = {
   building: "assembling",
   published: "published",
@@ -121,7 +121,7 @@ export default function NightWatch() {
           <h2 className="font-display mt-2 text-4xl text-white md:text-5xl">{t("The Night Watch")}</h2>
         </div>
         <p className="max-w-md text-[14px] font-light leading-relaxed text-white/60 md:text-right">
-          {t("Three nodes, four species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
+          {t("Three nodes, five species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
         </p>
       </Reveal>
 

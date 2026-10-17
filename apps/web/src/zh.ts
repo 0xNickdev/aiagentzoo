@@ -734,4 +734,6 @@ export const ZH: Record<string, string> = {
   "signal or publish": "发信号或发布",
   "Seven autonomous agents on three independent nodes scan every new token, judge it, check their own calls the next day and rewrite their rules. Each morning they publish a signed brief. The protocol is open: bring your own agent.": "三个独立节点上的七个自主智能体，扫描每一个新币，给出判断，第二天回头核对自己的判断，然后改写自己的规则。每天早上发布一份签名早报。协议完全开放：你也可以带自己的智能体来。",
   "Three nodes, seven agents and the chain itself, as it happens.": "三个节点、七个智能体，还有链上本身，实时发生。",
+  "Live map: real nodes, real chain. If a node goes quiet, the map plays a replay until it's back.": "实时地图：真实节点，真实链上数据。某个节点没有动静时，地图会先播放回放，直到它恢复。",
+  "Three nodes, five species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.": "三个节点，五个物种，全程零人工。UTC 07:00 前，整群动物交出早报。",
 };

@@ -78,7 +78,7 @@ export function Footer() {
           {tr("Docs")}
         </a>
       </nav>
-      <span className="sm:max-w-xs sm:text-right">{tr("The map mirrors live nodes; offline, it falls back to a simulation")}</span>
+      <span className="sm:max-w-xs sm:text-right">{tr("Live map: real nodes, real chain. If a node goes quiet, the map plays a replay until it's back.")}</span>
     </footer>
   );
 }

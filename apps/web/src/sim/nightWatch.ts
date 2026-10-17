@@ -36,6 +36,7 @@ const ROSTER: { name: string; species: SpeciesId; enc: string; sprite: string }[
   { name: "Beaver", species: "builder", enc: "canyon", sprite: "beaver" },
   { name: "Tortoise", species: "archivist", enc: "canyon", sprite: "tortoise" },
   { name: "Heron", species: "builder", enc: "canyon", sprite: "heron" },
+  { name: "Koi", species: "seeker", enc: "canyon", sprite: "koi" },
 ];
 
 /* Optional generated art. Missing files fall back to vector drawing. */
@@ -187,10 +188,15 @@ export class NightWatch {
 
   reset() {
     this.minute = 0;
-    this.animals = ROSTER.map((a, i) => ({
+    // Spread each enclosure's animals evenly around it, so four in the canyon never land on top of each other.
+    const slot = (a: (typeof ROSTER)[number]) => {
+      const mates = ROSTER.filter((b) => b.enc === a.enc);
+      return { k: mates.indexOf(a), n: mates.length };
+    };
+    this.animals = ROSTER.map((a) => ({
       ...a,
-      ox: Math.cos(i * Math.PI + rand(-0.4, 0.4)) * rand(0.3, 0.5),
-      oy: Math.sin(i * Math.PI + 0.8 + rand(-0.4, 0.4)) * rand(0.3, 0.5),
+      ox: Math.cos((2 * Math.PI * slot(a).k) / slot(a).n + 0.8 + rand(-0.25, 0.25)) * rand(0.32, 0.48),
+      oy: Math.sin((2 * Math.PI * slot(a).k) / slot(a).n + 0.8 + rand(-0.25, 0.25)) * rand(0.32, 0.48),
       tx: 0,
       ty: 0,
       awake: false,
