@@ -16,6 +16,7 @@ interface KoiView {
   tally: { picks: number; graded: number; alive: number; dead: number; nights: number };
   nights: Array<{ night: string; picks: Pick[]; score: { alive: number; dead: number; unknown: number; cases: Array<{ mint: string; outcome: string }> } | null }>;
   perNight: number;
+  lastLook?: { at: number; candidates: number } | null;
 }
 
 /** About 1 in 270 pump.fun tokens is alive a day later: the bar the koi's picks are measured against. */
@@ -75,6 +76,14 @@ export default function KoiSection() {
               </li>
             ))}
             {data && !data.tonight.length && <p className="text-[12.5px] text-white/40">{pick("No picks yet tonight. Most nights the honest answer is \"none\".", "今晚还没有挑选。大多数夜里，诚实的答案是「一个都没有」。")}</p>}
+            {data?.lastLook && (
+              <p className="font-mono text-[10.5px] text-white/35">
+                {pick(
+                  `last looked ${new Date(data.lastLook.at).toISOString().slice(11, 16)} UTC · ${data.lastLook.candidates} launches worth a look`,
+                  `上次查看 ${new Date(data.lastLook.at).toISOString().slice(11, 16)} UTC · ${data.lastLook.candidates} 个值得一看的新币`,
+                )}
+              </p>
+            )}
           </ul>
         </div>
 
