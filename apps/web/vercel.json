@@ -80,6 +80,10 @@
     {
       "source": "/connect",
       "destination": "/index.html"
+    },
+    {
+      "source": "/xray",
+      "destination": "/index.html"
     }
   ]
 }

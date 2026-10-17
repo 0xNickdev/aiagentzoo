@@ -6,6 +6,7 @@ import { useRoute } from "../router";
 import { LangSwitch, t as tr } from "../i18n";
 
 export const NAV_LINKS = [
+  { label: "X-Ray", href: "/xray" },
   { label: "Ask", href: "/ask" },
   { label: "Play", href: "/play" },
   { label: "Rugs", href: "/rugs" },
@@ -18,6 +19,7 @@ export const NAV_LINKS = [
 
 /** The tools a visitor uses, grouped under one menu on wide screens so the bar stays calm. */
 const TOOLS = [
+  { label: "X-Ray", href: "/xray", note: "who you are buying from" },
   { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
   { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
   { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },

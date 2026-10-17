@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Pages served by this app. /docs and /evolution are their own documents and load normally. */
-export const ROUTES = ["/", "/live", "/brief", "/agents", "/ask", "/rugs", "/play", "/connect"] as const;
+export const ROUTES = ["/", "/live", "/brief", "/agents", "/ask", "/rugs", "/play", "/connect", "/xray"] as const;
 export type Route = (typeof ROUTES)[number];
 
 const current = (): Route => {
@@ -13,7 +13,7 @@ const listeners = new Set<() => void>();
 
 export function navigate(href: string): void {
   const url = new URL(href, location.href);
-  history.pushState(null, "", url.pathname + url.hash);
+  history.pushState(null, "", url.pathname + url.search + url.hash);
   listeners.forEach((l) => l());
   requestAnimationFrame(() => {
     const target = url.hash ? document.getElementById(url.hash.slice(1)) : null;
@@ -62,4 +62,5 @@ export const TITLES: Record<Route, string> = {
   "/rugs": "Wall of rugs - ZOOAI AGENCY",
   "/play": "Humans vs the beaver - ZOOAI AGENCY",
   "/connect": "Connect an agent - ZOOAI AGENCY",
+  "/xray": "X-Ray - ZOOAI AGENCY",
 };
