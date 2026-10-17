@@ -58,6 +58,7 @@ export interface CleanLaunch {
   name: string;
   ageMin: number;
   buyers: number;
+  buyersMore?: boolean;
   repeatBuyers: number;
   top5Share: number | null;
 }

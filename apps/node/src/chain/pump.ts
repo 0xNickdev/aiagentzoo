@@ -208,8 +208,10 @@ export interface ChainFacts {
   quote?: string | null;
   buys: number;
   sells: number;
-  /** Distinct wallets that bought, capped at 100 to bound memory across tens of thousands of tokens. */
+  /** Distinct wallets that bought on the curve, counted up to 5,000 (then buyersMore is true). */
   buyers: number;
+  /** True when there were more buyers than the tape counts. */
+  buyersMore?: boolean;
   solIn: number;
   solOut: number;
   /** SOL sitting in the bonding curve right now. */
@@ -221,7 +223,7 @@ export interface ChainFacts {
   graduated: boolean;
   /** Share of all SOL bought in that came from the five biggest buyers, 0..1: a few wallets propping it up. */
   top5Share: number | null;
-  /** Buyers who came back and bought again: real interest leaves repeat buyers. */
+  /** Buyers who came back and bought again (among the first 100): real interest leaves repeat buyers. */
   repeatBuyers: number;
   /** Trades in the first 15 minutes after launch. */
   trades15m: number;
@@ -253,6 +255,8 @@ interface Tracked {
   buys: number;
   sells: number;
   buyers: Map<string, { sol: number; buys: number }>;
+  /** Buyers past the first 100, kept only as 32-bit hashes so a busy token still gets a true count. */
+  moreBuyers?: Set<number>;
   trades15m: number;
   solIn: number;
   solOut: number;
@@ -300,6 +304,7 @@ export interface CleanLaunch {
   name: string;
   ageMin: number;
   buyers: number;
+  buyersMore?: boolean;
   repeatBuyers: number;
   top5Share: number | null;
   creatorSold: number | null;
@@ -345,6 +350,16 @@ const KEEP_MS = 48 * 3_600_000;
 const RECENT_KEEP = 20_000;
 const DAY_MS = 24 * 3_600_000;
 const MAX_TRACKED = 30_000;
+/** The first buyers are kept whole (amounts, repeat buys); past that only a hash, to count them. */
+const BUYERS_FULL = 100;
+const BUYERS_MAX = 5_000;
+
+/** FNV-1a: a wallet as a 32-bit number. At 5,000 wallets two colliding is a few in a thousand. */
+const hash32 = (s: string): number => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+};
 
 export class PumpTape {
   private readonly tokens = new Map<string, Tracked>();
@@ -516,7 +531,8 @@ export class PumpTape {
       if (b) {
         b.sol += ev.sol;
         b.buys += 1;
-      } else if (t.buyers.size < 100) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
+      } else if (t.buyers.size < BUYERS_FULL) t.buyers.set(ev.user, { sol: ev.sol, buys: 1 });
+      else if ((t.moreBuyers?.size ?? 0) < BUYERS_MAX - BUYERS_FULL) (t.moreBuyers ??= new Set()).add(hash32(ev.user));
       if (ev.user === t.creator) t.devBought += ev.tokens;
       else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
@@ -575,7 +591,7 @@ export class PumpTape {
    * Maps become arrays; what can be rebuilt (creators' mints, pools) is rebuilt on load.
    */
   snapshot(): string {
-    const tokens = [...this.tokens.values()].map((t) => ({ ...t, buyers: [...t.buyers], launchBuys: [...t.launchBuys] }));
+    const tokens = [...this.tokens.values()].map((t) => ({ ...t, buyers: [...t.buyers], moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys] }));
     return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen });
   }
 
@@ -583,7 +599,7 @@ export class PumpTape {
     try {
       const saved = JSON.parse(json) as {
         v?: number;
-        tokens?: Array<Omit<Tracked, "buyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, { sol: number; buys: number }][]; launchBuys: [string, number][] }>;
+        tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, { sol: number; buys: number }][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
         seen?: { launches: number; trades: number };
@@ -603,6 +619,7 @@ export class PumpTape {
           ammSolIn: s.ammSolIn ?? 0,
           ammSolOut: s.ammSolOut ?? 0,
           buyers: new Map(s.buyers ?? []),
+          moreBuyers: s.moreBuyers?.length ? new Set(s.moreBuyers) : undefined,
           launchBuys: new Map(s.launchBuys ?? []),
         };
         this.tokens.set(t.mint, t);
@@ -649,7 +666,8 @@ export class PumpTape {
       ...(t.quote ? { quote: t.quote } : {}),
       buys: t.buys,
       sells: t.sells,
-      buyers: t.buyers.size,
+      buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
+      ...(t.buyers.size + (t.moreBuyers?.size ?? 0) >= BUYERS_MAX ? { buyersMore: true } : {}),
       solIn: round(t.solIn),
       solOut: round(t.solOut),
       curveSol: t.curveSol === null ? null : round(t.curveSol),
@@ -756,7 +774,7 @@ export class PumpTape {
       if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) continue;
       const rec = this.creator(t.creator, now);
       if (rec && rec.dumped >= 3 && rec.dumped / Math.max(1, rec.launches48h) >= 0.5) continue;
-      out.push({ mint, symbol: t.symbol.slice(0, 16), name: t.name.slice(0, 40), ageMin: Math.round(age), buyers: f.buyers, repeatBuyers: f.repeatBuyers, top5Share: f.top5Share, creatorSold: f.creatorSold, curveSol: f.curveSol, graduated: f.graduated });
+      out.push({ mint, symbol: t.symbol.slice(0, 16), name: t.name.slice(0, 40), ageMin: Math.round(age), buyers: f.buyers, ...(f.buyersMore ? { buyersMore: true } : {}), repeatBuyers: f.repeatBuyers, top5Share: f.top5Share, creatorSold: f.creatorSold, curveSol: f.curveSol, graduated: f.graduated });
     }
     return out;
   }

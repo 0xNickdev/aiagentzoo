@@ -103,7 +103,7 @@ const compactKoi = (c: CleanLaunch) => ({
   symbol: c.symbol,
   name: c.name,
   ageMin: c.ageMin,
-  buyers: c.buyers,
+  buyers: c.buyersMore ? `${c.buyers}+` : c.buyers,
   repeatBuyers: c.repeatBuyers,
   top5Share: c.top5Share,
   creatorSold: c.creatorSold,

@@ -1491,3 +1491,22 @@ test("holder keys: shown once, stored as a hash, replaced by a new one, and lift
   assert.equal(reads, 1);
   assert.equal(await cache.holds(W, HOLDING_TTL_MS + 1), false);
 });
+
+test("tape counts every buyer past the first 100 and keeps the count across a restart", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const now = Date.now();
+  const tape = new PumpTape();
+  const mint = "Busy11111111111111111111111111111111111111";
+  tape.apply({ kind: "create", name: "busy", symbol: "BUSY", mint, creator: "Dev1111111111111111111111111111111111111111", ts: now }, now);
+  for (let i = 0; i < 250; i++) {
+    const user = `Buyer${String(i).padStart(4, "0")}111111111111111111111111111111111`;
+    tape.apply({ kind: "trade", mint, sol: 0.1, tokens: 1000, isBuy: true, user, ts: now, curveSol: 5 }, now);
+    // A second buy from the same wallet is not a new buyer, hashed or not.
+    if (i % 50 === 0) tape.apply({ kind: "trade", mint, sol: 0.1, tokens: 1000, isBuy: true, user, ts: now, curveSol: 5 }, now);
+  }
+  assert.equal(tape.facts(mint, now)!.buyers, 250);
+  assert.equal(tape.facts(mint, now)!.buyersMore, undefined);
+  const reborn = new PumpTape();
+  reborn.load(tape.snapshot(), now);
+  assert.equal(reborn.facts(mint, now)!.buyers, 250);
+});

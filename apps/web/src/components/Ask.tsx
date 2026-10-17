@@ -14,6 +14,7 @@ interface Chain {
   buys: number;
   sells: number;
   buyers: number;
+  buyersMore?: boolean;
   creatorSold: number | null;
   creatorLaunches24h: number;
   top5Share: number | null;
@@ -36,6 +37,7 @@ interface CleanLaunch {
   name: string;
   ageMin: number;
   buyers: number;
+  buyersMore?: boolean;
   repeatBuyers: number;
   top5Share: number | null;
   creatorSold: number | null;
@@ -104,7 +106,7 @@ function evidence(a: Ask): Array<[string, string, boolean]> {
   const b = a.facts.bundle;
   if (b) out.push(["bundle at launch", `${t("{n} wallets", { n: b.wallets })} · ${pctOf(b.share)}${b.linked >= 2 ? ` · ${t("{n} same funder", { n: b.linked })}` : ""}`, b.wallets >= 3 || b.linked >= 2]);
   else if (c?.top5Share !== null && c?.top5Share !== undefined) out.push(["top 5 buyers' share", pctOf(c.top5Share), c.top5Share >= 0.6]);
-  if (c && !r) out.push(["buyers · repeat", `${c.buyers} · ${c.repeatBuyers}`, false]);
+  if (c && !r) out.push(["buyers · repeat", `${c.buyers}${c.buyersMore ? "+" : ""} · ${c.repeatBuyers}`, false]);
   if (m) {
     out.push(["liquidity", usd(m.liquidityUsd), (m.liquidityUsd ?? 0) < 1000]);
     out.push(["volume 24h", usd(m.volume24hUsd), false]);
@@ -430,7 +432,7 @@ export default function AskPage() {
                   <span className="font-mono shrink-0 text-[10.5px] text-white/40">{t("{n} min old", { n: c.ageMin })}</span>
                 </div>
                 <p className="font-mono mt-1 text-[10.5px] text-white/50">
-                  {t("{b} buyers · {r} came back · top 5 hold {p}", { b: c.buyers >= 100 ? "100+" : c.buyers, r: c.repeatBuyers, p: pctOf(c.top5Share) })}
+                  {t("{b} buyers · {r} came back · top 5 hold {p}", { b: c.buyersMore ? `${c.buyers}+` : c.buyers, r: c.repeatBuyers, p: pctOf(c.top5Share) })}
                 </p>
                 <button
                   type="button"
