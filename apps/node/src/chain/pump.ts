@@ -355,7 +355,7 @@ interface Tracked {
   /** The last curve trade, to spot a buy and a sell in one transaction. Not saved. */
   last?: { tx: string; user: string; isBuy: boolean };
   /** The early and churn numbers as they stood five minutes in, for the check's own record. */
-  at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number };
+  at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number; at?: number };
   /** Crew and ring counts, worked out at most once a minute. Not saved. */
   crew?: { at: number; counts: Crew; members: CrewMembers };
 }
@@ -431,6 +431,8 @@ const BUYERS_FULL = 100;
 const BUYERS_MAX = 5_000;
 /** A buy this soon after the create is a sniper's or the creator's friends': nobody else could have seen it yet. */
 const EARLY_MS = 5_000;
+/** The latest trade that may stand for the five-minute reading of a token. */
+const AT5_LATEST = 10 * 60_000;
 /** First-second buys remembered per wallet. */
 const EARLY_KEEP = 300;
 /** Sniping this many launches together makes two wallets a ring. */
@@ -616,9 +618,11 @@ export class PumpTape {
     this.count(now, "trades");
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     // Five minutes in, the early and churn numbers are written down once, for the check's record.
-    if (!t.at5 && ev.ts - t.createdAt >= 5 * 60_000) {
+    // Only a trade between 5 and 10 minutes in can stand for "five minutes in": a token first traded later (or one
+    // launched before the tape knew these numbers) has no five-minute reading, and the record leaves it out.
+    if (!t.at5 && ev.ts - t.createdAt >= 5 * 60_000 && ev.ts - t.createdAt < AT5_LATEST) {
       const { creatorCrew, ringWallets } = this.crewOf(t, now);
-      t.at5 = { ...this.early(t), creatorCrew, ringWallets };
+      t.at5 = { ...this.early(t), creatorCrew, ringWallets, at: ev.ts };
     }
     // A buy and a sell by one wallet in one transaction is a bump bot, not a trader.
     if (tx) {
@@ -1133,7 +1137,8 @@ export class PumpTape {
       const s = dumpedEarly || serial || bundle ? flagged : clear;
       s.n += 1;
       s[outcome] += 1;
-      if (t.at5) {
+      // Readings taken late (before this rule, a first trade a day in counted as "five minutes in") are not used.
+      if (t.at5 && t.at5.at !== undefined && t.at5.at - t.createdAt < AT5_LATEST) {
         const add = (x: Side) => {
           x.n += 1;
           x[outcome] += 1;

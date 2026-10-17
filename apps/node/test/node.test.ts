@@ -1827,3 +1827,22 @@ test("a wallet is a point on the curve; a launchpad's authority, owning its vaul
   assert.equal(isOnCurve(fromBase58("CogH8XVFdLBkYpdJH8CHoJKrBZxwuU95LFvQCeWYbm6N")), true);
   assert.equal(isOnCurve(fromBase58("8TPACXaKotSZ7WXktfmKDRhgoypyGXNzo1ctr2YBzxLc")), true);
 });
+
+test("the record's five-minute reading is taken between 5 and 10 minutes in, never from a late first trade", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const now = Date.now();
+  const day = 30 * 3_600_000;
+  const tape = new PumpTape();
+  const w = (n: string) => n.padEnd(44, "z");
+  const launch = (mint: string, laterTradeMin: number) => {
+    const t0 = now - day;
+    tape.apply({ kind: "create", name: "x", symbol: "X", mint, creator: w(`Dev${mint}`), ts: t0 }, t0);
+    for (const s of ["SnipeA", "SnipeB"]) tape.apply({ kind: "trade", mint, sol: 1, tokens: 150_000_000, isBuy: true, user: w(s), ts: t0 + 1_000, curveSol: 1 }, t0);
+    tape.apply({ kind: "trade", mint, sol: 0.1, tokens: 1_000, isBuy: true, user: w("Late"), ts: t0 + laterTradeMin * 60_000, curveSol: 1 }, t0);
+  };
+  launch(w("OnTime"), 6);
+  launch(w("Stale"), 600);
+  const r = tape.checkRecord(now);
+  assert.equal(r.signals.stillTrading.n, 1, "only the token traded 6 minutes in has a reading");
+  assert.equal(r.signals.insidersHold25.n, 1);
+});
