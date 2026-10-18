@@ -600,6 +600,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/start":
         // t.me/<bot>?start=link-<code> from the site links the chat in one tap.
         if (arg.startsWith("link-")) return link(chat, arg.slice(5));
+        // t.me/<bot>?start=w-<mint> from an x-ray on the site: watch that token in one tap.
+        if (arg.startsWith("w-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return watch(chat, arg.slice(2), true);
         return welcome(chat, msg.from?.first_name);
       case "/app":
         return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);

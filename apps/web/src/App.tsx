@@ -8,6 +8,7 @@ import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
 import XRay from "./components/XRay";
+import LiveProof from "./components/LiveProof";
 import Play from "./components/Play";
 import Connect from "./components/Connect";
 import BeaverRecord from "./components/BeaverRecord";
@@ -81,6 +82,7 @@ function Home() {
     <>
       <Hero />
       <LiveStats />
+      <LiveProof />
       <Species />
       <Doors />
       <BringYourAgent />

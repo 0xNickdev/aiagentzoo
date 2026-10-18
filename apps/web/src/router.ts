@@ -49,7 +49,7 @@ export function interceptLinks(): void {
     // A hash on the current page is a plain in-page jump.
     if (path === (location.pathname.replace(/\/+$/, "") || "/") && url.hash) return;
     e.preventDefault();
-    navigate(url.pathname + url.hash);
+    navigate(url.pathname + url.search + url.hash);
   });
 }
 

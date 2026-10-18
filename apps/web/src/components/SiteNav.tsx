@@ -19,7 +19,6 @@ export const NAV_LINKS = [
 
 /** The tools a visitor uses, grouped under one menu on wide screens so the bar stays calm. */
 const TOOLS = [
-  { label: "X-Ray", href: "/xray", note: "who you are buying from" },
   { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
   { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
   { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
@@ -82,13 +81,17 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="liquid-glass flex items-center gap-2 rounded-full px-4 py-2 text-[13px] text-white/90 hover:text-white"
+            aria-label="GitHub"
+            title="GitHub"
+            className="liquid-glass flex h-9 w-9 items-center justify-center rounded-full text-white/90 hover:text-white"
           >
             <GitHubIcon size={15} />
-            GitHub
           </a>
-          <a href="/connect" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
+          <a href="/connect" className="liquid-glass rounded-full px-4 py-2 text-[13px] text-white/90 hover:text-white">
             {tr("Connect an agent")}
+          </a>
+          <a href="https://t.me/zooaiagency_bot" target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black transition hover:bg-white/90">
+            {tr("Open the bot")}
           </a>
         </div>
         <button type="button" className="text-white lg:hidden" aria-label={menuOpen ? tr("Close menu") : tr("Open menu")} onClick={() => setMenuOpen((open) => !open)}>

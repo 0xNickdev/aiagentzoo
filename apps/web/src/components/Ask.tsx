@@ -227,7 +227,8 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
 /* ---------- the page ---------- */
 
 export default function AskPage() {
-  const [input, setInput] = useState("");
+  // A link from the x-ray (/ask?mint=...) arrives with the token already in the box.
+  const [input, setInput] = useState(() => mintIn(new URLSearchParams(window.location.search).get("mint") ?? "") ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
