@@ -20,7 +20,7 @@ body { min-height: 100svh; }
 .zapp-ticker { position: relative; z-index: 3; max-width: 560px; margin: -4px auto 10px; display: flex; justify-content: center; }
 
 /* The answer sheet: frosted bokeh behind glass, sliding up from the bottom. */
-.zapp-sheet-wrap { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.zapp-sheet-wrap { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); }
 .zapp-sheet { position: relative; width: 100%; max-width: 560px; max-height: 90svh; overflow-y: auto; padding: 10px 14px calc(env(safe-area-inset-bottom) + 18px); border-radius: 30px 30px 0 0; background: linear-gradient(180deg, rgba(3,5,4,0.55), rgba(3,5,4,0.85)), url("/app/sheet.jpg") center / cover; box-shadow: 0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14); }
 .zapp-sheet-handle { width: 40px; height: 4px; margin: 2px auto 12px; border-radius: 4px; background: rgba(255,255,255,0.28); }
 .zapp-firefly { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #ffd99a; box-shadow: 0 0 10px 2px rgba(255, 200, 120, 0.55); opacity: 0; animation: zapp-float 7s ease-in-out infinite; }
@@ -40,7 +40,7 @@ body { min-height: 100svh; }
   position: relative;
   background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
   backdrop-filter: blur(22px) saturate(1.6);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+ 
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(255,255,255,0.04), 0 10px 40px rgba(0,0,0,0.35);
 }
 .glass-card::before, .glass-pill::before, .glass-bar::before, .glass-btn::before {
@@ -82,12 +82,12 @@ body { min-height: 100svh; }
  * fraction of the work.
  */
 @media (hover: none), (pointer: coarse) {
-  .glass-card, .glass-pill, .glass-bar, .glass-btn { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .glass-card, .glass-pill, .glass-bar, .glass-btn { backdrop-filter: blur(10px); }
   .glass-card { background: linear-gradient(180deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035)); }
-  .glass-btn { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)); }
-  .zapp-sheet .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(20,24,22,0.55), rgba(10,12,11,0.7)); }
-  .zapp-main .grid > .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)); }
-  .zapp-sheet-wrap { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.7); }
+  .glass-btn { backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)); }
+  .zapp-sheet .glass-card { backdrop-filter: none; background: linear-gradient(180deg, rgba(20,24,22,0.55), rgba(10,12,11,0.7)); }
+  .zapp-main .grid > .glass-card { backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)); }
+  .zapp-sheet-wrap { backdrop-filter: none; background: rgba(0,0,0,0.7); }
   .zapp-hero { filter: none; opacity: 0.22; transition: opacity 0.4s ease; }
   .zapp-hero.is-on { opacity: 1; }
   .zapp-firefly:nth-child(n + 8) { display: none; }
