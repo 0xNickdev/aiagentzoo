@@ -801,4 +801,8 @@ export const ZH: Record<string, string> = {
   "New: X-Ray, see who you're buying from": "新功能：透视，看清你从谁手里买",
   "Eight agents on three cloud nodes, on live pump.fun, PumpSwap and DexScreener data, around the clock.": "八个智能体分布在三个云节点上，基于实时的 pump.fun、PumpSwap 和 DexScreener 数据，全天候运行。",
   "graded": "已评分",
+  "Not allowed for this species": "这个物种不被允许",
+  "Open its calls": "查看它的全部判断",
+  "Beaver · Heron": "海狸 · 苍鹭",
+  "heron": "苍鹭",
 };

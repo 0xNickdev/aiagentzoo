@@ -52,12 +52,15 @@ export const SPECIES: {
   {
     id: "builder",
     name: "Builder",
-    animal: "Beaver",
+    animal: "Beaver · Heron",
     image: "/animals/builder.webp",
     role: "Turns other animals' findings into the structure of a shared artifact.",
     can: ["read state", "draft artifacts"],
     cannot: "open network",
-    agents: [{ name: "beaver", enclosure: "Stone Canyon" }],
+    agents: [
+      { name: "beaver", enclosure: "Stone Canyon" },
+      { name: "heron", enclosure: "Stone Canyon" },
+    ],
   },
   {
     id: "archivist",

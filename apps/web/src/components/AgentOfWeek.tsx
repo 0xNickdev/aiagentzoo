@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
+import { openGuest } from "./Guests";
 
 interface Row {
   id: string;
   name: string;
+  /** guest, or one of the zoo's own judges. */
+  kind?: string;
   score: number;
   graded: number;
   dead: number;
@@ -36,6 +39,21 @@ function left(endsAt: string): string {
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return d ? `${d}d ${h}h` : `${h}h ${m}m`;
 }
+
+/** A guest's row opens its record, every call with how it turned out, in the sheet the guest wing uses. */
+const ROW_LINK = "-mx-3 cursor-pointer rounded-xl px-3 transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none";
+const guestRow = (name: string) => ({
+  role: "button" as const,
+  tabIndex: 0,
+  title: t("Open its calls"),
+  onClick: () => openGuest(name),
+  onKeyDown: (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openGuest(name);
+    }
+  },
+});
 
 export default function AgentOfWeek() {
   const [data, setData] = useState<Weekly | null>(null);
@@ -112,7 +130,11 @@ export default function AgentOfWeek() {
           {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-light text-white/55">{t("No graded calls yet this week. Agents that report today are graded tomorrow.")}</p>}
           <ol className="mt-3">
             {rows.map((r, i) => (
-              <li key={r.id} className="border-b border-dashed border-white/10 py-3">
+              <li
+                key={r.id}
+                {...(r.kind === "guest" ? guestRow(r.name) : {})}
+                className={`border-b border-dashed border-white/10 py-3 ${r.kind === "guest" ? ROW_LINK : ""}`}
+              >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">
                     <span className="font-mono mr-3 text-[11px] text-white/35">{String(i + 1).padStart(2, "0")}</span>
@@ -134,7 +156,7 @@ export default function AgentOfWeek() {
               </li>
             ))}
             {waiting.map((g) => (
-              <li key={g.name} className="border-b border-dashed border-white/10 py-3">
+              <li key={g.name} {...guestRow(g.name)} className={`border-b border-dashed border-white/10 py-3 ${ROW_LINK}`}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px] text-white/70">
                     <span className="font-mono mr-3 text-[11px] text-white/35">{t("new")}</span>

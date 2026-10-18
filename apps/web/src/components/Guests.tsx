@@ -136,6 +136,10 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
   );
 }
 
+/** Fired with a guest's name to open its record from elsewhere on the page. */
+export const OPEN_GUEST = "zoo:open-guest";
+export const openGuest = (name: string) => window.dispatchEvent(new CustomEvent(OPEN_GUEST, { detail: name }));
+
 /** A guest's record, linkable: /agents?guest=<name> opens its sheet. */
 const recordUrl = (name: string) => `https://zooaiagency.com/agents?guest=${encodeURIComponent(name)}`;
 
@@ -356,6 +360,16 @@ export default function Guests() {
       );
     })().catch(() => setError(true));
   }, []);
+
+  // Anywhere on the page (the week's standings) can open a guest's record.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const name = (e as CustomEvent<string>).detail;
+      if (guests?.some((g) => g.name === name)) setOpenName(name);
+    };
+    window.addEventListener(OPEN_GUEST, onOpen);
+    return () => window.removeEventListener(OPEN_GUEST, onOpen);
+  }, [guests, setOpenName]);
 
   const opened = guests?.find((g) => g.name === open) ?? null;
   const close = useCallback(() => setOpenName(null), [setOpenName]);
