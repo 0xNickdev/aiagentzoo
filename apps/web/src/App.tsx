@@ -154,7 +154,8 @@ export default function App() {
   return (
     <>
       {route !== "/" && <SiteNav />}
-      <main key={route}>
+      {/* At least a screen tall, so the footer never floats up the page. */}
+      <main key={route} className="min-h-screen">
         <Page />
       </main>
       <Footer />

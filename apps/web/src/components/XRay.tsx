@@ -311,6 +311,81 @@ function Report({ r }: { r: XRayReport }) {
   );
 }
 
+interface Moment {
+  mint: string;
+  symbol: string;
+  kind: string;
+  text: string;
+  at: number;
+}
+
+const SHOWS = [
+  { title: "The first 5 seconds", text: "Every wallet that bought before anyone could see the token: what it took, what it still holds, when it sold out." },
+  { title: "Who those wallets are", text: "Across every launch of the last two days: the creator's own crew, sniper rings, serial snipers." },
+  { title: "Who paid for the creator", text: "The wallet that funded the dev, and what else it funded. Exchanges are left out: they fund everyone." },
+];
+
+/** Before anything is pasted: tokens the chain is talking about right now, one tap from their x-ray, and what it shows. */
+function Start({ onPick }: { onPick: (mint: string) => void }) {
+  const [moments, setMoments] = useState<Moment[] | null>(null);
+  useEffect(() => {
+    const load = () =>
+      fetch(`${NORTH}/v1/chain/moments?limit=120`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b: { moments: Moment[] } | null) => {
+          if (!b) return;
+          const seen = new Set<string>();
+          // Something worth looking at: a dev who just dumped, a serial launcher, a token that graduated.
+          const pickd = b.moments.filter((m) => ["dump", "serial", "graduated"].includes(m.kind) && !seen.has(m.mint) && seen.add(m.mint)).slice(0, 8);
+          setMoments(pickd);
+        })
+        .catch(() => setMoments([]));
+    void load();
+    const timer = window.setInterval(load, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  const ago = (at: number) => {
+    const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
+    return m < 1 ? t("now") : t("{m} min ago", { m });
+  };
+  return (
+    <Section className="!pt-2">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="font-display text-2xl">{t("Try one from the chain, right now")}</h2>
+        <p className="font-mono text-[11px] text-white/45">{t("live from Solana · tap to x-ray")}</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {!moments && Array.from({ length: 4 }, (_, i) => <div key={i} className="liquid-glass h-[84px] animate-pulse rounded-2xl opacity-60" />)}
+        {moments?.map((m) => (
+          <button
+            key={m.mint}
+            type="button"
+            onClick={() => onPick(m.mint)}
+            className="liquid-glass group rounded-2xl p-4 text-left transition hover:bg-white/[0.06]"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
+              <span className="font-mono shrink-0 text-[10.5px] text-white/40">{ago(m.at)}</span>
+            </div>
+            <p className={`mt-1.5 truncate text-[12.5px] font-light ${m.kind === "graduated" ? "text-[#9df3b0]" : "text-[#ff8a7e]"}`}>{tChain(m.text)}</p>
+            <p className="font-mono mt-2 text-[10.5px] text-white/40 group-hover:text-white/70">{t("x-ray it →")}</p>
+          </button>
+        ))}
+      </div>
+      {moments && moments.length === 0 && <p className="text-[13px] font-light text-white/50">{t("Nothing loud on the chain this minute. Paste any token above.")}</p>}
+
+      <div className="mt-10 grid gap-3 md:grid-cols-3">
+        {SHOWS.map((x) => (
+          <div key={x.title} className="liquid-glass rounded-3xl p-5 sm:p-6">
+            <h3 className="font-display text-xl text-white/90">{t(x.title)}</h3>
+            <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/65">{t(x.text)}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 /** One token, seen through: who got in first, who they are across launches, who paid for the creator, what is churn. */
 export default function XRay() {
   const [input, setInput] = useState("");
@@ -384,6 +459,7 @@ export default function XRay() {
         </Reveal>
       </Section>
       <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} />}</AnimatePresence>
+      {!report && !busy && <Start onPick={(m) => { setInput(m); void run(m); }} />}
     </>
   );
 }
