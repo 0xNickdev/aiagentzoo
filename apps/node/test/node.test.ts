@@ -1910,6 +1910,17 @@ test("an X account reused across launches whose devs sold within minutes is name
   assert.equal(c.verdict, "avoid");
   assert.match(c.reasons.join(" "), /X account this token links to \(@RugCrew_\) is also on 3 other launches from the last 48 hours; their dev sold within 5 minutes on 3/);
   assert.equal(reg.reused()[0]!.fastDumps, 3);
+  // A coin named after the account it links to is about that account: @chatgpt on ChatGPT coins is never listed.
+  for (let i = 0; i < 3; i++) {
+    const mint = pad(`Gpt${i}x`);
+    const at = now - (30 - i) * 60_000;
+    tape.apply({ kind: "create", name: "ChatGPT", symbol: "CHATGPT", mint, creator: pad(`G${i}x`), ts: at }, at);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: pad(`G${i}x`), ts: at, curveSol: 1 }, at);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: false, user: pad(`G${i}x`), ts: at + 30_000, curveSol: 0.1 }, at);
+    reg.add(mint, socialsOf({ twitter: "https://x.com/ChatGPTapp" }));
+  }
+  assert.ok(!reg.reused().some((r) => r.social.label === "@ChatGPTapp"));
+  assert.deepEqual(reg.forMint(pad("Gpt2x")), []);
   // Refused by every gateway: the reader is told to back off.
   const shut = new SocialsRegistry(tape, (async () => new Response("no", { status: 403 })) as unknown as typeof fetch);
   assert.equal(await shut.read(fresh, `https://ipfs.io/ipfs/Qm${"b".repeat(44)}`), false);

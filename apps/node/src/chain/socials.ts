@@ -54,6 +54,10 @@ export interface AccountRecord {
 
 const KEEP_MS = 48 * 3_600_000;
 
+/** Accounts memecoins point to because they are about them, never because they run them. */
+const FAMOUS = new Set(["elonmusk", "chatgpt", "openai", "sama", "solana", "pumpdotfun", "binance", "cz_binance", "realdonaldtrump", "potus", "whitehouse", "x", "grok", "xai", "anthropicai", "claudeai", "nvidia", "tesla", "spacex", "jupiterexchange", "raydiumprotocol", "metdaoteam", "bonk_inu", "coinbase", "base", "jessepollak", "vitalikbuterin", "toly", "aeyakovenko"]);
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
 export class SocialsRegistry {
   private readonly tape: PumpTape;
   private readonly fetchFn: typeof fetch;
@@ -111,6 +115,15 @@ export class SocialsRegistry {
     const outlines = mints.map((m) => this.tape.outline(m)).filter((o): o is NonNullable<ReturnType<PumpTape["outline"]>> => Boolean(o) && o!.mint !== except);
     const social = this.byMint.get(mints[0] ?? "")?.find((s) => s.key === key);
     if (!social) return null;
+    // A token named after the account it links to is about that account (a ChatGPT coin linking @chatgpt): the
+    // account is the meme's subject, not the hand behind it. Most of its launches like that, and it is left out.
+    const handle = squash(social.label.replace(/^@|^t\.me\//, ""));
+    if (social.kind === "x" && FAMOUS.has(handle)) return null;
+    const about = outlines.filter((o) => {
+      const sym = squash(o.symbol);
+      return handle.length >= 3 && sym.length >= 3 && (handle.includes(sym) || sym.includes(handle));
+    }).length;
+    if (outlines.length && about / outlines.length >= 0.5) return null;
     return {
       social,
       launches: outlines.length,
