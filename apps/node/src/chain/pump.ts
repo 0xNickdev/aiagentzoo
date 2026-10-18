@@ -7,7 +7,6 @@
  * their bag, and once it graduates, how its PumpSwap pool is doing.
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
-import { mask } from "./mask.ts";
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
@@ -518,7 +517,7 @@ export class PumpTape {
     try {
       const saved = JSON.parse(json) as { pulseSeq?: number; moments?: PulseEvent[] };
       this.pulseSeq = Math.max(this.pulseSeq, Number(saved.pulseSeq) || 0);
-      this.moments = (saved.moments ?? []).filter((e) => e && now - e.at <= MOMENTS_KEEP_MS).map((e) => ({ ...e, symbol: mask(e.symbol) }));
+      this.moments = (saved.moments ?? []).filter((e) => e && now - e.at <= MOMENTS_KEEP_MS);
     } catch {
       /* a broken file starts the record afresh */
     }
@@ -572,8 +571,8 @@ export class PumpTape {
         ...(ev.venue ? { venue: ev.venue } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
         ...(ev.uri ? { uri: ev.uri } : {}),
-        name: mask(ev.name),
-        symbol: mask(ev.symbol),
+        name: ev.name,
+        symbol: ev.symbol,
         creator: ev.creator,
         createdAt,
         buys: 0,
@@ -765,8 +764,6 @@ export class PumpTape {
         // Fields added after a snapshot was written start empty.
         const t: Tracked = {
           ...s,
-          name: mask(s.name ?? ""),
-          symbol: mask(s.symbol ?? ""),
           pool: s.pool ?? null,
           poolSol: s.poolSol ?? null,
           poolPeak: s.poolPeak ?? null,
