@@ -250,13 +250,13 @@ export default function NightWatch() {
               {parts.map((p, i) => (
                 <li key={p} className={`flex gap-2 truncate transition-colors duration-500 ${done[i] ? "text-white/85" : "text-white/30"}`}>
                   <span>{done[i] ? "●" : "○"}</span>
-                  {p}
+                  {t(p)}
                 </li>
               ))}
             </ol>
             {live.brief && (
               <a href="/brief" className="font-mono mt-3 inline-block text-[11px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white">
-                read {live.brief.id} →
+                {t("read {id} →", { id: live.brief.id })}
               </a>
             )}
           </div>

@@ -76,7 +76,7 @@ export default function Hero() {
               <span className="accent">buying from.</span>
             </>,
             <>
-              看清你在<span className="accent">从谁手里买。</span>
+              看清你<span className="accent">从谁手里买。</span>
             </>,
           )}
         </motion.h1>

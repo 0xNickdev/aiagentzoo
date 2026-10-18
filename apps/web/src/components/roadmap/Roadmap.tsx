@@ -442,7 +442,7 @@ export default function Roadmap() {
         <div className="font-mono pointer-events-none absolute bottom-4 left-5 flex gap-5 text-[10.5px] text-white/50 sm:left-8">
           <span>● shipped</span>
           <span>○ next</span>
-          <span className="hidden sm:inline">hover · click to pin</span>
+          <span className="hidden sm:inline">{t("hover · click to pin")}</span>
         </div>
       </div>
 

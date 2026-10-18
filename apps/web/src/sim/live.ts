@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import type { SpeciesId } from "../data";
 import type { NightWatch, PulseEvent } from "./nightWatch";
 
@@ -57,32 +58,32 @@ function describe(e: Entry["event"]): string | null {
   switch (e.type) {
     case "agent.woke": {
       const note = String(p.note ?? "");
-      if (note.startsWith("guardian:")) return `was woken by guardian ${note.slice(9, 13)}…${note.slice(-4)}`;
-      if (note === "visitor") return "was woken by a visitor";
+      if (note.startsWith("guardian:")) return t("was woken by guardian {g}", { g: `${note.slice(9, 13)}…${note.slice(-4)}` });
+      if (note === "visitor") return t("was woken by a visitor");
       return null;
     }
     case "launches.found":
-      return `found ${p.launches?.length ?? 0} new pump.fun launches → ${e.to?.agent}${e.to?.node !== e.from.node ? ` @${e.to?.node}` : ""}`;
+      return t("found {n} new pump.fun launches → {to}", { n: p.launches?.length ?? 0, to: `${e.to?.agent}${e.to?.node !== e.from.node ? ` @${e.to?.node}` : ""}` });
     case "profiles.found":
-      return `spotted ${p.mints?.length ?? 0} fresh DexScreener profiles → ${e.to?.agent}`;
+      return t("spotted {n} fresh DexScreener profiles → {to}", { n: p.mints?.length ?? 0, to: String(e.to?.agent) });
     case "observations":
-      return `sent ${p.items?.length ?? 0} observations → ${e.to?.agent} @${e.to?.node}`;
+      return t("sent {n} observations → {to}", { n: p.items?.length ?? 0, to: `${e.to?.agent} @${e.to?.node}` });
     case "gathered":
-      return `gathered market data for ${p.count} tokens`;
+      return t("gathered market data for {n} tokens", { n: p.count });
     case "scan":
-      return "scanned, nothing new";
+      return t("scanned, nothing new");
     case "artifact.drafted":
-      return "updated the brief draft";
+      return t("updated the brief draft");
     case "artifact.published":
-      return `published ${p.id}`;
+      return t("published {id}", { id: p.id });
     case "signal.rejected":
       return `rejected a signal from ${p.from?.agent}: ${p.reason}`;
     case "budget.stop":
       return `budget stop (${p.resource})`;
     case "agent.hungry":
-      return "is hungry - no feed";
+      return t("is hungry - no feed");
     case "loop.stop":
-      return "paused: repeating itself";
+      return t("paused: repeating itself");
     case "stake.slashed":
       return `stake slashed by ${p.amount} (spam rule)`;
     case "enclosure.retired":
