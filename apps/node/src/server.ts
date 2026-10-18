@@ -13,6 +13,7 @@ import { weekOf } from "./stats.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { lineage, type LineageView } from "./chain/lineage.ts";
+import { socials } from "./chain/socials.ts";
 import { holderReport, holdersEnabled } from "./chain/holders.ts";
 import { checkToken, RateGate } from "./chain/check.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
@@ -379,7 +380,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
         }
-        const check = checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}) });
+        const linked = found ? socials.forMint(mint) : [];
+        const check = checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         if (checkOf) return json(res, 200, { ...check, access: tier });
         if (!found) return json(res, 404, { error: "not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)", check });
@@ -395,6 +397,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           creatorRecord: found.creatorRecord,
           funding: funding ?? null,
           bundle: { wallets: found.bundle, funding: bundle },
+          socials: linked,
           access: tier,
         });
       }
@@ -420,6 +423,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!holdersEnabled()) return json(res, 404, { error: "no RPC configured on this node" });
         const report = await holderReport(holdersOf[1]!);
         return report ? json(res, 200, report) : json(res, 404, { error: "no holders found" });
+      }
+      // X accounts, X communities and Telegram groups reused across launches, the most-dumped first.
+      if (req.method === "GET" && path === "/v1/chain/socials") {
+        return json(res, 200, { hours: 48, read: socials.size, accounts: socials.reused(clampInt(url.searchParams.get("limit"), 30, 1, 100)) });
       }
       if (req.method === "GET" && path === "/v1/chain/ruggers") {
         return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });

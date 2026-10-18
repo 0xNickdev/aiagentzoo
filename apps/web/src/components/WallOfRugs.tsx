@@ -88,10 +88,79 @@ export default function WallOfRugs() {
           </div>
         ))}
       </Reveal>
+      <ReusedAccounts />
       <p className="font-mono mt-4 text-center text-[11px] text-white/40">
         {t("check any dev:")} <a href="/ask" className="underline decoration-white/25 underline-offset-4 hover:text-white">{t("ask the beaver")}</a> · {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/ruggers`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/ruggers</a>
       </p>
     </Section>
+  );
+}
+
+interface Account {
+  social: { kind: string; url: string; label: string };
+  launches: number;
+  fastDumps: number;
+  creators: number;
+  recent: Array<{ mint: string; symbol: string; dumpedAfterMin: number | null }>;
+}
+
+/**
+ * The X accounts, X communities and Telegram groups that keep coming back on launches whose dev sold within minutes.
+ * Facts from each token's own metadata and the chain, never a verdict on a person.
+ */
+function ReusedAccounts() {
+  const [list, setList] = useState<Account[] | null>(null);
+  useEffect(() => {
+    const load = () =>
+      fetch(`${NORTH}/v1/chain/socials?limit=25`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b: { accounts: Account[] } | null) => b && setList(b.accounts.filter((a) => a.fastDumps >= 2)))
+        .catch(() => setList([]));
+    void load();
+    const timer = window.setInterval(load, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="mt-16">
+      <div className="mb-4 max-w-3xl">
+        <p className="font-mono mb-2 text-[11px] text-white/45">{t("same account, new token · last 48 hours")}</p>
+        <h3 className="font-display text-3xl leading-tight">{t("The accounts behind repeat rugs.")}</h3>
+        <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
+          {t("A rugger switches wallets for every launch. The X account or Telegram group on the token often stays the same. These are linked, in their own metadata, to several launches whose dev sold within 5 minutes.")}
+        </p>
+      </div>
+      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
+        <div className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[10.5px] text-white/40 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+          <span>{t("linked account")}</span>
+          <span className="text-right">{t("launches")}</span>
+          <span className="text-right">{t("dev sold ≤5 min")}</span>
+          <span className="hidden text-right sm:block">{t("wallets")}</span>
+          <span className="hidden sm:block">{t("tokens")}</span>
+        </div>
+        {!list && <p className="px-7 py-8 text-center text-[13px] text-white/45">{t("Reading the chain…")}</p>}
+        {list && list.length === 0 && <p className="px-7 py-8 text-center text-[13px] text-white/45">{t("None yet: the reader fills this as new launches come in.")}</p>}
+        {list?.map((a) => (
+          <div key={a.social.url} className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3 text-[12.5px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+            <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-white/85 hover:text-white">
+              {a.social.label} ↗
+            </a>
+            <span className="text-right text-white/70">{a.launches}</span>
+            <span className="text-right text-[#ff8a7e]">{a.fastDumps}</span>
+            <span className="hidden text-right text-white/60 sm:block">{a.creators}</span>
+            <span className="hidden truncate text-white/55 sm:block">
+              {a.recent.slice(0, 4).map((r, i) => (
+                <a key={r.mint} href={`/xray?mint=${r.mint}`} className="hover:text-white">
+                  {i ? " · " : ""}${r.symbol}
+                </a>
+              ))}
+            </span>
+          </div>
+        ))}
+      </Reveal>
+      <p className="mt-3 text-[11.5px] font-light text-white/40">
+        {t("Facts from each token's metadata and the chain, not a judgement of any person. Think one is listed by mistake? Write to x.com/zooclawagency.")}
+      </p>
+    </div>
   );
 }

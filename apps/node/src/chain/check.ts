@@ -1,6 +1,7 @@
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
+import type { AccountRecord } from "./socials.ts";
 import type { ChainFacts, CreatorRecord } from "./pump.ts";
 
 /**
@@ -77,7 +78,7 @@ export interface CheckInput {
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[] } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -125,6 +126,14 @@ export function checkToken(
   // Wallets other than the creator buying in the launch block: the supply was split up before anyone could see it.
   if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) {
     avoid.push(`${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`);
+  }
+
+  // The account the token advertises, reused on other launches whose devs sold within minutes: the same hands.
+  for (const a of opts.socials ?? []) {
+    if (a.fastDumps < 2) continue;
+    const said = `the ${a.social.kind === "telegram" ? "Telegram group" : a.social.kind === "x-community" ? "X community" : "X account"} this token links to (${a.social.label}) is also on ${a.launches} other launch${a.launches === 1 ? "" : "es"} from the last 48 hours; their dev sold within 5 minutes on ${a.fastDumps}`;
+    if (a.fastDumps >= 3) avoid.push(said);
+    else caution.push(said);
   }
 
   // Wallets in before anyone could see the token, still sitting on a big share: they decide when it dies.

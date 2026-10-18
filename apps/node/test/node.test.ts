@@ -1875,3 +1875,44 @@ test("a guest's contact is a link people can open, to X, Telegram or GitHub only
   assert.equal(contactUrl("x.com/a/status/1"), false);
   assert.equal(contactUrl("javascript:alert(1)"), false);
 });
+
+test("an X account reused across launches whose devs sold within minutes is named in the check, a famous tweet is not", async () => {
+  const { socialsOf, SocialsRegistry } = await import("../src/chain/socials.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  assert.deepEqual(socialsOf({ twitter: "https://x.com/elonmusk/status/2111734982611751330" }), [], "someone's tweet is not the token's account");
+  assert.equal(socialsOf({ twitter: "https://twitter.com/RugCrew_" })[0]!.key, "x:@rugcrew_");
+  assert.equal(socialsOf({ twitter: "https://x.com/i/communities/1912345678901234567" })[0]!.kind, "x-community");
+  assert.equal(socialsOf({ telegram: "https://t.me/rugcrewchat" })[0]!.key, "telegram:rugcrewchat");
+  assert.deepEqual(socialsOf({ twitter: "javascript:alert(1)", telegram: "https://evil.example/t" }), []);
+
+  const tape = new PumpTape();
+  const now = Date.now();
+  const pad = (s: string) => s.padEnd(44, "z");
+  const meta = (handle: string) => ({ twitter: `https://x.com/${handle}` });
+  // One X account on four launches by four fresh wallets; three of them sold everything in the first minute.
+  const reg = new SocialsRegistry(tape, (async (url: string) => Response.json(meta(String(url).includes("Clean") ? "honestdev" : "RugCrew_"))) as unknown as typeof fetch);
+  for (let i = 0; i < 4; i++) {
+    const mint = pad(`Rug${i}x`);
+    const dev = pad(`Dev${i}x`);
+    const at = now - (60 - i) * 60_000;
+    tape.apply({ kind: "create", name: "r", symbol: `R${i}`, mint, creator: dev, ts: at, uri: `https://ipfs.io/ipfs/Qm${"a".repeat(44)}${i}` }, at);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: dev, ts: at, curveSol: 1 }, at);
+    if (i < 3) tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: false, user: dev, ts: at + 40_000, curveSol: 0.1 }, at);
+    await reg.read(mint, `https://ipfs.io/ipfs/Qm${"a".repeat(44)}${i}`);
+  }
+  const fresh = pad("Rug3x");
+  const [linked] = reg.forMint(fresh);
+  assert.equal(linked!.social.label, "@RugCrew_");
+  assert.equal(linked!.launches, 3, "the other launches, not this one");
+  assert.equal(linked!.fastDumps, 3);
+  const c = checkToken(fresh, { symbol: "R3", facts: tape.facts(fresh)!, creatorRecord: tape.creator(pad("Dev3x")) }, { socials: reg.forMint(fresh) });
+  assert.equal(c.verdict, "avoid");
+  assert.match(c.reasons.join(" "), /X account this token links to \(@RugCrew_\) is also on 3 other launches from the last 48 hours; their dev sold within 5 minutes on 3/);
+  assert.equal(reg.reused()[0]!.fastDumps, 3);
+  // Refused by every gateway: the reader is told to back off.
+  const shut = new SocialsRegistry(tape, (async () => new Response("no", { status: 403 })) as unknown as typeof fetch);
+  assert.equal(await shut.read(fresh, `https://ipfs.io/ipfs/Qm${"b".repeat(44)}`), false);
+  const gone = new SocialsRegistry(tape, (async () => new Response("no", { status: 404 })) as unknown as typeof fetch);
+  assert.equal(await gone.read(fresh, `https://ipfs.io/ipfs/Qm${"c".repeat(44)}`), true, "missing metadata is not a refusal");
+});

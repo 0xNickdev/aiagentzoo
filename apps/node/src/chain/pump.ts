@@ -43,6 +43,8 @@ export type PumpEvent =
       venue?: Venue;
       /** The whole supply, when it is not pump.fun's billion. */
       supply?: number;
+      /** Where the token's metadata lives (its X, Telegram, website). */
+      uri?: string;
     }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
   | { kind: "complete"; mint: string }
@@ -156,7 +158,7 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
       if (head.equals(DISC.create)) {
         const name = r.str();
         const symbol = r.str();
-        r.str(); // uri
+        const uri = r.str();
         const mint = r.key();
         r.key(); // bonding curve
         const user = r.key();
@@ -174,7 +176,7 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
           const q = base58(r.key());
           if (q !== WSOL && !/^1+$/.test(q)) quote = q;
         }
-        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}), ...(mayhem ? { mayhem } : {}) });
+        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}), ...(mayhem ? { mayhem } : {}), ...(uri ? { uri: uri.slice(0, 200) } : {}) });
       } else if (head.equals(DISC.trade)) {
         const mint = r.key();
         const sol = Number(r.u64()) / LAMPORTS;
@@ -316,6 +318,8 @@ interface Tracked {
   venue?: Venue;
   /** The whole supply, when it is not pump.fun's billion. */
   supply?: number;
+  /** Where its metadata lives. */
+  uri?: string;
   name: string;
   symbol: string;
   creator: string;
@@ -557,6 +561,7 @@ export class PumpTape {
         ...(ev.mayhem ? { mayhem: true } : {}),
         ...(ev.venue ? { venue: ev.venue } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
+        ...(ev.uri ? { uri: ev.uri } : {}),
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -899,6 +904,25 @@ export class PumpTape {
       })
       .sort((a, b) => b.bought - a.bought)
       .slice(0, 30);
+  }
+
+  /** The newest launches with a metadata address, newest first, for the socials reader. */
+  withMetadata(limit: number): Array<{ mint: string; uri: string }> {
+    const out: Array<{ mint: string; uri: string }> = [];
+    for (const mint of this.recent) {
+      const t = this.tokens.get(mint);
+      if (t?.uri) out.push({ mint, uri: t.uri });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  /** What the socials registry needs about one token: who made it, and whether they sold within five minutes. */
+  outline(mint: string) {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    const dumpedAfterMin = t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000));
+    return { mint, symbol: t.symbol, creator: t.creator, createdAt: t.createdAt, dumpedAfterMin, fastDump: dumpedAfterMin !== null && dumpedAfterMin <= 5 };
   }
 
   /** One wallet's first-second buys over two days, and how fast it sold out of them. */

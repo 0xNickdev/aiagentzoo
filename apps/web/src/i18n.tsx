@@ -125,6 +125,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+) hours old and the curve is back where it opened: nobody is holding it$/, (m) => `已发币 ${m[1]} 小时，内盘回到起点：没人拿着`],
   [/^the top 5 buyers took (\d+)% of all buying$/, (m) => `前五买家占了全部买入的 ${m[1]}%`],
   [/^not a launch from pump\.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check$/, () => "不是过去两天里在 pump.fun、Raydium LaunchLab 或 Meteora 上发的币，所以没有链上记录可查"],
+  [/^the (X account|X community|Telegram group) this token links to \((.+)\) is also on (\d+) other launch(?:es)? from the last 48 hours; their dev sold within 5 minutes on (\d+)$/, (m) => `这个币关联的${m[1] === "Telegram group" ? " Telegram 群" : m[1] === "X community" ? " X 社区" : " X 账号"}（${m[2]}）在过去 48 小时还出现在另外 ${m[3]} 个币上，其中 ${m[4]} 个的开发者 5 分钟内就卖了`],
   [/^nobody has bought it$/, () => "还没人买"],
   [/^only (\d+) wallets have bought it$/, (m) => `只有 ${m[1]} 个钱包买过`],
   [/^sells outnumber buys (\d+) to (\d+)$/, (m) => `卖单多于买单：${m[1]} 比 ${m[2]}`],

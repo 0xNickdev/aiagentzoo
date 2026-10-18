@@ -65,6 +65,8 @@ interface XRayReport {
   check: Check;
   early: Early[];
   creatorRecord: { launches48h: number; dumped: number; medianDumpMin: number | null } | null;
+  /** The X account, X community or Telegram group the token links to, and its other launches. */
+  socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
   funding: Funding | null;
   bundle: { wallets: Array<{ wallet: string; share: number }>; funding: { groups: Array<{ funder: string; wallets: string[] }>; linked: number; checked: number } | null };
 }
@@ -416,6 +418,16 @@ function Report({ r }: { r: XRayReport }) {
             <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
             <Stat k="sold of their own bag" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought") : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
             <Stat k="launch block" v={f?.bundleWallets ? t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 }) : t("none")} bad={(f?.bundleSharePct ?? 0) >= 15} />
+            {r.socials?.map((s) => (
+              <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.06] py-2">
+                <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-light text-white/70 hover:text-white">
+                  {s.social.label} ↗
+                </a>
+                <span className={`font-mono shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-white/60"}`}>
+                  {t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}
+                </span>
+              </div>
+            ))}
           </Panel>
           <Panel title="Who paid for the creator" note="traced on Solana">
             {!fund && <p className="text-[13px] font-light text-white/50">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
