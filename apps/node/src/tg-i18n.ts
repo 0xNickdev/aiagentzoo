@@ -254,4 +254,6 @@ export const BOT_ZH: Record<string, string> = {
   "Send me a token to x-ray: pump.fun, LaunchLab or Meteora.": "发给我一个要透视的代币：pump.fun、LaunchLab 或 Meteora。",
   "· X-Ray any token: who bought in the first 5 seconds, and who they are": "· 透视任何代币：开盘前 5 秒谁买了，他们是谁",
   "/xray &lt;token&gt; · who bought in the first 5 seconds, and who they are": "/xray &lt;代币&gt; · 开盘前 5 秒谁买了，他们是谁",
+  "See who you're buying from: paste any Solana token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.": "看清你在从谁手里买：粘贴任何 Solana 代币，我会告诉你开发者自己的小号、开盘前五秒的狙击手，以及是谁给他们打的钱。免费。",
+  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana and gets graded by reality the next day. In public.": "背后是一座 AI 智能体动物园：直接从 Solana 链上读取 pump.fun、Raydium LaunchLab 和 Meteora，第二天由市场公开打分。",
 };

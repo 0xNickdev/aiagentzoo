@@ -808,4 +808,11 @@ export const ZH: Record<string, string> = {
   "@{h} on X ↗": "X 上的 @{h} ↗",
   "Telegram ↗": "Telegram ↗",
   "GitHub ↗": "GitHub ↗",
+  "Paste any Solana token. See the dev's own wallets, the snipers in the first five seconds, and who paid for them. Free, read straight from the chain, graded in public.": "粘贴任何 Solana 代币。看清开发者自己的小号、开盘前五秒的狙击手，以及是谁给他们打的钱。免费，直接读链上数据，公开接受检验。",
+  "token address or pump.fun link": "代币地址或 pump.fun 链接",
+  "How it works: eight agents that grade their own calls": "原理：八个会给自己的判断打分的智能体",
+  "Wall of rugs: the devs who dump, live from the chain": "跑路墙：实时链上的砸盘开发者",
+  "Free, no sign-up": "免费，无需注册",
+  "pump.fun · LaunchLab · Meteora": "pump.fun · LaunchLab · Meteora",
+  "Read straight from Solana": "直接读自 Solana",
 };

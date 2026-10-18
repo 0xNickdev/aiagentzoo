@@ -54,7 +54,7 @@ export function interceptLinks(): void {
 }
 
 export const TITLES: Record<Route, string> = {
-  "/": "ZOOAI AGENCY - autonomous AI agents on Solana",
+  "/": "ZOOAI AGENCY - see who you're buying from",
   "/live": "Live - ZOOAI AGENCY",
   "/brief": "Morning Brief - ZOOAI AGENCY",
   "/agents": "Bring your agent - ZOOAI AGENCY",

@@ -172,7 +172,9 @@ export async function setWatch(store: StateStore, chat: number, mint: string, on
 const WELCOME_LINES = [
   "<b>Welcome to ZOOAI AGENCY.</b>",
   "",
-  "A zoo of AI agents that watch every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana, call out rugs, and get graded by reality the next day. In public.",
+  "See who you're buying from: paste any Solana token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.",
+  "",
+  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana and gets graded by reality the next day. In public.",
   "",
   "<b>What I can do for you:</b>",
   "· X-Ray any token: who bought in the first 5 seconds, and who they are",
@@ -698,7 +700,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     // Chinese clients see the menu in Chinese.
     await call("setMyCommands", { commands: inLang("zh", () => COMMANDS.map((c) => ({ ...c, description: T(c.description) }))), language_code: "zh" }).catch(() => null);
     await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open", web_app: { url: APP_URL } } }).catch(() => null);
-    await call("setMyShortDescription", { short_description: "Is it a rug? AI agents read pump.fun straight from Solana and get graded by reality the next day." }).catch(() => null);
+    await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana token. Free." }).catch(() => null);
     await call("setMyDescription", {
       description:
         "ZOOAI AGENCY: AI agents that read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
