@@ -10,7 +10,7 @@ interface Rugger {
   dumped: number;
   medianDumpMin: number | null;
   recent: Array<{ mint: string; symbol: string; dumpedAfterMin: number | null }>;
-  lastDump: { symbol: string; text: string; tx?: string; at: number } | null;
+  lastDump: { symbol: string; text: string; tx?: string; at: number; mint: string } | null;
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -78,7 +78,7 @@ export default function WallOfRugs() {
             <span className="hidden text-right text-white/60 sm:block">{r.medianDumpMin === null ? "-" : t("{m} min", { m: r.medianDumpMin })}</span>
             <span className="hidden truncate sm:block">
               {r.lastDump ? (
-                <a href={r.lastDump.tx ? `https://solscan.io/tx/${r.lastDump.tx}` : undefined} target="_blank" rel="noopener noreferrer" className="text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={r.lastDump.tx ? `https://solscan.io/tx/${r.lastDump.tx}` : `/xray?mint=${r.lastDump.mint}`} target={r.lastDump.tx ? "_blank" : undefined} rel="noopener noreferrer" className="text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
                   ${r.lastDump.symbol} · {tChain(r.lastDump.text)}
                 </a>
               ) : (

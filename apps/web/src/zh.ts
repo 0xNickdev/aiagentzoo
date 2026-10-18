@@ -934,4 +934,12 @@ export const ZH: Record<string, string> = {
   "1 launch": "1 次发币",
   "{b} buyers · {x} buys · {y} sells": "买家 {b} · 买入 {x} · 卖出 {y}",
   "Nobody holds it outside the curve: everyone sold back.": "曲线之外没人持有：所有人都卖回去了。",
+  "{p}% sits in the curve or pool": "{p}% 在曲线或池子里",
+  "in the curve or pool": "在曲线或池子里",
+  "Turn {n}": "第 {n} 轮",
+  "next in 1 night": "下一轮还有 1 晚",
+  "next in {n} nights": "下一轮还有 {n} 晚",
+  "at risk": "危险",
+  "fallen": "已阵亡",
+  "{n} graded": "已评分 {n}",
 };

@@ -556,7 +556,7 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
             <button key={m.mint} type="button" onClick={() => onPick(m.mint)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.04]">
               <span className="min-w-0">
                 <span className="font-display block truncate text-[15px]">${sym(m.symbol)}</span>
-                <span className={`block truncate text-[12px] font-light ${m.kind === "graduated" ? "text-[#9df3b0]" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
+                <span className={`block truncate text-[12px] font-light ${m.kind === "graduated" ? "text-white/55" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
               </span>
               <span className="font-mono shrink-0 text-[10.5px] text-white/40">{tt("x-ray it →")}</span>
             </button>
@@ -810,7 +810,7 @@ function CleanTab({ onXRay }: { onXRay: (mint: string) => void }) {
             <motion.div key={c.mint} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-card rounded-[20px] p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="font-display truncate text-[17px]">${sym(c.symbol)}</span>
-                <span className="font-mono text-[10.5px] text-white/40">{c.ageMin} min old</span>
+                <span className="font-mono text-[10.5px] text-white/40">{tt("{m} min old", { m: c.ageMin })}</span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="font-mono text-[11px] text-white/55">
@@ -853,9 +853,9 @@ function NurseryTab() {
       ) : (
         <>
           <div className="glass-card mb-3 flex items-center justify-between rounded-[22px] px-4 py-3.5">
-            <span className="text-[13px] text-white/70">Turn {evo.generation}</span>
+            <span className="text-[13px] text-white/70">{tt("Turn {n}", { n: evo.generation })}</span>
             <span className="font-mono text-[12px] text-amber-100/80">
-              next in {evo.nextGenerationInNights} {evo.nextGenerationInNights === 1 ? "night" : "nights"}
+              {evo.nextGenerationInNights === 1 ? tt("next in 1 night") : tt("next in {n} nights", { n: evo.nextGenerationInNights })}
             </span>
           </div>
           <div className="glass-card divide-y divide-white/[0.06] rounded-[22px]">
@@ -864,24 +864,37 @@ function NurseryTab() {
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display text-[15px]">
                     {c.name}
-                    {i === alive.length - 1 && alive.length > 2 && <span className="font-mono ml-2 text-[10px] text-[#ff8f84]">at risk</span>}
+                    {i === alive.length - 1 && alive.length > 2 && <span className="font-mono ml-2 text-[10px] text-[#ff8f84]">{" "}{tt("at risk")}</span>}
                   </span>
                   <span className="font-mono text-[11.5px] text-white/70">{c.graded ? pct(c.lifetimeSkill) : "-"}</span>
                 </div>
-                <p className="mt-0.5 text-[11.5px] font-light text-white/45">{c.temperament}</p>
+                <p className="mt-0.5 text-[11.5px] font-light text-white/45">{temper(c.temperament)}</p>
                 <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-white/[0.06]">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((c.lifetimeSkill ?? 0) * 100)}%` }} transition={{ duration: 0.8, delay: i * 0.05 }} className="h-full rounded-full bg-amber-100/70" />
                 </div>
               </button>
             ))}
           </div>
-          {story && <p className="mt-4 px-1 text-[13px] font-light italic leading-relaxed text-white/60">"{story.text}"</p>}
-          {fallen.length > 0 && <p className="font-mono mt-3 px-1 text-[10.5px] text-white/35">fallen: {fallen.map((c) => c.name).join(", ")}</p>}
+          {story && lang() !== "zh" && <p className="mt-4 px-1 text-[13px] font-light italic leading-relaxed text-white/60">"{story.text}"</p>}
+          {fallen.length > 0 && <p className="font-mono mt-3 px-1 text-[10.5px] text-white/35">{tt("fallen")}: {fallen.map((c) => c.name).join(", ")}</p>}
         </>
       )}
     </section>
   );
 }
+
+/** A judge's temperament in the reader's language; bred ones are "a × b". */
+const TEMPER_ZH: Record<string, string> = {
+  skeptic: "怀疑者",
+  "liquidity hunter": "流动性猎手",
+  "optimist drawn to light": "向光的乐观者",
+  paranoid: "偏执者",
+  "graduation watcher": "毕业观察者",
+  "copycat hunter": "仿盘猎手",
+  contrarian: "逆行者",
+  "patient one": "耐心者",
+};
+const temper = (x: string) => (lang() !== "zh" ? x : x.split(" × ").map((p) => TEMPER_ZH[p.replace(/^the /, "")] ?? p).join(" × "));
 
 /* ---------- ranks ---------- */
 
@@ -930,7 +943,7 @@ function Row({ r, n }: { r: BoardRow; n?: number }) {
       <span className="min-w-0 flex-1">
         <span className="font-display block truncate text-[15px]">{r.name}</span>
         <span className="font-mono block text-[10px] text-white/40">
-          {r.kind} · {r.graded} graded
+          {tt(r.kind)} · {tt("{n} graded", { n: r.graded })}
         </span>
       </span>
       <span className="font-mono text-[14px]">{pct(r.score)}</span>

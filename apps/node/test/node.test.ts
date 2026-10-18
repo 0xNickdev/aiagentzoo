@@ -1296,7 +1296,7 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   const moved = checkToken("M", { symbol: "H", facts: facts({ creatorSold: 0 }), creatorRecord: rec() }, { holders: { top10Share: 0.3, topShare: 0.05, programShare: 0.6, creator: "c", creatorShare: 0 } });
   assert.equal(moved.verdict, "caution");
   assert.match(moved.reasons[0]!, /bag moved to other wallets/);
-  assert.deepEqual(moved.holders, { top10Pct: 30, topWalletPct: 5, creatorHoldsPct: 0 });
+  assert.deepEqual(moved.holders, { top10Pct: 30, topWalletPct: 5, creatorHoldsPct: 0, programPct: 60 });
   const whale = checkToken("M", { symbol: "W", facts: facts(), creatorRecord: rec() }, { holders: { top10Share: 0.6, topShare: 0.35, programShare: 0.2, creator: null, creatorShare: null } });
   assert.match(whale.reasons[0]!, /one wallet holds 35%/);
   const noRpc = checkToken("M", { symbol: "N", facts: facts(), creatorRecord: rec() }, { holders: null });

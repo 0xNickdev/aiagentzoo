@@ -60,7 +60,7 @@ export interface TokenCheck {
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
-  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
   stream: { live: boolean; lastEventSecAgo: number | null };
   checkedAt: number;
@@ -176,7 +176,7 @@ export function checkToken(
   let holders: TokenCheck["holders"];
   if (opts.holders !== undefined) {
     const h = opts.holders;
-    holders = h ? { top10Pct: pct(h.top10Share)!, topWalletPct: pct(h.topShare)!, creatorHoldsPct: pct(h.creatorShare) } : null;
+    holders = h ? { top10Pct: pct(h.top10Share)!, topWalletPct: pct(h.topShare)!, creatorHoldsPct: pct(h.creatorShare), programPct: pct(h.programShare)! } : null;
     if (!h) notes.push("holders could not be read from Solana right now");
     else {
       if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);

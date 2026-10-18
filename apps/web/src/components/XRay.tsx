@@ -49,7 +49,7 @@ interface Check {
     ringWallets: number | null;
     serialSnipers: number | null;
   } | null;
-  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null } | null;
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number } | null;
 }
 
 interface Funding {
@@ -423,7 +423,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
       id: "xr-holders",
       k: "Holders now",
       v: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }),
-      sub: !c.holders ? t("could not be read right now") : c.holders.top10Pct === 0 ? t("everyone sold back to the curve") : t("largest wallet {p}%", { p: c.holders.topWalletPct }),
+      sub: !c.holders ? t("could not be read right now") : c.holders.top10Pct === 0 ? (c.holders.programPct ? t("{p}% sits in the curve or pool", { p: c.holders.programPct }) : t("everyone sold back to the curve")) : t("largest wallet {p}%", { p: c.holders.topWalletPct }),
       bad: (c.holders?.top10Pct ?? 0) >= 50,
     },
   ];
@@ -612,7 +612,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           <div id="xr-holders">
             <Panel title="Holders now" note="read from Solana">
               {!c.holders && <p className="text-[13px] font-light text-white/50">{t("Holders could not be read right now.")}</p>}
-              {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-light text-white/50">{t("Nobody holds it outside the curve: everyone sold back.")}</p>}
+              {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-light text-white/50">{t("Nobody holds it outside the curve: everyone sold back.")}{c.holders.programPct ? ` ${t("{p}% sits in the curve or pool", { p: c.holders.programPct })}.` : ""}</p>}
+              {c.holders && c.holders.top10Pct > 0 && !!c.holders.programPct && <Stat k="in the curve or pool" v={`${c.holders.programPct}%`} />}
               {c.holders && c.holders.top10Pct > 0 && (
                 <>
                   <Stat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />

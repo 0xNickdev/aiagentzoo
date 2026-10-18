@@ -129,6 +129,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^nobody has bought it$/, () => "还没人买"],
   [/^only (\d+) wallets have bought it$/, (m) => `只有 ${m[1]} 个钱包买过`],
   [/^only 1 wallet has bought it$/, () => "只有 1 个钱包买过"],
+  [/^dumped (\d+) min after launch$/, (m) => `开盘 ${m[1]} 分钟后砸盘`],
   [/^sells outnumber buys (\d+) to (\d+)$/, (m) => `卖单多于买单：${m[1]} 比 ${m[2]}`],
   [/^at least (\d+)% of the trading is wallets selling back what they just bought: volume, not holders$/, (m) => `至少 ${m[1]}% 的成交是钱包刚买就卖回：这是刷量，不是持有者`],
   [/^a bot bought and sold it in the same transaction (\d+) times to keep it on the front page$/, (m) => `机器人在同一笔交易里买了又卖 ${m[1]} 次，为了挂在首页`],
