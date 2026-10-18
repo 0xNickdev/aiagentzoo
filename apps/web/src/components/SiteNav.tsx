@@ -45,7 +45,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               {tr("Tools")} <span className="text-[10px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
             </button>
             <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
-              <div className="liquid-glass rounded-2xl bg-[#070908]/90 p-2 shadow-2xl backdrop-blur-xl">
+              <div className="rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl">
                 {TOOLS.map((t) => (
                   <a key={t.href} href={t.href} className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === t.href ? "bg-white/[0.06]" : ""}`}>
                     <span className="block text-[13.5px] text-white">{tr(t.label)}</span>
