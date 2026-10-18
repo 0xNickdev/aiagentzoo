@@ -89,5 +89,32 @@
       "source": "/xray",
       "destination": "/xray.html"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/rug",
+      "destination": "/rugs",
+      "permanent": true
+    },
+    {
+      "source": "/x-ray",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/scan",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/check",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/bot",
+      "destination": "https://t.me/zooaiagency_bot",
+      "permanent": true
+    }
   ]
 }
