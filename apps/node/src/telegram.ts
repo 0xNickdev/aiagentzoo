@@ -442,7 +442,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
       return void send(chat, xrayMessage(x), [
-        [{ text: T("Open the map"), url: `${SITE}/xray?mint=${mint}` }],
+        // Mini app buttons only work in a private chat; a group gets the site.
+        [chat > 0 ? { text: T("Open the map"), web_app: { url: `${APP_URL}?mint=${mint}` } } : { text: T("Open the map"), url: `${SITE}/xray?mint=${mint}` }],
         [
           { text: T("Watch it"), callback_data: `watch:${mint}` },
           { text: T("Ask the beaver"), callback_data: `ask:${mint}` },

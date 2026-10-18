@@ -59,7 +59,7 @@ body { min-height: 100svh; }
 .zapp-verdict-glow { position: absolute; inset: 0; pointer-events: none; }
 
 /* The tab bar floats over the content like a sheet of glass. */
-.zapp-tabs { position: fixed; z-index: 10; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); max-width: 536px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px; border-radius: 26px; }
+.zapp-tabs { position: fixed; z-index: 10; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); max-width: 536px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); padding: 6px; border-radius: 26px; }
 .zapp-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0 6px; border-radius: 20px; color: rgba(255,255,255,0.45); transition: color 0.2s ease; }
 .zapp-tab.is-on { color: #fff; }
 .zapp-tab-glow { position: absolute; inset: 0; border-radius: 20px; background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 0 24px rgba(255, 220, 160, 0.12); }
@@ -73,4 +73,23 @@ body { min-height: 100svh; }
 
 @media (prefers-reduced-motion: reduce) {
   .zapp-firefly, .zapp-breathe, .zapp-dot { animation: none; }
+}
+
+/*
+ * Phones: glass costs a blur pass for every pane, redone on every frame something moves underneath. Lists sit over
+ * the dark fog where a deep blur shows nothing, so on touch screens the blur is short, the saturation pass is gone,
+ * the fireflies only drift over the clearing, and the sheet's veil is a plain shade. It looks the same; it draws a
+ * fraction of the work.
+ */
+@media (hover: none), (pointer: coarse) {
+  .glass-card, .glass-pill, .glass-bar, .glass-btn { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .glass-card { background: linear-gradient(180deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035)); }
+  .glass-btn { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)); }
+  .zapp-sheet .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(20,24,22,0.55), rgba(10,12,11,0.7)); }
+  .zapp-main .grid > .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)); }
+  .zapp-sheet-wrap { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.7); }
+  .zapp-hero { filter: none; opacity: 0.22; transition: opacity 0.4s ease; }
+  .zapp-hero.is-on { opacity: 1; }
+  .zapp-firefly:nth-child(n + 8) { display: none; }
+  .zapp-bg:not(.is-hero) .zapp-firefly { display: none; }
 }

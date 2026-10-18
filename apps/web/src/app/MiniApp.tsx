@@ -4,10 +4,14 @@ import { createPortal } from "react-dom";
 import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
+import { EarlyMap, KIND, TONE as XTONE, type XRayReport } from "../components/XRay";
 
-type Tab = "ask" | "rugs" | "clean" | "nursery" | "ranks";
+type Tab = "xray" | "ask" | "rugs" | "clean" | "nursery" | "ranks";
+/** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
+type Seed = { mint: string; n: number };
 
 const TABS: Array<{ id: Tab; label: string; icon: ReactNode }> = [
+  { id: "xray", label: "X-Ray", icon: <IconXRay /> },
   { id: "ask", label: "Ask", icon: <IconAsk /> },
   { id: "rugs", label: "Rugs", icon: <IconRugs /> },
   { id: "clean", label: "Clean", icon: <IconClean /> },
@@ -22,9 +26,21 @@ const TONE = {
 } as const;
 
 const SITE = "https://zooaiagency.com";
+/** Some launches put the dollar sign in the ticker itself. */
+const sym = (s: string) => s.replace(/^\$+/, "");
+
+/** The token the app was opened on: /app?mint=… from a link, or startapp=… from t.me/<bot>/app. */
+function openedOn(): Seed | null {
+  const mint = mintIn(new URLSearchParams(location.search).get("mint") ?? tg?.initDataUnsafe?.start_param ?? "");
+  return mint ? { mint, n: 0 } : null;
+}
 
 export default function MiniApp() {
-  const [tab, setTab] = useState<Tab>("ask");
+  const [tab, setTab] = useState<Tab>("xray");
+  const [seeds, setSeeds] = useState<Partial<Record<Tab, Seed>>>(() => {
+    const s = openedOn();
+    return s ? { xray: s } : {};
+  });
   const [pulse, setPulse] = useState<{ launches: number; trades: number } | null>(null);
 
   useEffect(() => {
@@ -43,21 +59,26 @@ export default function MiniApp() {
     setTab(t);
     window.scrollTo({ top: 0 });
   };
+  const send = (t: Tab, mint: string) => {
+    setSeeds((s) => ({ ...s, [t]: { mint, n: (s[t]?.n ?? 0) + 1 } }));
+    setTab(t);
+    window.scrollTo({ top: 0 });
+  };
 
   return (
     <div className="zapp">
-      <Backdrop hero={tab === "ask"} />
+      <Backdrop hero={tab === "xray" || tab === "ask"} />
       <header className="zapp-top">
         <div className="flex items-center gap-2">
           <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
-          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono px-2.5 py-1 text-[10.5px] text-white/75" aria-label="Language">
+          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono shrink-0 whitespace-nowrap px-2.5 py-1 text-[10.5px] text-white/75" aria-label="Language">
             {lang() === "zh" ? "EN" : "中文"}
           </button>
         </div>
-        <div className="glass-pill font-mono flex items-center gap-2 px-3 py-1.5 text-[10.5px] text-white/70">
-          <i className="zapp-dot" />
+        <div className="glass-pill font-mono flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-[10.5px] text-white/70">
+          <i className="zapp-dot shrink-0" />
           {pulse ? (
-            <span>
+            <span className="truncate">
               <b className="font-medium text-white">{pulse.launches}</b> {tt("launches")} · <b className="font-medium text-white">{pulse.trades.toLocaleString("en-US")}</b> {tt("trades / min")}
             </span>
           ) : (
@@ -70,9 +91,10 @@ export default function MiniApp() {
       <main className="zapp-main">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
-            {tab === "ask" && <AskTab />}
+            {tab === "xray" && <XRayTab seed={seeds.xray ?? null} onAsk={(m) => send("ask", m)} />}
+            {tab === "ask" && <AskTab seed={seeds.ask ?? null} />}
             {tab === "rugs" && <RugsTab />}
-            {tab === "clean" && <CleanTab onAsk={(m) => { setTab("ask"); window.dispatchEvent(new CustomEvent("zoo-ask", { detail: m })); }} />}
+            {tab === "clean" && <CleanTab onXRay={(m) => send("xray", m)} />}
             {tab === "nursery" && <NurseryTab />}
             {tab === "ranks" && <RanksTab />}
           </motion.div>
@@ -94,7 +116,7 @@ export default function MiniApp() {
 
 /* ---------- ask ---------- */
 
-function AskTab() {
+function AskTab({ seed }: { seed: Seed | null }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<Ask | null>(null);
@@ -129,14 +151,12 @@ function AskTab() {
 
   useEffect(() => {
     void get<{ asks: Ask[] }>(`${CANYON}/v1/asks?limit=8`).then((b) => b && setRecent(b.asks));
-    const onAsk = (e: Event) => {
-      const m = (e as CustomEvent<string>).detail;
-      setInput(m);
-      void run(m);
-    };
-    window.addEventListener("zoo-ask", onAsk);
-    return () => window.removeEventListener("zoo-ask", onAsk);
-  }, [run]);
+  }, []);
+  useEffect(() => {
+    if (!seed) return;
+    setInput(seed.mint);
+    void run(seed.mint);
+  }, [seed, run]);
 
   const paste = async () => {
     haptic.tap();
@@ -185,11 +205,11 @@ function AskTab() {
         />
         {input ? (
           <button type="submit" disabled={busy} className="zapp-cta">
-            {busy ? <Spinner /> : "Ask"}
+            {busy ? <Spinner /> : tt("Ask")}
           </button>
         ) : (
           <button type="button" onClick={() => void paste()} className="zapp-cta">
-            Paste
+            {tt("Paste")}
           </button>
         )}
       </form>
@@ -227,7 +247,7 @@ function AskTab() {
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.04]"
               >
                 <span className="min-w-0">
-                  <span className="font-display block truncate text-[15px]">${a.symbol}</span>
+                  <span className="font-display block truncate text-[15px]">${sym(a.symbol)}</span>
                   <span className="font-mono block text-[10px] text-white/40">
                     {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: ago(a.at) })}
                   </span>
@@ -274,7 +294,7 @@ function Verdict({ a }: { a: Ask }) {
       return;
     }
     const res = await watch(tg.initData, a.mint);
-    setWatching(res.message);
+    setWatching(tt(res.message));
     if (res.ok) haptic.verdict("promising");
   };
 
@@ -286,7 +306,7 @@ function Verdict({ a }: { a: Ask }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-mono truncate text-[10px] text-white/40">{a.name || `${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`}</p>
-              <p className="font-display truncate text-[22px]">${a.symbol}</p>
+              <p className="font-display truncate text-[22px]">${sym(a.symbol)}</p>
             </div>
             <span className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">{Math.round(a.confidence * 100)}% sure</span>
           </div>
@@ -323,20 +343,20 @@ function Verdict({ a }: { a: Ask }) {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => void doWatch()} className="glass-btn">
-              {tt("Watch")}
+              {tt("Follow it")}
             </button>
             <button
               type="button"
               onClick={() => {
                 haptic.tap();
-                share(`${SITE}/ask#${a.id}`, pick(`the beaver on $${a.symbol}: ${tone.label.toLowerCase()}. ${a.why}`, `海狸对 $${a.symbol} 的判断：${tt(tone.label)}。${a.whyZh ?? a.why}`));
+                share(`${SITE}/ask#${a.id}`, pick(`the beaver on $${sym(a.symbol)}: ${tone.label.toLowerCase()}. ${a.why}`, `海狸对 $${sym(a.symbol)} 的判断：${tt(tone.label)}。${a.whyZh ?? a.why}`));
               }}
               className="glass-btn"
             >
               {tt("Share")}
             </button>
             <button type="button" onClick={() => openLink(a.facts.url ?? `https://dexscreener.com/solana/${a.mint}`)} className="glass-btn">
-              Chart
+              {tt("Chart")}
             </button>
           </div>
           {watching && <p className="mt-3 text-center text-[12px] text-white/60">{watching}</p>}
@@ -372,7 +392,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
           <div className="mt-4 divide-y divide-white/[0.06]">
             {r.recent.slice(0, 8).map((t) => (
               <div key={t.mint} className="flex items-center justify-between py-2 text-[13px]">
-                <span className="truncate">${t.symbol}</span>
+                <span className="truncate">${sym(t.symbol)}</span>
                 <span className={`font-mono text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
                   {t.dumpedAfterMin !== null ? tt("rugged in {m} min", { m: t.dumpedAfterMin }) : tt(t.graduated ? "graduated" : "dev holding")}
                 </span>
@@ -382,6 +402,322 @@ function DevCard({ r }: { r: CreatorRecord }) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+/* ---------- x-ray ---------- */
+
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
+const BOT = "https://t.me/zooaiagency_bot";
+const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
+const share1 = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
+
+async function xray(mint: string): Promise<{ report?: XRayReport; error?: string }> {
+  try {
+    const r = await fetch(`${NORTH}/v1/xray/${mint}`);
+    if (r.status === 429) return { error: tt("Ten x-rays a minute on the free tier. Try again in a minute.") };
+    const body = (await r.json()) as XRayReport & { error?: string };
+    if (r.ok) return { report: body };
+    return { error: tt(body.error ? "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)." : "Something went wrong.") };
+  } catch {
+    return { error: tt("The chain reader is not reachable right now. Try again in a minute.") };
+  }
+}
+
+/** Paste a token, see who you are buying from: the first five seconds, the creator's crew, who paid for the creator. */
+function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => void }) {
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<XRayReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+
+  const run = useCallback(async (raw: string) => {
+    const mint = mintIn(raw);
+    if (!mint) {
+      setError(tt("Paste a token address or link."));
+      haptic.verdict("watch");
+      return;
+    }
+    field.current?.blur();
+    haptic.tap();
+    setInput(mint);
+    setBusy(true);
+    setError(null);
+    setReport(null);
+    const r = await xray(mint);
+    setBusy(false);
+    if (r.report) {
+      setReport(r.report);
+      const v = r.report.check.verdict;
+      haptic.verdict(v === "avoid" ? "suspicious" : v === "pass" ? "promising" : "watch");
+    } else setError(r.error ?? tt("Something went wrong."));
+  }, []);
+
+  useEffect(() => {
+    if (seed) void run(seed.mint);
+  }, [seed, run]);
+
+  const paste = async () => {
+    haptic.tap();
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) void run(text);
+      else field.current?.focus();
+    } catch {
+      field.current?.focus();
+    }
+  };
+
+  return (
+    <section>
+      {!report && !busy && (
+        <div className="zapp-intro px-1 pb-5">
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">x-ray</p>
+          <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
+            {tt("See who you are")}
+            <br />
+            <span className="text-white/50">{tt("buying from.")}</span>
+          </h1>
+          <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
+            {tt("The wallets that bought in the first five seconds, the creator's own crew, who paid for the creator. Read straight from Solana.")}
+          </p>
+        </div>
+      )}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run(input);
+        }}
+        className="glass-card flex items-center gap-2 rounded-[22px] p-1.5"
+      >
+        <input
+          ref={field}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={tt("token address or link")}
+          spellCheck={false}
+          autoComplete="off"
+          enterKeyHint="search"
+          className="font-mono min-w-0 flex-1 bg-transparent px-3.5 py-3 text-[13.5px] text-white outline-none placeholder:text-white/35"
+        />
+        {input ? (
+          <button type="submit" disabled={busy} className="zapp-cta">
+            {busy ? <Spinner /> : tt("X-ray it")}
+          </button>
+        ) : (
+          <button type="button" onClick={() => void paste()} className="zapp-cta">
+            {tt("Paste")}
+          </button>
+        )}
+      </form>
+      {error && <p className="mt-3 px-1 text-[12.5px] text-[#ff9a8f]">{error}</p>}
+
+      {busy && <Thinking lines={["Reading the chain…", "Finding the first five seconds…", "Checking who those wallets are…", "Tracing who paid for the creator…"]} image="/agents/owl.webp" />}
+      <AnimatePresence>
+        {report && (
+          <Sheet key={report.mint} onClose={() => setReport(null)}>
+            <XRayCard r={report} onAsk={onAsk} />
+          </Sheet>
+        )}
+      </AnimatePresence>
+
+      {!busy && !report && <XRayStart onPick={(m) => void run(m)} />}
+    </section>
+  );
+}
+
+/** Tokens the chain is talking about this minute, one tap from their x-ray. */
+function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
+  const [list, setList] = useState<Moment[] | null>(null);
+  useEffect(() => {
+    const load = async () => {
+      const b = await get<{ moments: Moment[] }>(`${NORTH}/v1/chain/moments?limit=120`);
+      if (!b) return setList((l) => l ?? []);
+      const seen = new Set<string>();
+      setList(b.moments.filter((m) => ["dump", "serial", "graduated"].includes(m.kind) && !seen.has(m.mint) && seen.add(m.mint)).slice(0, 6));
+    };
+    void load();
+    const t = window.setInterval(load, 30_000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="mt-7">
+      <SectionTitle>{tt("Try one from the chain, right now")}</SectionTitle>
+      {!list ? (
+        <Skeleton rows={4} />
+      ) : list.length === 0 ? (
+        <Empty>{tt("Nothing loud on the chain this minute. Paste any token above.")}</Empty>
+      ) : (
+        <div className="glass-card divide-y divide-white/[0.06] rounded-[22px]">
+          {list.map((m) => (
+            <button key={m.mint} type="button" onClick={() => onPick(m.mint)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.04]">
+              <span className="min-w-0">
+                <span className="font-display block truncate text-[15px]">${sym(m.symbol)}</span>
+                <span className={`block truncate text-[12px] font-light ${m.kind === "graduated" ? "text-[#9df3b0]" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
+              </span>
+              <span className="font-mono shrink-0 text-[10.5px] text-white/40">{tt("x-ray it →")}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function XStat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
+  return (
+    <div className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
+      <p className="text-[10.5px] leading-tight text-white/45">{tt(k)}</p>
+      <p className={`font-mono mt-1 text-[15px] ${bad ? "text-[#ff8f84]" : "text-white/90"}`}>{v}</p>
+    </div>
+  );
+}
+
+function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }) {
+  const c = r.check;
+  const f = c.facts;
+  const tone = XTONE[c.verdict];
+  const glow = c.verdict === "avoid" ? "255,110,95" : c.verdict === "caution" ? "242,211,155" : c.verdict === "pass" ? "143,240,164" : "239,232,218";
+  const took = r.early.reduce((n, e) => n + e.bought, 0);
+  const holds = r.early.reduce((n, e) => n + e.held, 0);
+  const fund = r.funding;
+  const [watching, setWatching] = useState<string | null>(null);
+
+  const follow = async () => {
+    haptic.tap();
+    if (!inTelegram || !tg) return openLink(`${BOT}?start=w-${r.mint}`);
+    const res = await watch(tg.initData, r.mint);
+    setWatching(tt(res.message));
+    if (res.ok) haptic.verdict("promising");
+  };
+
+  return (
+    <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
+      <div className="zapp-verdict-glow" style={{ background: `radial-gradient(60% 45% at 15% 12%, rgba(${glow},0.24), transparent 70%)` }} />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-mono truncate text-[10px] text-white/40">
+              {r.name || short(r.mint)} · {tt("{m} min old", { m: f?.ageMin ?? 0 })} · {VENUE[f?.venue ?? "pump.fun"]}
+            </p>
+            <p className="font-display truncate text-[22px]">${sym(r.symbol)}</p>
+          </div>
+          <button type="button" onClick={() => openLink(!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`)} className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">
+            {short(r.mint)} ↗
+          </button>
+        </div>
+
+        <p className="font-display mt-4 text-[38px] leading-none tracking-tight" style={{ color: tone.color, textShadow: `0 0 40px rgba(${glow},0.3)` }}>
+          {tt(tone.label)}
+        </p>
+        {c.reasons.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {c.reasons.map((x) => (
+              <li key={x} className="flex gap-2.5 text-[14px] font-light leading-snug text-white/85">
+                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color }} />
+                {tChain(x)}
+              </li>
+            ))}
+          </ul>
+        )}
+        {c.notes.length > 0 && <p className="mt-3 text-[11.5px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
+
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => void follow()} className="zapp-cta !min-w-0 !py-3">
+            {tt("Follow it")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              haptic.tap();
+              share(`${SITE}/xray?mint=${r.mint}`, pick(`x-rayed $${sym(r.symbol)}: ${tone.label.toLowerCase()}. ${c.reasons[0] ?? ""}`, `透视 $${sym(r.symbol)}：${tt(tone.label)}。${c.reasons[0] ? tChain(c.reasons[0]) : ""}`));
+            }}
+            className="glass-btn"
+          >
+            {tt("Share")}
+          </button>
+        </div>
+        <p className="mt-2 text-center text-[11.5px] font-light text-white/50">{watching ?? tt("The bot tells you the moment the dev sells, the pool is drained or it graduates.")}</p>
+
+        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-white/40">
+          {tt("The first 5 seconds")}
+        </p>
+        <div className="rounded-2xl bg-black/30 px-1 py-2 ring-1 ring-white/[0.06]">
+          <EarlyMap r={r} />
+          <div className="font-mono flex flex-wrap gap-x-3 gap-y-1 px-2.5 pb-1 text-[10px] text-white/50">
+            {Object.entries(KIND).map(([k, v]) => (
+              <span key={k} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ background: v.color }} />
+                {tt(v.label)}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <XStat k="wallets" v={String(r.early.length)} />
+          <XStat k="took" v={share1(took)} bad={took >= 0.25} />
+          <XStat k="still hold" v={share1(holds)} bad={holds >= 0.25} />
+          <XStat k="creator's crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
+          <XStat k="sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
+          <XStat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
+        </div>
+
+        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("The creator")} · <span className="normal-case tracking-normal">{tt("last 48 hours")}</span></p>
+        <div className="grid grid-cols-3 gap-2">
+          <XStat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
+          <XStat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
+          <XStat k="dev sold" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
+        </div>
+        <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
+          <p className="text-[10.5px] text-white/45">{tt("Who paid for the creator")}</p>
+          {!fund && <p className="mt-1 text-[13px] font-light text-white/60">{tt("Not traced yet. It is queued: open this again in a minute.")}</p>}
+          {fund && !fund.funder && <p className="mt-1 text-[13px] font-light text-white/60">{tt("No funding transfer in the creator's recent history.")}</p>}
+          {fund?.funder && (
+            <>
+              <button type="button" onClick={() => openLink(`https://solscan.io/account/${fund.funder}`)} className="font-mono mt-1 text-[14px] text-white/90">
+                {short(fund.funder)} ↗
+              </button>
+              <p className={`mt-1 text-[12.5px] font-light ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-white/60"}`}>
+                {fund.funderIsHot
+                  ? tt("An exchange or a router: it funds everyone, so it ties no one together.")
+                  : tt("funded {n} other creators · {l} launches, {d} dumps in 48h", { n: fund.siblings.length, l: fund.siblingLaunches48h, d: fund.siblingDumped48h })}
+              </p>
+            </>
+          )}
+        </div>
+        {r.socials?.map((s) => (
+          <button key={s.social.url} type="button" onClick={() => openLink(s.social.url)} className="mt-2 flex w-full items-baseline justify-between gap-3 rounded-2xl bg-black/30 px-3.5 py-2.5 text-left ring-1 ring-white/[0.06]">
+            <span className="truncate text-[12.5px] font-light text-white/75">{s.social.label} ↗</span>
+            <span className={`font-mono shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8f84]" : "text-white/55"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
+          </button>
+        ))}
+        {c.holders && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <XStat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />
+            <XStat k="10 largest wallets" v={`${c.holders.top10Pct}%`} bad={c.holders.top10Pct >= 50} />
+          </div>
+        )}
+
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              haptic.tap();
+              onAsk(r.mint);
+            }}
+            className="glass-btn"
+          >
+            {tt("Ask the beaver")}
+          </button>
+          <button type="button" onClick={() => openLink(`${SITE}/xray?mint=${r.mint}`)} className="glass-btn">
+            {tt("Full map")}
+          </button>
+        </div>
+        <p className="font-mono mt-4 text-center text-[10px] text-white/35">{tt("Not financial advice. Read from public chain data.")}</p>
+      </div>
+    </div>
   );
 }
 
@@ -418,7 +754,7 @@ function RugsTab() {
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
               >
                 <span className="min-w-0">
-                  <span className="font-display block truncate text-[15px]">${e.symbol}</span>
+                  <span className="font-display block truncate text-[15px]">${sym(e.symbol)}</span>
                   <span className="block text-[12px] font-light text-[#ffb3ab]">{tChain(e.text)}</span>
                 </span>
                 <span className="font-mono shrink-0 text-[10.5px] text-white/40">{ago(e.at)}</span>
@@ -433,7 +769,7 @@ function RugsTab() {
 
 /* ---------- clean ---------- */
 
-function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
+function CleanTab({ onXRay }: { onXRay: (mint: string) => void }) {
   const [list, setList] = useState<CleanLaunch[] | null>(null);
   useEffect(() => {
     const load = async () => {
@@ -460,7 +796,7 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
           {list.map((c, i) => (
             <motion.div key={c.mint} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-card rounded-[20px] p-4">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display truncate text-[17px]">${c.symbol}</span>
+                <span className="font-display truncate text-[17px]">${sym(c.symbol)}</span>
                 <span className="font-mono text-[10.5px] text-white/40">{c.ageMin} min old</span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
@@ -471,11 +807,11 @@ function CleanTab({ onAsk }: { onAsk: (mint: string) => void }) {
                   type="button"
                   onClick={() => {
                     haptic.tap();
-                    onAsk(c.mint);
+                    onXRay(c.mint);
                   }}
                   className="glass-btn !px-3.5 !py-1.5 text-[12px]"
                 >
-                  Ask
+                  X-Ray
                 </button>
               </div>
             </motion.div>
@@ -679,7 +1015,7 @@ function Ticker() {
         >
           <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6e5f] shadow-[0_0_8px_rgba(255,110,95,0.9)]" />
           <span className="truncate text-white/80">
-            <b className="font-medium text-white">${e.symbol}</b> · {tChain(e.text)}
+            <b className="font-medium text-white">${sym(e.symbol)}</b> · {tChain(e.text)}
           </span>
           <span className="shrink-0 text-white/40">{ago(e.at)}</span>
         </motion.button>
@@ -710,8 +1046,8 @@ function Skeleton({ rows }: { rows: number }) {
   );
 }
 
-function Thinking() {
-  const lines = ["Reading the chain…", "Checking the dev's wallet…", "Counting who bought…", "The beaver is thinking…"].map((l) => tt(l));
+function Thinking({ lines: raw = ["Reading the chain…", "Checking the dev's wallet…", "Counting who bought…", "The beaver is thinking…"], image = "/agents/beaver.webp" }: { lines?: string[]; image?: string }) {
+  const lines = raw.map((l) => tt(l));
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = window.setInterval(() => setI((x) => (x + 1) % lines.length), 1100);
@@ -719,7 +1055,7 @@ function Thinking() {
   }, [lines.length]);
   return (
     <div className="glass-card mt-4 flex items-center gap-4 rounded-[26px] p-5">
-      <img src="/agents/beaver.webp" alt="" className="zapp-breathe h-14 w-14 rounded-full" />
+      <img src={image} alt="" className="zapp-breathe h-14 w-14 rounded-full" />
       <AnimatePresence mode="wait">
         <motion.p key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-[14px] font-light text-white/75">
           {lines[i]}
@@ -736,7 +1072,7 @@ function Spinner() {
 /** The beaver's clearing behind everything: sharp on Ask, dimmed and blurred behind the other tabs. */
 function Backdrop({ hero }: { hero: boolean }) {
   return (
-    <div className="zapp-bg" aria-hidden>
+    <div className={`zapp-bg ${hero ? "is-hero" : ""}`} aria-hidden>
       <div className={`zapp-hero ${hero ? "is-on" : ""}`}>
         <img src="/app/hero.jpg" alt="" />
         <div className="zapp-hero-fade" />
@@ -755,6 +1091,18 @@ function Svg({ children }: { children: ReactNode }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       {children}
     </svg>
+  );
+}
+function IconXRay() {
+  return (
+    <Svg>
+      <path d="M4 8V5.5A1.5 1.5 0 015.5 4H8M16 4h2.5A1.5 1.5 0 0120 5.5V8M20 16v2.5a1.5 1.5 0 01-1.5 1.5H16M8 20H5.5A1.5 1.5 0 014 18.5V16" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="8.5" cy="9" r="1" opacity="0.6" />
+      <circle cx="15.5" cy="9.5" r="1.2" opacity="0.6" />
+      <circle cx="9.5" cy="15.5" r="0.9" opacity="0.6" />
+      <circle cx="15" cy="15" r="1" opacity="0.6" />
+    </Svg>
   );
 }
 function IconAsk() {

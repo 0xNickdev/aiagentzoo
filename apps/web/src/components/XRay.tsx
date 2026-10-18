@@ -4,9 +4,9 @@ import { NODE_URLS } from "../sim/live";
 import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
 
-type Verdict = "avoid" | "caution" | "pass" | "unknown";
+export type Verdict = "avoid" | "caution" | "pass" | "unknown";
 
-interface Early {
+export interface Early {
   wallet: string;
   bought: number;
   held: number;
@@ -56,7 +56,7 @@ interface Funding {
   siblingDumped48h: number;
 }
 
-interface XRayReport {
+export interface XRayReport {
   mint: string;
   symbol: string;
   name: string;
@@ -78,7 +78,7 @@ const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
 
-const TONE: Record<Verdict, { label: string; color: string }> = {
+export const TONE: Record<Verdict, { label: string; color: string }> = {
   avoid: { label: "AVOID", color: "#ff8a7e" },
   caution: { label: "CAUTION", color: "#f2d39b" },
   pass: { label: "NO RED FLAGS", color: "#9df3b0" },
@@ -86,8 +86,8 @@ const TONE: Record<Verdict, { label: string; color: string }> = {
 };
 
 /** Colour of a wallet on the map: who it is matters more than how much it took. */
-const kindOf = (e: Early) => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
-const KIND: Record<string, { color: string; label: string }> = {
+export const kindOf = (e: Early) => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
+export const KIND: Record<string, { color: string; label: string }> = {
   crew: { color: "#ff8a7e", label: "creator's crew" },
   ring: { color: "#f2b56b", label: "sniper ring" },
   serial: { color: "#c9b48a", label: "serial sniper" },
@@ -100,7 +100,7 @@ const KIND: Record<string, { color: string; label: string }> = {
  * token around it. Size is what it took, a filled bubble still holds, a hollow one sold out. Crew wallets sit next to
  * the creator, ring members are tied together.
  */
-function EarlyMap({ r }: { r: XRayReport }) {
+export function EarlyMap({ r }: { r: XRayReport }) {
   const W = 560;
   const H = 400;
   const cx = W / 2;

@@ -1,7 +1,7 @@
 /** The slice of the Telegram Mini App API the zoo uses; every call is optional so the page also works in a browser. */
 interface TelegramWebApp {
   initData: string;
-  initDataUnsafe?: { user?: { id: number; first_name?: string } };
+  initDataUnsafe?: { user?: { id: number; first_name?: string }; start_param?: string };
   platform?: string;
   ready(): void;
   expand(): void;
