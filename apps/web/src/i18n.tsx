@@ -128,6 +128,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^the (X account|X community|Telegram group) this token links to \((.+)\) is also on (\d+) other launch(?:es)? from the last 48 hours; their dev sold within 5 minutes on (\d+)$/, (m) => `这个币关联的${m[1] === "Telegram group" ? " Telegram 群" : m[1] === "X community" ? " X 社区" : " X 账号"}（${m[2]}）在过去 48 小时还出现在另外 ${m[3]} 个币上，其中 ${m[4]} 个的开发者 5 分钟内就卖了`],
   [/^nobody has bought it$/, () => "还没人买"],
   [/^only (\d+) wallets have bought it$/, (m) => `只有 ${m[1]} 个钱包买过`],
+  [/^only 1 wallet has bought it$/, () => "只有 1 个钱包买过"],
   [/^sells outnumber buys (\d+) to (\d+)$/, (m) => `卖单多于买单：${m[1]} 比 ${m[2]}`],
   [/^at least (\d+)% of the trading is wallets selling back what they just bought: volume, not holders$/, (m) => `至少 ${m[1]}% 的成交是钱包刚买就卖回：这是刷量，不是持有者`],
   [/^a bot bought and sold it in the same transaction (\d+) times to keep it on the front page$/, (m) => `机器人在同一笔交易里买了又卖 ${m[1]} 次，为了挂在首页`],

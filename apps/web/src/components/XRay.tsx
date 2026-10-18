@@ -3,6 +3,8 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
+import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
+export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
 
@@ -35,6 +37,8 @@ interface Check {
     bundleWallets: number | null;
     bundleSharePct: number | null;
     graduated: boolean;
+    poolSol?: number | null;
+    curveSol?: number | null;
     mayhem?: boolean;
     venue?: "pump.fun" | "launchlab" | "dbc";
     earlyWallets: number | null;
@@ -64,7 +68,7 @@ export interface XRayReport {
   createdAt: number;
   check: Check;
   early: Early[];
-  creatorRecord: { launches48h: number; dumped: number; medianDumpMin: number | null } | null;
+  creatorRecord: { launches48h: number; dumped: number; medianDumpMin: number | null; recent?: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }> } | null;
   /** The X account, X community or Telegram group the token links to, and its other launches. */
   socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
   funding: Funding | null;
@@ -84,65 +88,6 @@ export const TONE: Record<Verdict, { label: string; color: string }> = {
   pass: { label: "NO RED FLAGS", color: "#9df3b0" },
   unknown: { label: "NOT ON THE STREAM", color: "#e9e4d8" },
 };
-
-/** Colour of a wallet on the map: who it is matters more than how much it took. */
-export const kindOf = (e: Early) => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
-export const KIND: Record<string, { color: string; label: string }> = {
-  crew: { color: "#ff8a7e", label: "creator's crew" },
-  ring: { color: "#f2b56b", label: "sniper ring" },
-  serial: { color: "#c9b48a", label: "serial sniper" },
-  bundle: { color: "#9fc3ff", label: "launch block" },
-  early: { color: "#e9e4d8", label: "first 5 s" },
-};
-
-/**
- * The first five seconds as a map: the creator in the middle, every wallet that got in before anyone could see the
- * token around it. Size is what it took, a filled bubble still holds, a hollow one sold out. Crew wallets sit next to
- * the creator, ring members are tied together.
- */
-export function EarlyMap({ r }: { r: XRayReport }) {
-  const W = 560;
-  const H = 400;
-  const cx = W / 2;
-  const cy = H / 2;
-  const list = r.early.slice(0, 24);
-  const inner = list.filter((e) => e.crew);
-  const outer = list.filter((e) => !e.crew);
-  const place = (arr: Early[], radius: number, offset: number) =>
-    arr.map((e, i) => {
-      const a = offset + (i / Math.max(1, arr.length)) * Math.PI * 2;
-      return { e, x: cx + Math.cos(a) * radius * 1.45, y: cy + Math.sin(a) * radius };
-    });
-  const nodes = [...place(inner, 78, -Math.PI / 2), ...place(outer, 150, -Math.PI / 3)];
-  const size = (e: Early) => 7 + Math.sqrt(Math.max(0, e.bought)) * 105;
-  const ring = nodes.filter((n) => n.e.ring);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={t("Wallets in the first 5 seconds")}>
-      {/* ring members tied to each other, crew tied to the creator */}
-      {ring.map((a, i) => ring.slice(i + 1).map((b) => <line key={`${a.e.wallet}${b.e.wallet}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#f2b56b" strokeOpacity="0.25" strokeWidth="1" />))}
-      {nodes.filter((n) => n.e.crew).map((n) => <line key={`c${n.e.wallet}`} x1={cx} y1={cy} x2={n.x} y2={n.y} stroke="#ff8a7e" strokeOpacity="0.45" strokeWidth="1.2" />)}
-      {nodes.map((n) => {
-        const k = KIND[kindOf(n.e)]!;
-        const held = n.e.bought > 0 ? n.e.held / n.e.bought : 0;
-        return (
-          <g key={n.e.wallet}>
-            <title>{`${n.e.wallet}\n${t(k.label)} · ${t("took")} ${pct(n.e.bought)} · ${t("holds")} ${pct(n.e.held)} · ${t("{n} snipes in 48h", { n: n.e.snipes48h })}`}</title>
-            <circle cx={n.x} cy={n.y} r={size(n.e)} fill={k.color} fillOpacity={0.08 + held * 0.55} stroke={k.color} strokeOpacity="0.85" strokeWidth="1" />
-          </g>
-        );
-      })}
-      <circle cx={cx} cy={cy} r="15" fill="#030504" stroke="white" strokeOpacity="0.8" />
-      <text x={cx} y={cy + 4} textAnchor="middle" className="font-mono" fontSize="10" fill="white" fillOpacity="0.85">
-        dev
-      </text>
-      {!list.length && (
-        <text x={cx} y={cy + 44} textAnchor="middle" className="font-mono" fontSize="11" fill="white" fillOpacity="0.45">
-          {t("nobody bought in the first 5 seconds")}
-        </text>
-      )}
-    </svg>
-  );
-}
 
 function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
@@ -337,7 +282,165 @@ function ShareBar({ r }: { r: XRayReport }) {
   );
 }
 
-function Report({ r }: { r: XRayReport }) {
+const solscan = (w: string) => `https://solscan.io/account/${w}`;
+
+/** A wallet or token address that opens where it can be checked. */
+function Addr({ a, href, className = "" }: { a: string; href?: string; className?: string }) {
+  return (
+    <a href={href ?? solscan(a)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`font-mono underline decoration-white/15 underline-offset-4 hover:text-white hover:decoration-white/50 ${className}`}>
+      {short(a)} ↗
+    </a>
+  );
+}
+
+interface Sniper {
+  wallet: string;
+  snipes48h: number;
+  soldOut: number;
+  medianExitSec: number | null;
+  topCreators: Array<{ creator: string; launches: number }>;
+  recent: Array<{ mint: string; symbol: string; createdAt: number }>;
+}
+
+/** Who a first-second wallet is: what it did here, and what it does across every launch of the last two days. */
+function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; onPick: (mint: string) => void; onClose: () => void }) {
+  const [s, setS] = useState<Sniper | null | undefined>(undefined);
+  useEffect(() => {
+    setS(undefined);
+    let live = true;
+    fetch(`${NORTH}/v1/chain/sniper/${e.wallet}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: Sniper | null) => live && setS(b))
+      .catch(() => live && setS(null));
+    return () => {
+      live = false;
+    };
+  }, [e.wallet]);
+  const k = KIND[kindOf(e)];
+  const sameDev = s?.topCreators.find((c) => c.creator === creator);
+  return (
+    <motion.div key={e.wallet} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="flex h-full flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.14em]" style={{ color: k.color }}>
+            {t(k.label)}
+          </p>
+          <Addr a={e.wallet} className="mt-1 inline-block text-[15px] text-white/90" />
+        </div>
+        <button type="button" onClick={onClose} className="font-mono rounded-full px-2.5 py-1 text-[11px] text-white/45 ring-1 ring-white/10 hover:text-white">
+          {t("close")}
+        </button>
+      </div>
+      <p className="mt-2 text-[12.5px] font-light leading-snug text-white/55">{t(k.what)}</p>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {[
+          ["in at", `${e.afterSec}s`, false],
+          ["took", pct(e.bought), e.bought >= 0.05],
+          ["holds now", pct(e.held), e.held >= 0.05],
+          ["sold out", e.exitSec === null ? t("not yet") : secs(e.exitSec), false],
+          ["snipes 48h", String(e.snipes48h), e.snipes48h >= 10],
+          ["sold out of", s ? `${s.soldOut}` : "…", false],
+        ].map(([kk, v, bad]) => (
+          <div key={kk as string} className="rounded-xl bg-black/30 px-3 py-2 ring-1 ring-white/[0.06]">
+            <p className="text-[10.5px] text-white/40">{t(kk as string)}</p>
+            <p className={`font-mono mt-0.5 text-[14px] ${bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{v}</p>
+          </div>
+        ))}
+      </div>
+      {s === undefined && <div className="mt-4 h-24 animate-pulse rounded-xl bg-white/[0.03]" />}
+      {s === null && <p className="mt-4 text-[12.5px] font-light text-white/45">{t("No other launches from this wallet on the stream in the last two days.")}</p>}
+      {s && (
+        <>
+          <p className="mt-4 text-[12.5px] font-light leading-snug text-white/70">
+            {t("Last two days: bought {n} launches in their first seconds, sold out of {o}, usually {x} after buying.", { n: s.snipes48h, o: s.soldOut, x: secs(s.medianExitSec) })}
+            {sameDev ? ` ${t("{n} of them were this creator's.", { n: sameDev.launches })}` : ""}
+          </p>
+          {s.topCreators.length > 0 && (
+            <div className="mt-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/35">{t("whose launches it buys")}</p>
+              <div className="mt-1.5 divide-y divide-white/[0.05]">
+                {s.topCreators.slice(0, 4).map((c) => (
+                  <div key={c.creator} className="flex items-baseline justify-between gap-3 py-1.5 text-[12px]">
+                    <Addr a={c.creator} className={c.creator === creator ? "text-[#ff8a7e]" : "text-white/70"} />
+                    <span className="font-mono text-white/50">
+                      {c.creator === creator ? `${t("this creator")} · ` : ""}
+                      {c.launches === 1 ? t("1 launch") : t("{n} launches", { n: c.launches })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {s.recent.length > 0 && (
+            <div className="mt-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/35">{t("its latest snipes · tap to x-ray")}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {s.recent.slice(0, 8).map((m) => (
+                  <button key={m.mint} type="button" onClick={() => onPick(m.mint)} className="font-mono max-w-[9rem] truncate rounded-full px-2.5 py-1 text-[11px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">
+                    ${m.symbol.replace(/^\$/, "")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+/** The lines that decide it, in one row: who launched it, who got in first, who paid, who holds. Each opens its panel. */
+function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
+  const c = r.check;
+  const f = c.facts;
+  const took = r.early.reduce((n, e) => n + e.bought, 0);
+  const holds = r.early.reduce((n, e) => n + e.held, 0);
+  const fund = r.funding;
+  const rec = r.creatorRecord;
+  const cells: Array<{ id: string; k: string; v: string; sub: string; bad: boolean }> = [
+    {
+      id: "xr-creator",
+      k: "The creator",
+      v: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"),
+      sub: f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought their own") : t("sold {p}% of their bag", { p: f.creatorSoldPct }),
+      bad: (rec?.dumped ?? 0) >= 2 || (f?.creatorSoldPct ?? 0) >= 50,
+    },
+    {
+      id: "xr-five",
+      k: "The first 5 seconds",
+      v: r.early.length ? t("{n} wallets", { n: r.early.length }) : t("nobody"),
+      sub: r.early.length ? t("took {a} · hold {b}", { a: pct(took), b: pct(holds) }) : t("no one bought before it was visible"),
+      bad: took >= 0.25 || (f?.creatorCrew ?? 0) >= 2,
+    },
+    {
+      id: "xr-funder",
+      k: "Who paid for the creator",
+      v: !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
+      sub: fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? t("{d} dumps in 48h", { d: fund.siblingDumped48h }) : t("funded {w}", { w: short(fund.funder) })) : fund?.funderIsHot ? t("funds everyone, ties no one") : "",
+      bad: !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
+    },
+    {
+      id: "xr-holders",
+      k: "Holders now",
+      v: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }),
+      sub: !c.holders ? t("could not be read right now") : c.holders.top10Pct === 0 ? t("everyone sold back to the curve") : t("largest wallet {p}%", { p: c.holders.topWalletPct }),
+      bad: (c.holders?.top10Pct ?? 0) >= 50,
+    },
+  ];
+  return (
+    <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
+      {cells.map((x) => (
+        <button key={x.id} type="button" onClick={() => go(x.id)} className="group bg-[#070a09]/90 px-4 py-3.5 text-left transition hover:bg-[#0c100e]">
+          <p className="text-[11px] text-white/45">{t(x.k)}</p>
+          <p className={`font-mono mt-1 text-[16px] ${x.bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{x.v}</p>
+          <p className="mt-0.5 truncate text-[11.5px] font-light text-white/45 group-hover:text-white/65">{x.sub || " "}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
   const c = r.check;
   const f = c.facts;
   const tone = TONE[c.verdict];
@@ -345,6 +448,15 @@ function Report({ r }: { r: XRayReport }) {
   const took = early.reduce((n, e) => n + e.bought, 0);
   const holds = early.reduce((n, e) => n + e.held, 0);
   const fund = r.funding;
+  const [sel, setSel] = useState<string | null>(null);
+  useEffect(() => setSel(null), [r.mint]);
+  const selected = early.find((e) => e.wallet === sel) ?? null;
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const choose = (w: string | null) => {
+    setSel(w);
+    if (w) document.getElementById(`xr-row-${w}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+  const pool = f?.graduated ? (f.poolSol !== undefined && f.poolSol !== null ? t("graduated · pool {s} SOL", { s: f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol) }) : t("graduated")) : null;
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-10 sm:px-8">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -352,17 +464,23 @@ function Report({ r }: { r: XRayReport }) {
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div>
               <p className="font-mono text-[11px] text-white/45">
-                ${r.symbol} · {r.name} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
+                ${r.symbol.replace(/^\$/, "")} · {r.name} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
                 {` · ${VENUE[f?.venue ?? "pump.fun"]}`}
+                {pool ? ` · ${pool}` : ""}
                 {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
               </p>
               <p className="font-display mt-2 text-4xl sm:text-5xl" style={{ color: tone.color }}>
                 {t(tone.label)}
               </p>
             </div>
-            <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
-              {short(r.mint)} ↗
-            </a>
+            <div className="flex items-center gap-4 text-[11px] text-white/50">
+              <span className="font-mono">
+                {t("dev")} <Addr a={r.creator} />
+              </span>
+              <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="font-mono underline decoration-white/20 underline-offset-4 hover:text-white">
+                {t("token")} {short(r.mint)} ↗
+              </a>
+            </div>
           </div>
           {c.reasons.length > 0 && (
             <ul className="mt-5 space-y-2">
@@ -374,88 +492,136 @@ function Report({ r }: { r: XRayReport }) {
               ))}
             </ul>
           )}
-          {c.notes.length > 0 && (
-            <p className="mt-4 text-[12px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>
-          )}
+          {c.notes.length > 0 && <p className="mt-4 text-[12px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
+          <KeyFacts r={r} go={go} />
         </div>
 
         <ShareBar r={r} />
 
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <Panel title="The first 5 seconds" note="before anyone could see it">
-            <EarlyMap r={r} />
-            <div className="font-mono mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-white/50">
-              {Object.entries(KIND).map(([k, v]) => (
-                <span key={k} className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full" style={{ background: v.color }} />
-                  {t(v.label)}
-                </span>
-              ))}
-              <span>{t("filled = still holds · hollow = sold out")}</span>
+        {early.length > 0 ? (
+          <div id="xr-five" className="liquid-glass grid gap-6 rounded-3xl p-5 sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <div>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
+                <span className="font-mono text-[10.5px] text-white/40">{t("before anyone could see it")}</span>
+              </div>
+              <XRayRadar early={early} selected={sel} onSelect={choose} />
             </div>
-          </Panel>
-          <div className="space-y-4">
-            <Panel title="Insiders">
-              <Stat k="wallets in the first 5 seconds" v={String(early.length)} />
-              <Stat k="supply they took" v={pct(took)} bad={took >= 0.25} />
-              <Stat k="supply they still hold" v={pct(holds)} bad={holds >= 0.25} />
-              <Stat k="the creator's own crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
-              <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
-              <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
-            </Panel>
-            <Panel title="Volume">
-              <Stat k="buyers" v={String(f?.buyers ?? 0)} />
-              <Stat k="buys · sells" v={`${f?.buys ?? 0} · ${f?.sells ?? 0}`} />
-              <Stat k="churned volume (at least)" v={f?.churnPct === null || f?.churnPct === undefined ? "-" : `${f.churnPct}%`} bad={(f?.churnPct ?? 0) >= 30 && !f?.mayhem} />
-              <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
-            </Panel>
+            <div className="border-white/[0.07] lg:border-l lg:pl-6">
+              <AnimatePresence mode="wait">
+                {selected ? (
+                  <Dossier key={selected.wallet} e={selected} creator={r.creator} onPick={onPick} onClose={() => setSel(null)} />
+                ) : (
+                  <motion.div key="sum" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <h3 className="font-display text-xl text-white/90">{t("Insiders")}</h3>
+                    <div className="mt-3">
+                      <Stat k="wallets in the first 5 seconds" v={String(early.length)} />
+                      <Stat k="supply they took" v={pct(took)} bad={took >= 0.25} />
+                      <Stat k="supply they still hold" v={pct(holds)} bad={holds >= 0.25} />
+                      <Stat k="the creator's own crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
+                      <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
+                      <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
+                    </div>
+                    <p className="font-mono mt-5 text-[11px] text-[#f2d39b]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
+                    <h3 className="font-display mt-6 text-lg text-white/85">{t("Volume")}</h3>
+                    <div className="mt-2">
+                      <Stat k="buyers" v={String(f?.buyers ?? 0)} />
+                      <Stat k="buys · sells" v={`${f?.buys ?? 0} · ${f?.sells ?? 0}`} />
+                      <Stat k="churned volume (at least)" v={f?.churnPct === null || f?.churnPct === undefined ? "-" : `${f.churnPct}%`} bad={(f?.churnPct ?? 0) >= 30 && !f?.mayhem} />
+                      <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div id="xr-five" className="liquid-glass flex flex-wrap items-center justify-between gap-4 rounded-3xl px-6 py-5">
+            <div>
+              <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
+              <p className="mt-1 text-[13px] font-light text-white/55">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
+            </div>
+            <p className="font-mono text-[12px] text-white/55">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Panel title="The creator" note="last 48 hours">
-            <Stat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
-            <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
-            <Stat k="sold of their own bag" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought") : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
-            <Stat k="launch block" v={f?.bundleWallets ? t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 }) : t("none")} bad={(f?.bundleSharePct ?? 0) >= 15} />
-            {r.socials?.map((s) => (
-              <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.06] py-2">
-                <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-light text-white/70 hover:text-white">
-                  {s.social.label} ↗
-                </a>
-                <span className={`font-mono shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-white/60"}`}>
-                  {t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}
-                </span>
-              </div>
-            ))}
-          </Panel>
-          <Panel title="Who paid for the creator" note="traced on Solana">
-            {!fund && <p className="text-[13px] font-light text-white/50">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
-            {fund && !fund.funder && <p className="text-[13px] font-light text-white/50">{t("No funding transfer in the creator's recent history.")}</p>}
-            {fund?.funder && (
-              <>
-                <Stat k="funded by" v={short(fund.funder)} />
-                {fund.funderIsHot ? (
-                  <p className="mt-2 text-[12.5px] font-light text-white/50">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
-                ) : (
-                  <>
-                    <Stat k="other creators it funded" v={String(fund.siblings.length)} bad={fund.siblings.length >= 2} />
-                    <Stat k="their launches · dumps (48h)" v={`${fund.siblingLaunches48h} · ${fund.siblingDumped48h}`} bad={fund.siblingDumped48h >= 3} />
-                  </>
-                )}
-              </>
-            )}
-          </Panel>
-          <Panel title="Holders now" note="read from Solana">
-            {!c.holders && <p className="text-[13px] font-light text-white/50">{t("Holders could not be read right now.")}</p>}
-            {c.holders && (
-              <>
-                <Stat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />
-                <Stat k="10 largest wallets" v={`${c.holders.top10Pct}%`} bad={c.holders.top10Pct >= 50} />
-                <Stat k="the creator holds" v={c.holders.creatorHoldsPct === null ? "-" : `${c.holders.creatorHoldsPct}%`} />
-              </>
-            )}
-          </Panel>
+          <div id="xr-creator">
+            <Panel title="The creator" note="last 48 hours">
+              <Stat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
+              <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
+              <Stat k="sold of their own bag" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought") : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
+              {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
+              {r.socials?.map((s) => (
+                <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.06] py-2">
+                  <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-light text-white/70 hover:text-white">
+                    {s.social.label} ↗
+                  </a>
+                  <span className={`font-mono shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-white/60"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
+                </div>
+              ))}
+              {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
+                <div className="mt-3 border-t border-white/[0.06] pt-3">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/35">{t("their other launches · tap to x-ray")}</p>
+                  <div className="mt-1.5">
+                    {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 6).map((x) => (
+                      <button key={x.mint} type="button" onClick={() => onPick(x.mint)} className="flex w-full items-baseline justify-between gap-3 rounded-lg px-1 py-1.5 text-left text-[12.5px] transition hover:bg-white/[0.04]">
+                        <span className="truncate text-white/80">${x.symbol.replace(/^\$/, "")}</span>
+                        <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : "text-white/50"}`}>
+                          {x.dumpedAfterMin !== null ? t("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? t("graduated") : t("dev holding")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Panel>
+          </div>
+          <div id="xr-funder">
+            <Panel title="Who paid for the creator" note="traced on Solana">
+              {!fund && <p className="text-[13px] font-light text-white/50">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+              {fund && !fund.funder && <p className="text-[13px] font-light text-white/50">{t("No funding transfer in the creator's recent history.")}</p>}
+              {fund?.funder && (
+                <>
+                  <div className="flex items-baseline justify-between gap-3 py-2">
+                    <span className="text-[12.5px] font-light text-white/55">{t("funded by")}</span>
+                    <Addr a={fund.funder} className="text-[13px] text-white/85" />
+                  </div>
+                  {fund.funderIsHot ? (
+                    <p className="mt-1 text-[12.5px] font-light text-white/50">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                  ) : (
+                    <>
+                      <Stat k="other creators it funded" v={String(fund.siblings.length)} bad={fund.siblings.length >= 2} />
+                      <Stat k="their launches · dumps (48h)" v={`${fund.siblingLaunches48h} · ${fund.siblingDumped48h}`} bad={fund.siblingDumped48h >= 3} />
+                      {fund.siblings.length > 0 && (
+                        <div className="mt-2 border-t border-white/[0.06] pt-2">
+                          {fund.siblings.slice(0, 6).map((s) => (
+                            <div key={s.wallet} className="flex items-baseline justify-between gap-3 py-1 text-[12px]">
+                              <Addr a={s.wallet} className="text-white/70" />
+                              <span className={`font-mono ${s.dumped >= 1 ? "text-[#ff8a7e]" : "text-white/50"}`}>{t("{l} launched · {d} dumped", { l: s.launches48h, d: s.dumped })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Panel>
+          </div>
+          <div id="xr-holders">
+            <Panel title="Holders now" note="read from Solana">
+              {!c.holders && <p className="text-[13px] font-light text-white/50">{t("Holders could not be read right now.")}</p>}
+              {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-light text-white/50">{t("Nobody holds it outside the curve: everyone sold back.")}</p>}
+              {c.holders && c.holders.top10Pct > 0 && (
+                <>
+                  <Stat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />
+                  <Stat k="10 largest wallets" v={`${c.holders.top10Pct}%`} bad={c.holders.top10Pct >= 50} />
+                  <Stat k="the creator holds" v={c.holders.creatorHoldsPct === null ? "-" : `${c.holders.creatorHoldsPct}%`} />
+                </>
+              )}
+            </Panel>
+          </div>
         </div>
 
         {early.length > 0 && (
@@ -470,21 +636,32 @@ function Report({ r }: { r: XRayReport }) {
               <span className="hidden text-right sm:block">{t("snipes 48h")}</span>
             </div>
             {early.map((e) => {
-              const k = KIND[kindOf(e)]!;
+              const k = KIND[kindOf(e)];
+              const on = sel === e.wallet;
               return (
-                <div key={e.wallet} className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-2.5 text-[12px] sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7">
-                  <a href={`https://solscan.io/account/${e.wallet}`} target="_blank" rel="noopener noreferrer" className="truncate text-white/80 hover:text-white">
+                <button
+                  id={`xr-row-${e.wallet}`}
+                  key={e.wallet}
+                  type="button"
+                  onClick={() => {
+                    choose(on ? null : e.wallet);
+                    if (!on) go("xr-five");
+                  }}
+                  className={`font-mono grid w-full grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
+                >
+                  <span className="flex items-center gap-2 truncate text-white/80">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
-                  </a>
+                  </span>
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}
                   </span>
                   <span className="text-right text-white/70">{pct(e.bought)}</span>
                   <span className={`text-right ${e.held >= 0.05 ? "text-[#ff8a7e]" : "text-white/70"}`}>{pct(e.held)}</span>
                   <span className="hidden text-right text-white/55 sm:block">{e.afterSec}s</span>
-                  <span className="text-right text-white/55">{e.exitSec === null ? "-" : e.exitSec < 120 ? `${e.exitSec}s` : `${Math.round(e.exitSec / 60)}m`}</span>
+                  <span className="text-right text-white/55">{secs(e.exitSec)}</span>
                   <span className={`hidden text-right sm:block ${e.snipes48h >= 10 ? "text-[#f2d39b]" : "text-white/55"}`}>{e.snipes48h}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -514,6 +691,17 @@ const SHOWS = [
 /** Before anything is pasted: tokens the chain is talking about right now, one tap from their x-ray, and what it shows. */
 function Start({ onPick }: { onPick: (mint: string) => void }) {
   const [moments, setMoments] = useState<Moment[] | null>(null);
+  // The check's own verdict on each, so a token that graduated is not mistaken for a good one.
+  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
+  useEffect(() => {
+    for (const m of moments ?? []) {
+      if (verdicts[m.mint]) continue;
+      fetch(`${NORTH}/v1/check/${m.mint}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b: { verdict?: Verdict } | null) => b?.verdict && setVerdicts((v) => ({ ...v, [m.mint]: b.verdict! })))
+        .catch(() => {});
+    }
+  }, [moments]);
   useEffect(() => {
     const load = () =>
       fetch(`${NORTH}/v1/chain/moments?limit=120`)
@@ -553,8 +741,17 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
               <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
               <span className="font-mono shrink-0 text-[10.5px] text-white/40">{ago(m.at)}</span>
             </div>
-            <p className={`mt-1.5 truncate text-[12.5px] font-light ${m.kind === "graduated" ? "text-[#9df3b0]" : "text-[#ff8a7e]"}`}>{tChain(m.text)}</p>
-            <p className="font-mono mt-2 text-[10.5px] text-white/40 group-hover:text-white/70">{t("x-ray it →")}</p>
+            <p className="mt-1.5 truncate text-[12.5px] font-light text-white/60">{tChain(m.text)}</p>
+            <div className="mt-2.5 flex items-center justify-between gap-2">
+              {verdicts[m.mint] ? (
+                <span className="font-mono rounded-full px-2 py-0.5 text-[10px] tracking-[0.06em] ring-1" style={{ color: TONE[verdicts[m.mint]!].color, boxShadow: "none", borderColor: "transparent", background: "rgba(255,255,255,0.03)" }}>
+                  {t(TONE[verdicts[m.mint]!].label)}
+                </span>
+              ) : (
+                <span className="font-mono text-[10px] text-white/30">{t("checking…")}</span>
+              )}
+              <span className="font-mono text-[10.5px] text-white/40 group-hover:text-white/70">{t("x-ray it →")}</span>
+            </div>
           </button>
         ))}
       </div>
@@ -644,7 +841,7 @@ export default function XRay() {
           {error && <p className="mt-4 text-center text-[13px] text-[#ff9a8f]">{error}</p>}
         </Reveal>
       </Section>
-      <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} />}</AnimatePresence>
+      <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} onPick={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}</AnimatePresence>
       {!report && !busy && <Start onPick={(m) => { setInput(m); void run(m); }} />}
     </>
   );

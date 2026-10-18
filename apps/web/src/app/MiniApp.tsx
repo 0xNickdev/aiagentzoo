@@ -4,7 +4,8 @@ import { createPortal } from "react-dom";
 import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
-import { EarlyMap, KIND, TONE as XTONE, type XRayReport } from "../components/XRay";
+import { TONE as XTONE, type XRayReport } from "../components/XRay";
+import XRayRadar from "../components/XRayRadar";
 
 type Tab = "xray" | "ask" | "rugs" | "clean" | "nursery" | "ranks";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
@@ -518,7 +519,7 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
       <AnimatePresence>
         {report && (
           <Sheet key={report.mint} onClose={() => setReport(null)}>
-            <XRayCard r={report} onAsk={onAsk} />
+            <XRayCard r={report} onAsk={onAsk} onPick={(m) => void run(m)} />
           </Sheet>
         )}
       </AnimatePresence>
@@ -575,7 +576,7 @@ function XStat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   );
 }
 
-function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }) {
+function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) => void; onPick: (mint: string) => void }) {
   const c = r.check;
   const f = c.facts;
   const tone = XTONE[c.verdict];
@@ -644,17 +645,13 @@ function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }
         <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-white/40">
           {tt("The first 5 seconds")}
         </p>
-        <div className="rounded-2xl bg-black/30 px-1 py-2 ring-1 ring-white/[0.06]">
-          <EarlyMap r={r} />
-          <div className="font-mono flex flex-wrap gap-x-3 gap-y-1 px-2.5 pb-1 text-[10px] text-white/50">
-            {Object.entries(KIND).map(([k, v]) => (
-              <span key={k} className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full" style={{ background: v.color }} />
-                {tt(v.label)}
-              </span>
-            ))}
+        {r.early.length > 0 ? (
+          <div className="rounded-2xl bg-black/30 px-2 py-2 ring-1 ring-white/[0.06]">
+            <XRayRadar early={r.early} />
           </div>
-        </div>
+        ) : (
+          <p className="rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-white/60 ring-1 ring-white/[0.06]">{tt("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
+        )}
         <div className="mt-2 grid grid-cols-3 gap-2">
           <XStat k="wallets" v={String(r.early.length)} />
           <XStat k="took" v={share1(took)} bad={took >= 0.25} />
@@ -670,6 +667,19 @@ function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }
           <XStat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
           <XStat k="dev sold" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
         </div>
+        {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
+          <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
+            <p className="text-[10.5px] text-white/45">{tt("their other launches · tap to x-ray")}</p>
+            {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 5).map((x) => (
+              <button key={x.mint} type="button" onClick={() => { haptic.tap(); onPick(x.mint); }} className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left text-[13px] active:opacity-70">
+                <span className="truncate text-white/85">${sym(x.symbol)}</span>
+                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : "text-white/50"}`}>
+                  {x.dumpedAfterMin !== null ? tt("dumped after {m} min", { m: x.dumpedAfterMin }) : tt(x.graduated ? "graduated" : "dev holding")}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
           <p className="text-[10.5px] text-white/45">{tt("Who paid for the creator")}</p>
           {!fund && <p className="mt-1 text-[13px] font-light text-white/60">{tt("Not traced yet. It is queued: open this again in a minute.")}</p>}
@@ -682,7 +692,9 @@ function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }
               <p className={`mt-1 text-[12.5px] font-light ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-white/60"}`}>
                 {fund.funderIsHot
                   ? tt("An exchange or a router: it funds everyone, so it ties no one together.")
-                  : tt("funded {n} other creators · {l} launches, {d} dumps in 48h", { n: fund.siblings.length, l: fund.siblingLaunches48h, d: fund.siblingDumped48h })}
+                  : fund.siblings.length
+                    ? tt("funded {n} other creators · {l} launches, {d} dumps in 48h", { n: fund.siblings.length, l: fund.siblingLaunches48h, d: fund.siblingDumped48h })
+                    : tt("only this creator")}
               </p>
             </>
           )}
@@ -693,7 +705,8 @@ function XRayCard({ r, onAsk }: { r: XRayReport; onAsk: (mint: string) => void }
             <span className={`font-mono shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8f84]" : "text-white/55"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
           </button>
         ))}
-        {c.holders && (
+        {c.holders && c.holders.top10Pct === 0 && <p className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-white/60 ring-1 ring-white/[0.06]">{tt("Nobody holds it outside the curve: everyone sold back.")}</p>}
+        {c.holders && c.holders.top10Pct > 0 && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <XStat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />
             <XStat k="10 largest wallets" v={`${c.holders.top10Pct}%`} bad={c.holders.top10Pct >= 50} />

@@ -306,7 +306,16 @@ interface Buyer {
   at?: number;
   /** When they had sold back nine tenths of what they bought. */
   exitAt?: number;
+  /** The most they held at once. A bot that buys and sells it back over and over buys more than the supply in all; this is what it actually took. */
+  peak?: number;
 }
+
+const notePeak = (b: Buyer) => {
+  const pos = (b.tok ?? 0) - (b.sold ?? 0);
+  if (pos > (b.peak ?? 0)) b.peak = pos;
+};
+/** What a first buyer took: the most they held at once (older snapshots only have the total bought). */
+const tookOf = (b: Buyer, supply: number) => Math.min(b.peak ?? b.tok ?? 0, supply);
 
 interface Tracked {
   mint: string;
@@ -643,8 +652,9 @@ export class PumpTape {
         b.sol += ev.sol;
         b.buys += 1;
         b.tok = (b.tok ?? 0) + ev.tokens;
+        notePeak(b);
       } else if (t.buyers.size < BUYERS_FULL) {
-        t.buyers.set(ev.user, { sol: ev.sol, buys: 1, tok: ev.tokens, sold: 0, out: 0, trades: 1, at: ev.ts });
+        t.buyers.set(ev.user, { sol: ev.sol, buys: 1, tok: ev.tokens, sold: 0, out: 0, trades: 1, at: ev.ts, peak: ev.tokens });
         if (ev.user !== t.creator && ev.ts - t.createdAt <= EARLY_MS) this.noteEarly(ev.user, t.mint, now);
       }
       else if ((t.moreBuyers?.size ?? 0) < BUYERS_MAX - BUYERS_FULL) (t.moreBuyers ??= new Set()).add(hash32(ev.user));
@@ -701,7 +711,10 @@ export class PumpTape {
     if (ev.isBuy) {
       t.ammBuys += 1;
       t.ammSolIn += ev.sol;
-      if (b) b.tok = (b.tok ?? 0) + ev.tokens;
+      if (b) {
+        b.tok = (b.tok ?? 0) + ev.tokens;
+        notePeak(b);
+      }
       if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy after graduation`, tx);
     } else {
       t.ammSells += 1;
@@ -730,6 +743,7 @@ export class PumpTape {
       ...(b.trades !== undefined && b.trades !== b.buys ? { trades: b.trades } : {}),
       ...(b.at !== undefined ? { at: b.at } : {}),
       ...(b.exitAt !== undefined ? { exitAt: b.exitAt } : {}),
+      ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys] }));
     return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen });
@@ -891,8 +905,8 @@ export class PumpTape {
         const sold = Math.min(tok, b.sold ?? 0);
         return {
           wallet,
-          bought: r(tok / supply),
-          held: r((tok - sold) / supply),
+          bought: r(tookOf(b, supply) / supply),
+          held: r(Math.min(tok - sold, supply) / supply),
           afterSec: Math.max(0, Math.round(((b.at ?? t.createdAt) - t.createdAt) / 1000)),
           exitSec: b.exitAt !== undefined && b.at !== undefined ? Math.max(0, Math.round((b.exitAt - b.at) / 1000)) : null,
           bundle: t.launchBuys.has(wallet),
@@ -970,14 +984,14 @@ export class PumpTape {
       const sold = Math.min(tok, b.sold ?? 0);
       if (b.at !== undefined && b.at - t.createdAt <= EARLY_MS) {
         earlyWallets += 1;
-        bought += tok;
+        bought += tookOf(b, supplyOf(t));
         held += tok - sold;
       }
       if ((b.trades ?? b.buys) >= 3 && tok > 0 && sold >= tok * 0.9) churn += b.sol + (b.out ?? 0);
     }
     const volume = t.solIn + t.solOut;
     const r = (n: number) => Math.round(n * 1000) / 1000;
-    return { earlyWallets, earlyShare: r(bought / supplyOf(t)), earlyHeld: r(held / supplyOf(t)), washShare: volume > 0 ? r(Math.min(1, churn / volume)) : 0, bumps: t.bumps ?? 0 };
+    return { earlyWallets, earlyShare: r(Math.min(1, bought / supplyOf(t))), earlyHeld: r(Math.min(1, held / supplyOf(t))), washShare: volume > 0 ? r(Math.min(1, churn / volume)) : 0, bumps: t.bumps ?? 0 };
   }
 
   /** `light` leaves out the crew and ring counts, for scans over thousands of tokens. */

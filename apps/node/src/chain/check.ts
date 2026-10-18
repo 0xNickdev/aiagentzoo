@@ -166,7 +166,7 @@ export function checkToken(
   } else {
     if (f.top5Share !== null && f.top5Share > 0.5) caution.push(`the top 5 buyers took ${pct(f.top5Share)}% of all buying`);
     if (f.buyers === 0) caution.push("nobody has bought it");
-    else if (f.buyers < 10) caution.push(`only ${f.buyers} wallets have bought it`);
+    else if (f.buyers < 10) caution.push(f.buyers === 1 ? "only 1 wallet has bought it" : `only ${f.buyers} wallets have bought it`);
     if (f.sells > f.buys * 2 && f.sells >= 10) caution.push(`sells outnumber buys ${f.sells} to ${f.buys}`);
     if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem) caution.push(`at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`);
     if (f.bumps !== undefined && f.bumps >= 3 && !f.mayhem) caution.push(`a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`);
