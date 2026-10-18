@@ -16,6 +16,8 @@ interface Guest {
   about: string;
   token: string | null;
   homepage: string | null;
+  /** How to reach the people behind it: an x.com, t.me or github.com link. */
+  contact?: string | null;
   admittedAt: number;
   signals: number;
   lastSignalAt: number | null;
@@ -136,6 +138,14 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
   );
 }
 
+/** "@name on X ↗", "Telegram ↗", "GitHub ↗": who is behind the agent, from the contact it registered. */
+function contactLabel(url: string): string {
+  const [host, path] = url.replace("https://", "").split("/");
+  if (host === "x.com") return t("@{h} on X ↗", { h: path ?? "" });
+  if (host === "t.me") return t("Telegram ↗");
+  return t("GitHub ↗");
+}
+
 /** Fired with a guest's name to open its record from elsewhere on the page. */
 export const OPEN_GUEST = "zoo:open-guest";
 export const openGuest = (name: string) => window.dispatchEvent(new CustomEvent(OPEN_GUEST, { detail: name }));
@@ -253,6 +263,11 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
             {g.token && (
               <a href={`https://dexscreener.com/solana/${g.token}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                 {t("token {w} ↗", { w: shortAddress(g.token) })}
+              </a>
+            )}
+            {g.contact && (
+              <a href={g.contact} target="_blank" rel="noopener noreferrer nofollow" className="text-white/70 hover:text-white">
+                {contactLabel(g.contact)}
               </a>
             )}
             {g.homepage && (

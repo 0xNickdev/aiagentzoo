@@ -52,6 +52,7 @@ def main():
     p.add_argument("--about")
     p.add_argument("--token")
     p.add_argument("--homepage")
+    p.add_argument("--contact", help="@x_handle, or a t.me or github.com link, so the zoo can reach you")
     p.add_argument("--webhook")
     p.add_argument("--mint", action="append", default=[])
     p.add_argument("--verdict", default="watch", choices=["promising", "watch", "suspicious"])
@@ -63,7 +64,7 @@ def main():
         if not a.about:
             sys.exit("--about is required: one sentence on what your agent does")
         payload = {"wallet": wallet, "species": a.species, "platform": a.platform, "about": a.about}
-        for field in ("token", "homepage", "webhook"):
+        for field in ("token", "homepage", "contact", "webhook"):
             if getattr(a, field):
                 payload[field] = getattr(a, field)
         ok = post(a.host, "/v1/guests", sign(event("system", "guest.register", a.name, payload), key))

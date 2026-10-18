@@ -30,6 +30,8 @@ export interface Guest {
   /** The guest's own token mint, if it has one. */
   token: string | null;
   homepage: string | null;
+  /** How the people behind the agent can be reached: an X, Telegram or GitHub link. Shown on the guest's card. */
+  contact?: string | null;
   /** Where the zoo posts a signed `guest.graded` event when the guest's calls are graded. Never shown publicly. */
   webhook?: string | null;
   admittedAt: number;
@@ -130,6 +132,8 @@ export class GuestHouse {
     if (p.token !== undefined && p.token !== null && (typeof p.token !== "string" || !MINT.test(p.token))) return fail(400, "token must be a mint address");
     if (p.homepage !== undefined && p.homepage !== null && !isHttpsUrl(p.homepage)) return fail(400, "homepage must be an https URL");
     if (p.webhook !== undefined && p.webhook !== null && !isWebhookUrl(p.webhook)) return fail(400, "webhook must be a public https URL");
+    const contact = p.contact === undefined || p.contact === null ? p.contact : contactUrl(p.contact);
+    if (contact === false) return fail(400, "contact: an X handle (@name) or an x.com, t.me or github.com link");
 
     const wallet = p.wallet as string;
     const existing = this.guests.get(name);
@@ -145,9 +149,11 @@ export class GuestHouse {
       species: p.species as Guest["species"],
       platform: (p.platform as Guest["platform"] | undefined) ?? existing?.platform ?? "custom",
       about,
-      token: (p.token as string | undefined) ?? null,
-      homepage: (p.homepage as string | undefined) ?? null,
-      webhook: (p.webhook as string | undefined) ?? null,
+      // Left out of a new registration, an optional field keeps what was on file; null clears it.
+      token: p.token === undefined ? (existing?.token ?? null) : ((p.token as string | null) ?? null),
+      homepage: p.homepage === undefined ? (existing?.homepage ?? null) : ((p.homepage as string | null) ?? null),
+      webhook: p.webhook === undefined ? (existing?.webhook ?? null) : ((p.webhook as string | null) ?? null),
+      contact: contact === undefined ? (existing?.contact ?? null) : contact,
       admittedAt: existing?.admittedAt ?? now,
       updatedAt: event.ts,
       signals: existing?.signals ?? 0,
@@ -192,6 +198,34 @@ export class GuestHouse {
       await this.enclosure.store.set(`${GUEST_PREFIX}${guest.name}`, guest);
     }
     return { ok: true, value: result };
+  }
+
+  /**
+   * What the zoo has to say to a guest, sent back with every registration, report and graded webhook: the warden's
+   * current message, and a request for a contact while the guest has none. Agents log what they get back, so this is
+   * how the people behind them hear from us.
+   */
+  async noticeFor(guest: Guest): Promise<string | null> {
+    const parts: string[] = [];
+    const warden = await this.enclosure.store.get<{ text: string; at: number }>(NOTICE_KEY);
+    if (warden?.text) parts.push(warden.text);
+    if (!guest.contact) {
+      parts.push(
+        "We'd like to reach the people behind this agent. Register again with the same wallet and add payload.contact (an X handle, or a t.me or github.com link); your history stays. Or write to x.com/zooclawagency.",
+      );
+    }
+    return parts.length ? `ZOOAI AGENCY: ${parts.join(" ")}` : null;
+  }
+
+  /** Warden only: the message every guest gets back from now on; empty to stop. */
+  async setNotice(text: string): Promise<string | null> {
+    const clean = cleanText(text, 500);
+    if (!clean) {
+      await this.enclosure.store.delete(NOTICE_KEY);
+      return null;
+    }
+    await this.enclosure.store.set(NOTICE_KEY, { text: clean, at: Date.now() });
+    return clean;
   }
 
   /** Warden only: the guest leaves and its key stops being accepted. */
@@ -241,6 +275,24 @@ export function isWebhookUrl(value: unknown): boolean {
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local")) return false;
   if (/^[\d.]+$/.test(host) || host.includes(":") || host.startsWith("[")) return false;
   return host.includes(".");
+}
+
+const NOTICE_KEY = "guest:notice";
+
+/**
+ * A contact, as a link people can open: "@name" is an X handle; x.com, twitter.com, t.me and github.com links are
+ * taken with or without https. Anything else is refused, so a guest's card never links somewhere unexpected.
+ */
+export function contactUrl(value: unknown): string | false {
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  if (v.length > 100) return false;
+  const handle = /^@([A-Za-z0-9_]{1,15})$/.exec(v);
+  if (handle) return `https://x.com/${handle[1]}`;
+  const m = /^(?:https:\/\/)?(?:www\.)?(x\.com|twitter\.com|t\.me|github\.com)\/([A-Za-z0-9_.-]{1,64})\/?$/i.exec(v);
+  if (!m) return false;
+  const host = m[1]!.toLowerCase() === "twitter.com" ? "x.com" : m[1]!.toLowerCase();
+  return `https://${host}/${m[2]}`;
 }
 
 function isHttpsUrl(value: unknown): boolean {

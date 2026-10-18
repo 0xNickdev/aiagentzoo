@@ -32,6 +32,7 @@ export async function notifyGraded(enclosure: Enclosure, guests: GuestHouse, bri
           misses: tally?.misses ?? 0,
           skill: tally ? skillOf(tally) : null,
           cases: cases.map(({ mint, symbol, verdict, outcome, hit }) => ({ mint, symbol, verdict, outcome, hit })),
+          notice: await guests.noticeFor(guest),
         },
       }),
       enclosure.node.identity,

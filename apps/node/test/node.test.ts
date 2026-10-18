@@ -286,8 +286,26 @@ test("an outside agent moves into a guest enclosure and lands in the brief", asy
     // A malformed report is refused without costing the slot.
     assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "maybe" }]))).body.accepted, false);
     const sent = await post("/v1/events", report([{ mint: MINT, verdict: "suspicious", note: "[click](https://evil) same art as a rug" }]));
-    assert.deepEqual(sent.body, { accepted: true });
+    assert.equal(sent.body.accepted, true);
+    // No contact on file: every answer asks the people behind the agent for one.
+    assert.match(sent.body.notice, /add payload\.contact/);
     assert.equal((await post("/v1/events", report([{ mint: MINT, verdict: "watch" }]))).status, 429);
+
+    // The guest leaves a contact by registering again with the same wallet: what it leaves out stays on file.
+    assert.equal((await post("/v1/guests", register({ about: "Watches ClawPump launches", contact: "https://evil.example/x" }))).status, 400);
+    await new Promise((r) => setTimeout(r, 5));
+    const again = await post("/v1/guests", register({ about: "Watches ClawPump launches", contact: "@crabdev" }));
+    assert.equal(again.status, 200);
+    assert.equal(again.body.guest.contact, "https://x.com/crabdev");
+    assert.equal(again.body.guest.token, MINT, "a field left out keeps its value");
+    assert.equal(again.body.guest.webhook, undefined, "the webhook is never shown");
+    assert.equal(again.body.notice, null, "with a contact and no warden message there is nothing to say");
+    // The warden's message reaches every guest from now on; only the warden can set it.
+    assert.equal((await post("/v1/guests/notice", { text: "hi" })).status, 401);
+    const set = await post("/v1/guests/notice", { text: "We are running a builders call on Friday." }, { authorization: "Bearer t" });
+    assert.equal(set.body.notice, "We are running a builders call on Friday.");
+    const denied = await post("/v1/events", report([{ mint: MINT, verdict: "watch" }]));
+    assert.equal(denied.body.notice, "ZOOAI AGENCY: We are running a builders call on Friday.");
 
     await (enclosure as any).agents.get("beaver").queue;
     await enclosure.wake("tortoise");
@@ -1845,4 +1863,15 @@ test("the record's five-minute reading is taken between 5 and 10 minutes in, nev
   const r = tape.checkRecord(now);
   assert.equal(r.signals.stillTrading.n, 1, "only the token traded 6 minutes in has a reading");
   assert.equal(r.signals.insidersHold25.n, 1);
+});
+
+test("a guest's contact is a link people can open, to X, Telegram or GitHub only", async () => {
+  const { contactUrl } = await import("../src/guests.ts");
+  assert.equal(contactUrl("@sniff_dev"), "https://x.com/sniff_dev");
+  assert.equal(contactUrl("twitter.com/sniff_dev"), "https://x.com/sniff_dev");
+  assert.equal(contactUrl("https://t.me/sniffbot"), "https://t.me/sniffbot");
+  assert.equal(contactUrl("github.com/sniff-labs/"), "https://github.com/sniff-labs");
+  assert.equal(contactUrl("https://evil.example/claim"), false);
+  assert.equal(contactUrl("x.com/a/status/1"), false);
+  assert.equal(contactUrl("javascript:alert(1)"), false);
 });

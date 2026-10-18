@@ -805,4 +805,7 @@ export const ZH: Record<string, string> = {
   "Open its calls": "查看它的全部判断",
   "Beaver · Heron": "海狸 · 苍鹭",
   "heron": "苍鹭",
+  "@{h} on X ↗": "X 上的 @{h} ↗",
+  "Telegram ↗": "Telegram ↗",
+  "GitHub ↗": "GitHub ↗",
 };

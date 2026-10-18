@@ -514,7 +514,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "POST" && path === "/v1/guests") {
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
         const result = await guests.register((await readJson(req)) as ZooEvent);
-        return result.ok ? json(res, 200, { admitted: true, guest: result.value }) : json(res, result.status, { admitted: false, reason: result.reason });
+        return result.ok
+          ? json(res, 200, { admitted: true, guest: publicGuest(result.value), notice: await guests.noticeFor(result.value) })
+          : json(res, result.status, { admitted: false, reason: result.reason });
+      }
+      // Warden only: what every guest hears back from now on (an empty text stops it).
+      if (req.method === "POST" && path === "/v1/guests/notice") {
+        if (!authorized(req, adminToken)) return json(res, 401, { error: "warden token required" });
+        if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
+        const body = (await readJson(req)) as { text?: unknown };
+        return json(res, 200, { notice: await guests.setNotice(typeof body.text === "string" ? body.text : "") });
       }
       const evict = /^\/v1\/guests\/([a-z0-9-]+)\/evict$/.exec(path);
       if (req.method === "POST" && evict) {
@@ -529,7 +538,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (typeof event?.from?.node === "string" && isGuestNode(event.from.node)) {
           if (!guests) return json(res, 403, { accepted: false, reason: "no guest enclosures on this node" });
           const result = await guests.receive(event);
-          return result.ok ? json(res, 200, result.value) : json(res, result.status, { accepted: false, reason: result.reason });
+          // Every answer to a guest carries the zoo's message for the people behind it.
+          const guest = guests.get(event.from.agent);
+          const notice = guest ? await guests.noticeFor(guest) : null;
+          return result.ok ? json(res, 200, { ...result.value, notice }) : json(res, result.status, { accepted: false, reason: result.reason, notice });
         }
         const result = await enclosure.deliver(event);
         return json(res, 200, result);
