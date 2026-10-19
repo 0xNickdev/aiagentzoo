@@ -5,7 +5,7 @@ import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type Creat
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 import { TONE as XTONE, type XRayReport } from "../components/XRay";
-import XRayRadar from "../components/XRayRadar";
+import XRayRadar, { secs } from "../components/XRayRadar";
 
 type Tab = "xray" | "ask" | "rugs" | "clean" | "nursery" | "ranks";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
@@ -411,6 +411,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
 const BOT = "https://t.me/zooaiagency_bot";
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
+const openWalletMini = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet-mini", { detail: w }));
 const share1 = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 
 async function xray(mint: string): Promise<{ report?: XRayReport; error?: string }> {
@@ -430,8 +431,14 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<XRayReport | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const on = (e: Event) => { haptic.tap(); setWallet((e as CustomEvent<string>).detail); };
+    window.addEventListener("zoo-wallet-mini", on);
+    return () => window.removeEventListener("zoo-wallet-mini", on);
+  }, []);
 
   const run = useCallback(async (raw: string) => {
     const mint = mintIn(raw);
@@ -523,6 +530,13 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
           </Sheet>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {wallet && (
+          <Sheet key={wallet} onClose={() => setWallet(null)}>
+            <WalletSheet wallet={wallet} onToken={(m) => { setWallet(null); void run(m); }} onWallet={(w) => setWallet(w)} />
+          </Sheet>
+        )}
+      </AnimatePresence>
 
       {!busy && !report && <XRayStart onPick={(m) => void run(m)} />}
     </section>
@@ -605,8 +619,8 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             </p>
             <p className="font-display truncate text-[22px]">${sym(r.symbol)}</p>
           </div>
-          <button type="button" onClick={() => openLink(!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`)} className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">
-            {short(r.mint)} ↗
+          <button type="button" onClick={() => openWalletMini(r.creator)} className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">
+            {tt("dev")} {short(r.creator)} →
           </button>
         </div>
 
@@ -647,7 +661,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </p>
         {r.early.length > 0 ? (
           <div className="rounded-2xl bg-black/30 px-2 py-2 ring-1 ring-white/[0.06]">
-            <XRayRadar early={r.early} />
+            <XRayRadar early={r.early} onSelect={(w) => w && openWalletMini(w)} />
           </div>
         ) : (
           <p className="rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-white/60 ring-1 ring-white/[0.06]">{tt("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
@@ -686,8 +700,8 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           {fund && !fund.funder && <p className="mt-1 text-[13px] font-light text-white/60">{tt("No funding transfer in the creator's recent history.")}</p>}
           {fund?.funder && (
             <>
-              <button type="button" onClick={() => openLink(`https://solscan.io/account/${fund.funder}`)} className="font-mono mt-1 text-[14px] text-white/90">
-                {short(fund.funder)} ↗
+              <button type="button" onClick={() => openWalletMini(fund.funder!)} className="font-mono mt-1 text-[14px] text-white/90">
+                {short(fund.funder)} →
               </button>
               <p className={`mt-1 text-[12.5px] font-light ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-white/60"}`}>
                 {fund.funderIsHot
@@ -730,6 +744,122 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         <p className="font-mono mt-4 text-center text-[10px] text-white/35">{tt("Not financial advice. Read from public chain data.")}</p>
       </div>
+    </div>
+  );
+}
+
+/* ---------- wallet page ---------- */
+
+interface WalletView {
+  wallet: string;
+  dev: { launches24h: number; launches48h: number; dumped: number; medianDumpMin: number | null; graduated: number; builder: { launches: number; grew: number; isBuilder: boolean } | null; launches: Array<{ mint: string; symbol: string; venue: string; buyers: number; early: number; dumpedAfterMin: number | null; graduated: boolean }>; regulars: Array<{ wallet: string; launches: number }> } | null;
+  funding: { funder: string | null; funderIsHot: boolean; siblings: Array<unknown>; siblingDumped48h: number } | null;
+  funded: { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> };
+  sniper: { snipes48h: number; soldOut: number; medianExitSec: number | null; topCreators: Array<{ creator: string; launches: number }>; recent: Array<{ mint: string; symbol: string }> } | null;
+}
+
+/** A wallet's page inside the mini app: what it did as a dev, a sniper and the one who pays for devs. */
+function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (mint: string) => void; onWallet: (w: string) => void }) {
+  const [p, setP] = useState<WalletView | null | undefined>(undefined);
+  useEffect(() => {
+    setP(undefined);
+    void get<WalletView>(`${NORTH}/v1/wallet/${wallet}`).then((b) => setP(b ?? null));
+  }, [wallet]);
+
+  if (p === undefined) return <div className="glass-card h-56 animate-pulse rounded-[26px]" />;
+  if (!p) return <div className="glass-card rounded-[26px] p-5 text-[13px] font-light text-white/60">{tt("This wallet did not launch, snipe or fund a launch the stream saw in the last two days.")}</div>;
+
+  const d = p.dev;
+  const serial = d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6);
+  const lead = d?.builder?.isBuilder
+    ? { text: tt("A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.", { g: d.builder.grew, n: d.builder.launches }), cls: "text-[#9df3b0]" }
+    : serial
+      ? { text: tt("A serial dumper: launched {n} tokens in two days and dumped {d} of them, usually {m} min after launch.", { n: d!.launches48h, d: d!.dumped, m: d!.medianDumpMin ?? 0 }), cls: "text-[#ff8f84]" }
+      : p.sniper && p.sniper.snipes48h >= 10
+        ? { text: tt("A sniper: bought {n} launches in their first seconds in two days and sold out of {o}, usually {x} after buying.", { n: p.sniper.snipes48h, o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), cls: "text-[#ff8f84]" }
+        : p.funded.creators.length >= 2 && !p.funded.hot
+          ? { text: tt("Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.", { n: p.funded.creators.length, d: p.funded.creators.reduce((n, c) => n + c.dumped, 0) }), cls: "text-white/90" }
+          : d
+            ? { text: tt("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), cls: d.dumped >= 2 ? "text-[#ff8f84]" : "text-white/90" }
+            : { text: tt("Seen in the first seconds of {n} launches in two days.", { n: p.sniper?.snipes48h ?? 0 }), cls: "text-white/90" };
+
+  return (
+    <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
+      <p className="font-mono text-[10px] text-white/40">{tt("wallet")}</p>
+      <button type="button" onClick={() => openLink(`https://solscan.io/account/${wallet}`)} className="font-mono mt-1 block break-all text-left text-[13px] text-white/80">
+        {wallet} ↗
+      </button>
+      <p className={`font-display mt-3 text-[20px] leading-snug ${lead.cls}`}>{lead.text}</p>
+
+      {d && (
+        <>
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            <XStat k="launches" v={String(d.launches48h)} bad={d.launches48h >= 5} />
+            <XStat k="dumped" v={String(d.dumped)} bad={d.dumped >= 2} />
+            <XStat k="graduated" v={String(d.graduated)} />
+            <XStat k="still alive" v={String(d.builder?.grew ?? 0)} />
+          </div>
+          <p className="font-mono mb-2 mt-5 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("Its launches")}</p>
+          <div className="glass-card divide-y divide-white/[0.06] rounded-[18px]">
+            {d.launches.slice(0, 8).map((x) => (
+              <button key={x.mint} type="button" onClick={() => { haptic.tap(); onToken(x.mint); }} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2.5 text-left active:bg-white/[0.04]">
+                <span className="truncate text-[13px] text-white/85">${sym(x.symbol)}</span>
+                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : x.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
+                  {x.dumpedAfterMin !== null ? tt("dumped after {m} min", { m: x.dumpedAfterMin }) : tt(x.graduated ? "graduated" : "dev holding")}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="mt-3 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
+        <p className="text-[10.5px] text-white/45">{tt("Who paid for this dev")}</p>
+        {!p.funding || !p.funding.funder ? (
+          <p className="mt-1 text-[13px] font-light text-white/60">{tt("No funding transfer in the dev's recent history.")}</p>
+        ) : (
+          <>
+            <button type="button" onClick={() => onWallet(p.funding!.funder!)} className="font-mono mt-1 text-[14px] text-white/90">{short(p.funding.funder)} →</button>
+            <p className="mt-1 text-[12.5px] font-light text-white/60">
+              {p.funding.funderIsHot ? tt("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? tt("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : tt("It paid for no other dev the zoo traced.")}
+            </p>
+          </>
+        )}
+      </div>
+
+      {p.sniper && (
+        <>
+          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("As a first-second buyer")}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <XStat k="launches sniped" v={String(p.sniper.snipes48h)} bad={p.sniper.snipes48h >= 10} />
+            <XStat k="sold out of" v={String(p.sniper.soldOut)} />
+            <XStat k="usually out after" v={secs(p.sniper.medianExitSec)} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {p.sniper.recent.slice(0, 6).map((m) => (
+              <button key={m.mint} type="button" onClick={() => { haptic.tap(); onToken(m.mint); }} className="font-mono max-w-[9rem] truncate rounded-full px-2.5 py-1 text-[11px] text-white/70 ring-1 ring-white/10 active:bg-white/[0.06]">${sym(m.symbol)}</button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(p.funded.creators.length > 0 || p.funded.hot) && (
+        <>
+          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("Devs it paid for")}</p>
+          {p.funded.hot ? (
+            <p className="text-[12.5px] font-light text-white/55">{tt("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+          ) : (
+            <div className="glass-card divide-y divide-white/[0.06] rounded-[18px]">
+              {p.funded.creators.slice(0, 8).map((c) => (
+                <button key={c.wallet} type="button" onClick={() => onWallet(c.wallet)} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2 text-left active:bg-white/[0.04]">
+                  <span className="font-mono text-[12px] text-white/80">{short(c.wallet)} →</span>
+                  <span className={`font-mono text-[11px] ${c.dumped >= 1 ? "text-[#ff8f84]" : "text-white/55"}`}>{tt("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
