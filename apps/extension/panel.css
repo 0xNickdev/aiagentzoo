@@ -1,0 +1,46 @@
+/* The report, shared by the popup and the panel on trading pages. Everything scoped under .zoo. */
+.zoo { --line: rgba(255,255,255,0.08); --avoid: #ff8a7e; color: #fff; font: 400 13px/1.45 ZooGeist, Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.zoo * { box-sizing: border-box; margin: 0; }
+.zoo .mono { font-family: ZooGeistMono, "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+.zoo .dim { color: rgba(255,255,255,.38); }
+.zoo .meta { font-size: 10.5px; color: rgba(255,255,255,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zoo .verdict { margin-top: 3px; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 400; }
+.zoo .reasons { list-style: none; padding: 0; margin-top: 9px; display: grid; gap: 5px; }
+.zoo .reasons li { display: flex; gap: 9px; font-size: 12.5px; font-weight: 300; color: rgba(255,255,255,.82); line-height: 1.4; }
+.zoo .reasons li::before { content: ""; flex: 0 0 5px; height: 5px; margin-top: 6px; border-radius: 50%; background: var(--c, #fff); }
+.zoo .notes { margin-top: 8px; font-size: 11px; font-weight: 300; color: rgba(255,255,255,.4); }
+.zoo .facts { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border-radius: 12px; overflow: hidden; background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.zoo .fact { background: #070a09; padding: 9px 11px; min-width: 0; }
+.zoo .fact span { display: block; font: 400 9.5px/1.3 ZooGeistMono, "Geist Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.38); }
+.zoo .fact b { display: block; margin-top: 3px; font: 400 13px/1.3 ZooGeistMono, "Geist Mono", ui-monospace, monospace; color: rgba(255,255,255,.92); }
+.zoo .fact b.bad { color: var(--avoid); }
+.zoo .fact em { display: block; font-style: normal; font-size: 10.5px; color: rgba(255,255,255,.42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zoo .five { margin-top: 13px; border-radius: 12px; background: rgba(0,0,0,.25); box-shadow: 0 0 0 1px var(--line); padding: 10px 10px 8px; }
+.zoo .five-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: rgba(255,255,255,.88); }
+.zoo .five-head .mono { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; }
+.zoo .radar { display: block; width: 100%; height: auto; margin-top: 4px; }
+.zoo .radar .node { cursor: pointer; }
+.zoo .radar .node:hover circle:last-child { stroke-width: 2; }
+.zoo .wallets { margin-top: 4px; display: grid; }
+.zoo .wallet { all: unset; display: grid; grid-template-columns: 8px 1fr 1.25fr 3.2em 3em; align-items: center; gap: 8px; padding: 5px 4px; border-top: 1px solid rgba(255,255,255,.05); font-size: 11px; color: rgba(255,255,255,.78); cursor: pointer; border-radius: 6px; }
+.zoo .wallet:hover { background: rgba(255,255,255,.04); }
+.zoo .wallet i { width: 6px; height: 6px; border-radius: 50%; }
+.zoo .wallet .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zoo .wallet .n { text-align: right; color: rgba(255,255,255,.6); }
+.zoo .dossier { margin-top: 8px; padding: 10px; border-radius: 10px; background: #0b0f0d; box-shadow: 0 0 0 1px rgba(255,255,255,.07); }
+.zoo .dos-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: .1em; }
+.zoo .link { color: rgba(255,255,255,.85); text-decoration: underline; text-decoration-color: rgba(255,255,255,.2); text-underline-offset: 3px; letter-spacing: 0; font-size: 11.5px; }
+.zoo .dos-line { margin-top: 6px; font-size: 10.5px; color: rgba(255,255,255,.55); }
+.zoo .dos-text { margin-top: 6px; font-size: 12px; font-weight: 300; color: rgba(255,255,255,.78); line-height: 1.45; }
+.zoo .chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+.zoo .chip { padding: 3px 8px; border-radius: 999px; font-size: 10.5px; color: rgba(255,255,255,.75); text-decoration: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); max-width: 8.5em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zoo .chip:hover { color: #fff; background: rgba(255,255,255,.05); }
+.zoo .actions { margin-top: 13px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 6px; }
+.zoo .btn { all: unset; box-sizing: border-box; display: block; text-align: center; padding: 9px 0; border-radius: 11px; font: 400 12.5px/1.2 ZooGeist, Geist, -apple-system, sans-serif; color: rgba(255,255,255,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); cursor: pointer; text-decoration: none; }
+.zoo .btn:hover { background: rgba(255,255,255,.05); }
+.zoo .btn[data-on="1"] { color: #9df3b0; box-shadow: inset 0 0 0 1px rgba(157,243,176,.35); }
+.zoo .btn.primary { background: #fff; color: #050505; font-weight: 500; box-shadow: none; }
+.zoo .btn.primary:hover { background: #ece7dc; }
+.zoo .skeleton { height: 160px; border-radius: 12px; background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.07), rgba(255,255,255,.03)); background-size: 200% 100%; animation: zoo-sh 1.3s linear infinite; }
+@keyframes zoo-sh { to { background-position: -200% 0; } }
+.zoo .err { font-size: 12px; color: #ff9a8f; }

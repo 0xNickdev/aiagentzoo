@@ -2,13 +2,43 @@
   "manifest_version": 3,
   "name": "ZOOAI X-Ray",
   "short_name": "X-Ray",
-  "version": "0.1.0",
-  "description": "See who you're buying from. Opens the X-Ray of the Solana token on the page you trade on.",
+  "version": "0.2.0",
+  "description": "See who you're buying from. The dev, the wallets in the first 5 seconds and who paid for the dev, on the page you trade on.",
+  "homepage_url": "https://zooaiagency.com/xray",
   "action": {
     "default_title": "ZOOAI X-Ray",
     "default_popup": "popup.html",
     "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
   },
   "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "permissions": ["activeTab"]
+  "background": { "service_worker": "background.js" },
+  "permissions": ["activeTab", "storage", "contextMenus", "notifications", "alarms"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://pump.fun/*", "https://*.pump.fun/*",
+        "https://dexscreener.com/*", "https://*.dexscreener.com/*",
+        "https://gmgn.ai/*", "https://*.gmgn.ai/*",
+        "https://axiom.trade/*", "https://*.axiom.trade/*",
+        "https://photon-sol.tinyastro.io/*",
+        "https://bullx.io/*", "https://*.bullx.io/*",
+        "https://birdeye.so/*", "https://*.birdeye.so/*",
+        "https://solscan.io/*",
+        "https://jup.ag/*", "https://*.jup.ag/*"
+      ],
+      "js": ["shared.js", "panel.js", "content-site.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*", "https://pro.x.com/*"],
+      "js": ["shared.js", "content-x.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*", "icons/*", "panel.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

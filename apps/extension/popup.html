@@ -3,35 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <title>ZOOAI X-Ray</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="panel.css" />
   <link rel="stylesheet" href="popup.css" />
 </head>
-<body>
+<body class="zoo">
   <header>
-    <span class="brand"><b>ZOOAI</b> X-Ray</span>
-    <span class="live"><i></i>live · solana</span>
+    <span class="brand"><img src="icons/32.png" alt="" /><b>ZOOAI</b> X-Ray</span>
+    <span class="live mono"><i></i>live · solana</span>
   </header>
 
   <form id="form">
-    <input id="mint" placeholder="token address or link" spellcheck="false" autocomplete="off" />
+    <input id="mint" class="mono" placeholder="token address or link" spellcheck="false" autocomplete="off" />
     <button type="submit" id="go">X-ray</button>
   </form>
-  <p id="hint" class="hint">Open it on a token page and it reads the token by itself.</p>
 
-  <section id="out" hidden>
-    <p id="meta" class="meta"></p>
-    <p id="verdict" class="verdict"></p>
-    <ul id="reasons"></ul>
-    <div id="facts" class="facts"></div>
-    <div class="actions">
-      <a id="full" class="btn primary" target="_blank" rel="noopener">Open the full X-Ray</a>
-      <a id="watch" class="btn" target="_blank" rel="noopener">Watch in Telegram</a>
+  <section id="out"></section>
+  <section id="home">
+    <p class="lead">Open a token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX and the X-Ray shows up on the page. On X, token addresses in posts get their verdict next to them.</p>
+    <div id="watch-wrap" hidden>
+      <p class="label mono">alerts on</p>
+      <div id="watch" class="list"></div>
+    </div>
+    <div id="hist-wrap" hidden>
+      <p class="label mono">recent</p>
+      <div id="hist" class="list"></div>
     </div>
   </section>
 
-  <p id="err" class="err" hidden></p>
-  <footer>read straight from the chain · not financial advice</footer>
+  <footer class="mono">read straight from the chain · not financial advice · <a href="https://zooaiagency.com/xray" target="_blank" rel="noopener">zooaiagency.com</a></footer>
+  <script src="shared.js"></script>
+  <script src="panel.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
