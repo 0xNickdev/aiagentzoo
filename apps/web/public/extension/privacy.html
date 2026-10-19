@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy policy · ZOOAI X-Ray extension</title>
+  <meta name="description" content="What the ZOOAI X-Ray browser extension reads, what it sends, and what it keeps." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; background: #030504; color: #fff; }
+    body { font: 300 16px/1.65 Geist, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { max-width: 720px; margin: 0 auto; padding: 72px 24px 96px; }
+    .k { font: 400 12px "Geist Mono", ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; color: rgba(242,211,155,.8); }
+    h1 { font-weight: 400; font-size: 44px; line-height: 1.05; letter-spacing: -0.03em; margin: 14px 0 10px; }
+    h1 span { color: rgba(255,255,255,.5); }
+    h2 { font-weight: 400; font-size: 20px; letter-spacing: -0.01em; margin: 40px 0 8px; }
+    p, li { color: rgba(255,255,255,.72); }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; }
+    code { font: 400 13.5px "Geist Mono", ui-monospace, monospace; color: rgba(255,255,255,.85); background: rgba(255,255,255,.05); padding: 1px 6px; border-radius: 6px; }
+    a { color: #fff; text-decoration: underline; text-decoration-color: rgba(255,255,255,.25); text-underline-offset: 4px; }
+    .meta { margin-top: 56px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08); font: 400 12px "Geist Mono", ui-monospace, monospace; color: rgba(255,255,255,.4); }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="k">ZOOAI X-Ray · browser extension</p>
+    <h1>Privacy policy.<br /><span>Short, because there is little to tell.</span></h1>
+    <p>The extension shows the X-Ray of a Solana token: who launched it, which wallets bought in its first seconds, who paid for the launcher. It does not ask who you are, and it has no account or sign-in.</p>
+
+    <h2>What it reads</h2>
+    <ul>
+      <li>On the trading sites it works on (pump.fun, DexScreener, gmgn, Axiom, Photon, BullX, Birdeye, Solscan, Jupiter), the address of the page, to find the token address in it.</li>
+      <li>On X (x.com, twitter.com), the text of posts on the screen, to find token addresses in them.</li>
+      <li>Text you select, only when you choose "X-Ray this token" from the right-click menu.</li>
+      <li>The address of the current tab, only when you click the extension's icon.</li>
+    </ul>
+    <p>It does not read anything else on those pages: no wallets, no balances, no forms, no passwords, no messages.</p>
+
+    <h2>What it sends</h2>
+    <ul>
+      <li>Token addresses, and nothing else, to the ZOOAI chain reader (<code>north-production-3f77.up.railway.app</code>), which answers with public on-chain facts about that token.</li>
+      <li>When a page shows a trading pool instead of a token, the pool address to DexScreener's public API (<code>api.dexscreener.com</code>) to learn which token it is.</li>
+    </ul>
+    <p>These requests carry no identifier of you. Like any web request, they reach the server from your internet address; the chain reader uses it only to apply its free rate limit and does not store it with what you looked at.</p>
+
+    <h2>What it keeps</h2>
+    <p>On your own computer only, in the browser's extension storage: the last tokens you opened, the tokens you asked to be alerted about, and where you dragged the on-page pill. Removing the extension removes them. Nothing is synced to us.</p>
+
+    <h2>What it never does</h2>
+    <ul>
+      <li>No analytics, no tracking, no advertising, no selling or sharing of data.</li>
+      <li>No access to your wallet, and no transactions: it reads and shows, it never trades.</li>
+      <li>No remote code: everything it runs ships inside the extension.</li>
+    </ul>
+
+    <h2>Permissions, and why</h2>
+    <ul>
+      <li><code>activeTab</code>: read the current tab's address when you click the icon.</li>
+      <li><code>storage</code>: remember your recent tokens, alerts and the pill's position.</li>
+      <li><code>contextMenus</code>: the "X-Ray this token" right-click item.</li>
+      <li><code>notifications</code> and <code>alarms</code>: tell you when a token you watch has its dev sell, its pool drained or it graduates, checked once a minute.</li>
+      <li>Access to the trading sites and X listed above: show the verdict on those pages.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>Questions: <a href="mailto:zooagency043@gmail.com">zooagency043@gmail.com</a> · <a href="https://zooaiagency.com">zooaiagency.com</a> · <a href="https://x.com/zooclawagency">x.com/zooclawagency</a></p>
+    <p>The X-Ray reads public chain data. It is not financial advice.</p>
+    <p class="meta">Last updated 19 October 2026 · ZOOAI AGENCY</p>
+  </main>
+</body>
+</html>
