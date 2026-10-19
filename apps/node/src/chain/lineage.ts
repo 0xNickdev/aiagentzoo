@@ -113,6 +113,18 @@ export class Lineage {
     };
   }
 
+  /** The creators a wallet paid for, as far as the zoo has traced, the worst first; empty when it funded none or is an exchange. */
+  funded(funder: string, now = Date.now()): { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> } {
+    const hot = this.hot.get(funder)?.hot ?? false;
+    const creators = [...(this.byFunder.get(funder) ?? [])]
+      .map((w) => {
+        const r = this.tape.creator(w, now);
+        return { wallet: w, launches48h: r?.launches48h ?? 0, dumped: r?.dumped ?? 0 };
+      })
+      .sort((a, b) => b.dumped - a.dumped || b.launches48h - a.launches48h);
+    return { hot, creators: creators.slice(0, 40) };
+  }
+
   /** Puts a creator in line for the background tracer; `first` for one somebody is asking about right now. */
   enqueue(creator: string, first = false): void {
     if (this.creators.has(creator) || this.queue.includes(creator)) return;

@@ -180,7 +180,16 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
                 <circle cx={n.x} cy={n.y} r={n.size} fill={k.color} fillOpacity="0.05" stroke={k.color} strokeOpacity="0.75" strokeWidth="1" strokeDasharray="3 3" />
               )}
               <circle cx={n.x} cy={n.y} r={1.8} fill={k.color} />
-              {(isSel || hover === n.e.wallet) && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="white" strokeOpacity="0.85" strokeWidth="1.2" />}
+              {hover === n.e.wallet && !isSel && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1" />}
+              {isSel && (
+                <>
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#f2d39b" strokeWidth="1.6" />
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#f2d39b" strokeOpacity="0.5" strokeWidth="1">
+                    <animate attributeName="r" from={n.size + 7} to={n.size + 20} dur="1.4s" repeatCount="indefinite" />
+                    <animate attributeName="stroke-opacity" from="0.5" to="0" dur="1.4s" repeatCount="indefinite" />
+                  </circle>
+                </>
+              )}
             </g>
           );
         })}
@@ -197,7 +206,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
 
       {/* what a wallet is, right where you point at it */}
       <AnimatePresence>
-        {tip && !compact && !(onSelect && sel === tip.e.wallet) && (
+        {tip && !compact && !(onSelect && sel) && (
           <motion.div
             key={tip.e.wallet}
             initial={{ opacity: 0, y: 4 }}

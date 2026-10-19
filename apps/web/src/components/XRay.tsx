@@ -4,6 +4,7 @@ import { NODE_URLS } from "../sim/live";
 import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
+import WalletProfile, { WalletLink } from "./WalletProfile";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -284,13 +285,18 @@ function ShareBar({ r }: { r: XRayReport }) {
 
 const solscan = (w: string) => `https://solscan.io/account/${w}`;
 
-/** A wallet or token address that opens where it can be checked. */
+/** Opens a wallet's own page inside the X-Ray. */
+const openWallet = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet", { detail: w }));
+
+/** A wallet: its page in the X-Ray, and a small link out to Solscan. A token address passes its own href. */
 function Addr({ a, href, className = "" }: { a: string; href?: string; className?: string }) {
-  return (
-    <a href={href ?? solscan(a)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`font-mono underline decoration-white/15 underline-offset-4 hover:text-white hover:decoration-white/50 ${className}`}>
-      {short(a)} ↗
-    </a>
-  );
+  if (href)
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`font-mono underline decoration-white/15 underline-offset-4 hover:text-white hover:decoration-white/50 ${className}`}>
+        {short(a)} ↗
+      </a>
+    );
+  return <WalletLink a={a} onWallet={openWallet} className={className} />;
 }
 
 interface Sniper {
@@ -332,6 +338,9 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
         </button>
       </div>
       <p className="mt-2 text-[12.5px] font-light leading-snug text-white/55">{t(k.what)}</p>
+      <button type="button" onClick={() => openWallet(e.wallet)} className="font-mono mt-3 self-start rounded-full px-3 py-1.5 text-[11px] text-[#f2d39b] ring-1 ring-[#f2d39b]/30 transition hover:bg-[#f2d39b]/10">
+        {t("open this wallet's page →")}
+      </button>
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
           ["in at", `${e.afterSec}s`, false],
@@ -448,13 +457,19 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const took = early.reduce((n, e) => n + e.bought, 0);
   const holds = early.reduce((n, e) => n + e.held, 0);
   const fund = r.funding;
-  const [sel, setSel] = useState<string | null>(null);
-  useEffect(() => setSel(null), [r.mint]);
+  const [sel, setSelState] = useState<string | null>(null);
+  // Where the wallet was picked: on the map its dossier opens beside the map, in the list it opens under its row.
+  const [from, setFrom] = useState<"map" | "list">("map");
+  useEffect(() => setSelState(null), [r.mint]);
   const selected = early.find((e) => e.wallet === sel) ?? null;
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const setSel = (w: string | null) => {
+    setFrom("list");
+    setSelState(w);
+  };
   const choose = (w: string | null) => {
-    setSel(w);
-    if (w) document.getElementById(`xr-row-${w}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    setFrom("map");
+    setSelState(w);
   };
   const pool = f?.graduated ? (f.poolSol !== undefined && f.poolSol !== null ? t("graduated · pool {s} SOL", { s: f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol) }) : t("graduated")) : null;
   return (
@@ -494,6 +509,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           )}
           {c.notes.length > 0 && <p className="mt-4 text-[12px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
           <KeyFacts r={r} go={go} />
+          <p className="font-mono mt-3 text-[10.5px] leading-relaxed text-white/35">{t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
         </div>
 
         <ShareBar r={r} />
@@ -509,7 +525,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
             </div>
             <div className="border-white/[0.07] lg:border-l lg:pl-6">
               <AnimatePresence mode="wait">
-                {selected ? (
+                {selected && from === "map" ? (
                   <Dossier key={selected.wallet} e={selected} creator={r.creator} onPick={onPick} onClose={() => setSel(null)} />
                 ) : (
                   <motion.div key="sum" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -640,15 +656,12 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               const k = KIND[kindOf(e)];
               const on = sel === e.wallet;
               return (
+                <div key={e.wallet}>
                 <button
                   id={`xr-row-${e.wallet}`}
-                  key={e.wallet}
                   type="button"
-                  onClick={() => {
-                    choose(on ? null : e.wallet);
-                    if (!on) go("xr-five");
-                  }}
-                  className={`font-mono grid w-full grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
+                  onClick={() => setSel(on ? null : e.wallet)}
+                  className={`font-mono grid w-full outline-none focus-visible:bg-white/[0.05] grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
                 >
                   <span className="flex items-center gap-2 truncate text-white/80">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
@@ -663,6 +676,12 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className="text-right text-white/55">{secs(e.exitSec)}</span>
                   <span className={`hidden text-right sm:block ${e.snipes48h >= 10 ? "text-[#f2d39b]" : "text-white/55"}`}>{e.snipes48h}</span>
                 </button>
+                {on && from === "list" && (
+                  <div className="border-t border-white/[0.05] bg-black/25 px-5 py-5 sm:px-7">
+                    <Dossier e={e} creator={r.creator} onPick={onPick} onClose={() => setSel(null)} />
+                  </div>
+                )}
+                </div>
               );
             })}
           </div>
@@ -776,17 +795,43 @@ export default function XRay() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<XRayReport | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
+
+  const showWallet = (w: string) => {
+    setReport(null);
+    setError(null);
+    setInput(w);
+    setWallet(w);
+    history.pushState(null, "", `/xray?wallet=${w}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  useEffect(() => {
+    const on = (e: Event) => showWallet((e as CustomEvent<string>).detail);
+    window.addEventListener("zoo-wallet", on);
+    return () => window.removeEventListener("zoo-wallet", on);
+  }, []);
 
   const run = async (mint: string) => {
     setBusy(true);
     setError(null);
+    setWallet(null);
     try {
       const r = await fetch(`${NORTH}/v1/xray/${mint}`);
       const body = (await r.json()) as XRayReport & { error?: string };
       if (r.status === 429) throw new Error(t("Ten x-rays a minute on the free tier. Try again in a minute."));
-      if (!r.ok) throw new Error(body.error ? t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
+      // Not a token the stream saw: perhaps a wallet, a dev, a sniper or a funder.
+      if (r.status === 404) {
+        const w = await fetch(`${NORTH}/v1/wallet/${mint}`).then((x) => x.status).catch(() => 0);
+        if (w === 200) {
+          setReport(null);
+          setWallet(mint);
+          history.replaceState(null, "", `/xray?wallet=${mint}`);
+          return;
+        }
+      }
+      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
       setReport(body);
-      history.replaceState(null, "", `/xray?mint=${mint}`);
+      history.pushState(null, "", `/xray?mint=${mint}`);
     } catch (err) {
       setReport(null);
       setError((err as Error).message);
@@ -796,11 +841,22 @@ export default function XRay() {
   };
 
   useEffect(() => {
-    const mint = mintIn(new URLSearchParams(location.search).get("mint") ?? "");
-    if (mint) {
-      setInput(mint);
-      void run(mint);
-    }
+    const read = () => {
+      const q = new URLSearchParams(location.search);
+      const mint = mintIn(q.get("mint") ?? "");
+      const w = mintIn(q.get("wallet") ?? "");
+      if (w) {
+        setInput(w);
+        setReport(null);
+        setWallet(w);
+      } else if (mint) {
+        setInput(mint);
+        void run(mint);
+      }
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
   }, []);
 
   const submit = (e: FormEvent) => {
@@ -842,8 +898,9 @@ export default function XRay() {
           {error && <p className="mt-4 text-center text-[13px] text-[#ff9a8f]">{error}</p>}
         </Reveal>
       </Section>
-      <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} onPick={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}</AnimatePresence>
-      {!report && !busy && <Start onPick={(m) => { setInput(m); void run(m); }} />}
+      <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} onPick={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}
+        {wallet && !report && <WalletProfile key={wallet} wallet={wallet} onWallet={showWallet} onToken={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}</AnimatePresence>
+      {!report && !wallet && !busy && <Start onPick={(m) => { setInput(m); void run(m); }} />}
     </>
   );
 }

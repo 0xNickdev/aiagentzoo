@@ -1077,6 +1077,42 @@ export class PumpTape {
   }
 
   /**
+   * A dev's whole page: every launch of the last two days and how it went, and the wallets that keep buying them in
+   * their first seconds. A wallet on most of one dev's launches, seconds after each one opens, is that dev's.
+   */
+  creatorProfile(wallet: string, now = Date.now()) {
+    const record = this.creator(wallet, now);
+    if (!record) return null;
+    const tokens = (this.byCreator.get(wallet) ?? []).map((m) => this.tokens.get(m)).filter((t): t is Tracked => Boolean(t));
+    const snipes = new Map<string, number>();
+    for (const t of tokens) for (const w of this.earlyWalletsOf(t)) snipes.set(w, (snipes.get(w) ?? 0) + 1);
+    const launches = tokens
+      .slice()
+      .reverse()
+      .slice(0, 40)
+      .map((t) => ({
+        mint: t.mint,
+        symbol: t.symbol,
+        createdAt: t.createdAt,
+        venue: t.venue ?? "pump.fun",
+        buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
+        early: this.earlyWalletsOf(t).length,
+        dumpedAfterMin: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000)),
+        graduated: t.graduated,
+      }));
+    return {
+      ...record,
+      launches,
+      // Wallets in the first seconds of two or more of this dev's launches, the most regular first.
+      regulars: [...snipes.entries()]
+        .filter(([, n]) => n >= 2)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([w, n]) => ({ wallet: w, launches: n, snipes48h: (this.earlyBy.get(w) ?? []).length })),
+    };
+  }
+
+  /**
    * The wall of rugs: creator wallets that dumped the most of their own launches in the last two days, worst first,
    * each with the transaction of its latest dump so anyone can check it.
    */

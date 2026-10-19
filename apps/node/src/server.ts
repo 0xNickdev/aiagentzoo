@@ -411,6 +411,30 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const found = tape.sniper(sniperOf[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "this wallet sniped no launch in the last two days" });
       }
+      // One page per wallet: what it did as a dev, as a first-second buyer and as the one who pays for devs.
+      const walletOf = /^\/v1\/wallet\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && walletOf) {
+        const w = walletOf[1]!;
+        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+        const wait = fromPeer(req) ? 0 : checkGate.take(caller);
+        if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
+        const dev = tape.creatorProfile(w);
+        let funding: LineageView | null = null;
+        if (dev && fundersEnabled()) {
+          funding = lineage.view(w);
+          if (!funding) lineage.enqueue(w, true);
+        }
+        const funded = lineage.funded(w);
+        const sniper = tape.sniper(w);
+        // The accounts this dev's own tokens link to in their metadata: typed by the dev, so a lead, not proof of who it is.
+        const seen = new Set<string>();
+        const accounts = dev
+          ? dev.launches.flatMap((l) => socials.forMint(l.mint)).filter((a) => !seen.has(a.social.url) && seen.add(a.social.url)).slice(0, 10)
+          : [];
+        if (!dev && !sniper && !funded.creators.length) return json(res, 404, { error: "this wallet did not launch, snipe or fund a launch the stream saw in the last two days" });
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, checkedAt: Date.now() });
+      }
       const bundleOf = /^\/v1\/chain\/bundle\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && bundleOf) {
         const t = tape.token(bundleOf[1]!);
