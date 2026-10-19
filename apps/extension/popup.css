@@ -1,0 +1,34 @@
+:root { --bg: #050807; --line: rgba(255,255,255,0.08); --dim: rgba(255,255,255,0.5); --avoid: #ff8a7e; --caution: #f2d39b; --pass: #9df3b0; }
+* { box-sizing: border-box; margin: 0; }
+body { width: 380px; padding: 16px 16px 12px; background: radial-gradient(120% 70% at 20% 0%, rgba(255,236,200,0.06), transparent 60%), var(--bg); color: #fff; font: 400 13px/1.45 Geist, -apple-system, sans-serif; }
+.mono, header, .meta, .facts, footer, input, .hint, .live { font-family: "Geist Mono", ui-monospace, monospace; }
+header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+header b { color: #fff; font-weight: 500; letter-spacing: .16em; }
+.live { display: flex; align-items: center; gap: 6px; letter-spacing: .1em; }
+.live i { width: 6px; height: 6px; border-radius: 50%; background: var(--pass); box-shadow: 0 0 8px rgba(157,243,176,.8); }
+form { display: flex; gap: 6px; margin-top: 14px; padding: 5px; border-radius: 16px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px var(--line); }
+input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: #fff; font-size: 12px; padding: 8px 10px; }
+input::placeholder { color: rgba(255,255,255,.32); }
+button { border: 0; border-radius: 12px; padding: 8px 14px; background: linear-gradient(180deg,#fff,#e9e3d6); color: #050505; font: 500 13px Geist, sans-serif; cursor: pointer; }
+button:disabled { opacity: .6; cursor: default; }
+.hint { margin-top: 10px; font-size: 10.5px; color: rgba(255,255,255,.4); }
+.meta { margin-top: 16px; font-size: 10.5px; color: rgba(255,255,255,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.verdict { margin-top: 4px; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; }
+ul { list-style: none; padding: 0; margin-top: 10px; display: grid; gap: 6px; }
+li { display: flex; gap: 9px; font-size: 12.5px; font-weight: 300; color: rgba(255,255,255,.82); }
+li::before { content: ""; flex: 0 0 5px; height: 5px; margin-top: 7px; border-radius: 50%; background: currentColor; color: var(--c, #fff); }
+.facts { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border-radius: 12px; overflow: hidden; background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.facts div { background: #070a09; padding: 9px 11px; }
+.facts span { display: block; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.38); }
+.facts b { display: block; margin-top: 3px; font-weight: 400; font-size: 13px; color: rgba(255,255,255,.9); }
+.facts b.bad { color: var(--avoid); }
+.facts em { display: block; font-style: normal; font-size: 10.5px; color: rgba(255,255,255,.42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btn { display: block; text-align: center; text-decoration: none; padding: 10px 0; border-radius: 12px; font-size: 12.5px; color: rgba(255,255,255,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.btn:hover { background: rgba(255,255,255,.05); }
+.btn.primary { background: #fff; color: #050505; font-weight: 500; box-shadow: none; }
+.btn.primary:hover { background: #ece7dc; }
+.err { margin-top: 12px; font-size: 12px; color: #ff9a8f; }
+.skeleton { margin-top: 16px; height: 150px; border-radius: 14px; background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.07), rgba(255,255,255,.03)); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
+@keyframes sh { to { background-position: -200% 0; } }
+footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 9.5px; letter-spacing: .08em; color: rgba(255,255,255,.3); text-align: center; }

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ZOOAI X-Ray</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <span class="brand"><b>ZOOAI</b> X-Ray</span>
+    <span class="live"><i></i>live · solana</span>
+  </header>
+
+  <form id="form">
+    <input id="mint" placeholder="token address or link" spellcheck="false" autocomplete="off" />
+    <button type="submit" id="go">X-ray</button>
+  </form>
+  <p id="hint" class="hint">Open it on a token page and it reads the token by itself.</p>
+
+  <section id="out" hidden>
+    <p id="meta" class="meta"></p>
+    <p id="verdict" class="verdict"></p>
+    <ul id="reasons"></ul>
+    <div id="facts" class="facts"></div>
+    <div class="actions">
+      <a id="full" class="btn primary" target="_blank" rel="noopener">Open the full X-Ray</a>
+      <a id="watch" class="btn" target="_blank" rel="noopener">Watch in Telegram</a>
+    </div>
+  </section>
+
+  <p id="err" class="err" hidden></p>
+  <footer>read straight from the chain · not financial advice</footer>
+  <script src="popup.js"></script>
+</body>
+</html>
