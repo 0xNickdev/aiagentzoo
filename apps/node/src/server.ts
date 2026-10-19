@@ -100,6 +100,49 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   }, 20_000);
   heartbeat.unref();
 
+  // How much the X-Ray is actually used, by day: calls served and the distinct callers that made them (hashed, never the raw address).
+  const h12 = (v: string) => { let h = 0x811c9dc5; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); };
+  const usage = {
+    mem: new Map<string, { xrays: number; checks: number; callers: Set<string> }>(),
+    dirty: new Set<string>(),
+    day: () => new Date().toISOString().slice(0, 10),
+    async bump(deep: boolean, caller: string) {
+      if (caller === "peer") return;
+      const d = usage.day();
+      let u = usage.mem.get(d);
+      if (!u) {
+        const saved = await enclosure.store.get<{ xrays: number; checks: number; callers: string[] }>(`usage:${d}`);
+        u = { xrays: saved?.xrays ?? 0, checks: saved?.checks ?? 0, callers: new Set(saved?.callers ?? []) };
+        usage.mem.set(d, u);
+      }
+      if (deep) u.xrays += 1; else u.checks += 1;
+      if (u.callers.size < 200_000) u.callers.add(h12(caller));
+      usage.dirty.add(d);
+    },
+    async flush() {
+      for (const d of usage.dirty) {
+        const u = usage.mem.get(d)!;
+        await enclosure.store.set(`usage:${d}`, { xrays: u.xrays, checks: u.checks, callers: [...u.callers] });
+      }
+      usage.dirty.clear();
+    },
+    async view() {
+      await usage.flush();
+      const rows = [];
+      let xrays = 0, checks = 0; const users = new Set<string>();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+        const u = usage.mem.get(d) ?? (await enclosure.store.get<{ xrays: number; checks: number; callers: string[] }>(`usage:${d}`));
+        const list = u ? (u.callers instanceof Set ? [...u.callers] : u.callers) : [];
+        rows.push({ day: d, xrays: u?.xrays ?? 0, checks: u?.checks ?? 0, users: list.length });
+        xrays += u?.xrays ?? 0; checks += u?.checks ?? 0;
+        for (const c of list) users.add(c);
+      }
+      return { days: rows, last7: { xrays, checks, users: users.size } };
+    },
+  };
+  setInterval(() => void usage.flush(), 60_000).unref();
+
   const server = createServer(async (req, res) => {
     res.setHeader("access-control-allow-origin", corsOrigin);
     res.setHeader("access-control-allow-headers", "content-type, authorization");
@@ -366,6 +409,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           const what = deep ? `${tier.deepPerMinute} deep reads` : `${tier.perMinute} checks`;
           return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
+        void usage.bump(deep, caller);
         const mint = (checkOf ?? xrayOf)![1]!;
         const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
         const found = tape.token(mint);
@@ -451,6 +495,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       // X accounts, X communities and Telegram groups reused across launches, the most-dumped first.
       if (req.method === "GET" && path === "/v1/chain/socials") {
         return json(res, 200, { hours: 48, read: socials.size, accounts: socials.reused(clampInt(url.searchParams.get("limit"), 30, 1, 100)) });
+      }
+      if (req.method === "GET" && path === "/v1/usage") {
+        return json(res, 200, await usage.view());
       }
       if (req.method === "GET" && path === "/v1/chain/builders") {
         return json(res, 200, { builders: tape.builders(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
