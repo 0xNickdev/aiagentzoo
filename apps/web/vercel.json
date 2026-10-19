@@ -34,6 +34,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/usage",
+      "destination": "https://north-production-3f77.up.railway.app/v1/usage"
+    },
+    {
       "source": "/api/check/:mint",
       "destination": "https://north-production-3f77.up.railway.app/v1/check/:mint"
     },
