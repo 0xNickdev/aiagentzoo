@@ -1076,6 +1076,50 @@ export class PumpTape {
     };
   }
 
+  /** A token still alive now: a graduated pool holding enough SOL, or a curve near graduation. */
+  private aliveNow(t: Tracked): boolean {
+    if (t.graduated) return t.poolSol !== null && t.poolSol >= POOL_ALIVE_SOL;
+    const real = t.curveSol ?? (t.buys === 0 ? 0 : null);
+    return real !== null && curveCapOf(real) >= CURVE_ALIVE_SOL;
+  }
+
+  /**
+   * A dev's track record of building, not dumping: how many of its launches grew and are still alive, how many
+   * graduated, how many it dumped. A builder has at least one launch that grew and still lives, and dumps few.
+   */
+  builderScore(wallet: string, now = Date.now()) {
+    const tokens = (this.byCreator.get(wallet) ?? []).map((m) => this.tokens.get(m)).filter((t): t is Tracked => Boolean(t));
+    if (!tokens.length) return null;
+    const grew = tokens.filter((t) => this.aliveNow(t) && t.dumpedAt === null).length;
+    const graduated = tokens.filter((t) => t.graduated).length;
+    const aliveGraduated = tokens.filter((t) => t.graduated && t.poolSol !== null && t.poolSol >= POOL_ALIVE_SOL).length;
+    const dumped = tokens.filter((t) => t.dumpedAt !== null).length;
+    return { launches: tokens.length, grew, graduated, aliveGraduated, dumped, isBuilder: grew >= 1 && dumped / tokens.length < 0.5 };
+  }
+
+  /**
+   * The other side of the wall of rugs: dev wallets whose launches actually grew and stayed alive, and who did not
+   * dump them. Ranked by how many of their launches are still alive, the proven hands first.
+   */
+  builders(limit = 20, now = Date.now()) {
+    const out: Array<{ wallet: string; launches48h: number; grew: number; graduated: number; dumped: number; recent: Array<{ mint: string; symbol: string; createdAt: number; alive: boolean; graduated: boolean }> }> = [];
+    for (const wallet of this.byCreator.keys()) {
+      const sc = this.builderScore(wallet, now);
+      if (!sc || !sc.isBuilder) continue;
+      const tokens = (this.byCreator.get(wallet) ?? []).map((m) => this.tokens.get(m)).filter((t): t is Tracked => Boolean(t));
+      out.push({
+        wallet,
+        launches48h: sc.launches,
+        grew: sc.grew,
+        graduated: sc.graduated,
+        dumped: sc.dumped,
+        recent: tokens.slice(-6).reverse().map((t) => ({ mint: t.mint, symbol: t.symbol.slice(0, 16), createdAt: t.createdAt, alive: this.aliveNow(t), graduated: t.graduated })),
+      });
+    }
+    out.sort((a, b) => b.grew - a.grew || b.graduated - a.graduated || a.dumped - b.dumped);
+    return out.slice(0, limit);
+  }
+
   /**
    * A dev's whole page: every launch of the last two days and how it went, and the wallets that keep buying them in
    * their first seconds. A wallet on most of one dev's launches, seconds after each one opens, is that dev's.
@@ -1102,6 +1146,7 @@ export class PumpTape {
       }));
     return {
       ...record,
+      builder: this.builderScore(wallet, now),
       launches,
       // Wallets in the first seconds of two or more of this dev's launches, the most regular first.
       regulars: [...snipes.entries()]

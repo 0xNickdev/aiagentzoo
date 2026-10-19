@@ -452,6 +452,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/chain/socials") {
         return json(res, 200, { hours: 48, read: socials.size, accounts: socials.reused(clampInt(url.searchParams.get("limit"), 30, 1, 100)) });
       }
+      if (req.method === "GET" && path === "/v1/chain/builders") {
+        return json(res, 200, { builders: tape.builders(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
       if (req.method === "GET" && path === "/v1/chain/ruggers") {
         return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
       }

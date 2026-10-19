@@ -21,6 +21,7 @@ interface Profile {
     dumped: number;
     medianDumpMin: number | null;
     graduated: number;
+    builder: { launches: number; grew: number; graduated: number; aliveGraduated: number; dumped: number; isBuilder: boolean } | null;
     launches: Array<{ mint: string; symbol: string; createdAt: number; venue: string; buyers: number; early: number; dumpedAfterMin: number | null; graduated: boolean }>;
     regulars: Array<{ wallet: string; launches: number; snipes48h: number }>;
   } | null;
@@ -66,8 +67,10 @@ function Num({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
 }
 
 /** One sentence for the whole wallet, from the facts, no adjectives the facts do not carry. */
-function lead(p: Profile): { text: string; bad: boolean } {
+function lead(p: Profile): { text: string; bad: boolean; good?: boolean } {
   const d = p.dev;
+  if (d && d.builder?.isBuilder)
+    return { text: t("A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.", { g: d.builder.grew, n: d.builder.launches }), bad: false, good: true };
   if (d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6))
     return { text: t("A serial dumper: launched {n} tokens in two days and dumped {d} of them, usually {m} min after launch.", { n: d.launches48h, d: d.dumped, m: d.medianDumpMin ?? 0 }), bad: true };
   if (p.funded.creators.length >= 2 && !p.funded.hot) {
@@ -129,7 +132,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </span>
           </div>
           <p className="font-mono mt-2 break-all text-[15px] text-white/85">{wallet}</p>
-          <p className={`font-display mt-4 max-w-4xl text-2xl leading-snug sm:text-3xl ${l.bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{l.text}</p>
+          <p className={`font-display mt-4 max-w-4xl text-2xl leading-snug sm:text-3xl ${l.good ? "text-[#9df3b0]" : l.bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{l.text}</p>
           {d && (
             <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-5">
               <Num k="launches · 48h" v={String(d.launches48h)} bad={d.launches48h >= 5} />

@@ -982,4 +982,11 @@ export const ZH: Record<string, string> = {
   "last 48 hours · tap to x-ray": "过去 48 小时 · 点击透视",
   "in their first 5 seconds": "在开盘前 5 秒",
   "from the tokens' metadata": "来自代币元数据",
+  "A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.": "有成绩：它 {n} 个币里有 {g} 个涨起来且仍有流动性，开发者没有砸盘。",
+  "Builders · last 48 hours · read from Solana": "建设者 · 过去 48 小时 · 读取自 Solana",
+  "The devs whose tokens": "这些开发者的币",
+  "actually grew.": "真的涨起来了。",
+  "The other side of the list: dev wallets with launches that graduated and still hold liquidity, where the dev has not dumped. Rare. A track record, not a promise.": "榜单的另一面：发的币已毕业且仍有流动性、开发者没有砸盘的钱包。很少见。是成绩，不是承诺。",
+  "still alive": "仍存活",
+  "latest launches": "最近发的币",
 };

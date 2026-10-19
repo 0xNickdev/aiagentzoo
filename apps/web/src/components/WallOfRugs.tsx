@@ -3,6 +3,8 @@ import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t, tChain } from "../i18n";
 
+const goWallet = (w: string) => { window.history.pushState(null, "", `/xray?wallet=${w}`); window.dispatchEvent(new PopStateEvent("popstate")); };
+
 interface Rugger {
   wallet: string;
   launches24h: number;
@@ -88,6 +90,7 @@ export default function WallOfRugs() {
           </div>
         ))}
       </Reveal>
+      <Builders />
       <ReusedAccounts />
       <p className="font-mono mt-4 text-center text-[11px] text-white/40">
         {t("check any dev:")} <a href="/ask" className="underline decoration-white/25 underline-offset-4 hover:text-white">{t("ask the beaver")}</a> · {t("raw:")}{" "}
@@ -109,6 +112,73 @@ interface Account {
  * The X accounts, X communities and Telegram groups that keep coming back on launches whose dev sold within minutes.
  * Facts from each token's own metadata and the chain, never a verdict on a person.
  */
+interface Builder {
+  wallet: string;
+  launches48h: number;
+  grew: number;
+  graduated: number;
+  dumped: number;
+  recent: Array<{ mint: string; symbol: string; createdAt: number; alive: boolean; graduated: boolean }>;
+}
+
+/** The other side of the wall: devs whose launches actually grew and stayed alive, and who did not dump them. */
+function Builders() {
+  const [list, setList] = useState<Builder[] | null>(null);
+  useEffect(() => {
+    const load = () =>
+      fetch(`${NORTH}/v1/chain/builders?limit=15`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b: { builders: Builder[] } | null) => b && setList(b.builders))
+        .catch(() => {});
+    void load();
+    const t = window.setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (list && list.length === 0) return null;
+  return (
+    <div className="mt-16">
+      <SectionHead
+        eyebrow={t("Builders · last 48 hours · read from Solana")}
+        title={[t("The devs whose tokens"), t("actually grew.")]}
+        text={t("The other side of the list: dev wallets with launches that graduated and still hold liquidity, where the dev has not dumped. Rare. A track record, not a promise.")}
+      />
+      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
+        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[10.5px] text-white/40 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+          <span>#</span>
+          <span>{t("dev wallet")}</span>
+          <span className="text-right">{t("launched")}</span>
+          <span className="text-right">{t("still alive")}</span>
+          <span className="hidden text-right sm:block">{t("dumped")}</span>
+          <span className="hidden sm:block">{t("latest launches")}</span>
+        </div>
+        {!list && <p className="px-7 py-10 text-center text-[13px] text-white/45">{t("Reading the chain…")}</p>}
+        {list?.map((r, i) => (
+          <div key={r.wallet} className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+            <span className="text-white/40">{String(i + 1).padStart(2, "0")}</span>
+            <button type="button" onClick={() => goWallet(r.wallet)} className="truncate text-left text-white/85 underline decoration-white/15 underline-offset-4 hover:text-white">
+              {short(r.wallet)}
+            </button>
+            <span className="text-right text-white/70">{r.launches48h}</span>
+            <span className="text-right text-[#9df3b0]">{r.grew}</span>
+            <span className="hidden text-right text-white/50 sm:block">{r.dumped}</span>
+            <span className="hidden gap-1.5 overflow-hidden sm:flex">
+              {r.recent.slice(0, 5).map((x) => (
+                <button key={x.mint} type="button" onClick={() => { window.history.pushState(null, "", `/xray?mint=${x.mint}`); window.dispatchEvent(new PopStateEvent("popstate")); }} className={`shrink-0 truncate ${x.alive ? "text-white/70" : "text-white/35"} hover:text-white`} title={x.graduated ? t("graduated") : ""}>
+                  ${x.symbol.replace(/^\$/, "")}
+                </button>
+              ))}
+            </span>
+          </div>
+        ))}
+      </Reveal>
+      <p className="font-mono mt-4 text-center text-[11px] text-white/40">
+        {t("raw:")}{" "}
+        <a href={`${NORTH}/v1/chain/builders`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/builders</a>
+      </p>
+    </div>
+  );
+}
+
 function ReusedAccounts() {
   const [list, setList] = useState<Account[] | null>(null);
   useEffect(() => {
