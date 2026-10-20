@@ -1927,3 +1927,42 @@ test("an X account reused across launches whose devs sold within minutes is name
   const gone = new SocialsRegistry(tape, (async () => new Response("no", { status: 404 })) as unknown as typeof fetch);
   assert.equal(await gone.read(fresh, `https://ipfs.io/ipfs/Qm${"c".repeat(44)}`), true, "missing metadata is not a refusal");
 });
+
+test("bundles anywhere in a token's life: four or more wallets in one block are marked, and what they hold is followed", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  const now = 1_792_300_000_000;
+  const born = now - 60 * 60_000;
+  const mint = "Bund1e1111111111111111111111111111111111111";
+  const creator = "Dev11111111111111111111111111111";
+  const tape = new PumpTape();
+  tape.apply({ kind: "create", name: "B", symbol: "B", mint, creator, ts: born }, born, undefined, 100);
+  const w = (p: string, i: number) => `${p}${String(i).padStart(2, "0")}${"1".repeat(30 - p.length)}`;
+  const buy = (user: string, tokens: number, slot: number, at = born + 20 * 60_000) => tape.apply({ kind: "trade", mint, sol: 0.3, tokens, isBuy: true, user, ts: at, curveSol: 20 }, at, undefined, slot);
+  const sell = (user: string, tokens: number, slot: number, at = born + 40 * 60_000) => tape.apply({ kind: "trade", mint, sol: 0.3, tokens, isBuy: false, user, ts: at, curveSol: 20 }, at, undefined, slot);
+  // Organic buyers, one per block: nobody is marked.
+  for (let i = 0; i < 20; i++) buy(w("Org", i), 1_000_000, 200 + i * 3);
+  // Three in one block is not a bundle; the creator never counts.
+  for (let i = 0; i < 3; i++) buy(w("Tri", i), 1_000_000, 300);
+  buy(creator, 5_000_000, 300);
+  // Twenty minutes in, three blocks of four wallets each take 40 million tokens apiece: 480 million, 48% of the supply.
+  for (let b = 0; b < 3; b++) for (let i = 0; i < 4; i++) buy(w(`Bx${b}`, i), 40_000_000, 400 + b);
+  buy(w("Org", 99), 1_000_000, 410); // closes the last block
+  let f = tape.facts(mint, now)!;
+  assert.equal(f.bundlers, 12);
+  assert.equal(f.bundlersPeak, 0.48);
+  assert.equal(f.bundlersHeld, 0.48);
+  // Half of them sell out: what they hold falls, the peak stays.
+  for (let b = 0; b < 3; b++) for (let i = 0; i < 2; i++) sell(w(`Bx${b}`, i), 40_000_000, 500 + b * 2 + i);
+  f = tape.facts(mint, now)!;
+  assert.equal(f.bundlersHeld, 0.24);
+  assert.equal(f.bundlersPeak, 0.48);
+  // The check says so: held up to 48%, 24% now, a caution and not an avoid.
+  const c = checkToken(mint, tape.token(mint), { stream: { live: true, lastEventSecAgo: 0 } });
+  assert.ok(c.reasons.some((r) => r.startsWith("12 wallets bought it in bundles") && r.includes("48%") && r.includes("24%")));
+  assert.equal(c.facts?.bundlers, 12);
+  // It survives a restart.
+  const again = new PumpTape();
+  again.load(tape.snapshot(), now);
+  assert.equal(again.facts(mint, now)!.bundlersPeak, 0.48);
+});

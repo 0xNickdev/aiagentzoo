@@ -37,6 +37,11 @@ interface Check {
     creatorMedianDumpMin: number | null;
     bundleWallets: number | null;
     bundleSharePct: number | null;
+    bundlers?: number;
+    bundlersHeldPct?: number | null;
+    bundlersPeakPct?: number | null;
+    bundledSol?: number | null;
+    bundlesSince?: number | null;
     graduated: boolean;
     poolSol?: number | null;
     curveSol?: number | null;
@@ -545,6 +550,9 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       <Stat k="buys · sells" v={`${f?.buys ?? 0} · ${f?.sells ?? 0}`} />
                       <Stat k="churned volume (at least)" v={f?.churnPct === null || f?.churnPct === undefined ? "-" : `${f.churnPct}%`} bad={(f?.churnPct ?? 0) >= 30 && !f?.mayhem} />
                       <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
+                      <Stat k="bought in bundles (4+ wallets in one block)" v={`${f?.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f?.bundlesSince ? ` · ${t("counted since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`} bad={(f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30 && !f?.mayhem} />
+                      {!!f?.bundlers && <Stat k="bundlers hold now · at most" v={`${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`} bad={(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem} />}
+                      {!!f?.bundledSol && <Stat k="SOL through bundles" v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
                     </div>
                   </motion.div>
                 )}

@@ -36,6 +36,13 @@ export interface TokenCheck {
     creatorMedianDumpMin: number | null;
     bundleWallets: number | null;
     bundleSharePct: number | null;
+    /** Wallets that bought in bundles of four or more in one block at any point of its life; what they hold now and held at most. */
+    bundlers: number;
+    bundlersHeldPct: number | null;
+    bundlersPeakPct: number | null;
+    bundledSol: number | null;
+    /** Older than the bundle reader: bundles counted only from this time (ms). */
+    bundlesSince: number | null;
     top5BuyingPct: number | null;
     graduated: boolean;
     /** The token it trades against when not SOL; then curveSol is null. */
@@ -128,6 +135,14 @@ export function checkToken(
     avoid.push(`${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`);
   }
 
+  // Bundles later in its life: blocks where four or more wallets bought at once, together holding much of the supply.
+  // Buyers like that are one hand dressed as a crowd. Mayhem Mode's own bot trades in bursts, so it is left out there.
+  if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem) {
+    const said = `${f.bundlers} wallets bought it in bundles (four or more in one block) and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they still hold ${pct(f.bundlersHeld ?? 0)}%`;
+    if ((f.bundlersHeld ?? 0) >= 0.4) avoid.push(said);
+    else caution.push(said);
+  }
+
   // The account the token advertises, reused on other launches whose devs sold within minutes: the same hands.
   for (const a of opts.socials ?? []) {
     if (a.fastDumps < 2) continue;
@@ -213,6 +228,11 @@ export function checkToken(
       creatorMedianDumpMin: c ? c.medianDumpMin : null,
       bundleWallets: f.bundleWallets,
       bundleSharePct: pct(f.bundleShare),
+      bundlers: f.bundlers ?? 0,
+      bundlersHeldPct: pct(f.bundlersHeld ?? null),
+      bundlersPeakPct: pct(f.bundlersPeak ?? null),
+      bundledSol: f.bundledSol ?? null,
+      bundlesSince: f.bundlesSince ?? null,
       top5BuyingPct: pct(f.top5Share),
       graduated: f.graduated,
       quote: f.quote ?? null,

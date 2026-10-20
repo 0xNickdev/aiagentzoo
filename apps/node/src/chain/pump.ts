@@ -260,6 +260,13 @@ export interface ChainFacts {
   bundleWallets: number | null;
   /** Share of the whole supply those wallets took, 0..1. */
   bundleShare: number | null;
+  /** Wallets that bought it in blocks of four or more buyers, at any point of its life; what they hold now and held at most, of the supply. */
+  bundlers?: number;
+  bundlersHeld?: number;
+  bundlersPeak?: number;
+  bundledSol?: number | null;
+  /** Set when the token is older than the bundle reader: bundles are counted from this time only. */
+  bundlesSince?: number | null;
   /** After graduation, on PumpSwap: SOL in the pool now, null before it has one. */
   poolSol: number | null;
   ammBuys: number;
@@ -290,6 +297,9 @@ const SUPPLY = 1_000_000_000;
 const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.mayhem ? 2 * SUPPLY : SUPPLY);
 /** A buy this many slots after the create still counts as part of the launch bundle. */
 const BUNDLE_SLOTS = 1;
+/** Four or more wallets buying in one block is a bundle, whenever it happens. */
+const BUNDLE_MIN = 4;
+const BUNDLERS_MAX = 3_000;
 
 type Crew = { creatorCrew: number; ringWallets: number; serialSnipers: number };
 type CrewMembers = { crew: Set<string>; ring: Set<string>; serial: Set<string> };
@@ -371,6 +381,17 @@ interface Tracked {
   at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number; at?: number };
   /** Crew and ring counts, worked out at most once a minute. Not saved. */
   crew?: { at: number; counts: Crew; members: CrewMembers };
+  /**
+   * Bundlers: wallets that bought it in a block where four or more wallets bought at once, at any point of its life,
+   * on the curve or in the pool. What each bought and sold since, the SOL they put in, and the most they held together.
+   */
+  bundlers?: Map<string, { tok: number; sold: number }>;
+  bundledSol?: number;
+  bundleHeld?: number;
+  bundlePeak?: number;
+  /** The block being read and who bought in it. Not saved. */
+  bslot?: number;
+  bpend?: Map<string, { tok: number; sol: number }>;
 }
 
 /** What the tape knows about one creator wallet over the last two days. */
@@ -469,6 +490,8 @@ export class PumpTape {
   /** Launches each wallet bought in the first seconds of, oldest first: rebuilt from the tokens on load, never saved. */
   private readonly earlyBy = new Map<string, string[]>();
   private earlyPrunedAt = 0;
+  /** When this tape began reading bundles; a token launched before it has only part of its life counted. */
+  bundleSince = Date.now();
   private prunedAt = 0;
   private readonly launchesBy = new Map<string, number[]>();
   /** Newest launches first, mints only. */
@@ -622,7 +645,7 @@ export class PumpTape {
       }
       return;
     }
-    if (ev.kind === "swap") return this.swap(ev, now, tx);
+    if (ev.kind === "swap") return this.swap(ev, now, tx, slot);
     const t = this.tokens.get(ev.mint);
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
@@ -638,6 +661,7 @@ export class PumpTape {
     }
     this.seen.trades += 1;
     this.count(now, "trades");
+    this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     // Five minutes in, the early and churn numbers are written down once, for the check's record.
     // Only a trade between 5 and 10 minutes in can stand for "five minutes in": a token first traded later (or one
@@ -697,18 +721,60 @@ export class PumpTape {
     }
   }
 
+  /**
+   * Bundles over a token's whole life: buys are gathered per block, and a block where four or more wallets bought
+   * marks them all. From then on every trade of theirs moves what the bundlers hold, and the peak is kept.
+   */
+  private noteBundle(t: Tracked, user: string, tokens: number, sol: number, isBuy: boolean, slot?: number): void {
+    if (user === t.creator) return;
+    if (slot !== undefined && slot !== t.bslot) {
+      this.closeBundleSlot(t);
+      t.bslot = slot;
+      t.bpend = undefined;
+    }
+    const bag = t.bundlers?.get(user);
+    if (bag) {
+      const before = Math.max(0, bag.tok - bag.sold);
+      if (isBuy) {
+        bag.tok += tokens;
+        t.bundledSol = (t.bundledSol ?? 0) + sol;
+      } else bag.sold += tokens;
+      t.bundleHeld = Math.max(0, (t.bundleHeld ?? 0) + Math.max(0, bag.tok - bag.sold) - before);
+      t.bundlePeak = Math.max(t.bundlePeak ?? 0, t.bundleHeld);
+    }
+    if (!isBuy || slot === undefined) return;
+    const p = (t.bpend ??= new Map()).get(user) ?? { tok: 0, sol: 0 };
+    // A wallet already marked has its buy counted above; here it only counts toward the block's crowd.
+    if (!bag) ((p.tok += tokens), (p.sol += sol));
+    t.bpend.set(user, p);
+  }
+
+  private closeBundleSlot(t: Tracked): void {
+    const pend = t.bpend;
+    if (!pend || pend.size < BUNDLE_MIN) return;
+    const bundlers = (t.bundlers ??= new Map());
+    for (const [user, p] of pend) {
+      if (bundlers.has(user) || bundlers.size >= BUNDLERS_MAX) continue;
+      bundlers.set(user, { tok: p.tok, sold: 0 });
+      t.bundleHeld = (t.bundleHeld ?? 0) + p.tok;
+      t.bundledSol = (t.bundledSol ?? 0) + p.sol;
+    }
+    t.bundlePeak = Math.max(t.bundlePeak ?? 0, t.bundleHeld ?? 0);
+  }
+
   /** The PumpSwap pools the tape follows, for the stream's pool filter. Sorted, so an unchanged set reads the same. */
   poolAddresses(): string[] {
     return [...this.pools.keys()].sort();
   }
 
   /** Life after the curve: trades on the PumpSwap pools of tokens we watched launch. */
-  private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string): void {
+  private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string, slot?: number): void {
     const mint = this.pools.get(ev.pool);
     const t = mint ? this.tokens.get(mint) : undefined;
     if (!t) return;
     this.seen.trades += 1;
     this.count(now, "trades");
+    this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     // Trades on a side pool still count, but only the main pool says how much SOL is left.
     if (ev.pool === t.pool) {
       t.poolSol = ev.poolSol;
@@ -758,8 +824,8 @@ export class PumpTape {
       ...(b.exitAt !== undefined ? { exitAt: b.exitAt } : {}),
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
-    const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys] }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen });
+    const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince });
   }
 
   load(json: string, now = Date.now()): number {
@@ -770,8 +836,11 @@ export class PumpTape {
         launchesBy?: [string, number[]][];
         recent?: string[];
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number };
+        bundleSince?: number;
       };
       if (saved.v !== 1) return 0;
+      // A snapshot from before bundles were read: they are read from now on.
+      this.bundleSince = saved.bundleSince ?? now;
       for (const s of saved.tokens ?? []) {
         if (!s?.mint || now - s.createdAt > KEEP_MS || this.tokens.has(s.mint)) continue;
         // Fields added after a snapshot was written start empty.
@@ -788,6 +857,7 @@ export class PumpTape {
           buyers: new Map(s.buyers ?? []),
           moreBuyers: s.moreBuyers?.length ? new Set(s.moreBuyers) : undefined,
           launchBuys: new Map(s.launchBuys ?? []),
+          bundlers: s.bundlers ? new Map(s.bundlers as unknown as [string, { tok: number; sold: number }][]) : undefined,
         };
         this.tokens.set(t.mint, t);
         const mine = this.byCreator.get(t.creator) ?? [];
@@ -1054,6 +1124,11 @@ export class PumpTape {
       trades15m: t.trades15m,
       bundleWallets: t.createSlot === null ? null : t.launchBuys.size,
       bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supplyOf(t)),
+      bundlers: t.bundlers?.size ?? 0,
+      bundlersHeld: round(Math.min(1, (t.bundleHeld ?? 0) / supplyOf(t))),
+      bundlersPeak: round(Math.min(1, (t.bundlePeak ?? 0) / supplyOf(t))),
+      bundledSol: t.quote ? null : round(t.bundledSol ?? 0),
+      bundlesSince: t.createdAt >= this.bundleSince ? null : this.bundleSince,
       poolSol: t.poolSol === null ? null : round(t.poolSol),
       ammBuys: t.ammBuys,
       ammSells: t.ammSells,
@@ -1224,6 +1299,8 @@ export class PumpTape {
       if (f.buys <= f.sells) continue;
       // A few wallets taking the supply in the launch block, or a creator who dumps most of what they launch.
       if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) continue;
+      // Bundles later in its life that took half the supply or more: the buyers are mostly one hand.
+      if ((f.bundlersPeak ?? 0) >= 0.5) continue;
       const rec = this.creator(t.creator, now);
       if (rec && rec.dumped >= 3 && rec.dumped / Math.max(1, rec.launches48h) >= 0.5) continue;
       // The creator's own crew in the first seconds, or snipers still sitting on half the supply.

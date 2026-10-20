@@ -1023,4 +1023,8 @@ export const ZH: Record<string, string> = {
   "Stats - ZOOAI AGENCY": "数据 - ZOOAI AGENCY",
   "Stats": "数据",
   "our numbers, live": "我们的实时数据",
+  "bought in bundles (4+ wallets in one block)": "捆绑买入（同一区块 4 个以上钱包）",
+  "bundlers hold now · at most": "捆绑钱包现持 · 最高",
+  "SOL through bundles": "经捆绑流入的 SOL",
+  "counted since {d}": "自 {d} 起计数",
 };
