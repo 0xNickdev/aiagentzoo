@@ -689,6 +689,11 @@ export class PumpTape {
     }
   }
 
+  /** The PumpSwap pools the tape follows, for the stream's pool filter. Sorted, so an unchanged set reads the same. */
+  poolAddresses(): string[] {
+    return [...this.pools.keys()].sort();
+  }
+
   /** Life after the curve: trades on the PumpSwap pools of tokens we watched launch. */
   private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string): void {
     const mint = this.pools.get(ev.pool);
@@ -1343,7 +1348,14 @@ export interface StreamOptions {
 
 const STREAM_STALL_MS = 90_000;
 
-/** Keeps a Yellowstone subscription to the pump.fun program open, reconnecting with backoff, feeding the tape. */
+type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown };
+
+/**
+ * Keeps Yellowstone subscriptions open, reconnecting with backoff, feeding the tape. Two connections: launches and the
+ * curves (pump.fun, LaunchLab, Meteora) on one, PumpSwap on the other, and that one only for the pools of tokens on the
+ * tape. All of PumpSwap on one connection was more than the stream could carry: it fell minutes behind the chain and
+ * took the launches down with it.
+ */
 export async function startPumpStream(t: PumpTape, { url, token, log = console.log }: StreamOptions): Promise<() => void> {
   type Yellowstone = typeof import("@triton-one/yellowstone-grpc");
   const mod = (await import("@triton-one/yellowstone-grpc")) as unknown as Yellowstone & { default: Yellowstone["default"] | { default: Yellowstone["default"] } };
@@ -1351,86 +1363,108 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
   const Client = ("default" in mod.default ? mod.default.default : mod.default) as Yellowstone["default"];
   const CommitmentLevel = mod.CommitmentLevel ?? (mod.default as unknown as Yellowstone).CommitmentLevel;
   let stopped = false;
-  let current: { end(): void } | null = null;
-  let delay = 1_000;
+  const open = new Set<{ end(): void }>();
+  const filter = (accounts: string[]) => ({ vote: false, failed: false, accountInclude: accounts, accountExclude: [], accountRequired: [] });
+  const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
 
-  const run = async () => {
+  const onData = (update: StreamUpdate) => {
+    const logs = update.transaction?.transaction?.meta?.logMessages;
+    if (!logs) return;
+    const sig = update.transaction?.transaction?.signature;
+    const tx = sig && sig.length ? base58(sig) : undefined;
+    const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
+    const at = Number.isFinite(slot) ? slot : undefined;
+    for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, at);
+    // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
+    if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
+      const raw = fromYellowstone(update.transaction!.transaction!);
+      if (raw) for (const ev of parseLaunchpads(raw, Date.now())) t.apply(ev, Date.now(), tx, at);
+    }
+  };
+
+  /**
+   * One connection, reopened whenever it ends, errors or goes quiet for `stallMs`. `filters` is read again on every
+   * open and every `refreshMs`; when it changes the new request goes down the same stream. No filters, no connection.
+   */
+  const lane = async (name: string, filters: () => Record<string, ReturnType<typeof filter>> | null, opts: { stallMs: number; refreshMs?: number; core?: boolean }) => {
+    let delay = 1_000;
     while (!stopped) {
+      let wanted = filters();
+      if (!wanted) {
+        await new Promise((r) => setTimeout(r, 30_000));
+        continue;
+      }
       try {
         const client = new Client(url, token, undefined);
         await client.connect();
         const stream = await client.subscribe();
-        current = stream;
+        open.add(stream);
         let heard = Date.now();
-        let stall: ReturnType<typeof setInterval> | undefined;
+        let timer: ReturnType<typeof setInterval> | undefined;
+        let sentAt = Date.now();
         await new Promise<void>((resolve, reject) => {
-          // A stream can go quiet without ending: pump.fun is never silent for a minute, so silence means reconnect.
-          stall = setInterval(() => {
-            if (Date.now() - heard < STREAM_STALL_MS) return;
-            reject(new Error(`no transactions for ${Math.round((Date.now() - heard) / 1000)} s, reconnecting`));
-            try {
-              stream.end();
-            } catch {
-              /* already closed */
+          timer = setInterval(() => {
+            // A stream can go quiet without ending: silence on a busy program means reconnect.
+            if (Date.now() - heard >= opts.stallMs) {
+              reject(new Error(`no transactions for ${Math.round((Date.now() - heard) / 1000)} s, reconnecting`));
+              try {
+                stream.end();
+              } catch {
+                /* already closed */
+              }
+              return;
+            }
+            if (opts.refreshMs && Date.now() - sentAt >= opts.refreshMs) {
+              sentAt = Date.now();
+              const next = filters();
+              if (next && JSON.stringify(next) !== JSON.stringify(wanted)) {
+                wanted = next;
+                stream.write(request(next), (error: unknown) => error && reject(error));
+              }
             }
           }, 15_000);
-          stream.on("data", (update: { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
-            const logs = update.transaction?.transaction?.meta?.logMessages;
-            if (logs) heard = Date.now();
-            if (!logs) return;
-            if (!t.connected) {
+          stream.on("data", (update: StreamUpdate) => {
+            if (!update.transaction?.transaction?.meta?.logMessages) return;
+            heard = Date.now();
+            if (opts.core && !t.connected) {
               t.connected = true;
               delay = 1_000;
               log("[chain] pump.fun, LaunchLab and Meteora stream live");
-            }
-            const sig = update.transaction?.transaction?.signature;
-            const tx = sig && sig.length ? base58(sig) : undefined;
-            const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
-            const at = Number.isFinite(slot) ? slot : undefined;
-            for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, at);
-            // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
-            if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
-              const raw = fromYellowstone(update.transaction!.transaction!);
-              if (raw) for (const ev of parseLaunchpads(raw, Date.now())) t.apply(ev, Date.now(), tx, at);
-            }
+            } else if (!opts.core && delay > 1_000) delay = 1_000;
+            onData(update);
           });
           stream.on("error", reject);
           stream.on("end", resolve);
           stream.on("close", resolve);
-          stream.write(
-            {
-              accounts: {},
-              slots: {},
-              transactions: {
-                pump: { vote: false, failed: false, accountInclude: [PUMP_PROGRAM], accountExclude: [], accountRequired: [] },
-                amm: { vote: false, failed: false, accountInclude: [PUMP_AMM_PROGRAM], accountExclude: [], accountRequired: [] },
-                launchlab: { vote: false, failed: false, accountInclude: [LAUNCHLAB_PROGRAM], accountExclude: [], accountRequired: [] },
-                dbc: { vote: false, failed: false, accountInclude: [DBC_PROGRAM], accountExclude: [], accountRequired: [] },
-              },
-              transactionsStatus: {},
-              blocks: {},
-              blocksMeta: {},
-              entry: {},
-              accountsDataSlice: [],
-              commitment: CommitmentLevel.CONFIRMED,
-            },
-            (error: unknown) => error && reject(error),
-          );
-        }).finally(() => clearInterval(stall));
+          stream.write(request(wanted!), (error: unknown) => error && reject(error));
+        }).finally(() => {
+          clearInterval(timer);
+          open.delete(stream);
+        });
       } catch (error) {
-        log(`[chain] stream error: ${(error as Error).message?.slice(0, 200)}`);
+        log(`[chain] ${name} stream error: ${(error as Error).message?.slice(0, 200)}`);
       }
-      t.connected = false;
+      if (opts.core) t.connected = false;
       if (stopped) break;
       await new Promise((r) => setTimeout(r, delay));
       delay = Math.min(delay * 2, 60_000);
     }
   };
-  void run();
+
+  void lane("launches", () => ({ pump: filter([PUMP_PROGRAM]), launchlab: filter([LAUNCHLAB_PROGRAM]), dbc: filter([DBC_PROGRAM]) }), { stallMs: STREAM_STALL_MS, core: true });
+  // Only the pools we follow: an empty list would mean every PumpSwap transaction, so no pools means no connection.
+  void lane(
+    "pools",
+    () => {
+      const pools = t.poolAddresses();
+      return pools.length ? { amm: filter(pools) } : null;
+    },
+    { stallMs: 15 * 60_000, refreshMs: 60_000 },
+  );
   const pruner = setInterval(() => t.prune(), 10 * 60_000);
   return () => {
     stopped = true;
     clearInterval(pruner);
-    current?.end();
+    for (const s of open) s.end();
   };
 }
