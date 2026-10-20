@@ -438,7 +438,11 @@ const KEEP_MS = 48 * 3_600_000;
  */
 const RECENT_KEEP = 20_000;
 const DAY_MS = 24 * 3_600_000;
-const MAX_TRACKED = 30_000;
+/**
+ * A ceiling for the tape, well above two days of launches (about 100,000). It was 30,000, under what two days hold, so
+ * every launch ran a full prune over the whole tape that removed nothing: north fell minutes behind the chain.
+ */
+const MAX_TRACKED = 250_000;
 /** The first buyers are kept whole (amounts, repeat buys); past that only a hash, to count them. */
 const BUYERS_FULL = 100;
 const BUYERS_MAX = 5_000;
@@ -465,6 +469,7 @@ export class PumpTape {
   /** Launches each wallet bought in the first seconds of, oldest first: rebuilt from the tokens on load, never saved. */
   private readonly earlyBy = new Map<string, string[]>();
   private earlyPrunedAt = 0;
+  private prunedAt = 0;
   private readonly launchesBy = new Map<string, number[]>();
   /** Newest launches first, mints only. */
   private recent: string[] = [];
@@ -611,7 +616,10 @@ export class PumpTape {
       this.count(now, "launches");
       if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`, tx);
       else this.emit(now, "launch", ev, "new launch", tx);
-      if (this.tokens.size > MAX_TRACKED) this.prune(now);
+      if (this.tokens.size > MAX_TRACKED && now - this.prunedAt > 60_000) {
+        this.prunedAt = now;
+        this.prune(now);
+      }
       return;
     }
     if (ev.kind === "swap") return this.swap(ev, now, tx);
