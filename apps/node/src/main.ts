@@ -21,7 +21,7 @@ import { agentOfWeek, beaverRecord, canyonStats, leaderboard } from "./stats.ts"
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
-import { startPumpStream, tape } from "./chain/pump.ts";
+import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -116,10 +116,16 @@ if (config.role === "north") {
     renameSync(`${momentsFile}.tmp`, momentsFile);
   }, 60_000).unref();
 }
+// North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
+const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);
 const stopStream =
-  config.role === "north" && process.env.SHYFT_GRPC_TOKEN
-    ? await startPumpStream(tape, { url: process.env.SHYFT_GRPC_URL ?? "https://grpc.eu.shyft.to", token: process.env.SHYFT_GRPC_TOKEN, log: (m) => console.log(`[${config.id}] ${m}`) })
-    : null;
+  config.role !== "north"
+    ? null
+    : process.env.ZOO_RELAY_URL && process.env.ZOO_RELAY_TOKEN
+      ? startRelayFeed(tape, { url: process.env.ZOO_RELAY_URL, token: process.env.ZOO_RELAY_TOKEN, log: chainLog })
+      : process.env.SHYFT_GRPC_TOKEN
+        ? await startPumpStream(tape, { url: process.env.SHYFT_GRPC_URL ?? "https://grpc.eu.shyft.to", token: process.env.SHYFT_GRPC_TOKEN, log: chainLog })
+        : null;
 
 const visitorAgents = enclosure
   .snapshot()

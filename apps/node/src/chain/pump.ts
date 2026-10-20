@@ -1352,7 +1352,12 @@ export interface StreamOptions {
   url: string;
   token: string;
   log?: (message: string) => void;
+  /** Every PumpSwap transaction instead of the tape's pools: for the relay, which has no tape to ask. */
+  allPools?: boolean;
 }
+
+/** Where the stream's events go: the tape, or the relay's buffer. */
+export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean };
 
 const STREAM_STALL_MS = 90_000;
 // North runs in California and the stream comes from Europe: with the default HTTP/2 window a connection carries only
@@ -1367,7 +1372,7 @@ type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number
  * tape. All of PumpSwap on one connection was more than the stream could carry: it fell minutes behind the chain and
  * took the launches down with it.
  */
-export async function startPumpStream(t: PumpTape, { url, token, log = console.log }: StreamOptions): Promise<() => void> {
+export async function startPumpStream(t: StreamSink, { url, token, log = console.log, allPools = false }: StreamOptions): Promise<() => void> {
   type Yellowstone = typeof import("@triton-one/yellowstone-grpc");
   const mod = (await import("@triton-one/yellowstone-grpc")) as unknown as Yellowstone & { default: Yellowstone["default"] | { default: Yellowstone["default"] } };
   // A CommonJS package seen from ESM: the class is the default export, possibly wrapped once more.
@@ -1467,6 +1472,7 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
   void lane(
     "pools",
     () => {
+      if (allPools) return { amm: filter([PUMP_AMM_PROGRAM]) };
       const pools = t.poolAddresses();
       return pools.length ? { amm: filter(pools) } : null;
     },
@@ -1477,5 +1483,70 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
     stopped = true;
     clearInterval(pruner);
     for (const s of open) s.end();
+  };
+}
+
+/**
+ * The same events, read from a relay instead of the stream: a small reader on a server the stream reaches at full
+ * speed (it gave Railway a tenth of pump.fun), sending north the parsed events as lines of JSON. Picks up after the
+ * last event it applied when the connection drops; a relay that restarted says so and is read from its start.
+ */
+export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: Omit<StreamOptions, "allPools">): () => void {
+  let stopped = false;
+  let ctl: AbortController | null = null;
+  let after = 0;
+  let epoch = "";
+  const run = async () => {
+    let delay = 1_000;
+    while (!stopped) {
+      ctl = new AbortController();
+      const c = ctl;
+      let heard = Date.now();
+      const stall = setInterval(() => Date.now() - heard > STREAM_STALL_MS && c.abort(new Error("relay quiet")), 15_000);
+      try {
+        const res = await fetch(`${url}/events?after=${after}`, { headers: { authorization: `Bearer ${token}` }, signal: c.signal });
+        if (!res.ok || !res.body) throw new Error(`relay responded ${res.status}`);
+        const dec = new TextDecoder();
+        let buf = "";
+        for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+          heard = Date.now();
+          buf += dec.decode(chunk, { stream: true });
+          for (let i = buf.indexOf("\n"); i >= 0; i = buf.indexOf("\n")) {
+            const line = buf.slice(0, i);
+            buf = buf.slice(i + 1);
+            if (!line) continue;
+            const msg = JSON.parse(line) as [number, PumpEvent, string | null, number | null] | { hello: string };
+            if (!Array.isArray(msg)) {
+              if (msg.hello !== epoch) ((epoch = msg.hello), (after = 0));
+              continue;
+            }
+            const [seq, ev, tx, slot] = msg;
+            if (seq <= after) continue;
+            after = seq;
+            if (!t.connected) {
+              t.connected = true;
+              delay = 1_000;
+              log("[chain] relay live: pump.fun, LaunchLab and Meteora");
+            }
+            t.apply(ev, Date.now(), tx ?? undefined, slot ?? undefined);
+          }
+        }
+      } catch (error) {
+        if (!stopped) log(`[chain] relay error: ${(error as Error).message?.slice(0, 200)}`);
+      } finally {
+        clearInterval(stall);
+      }
+      t.connected = false;
+      if (stopped) break;
+      await new Promise((r) => setTimeout(r, delay));
+      delay = Math.min(delay * 2, 60_000);
+    }
+  };
+  void run();
+  const pruner = setInterval(() => t.prune(), 10 * 60_000);
+  return () => {
+    stopped = true;
+    clearInterval(pruner);
+    ctl?.abort();
   };
 }
