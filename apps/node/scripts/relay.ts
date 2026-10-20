@@ -15,6 +15,8 @@ if (!TOKEN || !GRPC_TOKEN) throw new Error("set ZOO_RELAY_TOKEN and SHYFT_GRPC_T
 const PORT = Number(process.env.PORT ?? 8797);
 /** About ten minutes of events at a busy 400 a second: enough for north to pick up after a deploy. */
 const KEEP = 250_000;
+/** The most a reader is sent to catch up on connecting: about a minute and a half of a busy stream. */
+const BACKLOG = 30_000;
 
 const epoch = randomUUID();
 let seq = 0;
@@ -66,9 +68,10 @@ createServer((req, res) => {
   const after = Number(url.searchParams.get("after") ?? 0) || 0;
   res.writeHead(200, { "content-type": "application/x-ndjson", "cache-control": "no-store" });
   res.write(`${JSON.stringify({ hello: epoch })}\n`);
-  // What the reader missed while it was away, as far back as the ring goes.
+  // What the reader missed while it was away, at most the last BACKLOG events: a reader that starts over (after=0)
+  // would otherwise get the whole ring at once, overflow its buffer and be dropped, again and again.
   const first = seq - ring.length + 1;
-  for (let i = Math.max(0, after + 1 - first); i < ring.length; i++) send(res, ring[i]!);
+  for (let i = Math.max(0, after + 1 - first, ring.length - BACKLOG); i < ring.length; i++) send(res, ring[i]!);
   clients.add(res);
   req.on("close", () => clients.delete(res));
 }).listen(PORT, () => console.log(`[relay] listening on :${PORT}`));
