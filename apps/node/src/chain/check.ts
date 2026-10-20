@@ -194,7 +194,9 @@ export function checkToken(
     holders = h ? { top10Pct: pct(h.top10Share)!, topWalletPct: pct(h.topShare)!, creatorHoldsPct: pct(h.creatorShare), programPct: pct(h.programShare)! } : null;
     if (!h) notes.push("holders could not be read from Solana right now");
     else {
-      if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
+      // Half the supply in one wallet: whoever holds it decides when the price goes to zero.
+      if (h.topShare >= 0.5) avoid.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
+      else if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
       else if (h.top10Share >= 0.5) caution.push(`the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`);
       const bought = f.creatorSold !== null;
       if (bought && (f.creatorSold ?? 0) < 0.5 && h.creatorShare !== null && h.creatorShare < 0.001) {
