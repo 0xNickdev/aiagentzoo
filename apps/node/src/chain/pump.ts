@@ -1347,6 +1347,9 @@ export interface StreamOptions {
 }
 
 const STREAM_STALL_MS = 90_000;
+// North runs in California and the stream comes from Europe: with the default HTTP/2 window a connection carries only
+// what fits in one window per round trip, far less than pump.fun writes. Big windows that grow with the link fix that.
+const CHANNEL = { grpcHttp2AdaptiveWindow: true, grpcInitialStreamWindowSize: 16 << 20, grpcInitialConnectionWindowSize: 32 << 20, grpcMaxDecodingMessageSize: 64 << 20 };
 
 type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown };
 
@@ -1395,7 +1398,7 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
         continue;
       }
       try {
-        const client = new Client(url, token, undefined);
+        const client = new Client(url, token, CHANNEL);
         await client.connect();
         const stream = await client.subscribe();
         open.add(stream);
