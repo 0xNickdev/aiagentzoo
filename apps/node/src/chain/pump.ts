@@ -1341,6 +1341,8 @@ export interface StreamOptions {
   log?: (message: string) => void;
 }
 
+const STREAM_STALL_MS = 90_000;
+
 /** Keeps a Yellowstone subscription to the pump.fun program open, reconnecting with backoff, feeding the tape. */
 export async function startPumpStream(t: PumpTape, { url, token, log = console.log }: StreamOptions): Promise<() => void> {
   type Yellowstone = typeof import("@triton-one/yellowstone-grpc");
@@ -1359,9 +1361,22 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
         await client.connect();
         const stream = await client.subscribe();
         current = stream;
+        let heard = Date.now();
+        let stall: ReturnType<typeof setInterval> | undefined;
         await new Promise<void>((resolve, reject) => {
+          // A stream can go quiet without ending: pump.fun is never silent for a minute, so silence means reconnect.
+          stall = setInterval(() => {
+            if (Date.now() - heard < STREAM_STALL_MS) return;
+            reject(new Error(`no transactions for ${Math.round((Date.now() - heard) / 1000)} s, reconnecting`));
+            try {
+              stream.end();
+            } catch {
+              /* already closed */
+            }
+          }, 15_000);
           stream.on("data", (update: { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown }) => {
             const logs = update.transaction?.transaction?.meta?.logMessages;
+            if (logs) heard = Date.now();
             if (!logs) return;
             if (!t.connected) {
               t.connected = true;
@@ -1401,7 +1416,7 @@ export async function startPumpStream(t: PumpTape, { url, token, log = console.l
             },
             (error: unknown) => error && reject(error),
           );
-        });
+        }).finally(() => clearInterval(stall));
       } catch (error) {
         log(`[chain] stream error: ${(error as Error).message?.slice(0, 200)}`);
       }
