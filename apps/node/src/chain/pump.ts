@@ -1418,6 +1418,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
         let heard = Date.now();
         let timer: ReturnType<typeof setInterval> | undefined;
         let sentAt = Date.now();
+        let pings = 0;
         await new Promise<void>((resolve, reject) => {
           timer = setInterval(() => {
             // A stream can go quiet without ending: silence on a busy program means reconnect.
@@ -1440,6 +1441,12 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
             }
           }, 15_000);
           stream.on("data", (update: StreamUpdate) => {
+            // The server asks if we are still here; a request with only a ping answers it and leaves the filters alone.
+            if (update.ping) {
+              pings += 1;
+              stream.write({ ...request({}), transactions: {}, ping: { id: pings } }, () => {});
+              return;
+            }
             if (!update.transaction?.transaction?.meta?.logMessages) return;
             heard = Date.now();
             if (opts.core && !t.connected) {
