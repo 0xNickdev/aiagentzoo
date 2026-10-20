@@ -1027,4 +1027,5 @@ export const ZH: Record<string, string> = {
   "bundlers hold now · at most": "捆绑钱包现持 · 最高",
   "SOL through bundles": "经捆绑流入的 SOL",
   "counted since {d}": "自 {d} 起计数",
+  "later bought in bundles: {n} wallets, held up to {p}% together, {h}% now": "之后被捆绑买入：{n} 个钱包，合计最高持有 {p}%，现在 {h}%",
 };

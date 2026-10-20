@@ -299,6 +299,8 @@ const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.ma
 const BUNDLE_SLOTS = 1;
 /** Four or more wallets buying in one block is a bundle, whenever it happens. */
 const BUNDLE_MIN = 4;
+/** ...and together take at least half a percent of the supply in that block. */
+const BUNDLE_MIN_SHARE = 0.005;
 const BUNDLERS_MAX = 3_000;
 
 type Crew = { creatorCrew: number; ringWallets: number; serialSnipers: number };
@@ -752,6 +754,10 @@ export class PumpTape {
   private closeBundleSlot(t: Tracked): void {
     const pend = t.bpend;
     if (!pend || pend.size < BUNDLE_MIN) return;
+    // Bots churning dust through a busy pool also land four to a block; a bundle has to move real supply.
+    let took = 0;
+    for (const p of pend.values()) took += p.tok;
+    if (took < supplyOf(t) * BUNDLE_MIN_SHARE) return;
     const bundlers = (t.bundlers ??= new Map());
     for (const [user, p] of pend) {
       if (bundlers.has(user) || bundlers.size >= BUNDLERS_MAX) continue;

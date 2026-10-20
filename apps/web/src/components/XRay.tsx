@@ -566,6 +566,11 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               <p className="mt-1 text-[13px] font-light text-white/55">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
             </div>
             <p className="font-mono text-[12px] text-white/55">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
+            {!!f?.bundlers && (
+              <p className={`font-mono w-full text-[12px] ${(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem ? "text-[#ff8a7e]" : "text-white/55"}`}>
+                {t("later bought in bundles: {n} wallets, held up to {p}% together, {h}% now", { n: f.bundlers, p: f.bundlersPeakPct ?? 0, h: f.bundlersHeldPct ?? 0 })}
+              </p>
+            )}
           </div>
         )}
 

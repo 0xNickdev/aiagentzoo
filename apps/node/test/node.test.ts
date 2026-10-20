@@ -1942,6 +1942,8 @@ test("bundles anywhere in a token's life: four or more wallets in one block are 
   const sell = (user: string, tokens: number, slot: number, at = born + 40 * 60_000) => tape.apply({ kind: "trade", mint, sol: 0.3, tokens, isBuy: false, user, ts: at, curveSol: 20 }, at, undefined, slot);
   // Organic buyers, one per block: nobody is marked.
   for (let i = 0; i < 20; i++) buy(w("Org", i), 1_000_000, 200 + i * 3);
+  // Four wallets moving dust in one block are bots in a busy pool, not a bundle.
+  for (let i = 0; i < 4; i++) buy(w("Dst", i), 100_000, 250);
   // Three in one block is not a bundle; the creator never counts.
   for (let i = 0; i < 3; i++) buy(w("Tri", i), 1_000_000, 300);
   buy(creator, 5_000_000, 300);
