@@ -7,6 +7,7 @@ import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
 import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
+import Stats from "./components/Stats";
 import XRay from "./components/XRay";
 import LiveProof from "./components/LiveProof";
 import Play from "./components/Play";
@@ -143,6 +144,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/xray": XRay,
   "/play": Play,
   "/connect": Connect,
+  "/stats": Stats,
 };
 
 export default function App() {

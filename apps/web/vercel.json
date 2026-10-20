@@ -90,6 +90,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/stats",
+      "destination": "/index.html"
+    },
+    {
       "source": "/xray",
       "destination": "/xray.html"
     }

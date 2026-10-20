@@ -22,6 +22,7 @@ const TOOLS = [
   { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
   { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
   { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
+  { label: "Stats", href: "/stats", note: "our numbers, live" },
 ];
 const TOOL_HREFS = new Set(TOOLS.map((t) => t.href));
 
