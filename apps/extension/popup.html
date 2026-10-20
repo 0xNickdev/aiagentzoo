@@ -8,29 +8,43 @@
 </head>
 <body class="zoo">
   <header>
-    <span class="brand"><img src="icons/32.png" alt="" /><b>ZOOAI</b> X-Ray</span>
-    <span class="live mono"><i></i>live · solana</span>
+    <span class="brand mono"><img src="icons/32.png" alt="" /><b>ZOOAI</b><span class="sep"></span>X-RAY</span>
+    <span class="live mono"><i></i>SOLANA</span>
   </header>
 
   <form id="form">
-    <input id="mint" class="mono" placeholder="token address or link" spellcheck="false" autocomplete="off" />
+    <span class="prompt mono">&gt;</span>
+    <input id="mint" class="mono" placeholder="token or wallet address, or a link" spellcheck="false" autocomplete="off" />
     <button type="submit" id="go">X-ray</button>
   </form>
 
   <section id="out"></section>
   <section id="home">
-    <p class="lead">Open a token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX and the X-Ray shows up on the page. On X, token addresses in posts get their verdict next to them.</p>
+    <section class="frame intro">
+      <h1>See who you're buying from.</h1>
+      <ol class="steps">
+        <li><b class="mono">01</b><span>Open a token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX: the verdict shows up on the page.</span></li>
+        <li><b class="mono">02</b><span>On X, token addresses in posts get a verdict chip.</span></li>
+        <li><b class="mono">03</b><span>Anywhere: select an address, right click, X-Ray this token.</span></li>
+      </ol>
+    </section>
     <div id="watch-wrap" hidden>
-      <p class="label mono">alerts on</p>
+      <div class="sec mono"><span>ALERTS ON</span><span class="rule"></span></div>
       <div id="watch" class="list"></div>
     </div>
     <div id="hist-wrap" hidden>
-      <p class="label mono">recent</p>
+      <div class="sec mono"><span>RECENT</span><span class="rule"></span></div>
       <div id="hist" class="list"></div>
+    </div>
+    <div id="boards" hidden>
+      <div class="sec mono"><span>SERIAL DUMPERS</span><span class="rule"></span><span class="aside">48 hours</span></div>
+      <div id="rug" class="list"></div>
+      <div class="sec mono"><span>BUILDERS</span><span class="rule"></span><span class="aside">48 hours</span></div>
+      <div id="built" class="list"></div>
     </div>
   </section>
 
-  <footer class="mono">read straight from the chain · not financial advice · <a href="https://zooaiagency.com/xray" target="_blank" rel="noopener">zooaiagency.com</a></footer>
+  <footer class="foot mono">read from public Solana data · not financial advice · <a href="https://zooaiagency.com/xray" target="_blank" rel="noopener">zooaiagency.com</a></footer>
   <script src="shared.js"></script>
   <script src="panel.js"></script>
   <script src="popup.js"></script>

@@ -66,6 +66,25 @@ async function xray(addr) {
   });
 }
 
+/** A wallet's page: what it did as a dev, as a first-second buyer and as the one who pays for devs. */
+const wallet = (w) =>
+  cached(`wallet:${w}`, 60_000, async () => {
+    const { status, ok, body } = await getJson(`${NORTH}/v1/wallet/${w}`);
+    if (status === 429) return { error: "Too many lookups this minute. Try again in a minute." };
+    if (!ok) return { error: "This wallet did not launch, snipe or fund a launch the stream saw in the last two days." };
+    return { profile: body };
+  }).then((r) => {
+    if (r.error) cache.delete(`wallet:${w}`);
+    return r;
+  });
+
+/** The worst devs and the builders of the last two days, for the popup's front page. */
+const boards = () =>
+  cached("boards", 300_000, async () => {
+    const [rug, built] = await Promise.all([getJson(`${NORTH}/v1/chain/ruggers?limit=3`), getJson(`${NORTH}/v1/chain/builders?limit=3`)]);
+    return { ruggers: rug.body.ruggers ?? [], builders: built.body.builders ?? [] };
+  }).catch(() => ({ ruggers: [], builders: [] }));
+
 /** The last tokens you looked at, for the popup. */
 async function remember(r) {
   const { history = [] } = await chrome.storage.local.get("history");
@@ -102,6 +121,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === "xray") return xray(msg.mint);
     if (msg.type === "tabMint") return { mint: tabMint.get(msg.tabId) ?? null };
     if (msg.type === "sniper") return cached(`sniper:${msg.wallet}`, 120_000, async () => (await getJson(`${NORTH}/v1/chain/sniper/${msg.wallet}`)).body);
+    if (msg.type === "wallet") return wallet(msg.wallet);
+    if (msg.type === "boards") return boards();
     if (msg.type === "watch") return watch(msg.mint, msg.symbol, msg.on);
     if (msg.type === "watching") {
       const { watched = {} } = await chrome.storage.local.get("watched");

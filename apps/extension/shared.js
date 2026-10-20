@@ -6,7 +6,7 @@ var ZOO = (() => {
     avoid: { label: "AVOID", color: "#ff8a7e", badge: "!!", badgeBg: "#d9584b" },
     caution: { label: "CAUTION", color: "#f2d39b", badge: "!", badgeBg: "#b8913f" },
     pass: { label: "NO RED FLAGS", color: "#9df3b0", badge: "ok", badgeBg: "#3f8f55" },
-    unknown: { label: "NOT ON THE STREAM", color: "#e9e4d8", badge: "", badgeBg: "#444" },
+    unknown: { label: "NOT ON THE STREAM", color: "#d9d8d3", badge: "", badgeBg: "#444" },
   };
   const VENUE = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
   const B58 = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
@@ -15,7 +15,12 @@ var ZOO = (() => {
   const pct = (x) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
   const short = (a) => `${a.slice(0, 4)}…${a.slice(-4)}`;
   const secs = (s) => (s === null || s === undefined ? "-" : s < 120 ? `${s}s` : `${Math.round(s / 60)}m`);
+  const mins = (m) => (m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`);
+  const ago = (t) => {
+    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+    return m < 1 ? "now" : m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  };
   const sym = (s) => String(s || "?").replace(/^\$+/, "");
   const ask = (msg) => new Promise((res) => chrome.runtime.sendMessage(msg, (r) => res(chrome.runtime.lastError ? { error: "The extension restarted. Reload the page." } : r)));
-  return { SITE, BOT, TONE, VENUE, addresses, pct, short, secs, sym, ask };
+  return { SITE, BOT, TONE, VENUE, addresses, pct, short, secs, mins, ago, sym, ask };
 })();

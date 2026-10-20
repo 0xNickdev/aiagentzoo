@@ -19,23 +19,28 @@
     .then((t) => (css.textContent = t + SHELL));
   const SHELL = `
     .wrap { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-    .pill { all:unset; display:flex; align-items:center; gap:9px; max-width:340px; padding:9px 13px 9px 11px; border-radius:999px; cursor:pointer;
-      background:rgba(7,10,9,.94); box-shadow:0 0 0 1px rgba(255,255,255,.12), 0 12px 40px rgba(0,0,0,.55); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-      font:500 12px/1.2 ZooGeist, -apple-system, sans-serif; color:#fff; transition:transform .15s ease; }
-    .pill:hover { transform:translateY(-1px); }
-    .pill .dot { width:8px; height:8px; border-radius:50%; flex:0 0 8px; }
-    .pill .brand { font:500 10px ZooGeistMono, ui-monospace, monospace; letter-spacing:.14em; color:rgba(255,255,255,.5); }
-    .pill .v { letter-spacing:.02em; }
-    .pill .why { font-weight:300; color:rgba(255,255,255,.62); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-    .card { width:372px; max-height:min(76vh,720px); overflow:auto; padding:14px 14px 12px; border-radius:20px;
-      background:radial-gradient(120% 60% at 15% 0%, rgba(255,236,200,.06), transparent 60%), rgba(5,8,7,.97);
-      box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 24px 70px rgba(0,0,0,.6); scrollbar-width:thin; }
-    .bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font:500 10px ZooGeistMono, ui-monospace, monospace; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.5); }
-    .bar b { color:#fff; font-weight:500; }
-    .x { all:unset; cursor:pointer; padding:2px 8px; border-radius:999px; color:rgba(255,255,255,.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); letter-spacing:0; text-transform:none; font-size:11px; }
-    .x:hover { color:#fff; }
+    .wrap .pill { all:unset; display:flex; align-items:center; gap:10px; max-width:360px; height:36px; padding:0 14px 0 12px; border-radius:10px; cursor:pointer; box-sizing:border-box;
+      background:rgba(14,14,16,.94); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 10px 34px rgba(0,0,0,.5); backdrop-filter:blur(12px);
+      font:500 12px/1 ZooGeist, -apple-system, sans-serif; color:#eeede9; transition:box-shadow .15s ease, transform .15s ease; }
+    .wrap .pill:hover { transform:translateY(-1px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), 0 12px 38px rgba(0,0,0,.55); }
+    .wrap .pill .dot { position:relative; width:7px; height:7px; border-radius:50%; flex:0 0 7px; }
+    .wrap .pill .dot::after { content:""; position:absolute; inset:-4px; border-radius:50%; border:1px solid currentColor; opacity:.35; }
+    .wrap .pill .brand { flex:none; white-space:nowrap; font:500 9.5px ZooGeistMono, ui-monospace, monospace; letter-spacing:.18em; color:rgba(238,237,233,.45); }
+    .wrap .pill .bar { width:1px; height:14px; background:rgba(255,255,255,.12); }
+    .wrap .pill .v { flex:none; white-space:nowrap; font:500 11px ZooGeistMono, ui-monospace, monospace; letter-spacing:.1em; }
+    .wrap .pill .why { font-weight:400; color:rgba(238,237,233,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .card { width:380px; max-height:min(78vh,740px); overflow:auto; padding:0 16px 14px; border-radius:12px;
+      background:radial-gradient(90% 30% at 50% 0%, rgba(255,255,255,.035), transparent 70%), rgba(11,11,12,.98);
+      border:1px solid rgba(255,255,255,.1); box-sizing:border-box; box-shadow:0 24px 70px rgba(0,0,0,.6); scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.15) transparent; }
+    .head { position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center; margin:0 -16px 12px; padding:12px 16px 11px; border-radius:11px 11px 0 0; border-bottom:1px solid rgba(255,255,255,.07);
+      background:rgba(11,11,12,.96); font:500 9.5px ZooGeistMono, ui-monospace, monospace; letter-spacing:.18em; color:rgba(238,237,233,.4); }
+    .head b { color:#eeede9; font-weight:500; }
+    .head .tools { display:flex; gap:6px; }
+    .wrap .x { all:unset; cursor:pointer; height:22px; padding:0 8px; display:inline-flex; align-items:center; border-radius:6px; color:rgba(238,237,233,.5); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); letter-spacing:.06em; font-size:10px; }
+    .wrap .x:hover { color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.22); }
     [hidden] { display:none !important; }
   `;
+
   const wrap = h("div", { class: "wrap zoo" });
   root.append(css, wrap);
 
@@ -75,38 +80,53 @@
     drag = null;
   });
 
+  // The card is built once per token, so a wallet opened inside it stays open while you minimize and come back.
+  let card = null;
+  let pill = null;
   function draw() {
     if (!current || !state.verdict) {
       host.remove();
+      card = pill = null;
       return;
     }
     if (!host.isConnected) document.documentElement.append(host);
     const tone = TONE[state.verdict];
-    const pill = h(
+    pill = h(
       "button",
       { class: "pill", title: "ZOOAI X-Ray: click to open, drag to move", onclick: () => (dragged ? (dragged = false) : toggle(!open)) },
-      h("i", { class: "dot", style: { background: tone.color, boxShadow: `0 0 10px ${tone.color}` } }),
+      h("i", { class: "dot", style: { background: tone.color, color: tone.color, boxShadow: `0 0 8px ${tone.color}` } }),
       h("span", { class: "brand" }, "X-RAY"),
+      h("span", { class: "bar" }),
       h("span", { class: "v", style: { color: tone.color } }, tone.label),
       state.why ? h("span", { class: "why" }, state.why) : null,
     );
-    const body = h("div", {});
-    const card = h(
-      "div",
-      { class: "card", hidden: !open },
-      h("div", { class: "bar" }, h("span", {}, h("b", {}, "ZOOAI"), " X-Ray"), h("button", { class: "x", onclick: () => toggle(false) }, "minimize")),
-      body,
-    );
+    if (!card || card.dataset.mint !== current) {
+      const body = h("div", {});
+      card = h(
+        "div",
+        { class: "card", "data-mint": current },
+        h("div", { class: "head" }, h("span", {}, h("b", {}, "ZOOAI"), "  X-RAY"), h("span", { class: "tools" }, h("a", { class: "x", href: `${ZOO.SITE}/xray?mint=${current}`, target: "_blank", rel: "noopener" }, "site ↗"), h("button", { class: "x", onclick: () => toggle(false) }, "minimize"))),
+        body,
+      );
+      card.loaded = false;
+      card.body = body;
+    }
+    card.hidden = !open;
     wrap.replaceChildren(card, pill);
-    if (open) {
-      if (report) ZooPanel.render(body, report, { compact: false });
+    if (open && !card.loaded) {
+      card.loaded = true;
+      const c = card;
+      if (report) ZooPanel.render(c.body, report, { scroller: c });
       else {
-        body.replaceChildren(h("div", { class: "skeleton" }));
+        c.body.replaceChildren(ZooPanel.skeleton());
         ask({ type: "xray", mint: current }).then((r) => {
           if (r?.report) {
             report = r.report;
-            if (open) ZooPanel.render(body, report);
-          } else body.replaceChildren(h("p", { class: "err" }, r?.error || "Something went wrong."));
+            ZooPanel.render(c.body, report, { scroller: c });
+          } else {
+            c.loaded = false;
+            c.body.replaceChildren(h("p", { class: "err" }, r?.error || "Something went wrong."));
+          }
         });
       }
     }

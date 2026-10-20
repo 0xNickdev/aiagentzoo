@@ -1,13 +1,15 @@
-// The report, drawn the same way in the popup and in the panel on a trading page. Built from DOM nodes, never from HTML strings.
+// The report, drawn the same way in the popup and in the panel on a trading page: a token's X-Ray and every wallet's page,
+// one leading to the other with a back step. Built from DOM nodes, never from HTML strings.
 var ZooPanel = (() => {
-  const { TONE, VENUE, pct, short, secs, sym, SITE, BOT, ask } = ZOO;
+  const { TONE, VENUE, pct, short, secs, mins, ago, sym, SITE, BOT, ask } = ZOO;
   const KIND = {
     crew: { color: "#ff8a7e", label: "dev's own wallet" },
     ring: { color: "#f2b56b", label: "sniper ring" },
-    serial: { color: "#c9b48a", label: "serial sniper" },
+    serial: { color: "#d8c49a", label: "serial sniper" },
     bundle: { color: "#9fc3ff", label: "launch block" },
-    early: { color: "#e9e4d8", label: "first 5 s" },
+    early: { color: "#a9a8a3", label: "first 5 s" },
   };
+  const ORDER = ["crew", "ring", "serial", "bundle", "early"];
   const kindOf = (e) => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
 
   function h(tag, props = {}, ...kids) {
@@ -23,83 +25,114 @@ var ZooPanel = (() => {
     return e;
   }
   const NS = "http://www.w3.org/2000/svg";
-  function s(tag, attrs = {}) {
+  function s(tag, attrs = {}, text) {
     const e = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
     return e;
   }
 
-  /** The first five seconds as a small radar: a ring per second, every wallet on the second it bought. */
-  function radar(early, onPick) {
-    const W = 300, H = 220, CX = W / 2, CY = H / 2;
-    const rOf = (sec) => 18 + Math.min(5, Math.max(0, sec)) * 17.5;
-    const order = ["crew", "ring", "serial", "bundle", "early"];
-    const list = early.slice(0, 30);
-    const groups = order.map((k) => list.filter((e) => kindOf(e) === k).sort((a, b) => a.afterSec - b.afterSec));
-    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, class: "radar" });
-    for (let i = 0; i <= 5; i++) svg.append(s("circle", { cx: CX, cy: CY, r: rOf(i), fill: "none", stroke: "#fff", "stroke-opacity": i === 5 ? 0.12 : 0.06, "stroke-dasharray": i === 0 ? "2 4" : "" }));
-    const lbl = s("text", { x: CX + 3, y: CY - rOf(5) - 3, "font-size": 8, fill: "#fff", "fill-opacity": 0.35, class: "mono" });
-    lbl.textContent = "5s";
-    svg.append(lbl);
-    let a0 = -Math.PI / 2 - (groups[0].length / Math.max(1, list.length)) * Math.PI;
-    const nodes = [];
-    groups.forEach((g, gi) => {
-      const span = (g.length / Math.max(1, list.length)) * Math.PI * 2;
-      g.forEach((e, i) => {
-        const a = a0 + span * ((i + 0.5) / g.length);
-        const r = rOf(e.afterSec) + (g.length > 6 ? (i % 2 ? 5 : -3) : 0);
-        nodes.push({ e, k: order[gi], x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r });
-      });
-      a0 += span;
+  const plus = () => ["tl", "tr", "bl", "br"].map((p) => h("i", { class: `plus ${p}`, "aria-hidden": "true" }));
+  const frame = (props, ...kids) => h("section", { ...props, class: `frame ${props.class || ""}` }, ...plus(), ...kids);
+  const sec = (n, title, aside) => h("div", { class: "sec mono" }, h("span", { class: "idx" }, n), h("span", {}, title.toUpperCase()), h("span", { class: "rule" }), aside ? h("span", { class: "aside" }, aside) : null);
+  const ext = (href, ...kids) => h("a", { href, target: "_blank", rel: "noopener noreferrer" }, ...kids);
+  const copy = (btn, text) => {
+    void navigator.clipboard?.writeText(text).then(() => {
+      const was = btn.textContent;
+      btn.textContent = "copied";
+      setTimeout(() => (btn.textContent = was), 1200);
     });
-    for (const n of nodes.filter((n) => n.e.crew)) svg.append(s("line", { x1: CX, y1: CY, x2: n.x, y2: n.y, stroke: KIND.crew.color, "stroke-opacity": 0.3 }));
-    for (const n of nodes) {
-      const c = KIND[n.k].color;
-      const size = Math.min(10, 2.5 + Math.sqrt(Math.max(0, n.e.bought)) * 24);
-      const holds = n.e.bought > 0 ? n.e.held / n.e.bought : 0;
-      const g = s("g", { class: "node" });
-      const t = s("title");
-      t.textContent = `${short(n.e.wallet)} · ${KIND[n.k].label} · in at ${n.e.afterSec}s · took ${pct(n.e.bought)} · holds ${pct(n.e.held)} · ${n.e.exitSec === null ? "still in" : `sold out after ${secs(n.e.exitSec)}`}`;
-      g.append(t, s("circle", { cx: n.x, cy: n.y, r: size + 5, fill: "transparent" }));
-      g.append(holds > 0.05 ? s("circle", { cx: n.x, cy: n.y, r: size, fill: c, "fill-opacity": 0.3 + holds * 0.55, stroke: c }) : s("circle", { cx: n.x, cy: n.y, r: size, fill: c, "fill-opacity": 0.06, stroke: c, "stroke-opacity": 0.8, "stroke-dasharray": "2 2" }));
-      g.addEventListener("click", () => onPick(n.e));
-      svg.append(g);
-    }
-    svg.append(s("circle", { cx: CX, cy: CY, r: 9, fill: "#050807", stroke: "#fff", "stroke-opacity": 0.85 }));
-    const dev = s("text", { x: CX, y: CY + 3, "text-anchor": "middle", "font-size": 7, fill: "#fff", class: "mono" });
-    dev.textContent = "dev";
-    svg.append(dev);
+  };
+
+  /** The first five seconds as a dot matrix: a column per second, a dot per wallet, size is what it took, filled while it still holds. */
+  function timeline(early, onPick) {
+    const list = early.slice(0, 40);
+    const W = 344, cols = 6, cell = 13, perRow = 4;
+    const band = W / cols;
+    const by = Array.from({ length: cols }, () => []);
+    for (const e of list) by[Math.min(cols - 1, Math.max(0, Math.round(e.afterSec)))].push(e);
+    for (const g of by) g.sort((a, b) => ORDER.indexOf(kindOf(a)) - ORDER.indexOf(kindOf(b)) || b.bought - a.bought);
+    const rows = Math.max(3, ...by.map((g) => Math.ceil(g.length / perRow)));
+    const top = 14, base = top + rows * cell + 4, H = base + 20;
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": `${list.length} wallets in the first 5 seconds` });
+    for (let i = 1; i < cols; i++) svg.append(s("line", { x1: i * band, x2: i * band, y1: top - 6, y2: base, stroke: "#fff", "stroke-opacity": 0.06, "stroke-dasharray": "1 3" }));
+    svg.append(s("line", { x1: 0, x2: W, y1: base, y2: base, stroke: "#fff", "stroke-opacity": 0.16 }));
+    by.forEach((g, c) => {
+      const x0 = c * band + (band - perRow * cell) / 2;
+      svg.append(s("line", { x1: c * band + band / 2, x2: c * band + band / 2, y1: base, y2: base + 4, stroke: "#fff", "stroke-opacity": 0.3 }));
+      svg.append(s("text", { x: c * band + band / 2, y: base + 15, "text-anchor": "middle", "font-size": 8.5, fill: "#fff", "fill-opacity": c === 0 ? 0.55 : 0.35, class: "mono", "letter-spacing": ".08em" }, c === 0 ? "LAUNCH" : `+${c}s`));
+      if (g.length) svg.append(s("text", { x: c * band + band / 2, y: base - Math.ceil(g.length / perRow) * cell - 4, "text-anchor": "middle", "font-size": 8, fill: "#fff", "fill-opacity": 0.4, class: "mono" }, String(g.length)));
+      g.forEach((e, i) => {
+        const cx = x0 + (i % perRow) * cell + cell / 2;
+        const cy = base - 2 - Math.floor(i / perRow) * cell - cell / 2;
+        const k = kindOf(e);
+        const color = KIND[k].color;
+        const r = Math.min(5.6, 2.4 + Math.sqrt(Math.max(0, e.bought)) * 15);
+        const holds = e.bought > 0 ? e.held / e.bought : 0;
+        const dot = s("g", { class: "dot", tabindex: 0 });
+        dot.append(s("title", {}, `${short(e.wallet)} · ${KIND[k].label} · in at ${e.afterSec}s · took ${pct(e.bought)} · holds ${pct(e.held)} · ${e.exitSec === null ? "still in" : `sold out after ${secs(e.exitSec)}`}`));
+        dot.append(s("rect", { x: cx - cell / 2, y: cy - cell / 2, width: cell, height: cell, fill: "transparent" }));
+        dot.append(holds > 0.05 ? s("circle", { class: "ring", cx, cy, r, fill: color, "fill-opacity": 0.35 + holds * 0.6, stroke: color }) : s("circle", { class: "ring", cx, cy, r, fill: "none", stroke: color, "stroke-opacity": 0.75 }));
+        dot.addEventListener("click", () => onPick(e.wallet));
+        dot.addEventListener("keydown", (ev) => ev.key === "Enter" && onPick(e.wallet));
+        svg.append(dot);
+      });
+    });
     return svg;
   }
 
-  function fact(k, v, sub, bad) {
-    return h("div", { class: "fact" }, h("span", {}, k), h("b", { class: bad ? "bad" : "" }, v), h("em", {}, sub || " "));
+  function fact(k, v, sub, bad, onclick) {
+    return h(onclick ? "button" : "div", { class: "fact", onclick, title: onclick ? "Open its page" : null }, h("span", {}, k), h("b", { class: bad ? "bad" : "" }, v), h("em", {}, sub || " "));
   }
 
-  /** Who a first-second wallet is, across two days of launches. */
-  async function dossier(box, e, creator) {
-    const k = KIND[kindOf(e)];
-    box.replaceChildren(
-      h("div", { class: "dos-head" }, h("span", { class: "mono", style: { color: k.color } }, k.label.toUpperCase()), h("a", { class: "mono link", href: `https://solscan.io/account/${e.wallet}`, target: "_blank", rel: "noopener" }, `${short(e.wallet)} ↗`)),
-      h("p", { class: "dos-line mono" }, `in at ${e.afterSec}s · took ${pct(e.bought)} · holds ${pct(e.held)} · ${e.exitSec === null ? "still in" : `out after ${secs(e.exitSec)}`}`),
-      h("p", { class: "dos-text" }, "Reading its last two days…"),
-    );
-    const sn = await ask({ type: "sniper", wallet: e.wallet });
-    const text = box.querySelector(".dos-text");
-    if (!sn || sn.error || !sn.snipes48h) {
-      text.textContent = "No other launches from this wallet on the stream in the last two days.";
-      return;
+  // Where you are and where you came from: a token or a wallet, with a step back.
+  function nav(root, opts = {}) {
+    return { root, opts, stack: [], cur: null };
+  }
+  const named = (v) => (v.t === "token" ? (v.report ? `$${sym(v.report.symbol)}` : short(v.id)) : short(v.id));
+  function backBar(ctx) {
+    const prev = ctx.stack[ctx.stack.length - 1];
+    if (prev) return h("button", { class: "back mono", onclick: () => go(ctx, ctx.stack.pop(), false) }, h("span", {}, "←"), h("span", {}, named(prev)));
+    if (ctx.opts.onHome) return h("button", { class: "back mono", onclick: ctx.opts.onHome }, h("span", {}, "←"), h("span", {}, "home"));
+    return null;
+  }
+  const skeleton = () => h("div", { class: "skeleton" }, h("i"), h("i"), h("i"), h("i"));
+
+  async function go(ctx, view, push = true) {
+    if (push && ctx.cur) ctx.stack.push(ctx.cur);
+    if (ctx.stack.length > 20) ctx.stack.shift();
+    ctx.cur = view;
+    (ctx.opts.scroller || document.scrollingElement)?.scrollTo?.(0, 0);
+    const ready = view.t === "token" ? view.report : view.profile;
+    if (!ready) {
+      ctx.root.replaceChildren(...[backBar(ctx), skeleton()].filter(Boolean));
+      const r = view.t === "token" ? await ask({ type: "xray", mint: view.id }) : await ask({ type: "wallet", wallet: view.id });
+      if (ctx.cur !== view) return;
+      if (view.t === "token" && r?.report) view.report = r.report;
+      else if (view.t === "wallet" && r?.profile) view.profile = r.profile;
+      else {
+        ctx.root.replaceChildren(...[backBar(ctx), h("p", { class: "err" }, r?.error || "Something went wrong.")].filter(Boolean));
+        return;
+      }
     }
-    const same = (sn.topCreators || []).find((c) => c.creator === creator);
-    text.textContent = `Bought ${sn.snipes48h} launches in their first seconds over two days, sold out of ${sn.soldOut}, usually ${secs(sn.medianExitSec)} after buying.${same ? ` ${same.launches} of them were this dev's.` : ""}`;
-    if (sn.recent?.length)
-      box.append(
-        h("div", { class: "chips" }, ...sn.recent.slice(0, 6).map((m) => h("a", { class: "chip mono", href: `${SITE}/xray?mint=${m.mint}`, target: "_blank", rel: "noopener" }, `$${sym(m.symbol)}`))),
-      );
+    if (view.t === "token") drawToken(ctx, view.report);
+    else drawWallet(ctx, view.profile);
+  }
+  const openToken = (ctx, mint) => go(ctx, { t: "token", id: mint });
+  const openWallet = (ctx, wallet) => go(ctx, { t: "wallet", id: wallet });
+
+  function meter(verdict) {
+    const at = { avoid: 0, caution: 1, pass: 2 }[verdict];
+    const names = ["AVOID", "CAUTION", "CLEAR"];
+    return [
+      h("div", { class: "meter" }, ...names.map((_, i) => h("span", { class: i === at ? "on" : "" }))),
+      h("div", { class: "meter-l mono" }, ...names.map((n, i) => h("span", { class: i === at ? "on" : "" }, n))),
+    ];
   }
 
-  /** The whole report into `root`. */
-  function render(root, r, { compact = false } = {}) {
+  /** A token's X-Ray. */
+  function drawToken(ctx, r) {
+    const compact = !!ctx.opts.compact;
     const c = r.check;
     const f = c.facts || {};
     const tone = TONE[c.verdict] || TONE.unknown;
@@ -108,39 +141,61 @@ var ZooPanel = (() => {
     const holds = early.reduce((n, e) => n + e.held, 0);
     const rec = r.creatorRecord;
     const fund = r.funding;
-    const meta = [`$${sym(r.symbol)}`, r.name, `${f.ageMin ?? 0} min old`, VENUE[f.venue || "pump.fun"], f.graduated ? "graduated" : "", f.mayhem ? "Mayhem Mode" : ""].filter(Boolean).join(" · ");
-    const dos = h("div", { class: "dossier", hidden: true });
-    const showDos = (e) => {
-      dos.hidden = false;
-      void dossier(dos, e, r.creator);
-    };
-    const reasons = h("ul", { class: "reasons" }, ...c.reasons.slice(0, compact ? 3 : 5).map((x) => h("li", { style: { "--c": tone.color } }, x)));
+    const live = c.stream?.live !== false;
+    const caBtn = h("button", { class: "ca mono", title: "Copy the token address", onclick: () => copy(caBtn, r.mint) }, `${short(r.mint)} ⧉`);
+    const track = h("p", { class: "track", hidden: true });
+    const verdict = frame(
+      { class: "verdict-card", style: { "--tone": tone.color } },
+      h("div", { class: "v-top mono" }, h("span", {}, h("span", { style: { opacity: 0.6 } }, "01  "), "VERDICT"), h("span", { class: `live ${live ? "" : "off"}` }, h("i"), live ? "LIVE READ" : "STREAM BEHIND")),
+      h("p", { class: "verdict" }, tone.label),
+      ...meter(c.verdict),
+      c.reasons?.length ? h("ol", { class: "reasons" }, ...c.reasons.slice(0, compact ? 3 : 5).map((x, i) => h("li", {}, h("b", {}, String(i + 1).padStart(2, "0")), h("span", {}, x)))) : null,
+      c.notes?.length && !compact ? h("p", { class: "notes" }, c.notes.join(" · ")) : null,
+      track,
+    );
+    // A dev with a clean track record gets a green line, read from its wallet page.
+    if (r.creator)
+      void ask({ type: "wallet", wallet: r.creator }).then((w) => {
+        const b = w?.profile?.dev?.builder;
+        if (!b?.isBuilder || !track.isConnected) return;
+        track.textContent = `Track record: ${b.grew} of this dev's ${b.launches} launches grew and still hold liquidity, and it has not dumped them.`;
+        track.hidden = false;
+      });
     const facts = h(
       "div",
       { class: "facts" },
-      fact("the dev", rec ? `${rec.dumped} of ${rec.launches48h} dumped` : "first launch", f.creatorSoldPct == null ? "never bought their own" : `sold ${f.creatorSoldPct}% of their bag`, (rec?.dumped ?? 0) >= 2 || (f.creatorSoldPct ?? 0) >= 50),
-      fact("first 5 seconds", early.length ? `${early.length} wallets` : "nobody", early.length ? `took ${pct(took)} · hold ${pct(holds)}` : "no one bought before it was visible", took >= 0.25),
-      fact("dev's own wallets", String(f.creatorCrew ?? 0), `sniper ring ${f.ringWallets ?? 0} · serial ${f.serialSnipers ?? 0}`, (f.creatorCrew ?? 0) >= 2),
+      fact("the dev", rec ? `${rec.dumped} of ${rec.launches48h} dumped` : "first launch", f.creatorSoldPct == null ? "never bought their own" : `sold ${f.creatorSoldPct}% of their bag`, (rec?.dumped ?? 0) >= 2 || (f.creatorSoldPct ?? 0) >= 50, r.creator ? () => openWallet(ctx, r.creator) : null),
       fact(
         "who paid the dev",
         !fund ? "tracing…" : !fund.funder ? "no transfer found" : fund.funderIsHot ? "an exchange" : fund.siblings.length ? `${fund.siblings.length} other devs` : "only this dev",
-        fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? `${fund.siblingDumped48h} dumps in 48h` : short(fund.funder)) : "",
+        fund?.funder ? (fund.funderIsHot ? "funds everyone, ties no one" : fund.siblings.length ? `${fund.siblingDumped48h} dumps in 48h` : short(fund.funder)) : "",
         !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
+        fund?.funder ? () => openWallet(ctx, fund.funder) : null,
       ),
+      fact("dev's own wallets", String(f.creatorCrew ?? 0), "keep sniping this dev", (f.creatorCrew ?? 0) >= 2),
+      fact("rings · serial", `${f.ringWallets ?? 0} · ${f.serialSnipers ?? 0}`, "snipers in the first seconds", (f.ringWallets ?? 0) >= 3),
     );
+    const kinds = ORDER.map((k) => [k, early.filter((e) => kindOf(e) === k).length]).filter(([, n]) => n);
+    const rowsShown = compact ? 5 : 8;
     const five = early.length
-      ? h(
-          "div",
-          { class: "five" },
-          h("div", { class: "five-head" }, h("span", {}, "The first 5 seconds"), h("span", { class: "mono dim" }, "tap a wallet")),
-          radar(early, showDos),
+      ? [
+          sec("03", "The first 5 seconds", `${early.length} wallets`),
+          timeline(early, (w) => openWallet(ctx, w)),
           h(
             "div",
-            { class: "wallets" },
-            ...early.slice(0, compact ? 5 : 8).map((e) =>
+            { class: "took" },
+            h("div", { class: "took-bar" }, h("i", { class: "held", style: { width: `${Math.min(100, holds * 100)}%` } }), h("i", { class: "sold", style: { left: `${Math.min(100, holds * 100)}%`, width: `${Math.max(0, Math.min(100, (took - holds) * 100))}%` } })),
+            h("div", { class: "took-l mono" }, h("span", {}, "took ", h("b", { class: took >= 0.25 ? "bad" : "" }, pct(took)), " of supply"), h("span", {}, "still hold ", h("b", {}, pct(holds)))),
+          ),
+          h("div", { class: "legend mono" }, ...kinds.map(([k, n]) => h("span", {}, h("i", { style: { background: KIND[k].color } }), `${KIND[k].label} · ${n}`)), h("span", {}, h("i", { class: "hollow" }), "sold out")),
+          h(
+            "div",
+            { class: "table mono" },
+            h("div", { class: "thead" }, h("span"), h("span", {}, "WALLET"), h("span", {}, "WHO"), h("span", { class: "n" }, "TOOK"), h("span", { class: "n" }, "OUT")),
+            ...early.slice(0, rowsShown).map((e) =>
               h(
                 "button",
-                { class: "wallet mono", onclick: () => showDos(e) },
+                { class: "row", onclick: () => openWallet(ctx, e.wallet), title: "Open its page" },
                 h("i", { style: { background: KIND[kindOf(e)].color } }),
                 h("span", { class: "w" }, short(e.wallet)),
                 h("span", { class: "k", style: { color: KIND[kindOf(e)].color } }, KIND[kindOf(e)].label),
@@ -149,39 +204,155 @@ var ZooPanel = (() => {
               ),
             ),
           ),
-          dos,
-        )
-      : null;
+          early.length > rowsShown ? h("a", { class: "more mono", href: `${SITE}/xray?mint=${r.mint}`, target: "_blank", rel: "noopener" }, `+${early.length - rowsShown} more on the full X-Ray ↗`) : null,
+        ]
+      : [sec("03", "The first 5 seconds"), h("p", { class: "p dim" }, "Nobody bought before it was visible.")];
     const watchBtn = h("button", { class: "btn" }, "Alert me");
-    ask({ type: "watching" }).then((w) => {
-      const on = !!w?.watched?.[r.mint];
+    const setWatch = (on) => {
       watchBtn.textContent = on ? "Alerts on ✓" : "Alert me";
       watchBtn.dataset.on = on ? "1" : "";
-    });
+    };
+    ask({ type: "watching" }).then((w) => setWatch(!!w?.watched?.[r.mint]));
     watchBtn.addEventListener("click", async () => {
       const on = !watchBtn.dataset.on;
       await ask({ type: "watch", mint: r.mint, symbol: r.symbol, on });
-      watchBtn.dataset.on = on ? "1" : "";
-      watchBtn.textContent = on ? "Alerts on ✓" : "Alert me";
+      setWatch(on);
     });
-    root.replaceChildren(
+    const age = f.ageMin === undefined ? null : `${mins(f.ageMin)} old`;
+    ctx.root.replaceChildren(
       ...[
-      h("p", { class: "meta mono" }, meta),
-      h("p", { class: "verdict", style: { color: tone.color } }, tone.label),
-      reasons,
-      c.notes?.length && !compact ? h("p", { class: "notes" }, c.notes.join(" · ")) : null,
-      facts,
-      five,
-      h(
-        "div",
-        { class: "actions" },
-        h("a", { class: "btn primary", href: `${SITE}/xray?mint=${r.mint}`, target: "_blank", rel: "noopener" }, "Full X-Ray"),
-        watchBtn,
-        h("a", { class: "btn", href: `${BOT}?start=w-${r.mint}`, target: "_blank", rel: "noopener", title: "Alerts in the Telegram bot" }, "Telegram"),
-      ),
+        backBar(ctx),
+        h("div", { class: "tok" }, h("div", { class: "tok-l" }, h("p", { class: "sym" }, `$${sym(r.symbol)}`), h("p", { class: "name" }, r.name)), caBtn),
+        h("p", { class: "sub mono" }, [age, VENUE[f.venue || "pump.fun"], f.graduated ? "graduated" : "", f.mayhem ? "Mayhem Mode" : ""].filter(Boolean).join(" · ")),
+        verdict,
+        sec("02", "Who is behind it", "tap to open"),
+        facts,
+        ...five,
+        h(
+          "div",
+          { class: "actions" },
+          h("a", { class: "btn primary", href: `${SITE}/xray?mint=${r.mint}`, target: "_blank", rel: "noopener" }, "Full X-Ray ↗"),
+          watchBtn,
+          h("a", { class: "btn", href: `${BOT}?start=w-${r.mint}`, target: "_blank", rel: "noopener", title: "Alerts in the Telegram bot" }, "Telegram"),
+        ),
+        h("p", { class: "foot mono" }, "read from public Solana data · not financial advice"),
       ].filter(Boolean),
     );
   }
 
-  return { render, h };
+  /** One sentence for the whole wallet, from the facts, no adjectives the facts do not carry. Same as the site. */
+  function lead(p) {
+    const d = p.dev;
+    if (d && d.builder?.isBuilder) return { text: `A track record: ${d.builder.grew} of its ${d.builder.launches} launches grew and still hold liquidity, and it has not dumped them.`, good: true };
+    if (d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6)) return { text: `A serial dumper: launched ${d.launches48h} tokens in two days and dumped ${d.dumped} of them, usually ${d.medianDumpMin ?? 0} min after launch.`, bad: true };
+    if (p.funded.creators.length >= 2 && !p.funded.hot) {
+      const dumps = p.funded.creators.reduce((n, c) => n + c.dumped, 0);
+      return { text: `Pays for other devs: funded ${p.funded.creators.length} launch wallets the zoo traced, with ${dumps} dumps between them in two days.`, bad: dumps >= 3 };
+    }
+    if (p.sniper && p.sniper.snipes48h >= 10) return { text: `A sniper: bought ${p.sniper.snipes48h} launches in their first seconds in two days and sold out of ${p.sniper.soldOut}, usually ${secs(p.sniper.medianExitSec)} after buying.`, bad: true };
+    if (d && d.graduated >= 1 && d.dumped === 0) return { text: "A dev whose launches graduated and who has not dumped one in two days." };
+    if (d) return { text: `Launched ${d.launches48h === 1 ? "1 token" : `${d.launches48h} tokens`} in two days, dumped ${d.dumped}.`, bad: d.dumped >= 2 };
+    if (p.funded.hot) return { text: "An exchange or a router: it funds everyone, so it ties no one together." };
+    return { text: `Seen in the first seconds of ${p.sniper?.snipes48h ?? 0} launches in two days.` };
+  }
+
+  const addr = (ctx, a) => h("button", { class: "addr mono", onclick: () => openWallet(ctx, a), title: a }, short(a));
+
+  /** A wallet's page: as a dev, as a first-second buyer and as the one who pays for devs. Every address leads on. */
+  function drawWallet(ctx, p) {
+    const d = p.dev;
+    const l = lead(p);
+    const roles = [d && "DEV", p.sniper && "FIRST-SECOND BUYER", p.funded.creators.length > 0 && !p.funded.hot && "PAYS FOR DEVS", p.funded.hot && "EXCHANGE OR ROUTER"].filter(Boolean);
+    const copyBtn = h("button", { onclick: () => copy(copyBtn, p.wallet) }, "copy");
+    let n = 0;
+    const no = () => String(++n).padStart(2, "0");
+    const parts = [
+      backBar(ctx),
+      frame(
+        { class: "wallet-card" },
+        h("div", { class: "w-top mono" }, h("span", {}, ["WALLET", ...roles].join(" · ")), h("span", { style: { display: "flex", gap: "10px" } }, copyBtn, ext(`https://solscan.io/account/${p.wallet}`, "solscan ↗"))),
+        h("p", { class: "w-addr mono" }, p.wallet),
+        h("p", { class: `w-lead ${l.good ? "good" : l.bad ? "bad" : ""}` }, l.text),
+      ),
+    ];
+    if (d) {
+      parts.push(
+        sec(no(), "As a dev", "48 hours"),
+        h(
+          "div",
+          { class: "facts three" },
+          fact("launched", String(d.launches48h), `${d.launches24h} in 24h`, d.launches48h >= 5),
+          fact("dumped", String(d.dumped), d.medianDumpMin === null ? "" : `usually after ${d.medianDumpMin} min`, d.dumped >= 2),
+          fact("graduated", String(d.graduated), d.builder?.aliveGraduated ? `${d.builder.aliveGraduated} still live` : ""),
+        ),
+        h(
+          "div",
+          { class: "list", style: { marginTop: "6px" } },
+          ...d.launches.slice(0, 8).map((x) =>
+            h(
+              "button",
+              { class: "li", onclick: () => openToken(ctx, x.mint), title: "Open its X-Ray" },
+              h("span", { class: "l" }, `$${sym(x.symbol)} `, h("small", { class: "mono" }, `${ago(x.createdAt)} · ${x.buyers} buyers`)),
+              h("span", { class: `r mono ${x.dumpedAfterMin !== null ? "bad" : x.graduated ? "good" : ""}` }, x.dumpedAfterMin !== null ? `dumped after ${x.dumpedAfterMin} min` : x.graduated ? "graduated" : "dev holding"),
+            ),
+          ),
+        ),
+        d.launches.length > 8 ? h("p", { class: "p dim", style: { marginTop: "6px" } }, `and ${d.launches.length - 8} more in two days`) : null,
+        sec(no(), "Who paid for it"),
+        !p.funding
+          ? h("p", { class: "p dim" }, "Not traced yet. It is queued: open this again in a minute.")
+          : !p.funding.funder
+            ? h("p", { class: "p dim" }, "No funding transfer in the dev's recent history.")
+            : h(
+                "div",
+                {},
+                h("div", { class: "li" }, h("span", { class: "l" }, "funded by"), h("span", { class: "r" }, addr(ctx, p.funding.funder))),
+                h("p", { class: "p dim", style: { marginTop: "6px" } }, p.funding.funderIsHot ? "An exchange or a router: it funds everyone, so it ties no one together." : p.funding.siblings.length ? `It paid for ${p.funding.siblings.length} other devs too, with ${p.funding.siblingDumped48h} dumps between them in two days.` : "It paid for no other dev the zoo traced."),
+              ),
+      );
+      if (d.regulars.length)
+        parts.push(
+          sec(no(), "Keeps buying its launches", "first 5 s"),
+          h("p", { class: "p dim" }, "A wallet in the first seconds of most of one dev's launches is usually that dev's own."),
+          h("div", { class: "list" }, ...d.regulars.slice(0, 6).map((x) => h("div", { class: "li" }, h("span", { class: "l" }, addr(ctx, x.wallet)), h("span", { class: `r mono ${x.launches >= Math.max(2, d.launches48h * 0.5) ? "bad" : ""}` }, `${x.launches} of its ${d.launches48h} launches`)))),
+        );
+      if (p.accounts?.length)
+        parts.push(
+          sec(no(), "Accounts its tokens link to"),
+          h("p", { class: "p dim" }, "Typed in by whoever launched the token: a lead to who is behind it, not proof."),
+          h("div", { class: "list" }, ...p.accounts.slice(0, 5).map((a) => h("a", { class: "li", href: a.social.url, target: "_blank", rel: "noopener noreferrer nofollow" }, h("span", { class: "l" }, `${a.social.label} ↗`), h("span", { class: `r mono ${a.fastDumps >= 2 ? "bad" : ""}` }, `${a.launches} launches · ${a.fastDumps} fast dumps`)))),
+        );
+    }
+    if (p.sniper)
+      parts.push(
+        sec(no(), "As a first-second buyer", "48 hours"),
+        h("div", { class: "facts three" }, fact("sniped", String(p.sniper.snipes48h), "launches", p.sniper.snipes48h >= 10), fact("sold out of", String(p.sniper.soldOut), ""), fact("out after", secs(p.sniper.medianExitSec), "usually")),
+        p.sniper.topCreators.length ? h("div", { class: "list", style: { marginTop: "6px" } }, ...p.sniper.topCreators.slice(0, 5).map((x) => h("div", { class: "li" }, h("span", { class: "l" }, "dev ", addr(ctx, x.creator)), h("span", { class: "r mono" }, x.launches === 1 ? "1 launch" : `${x.launches} launches`)))) : null,
+        p.sniper.recent.length ? h("div", { class: "chips" }, ...p.sniper.recent.slice(0, 8).map((m) => h("button", { class: "chip mono", onclick: () => openToken(ctx, m.mint), title: "Open its X-Ray" }, `$${sym(m.symbol)}`))) : null,
+      );
+    if (p.funded.creators.length && !p.funded.hot)
+      parts.push(
+        sec(no(), "Devs it paid for"),
+        h("div", { class: "list" }, ...p.funded.creators.slice(0, 8).map((x) => h("div", { class: "li" }, h("span", { class: "l" }, addr(ctx, x.wallet)), h("span", { class: `r mono ${x.dumped >= 1 ? "bad" : ""}` }, `${x.launches48h} launched · ${x.dumped} dumped`)))),
+      );
+    parts.push(
+      h("div", { class: "actions", style: { gridTemplateColumns: "1fr 1fr" } }, h("a", { class: "btn primary", href: `${SITE}/xray?wallet=${p.wallet}`, target: "_blank", rel: "noopener" }, "Full page ↗"), h("a", { class: "btn", href: `https://solscan.io/account/${p.wallet}`, target: "_blank", rel: "noopener" }, "Solscan ↗")),
+      h("p", { class: "foot mono" }, "read from public Solana data · not financial advice"),
+    );
+    ctx.root.replaceChildren(...parts.filter(Boolean));
+  }
+
+  /** The whole report into `root`. Returns the navigator so the caller can open wallets in the same place. */
+  function render(root, report, opts = {}) {
+    const ctx = nav(root, opts);
+    void go(ctx, { t: "token", id: report.mint, report });
+    return ctx;
+  }
+  function wallet(root, w, opts = {}) {
+    const ctx = nav(root, opts);
+    void go(ctx, { t: "wallet", id: w });
+    return ctx;
+  }
+
+  return { render, wallet, h, skeleton, plus };
 })();

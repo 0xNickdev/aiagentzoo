@@ -42,12 +42,16 @@
     a.title = `ZOOAI X-Ray: ${t.label}${v.why ? ` · ${v.why}` : ""}`;
     a.dataset.zooChip = "1";
     a.addEventListener("click", (e) => e.stopPropagation());
-    a.style.cssText = `display:inline-flex;align-items:center;gap:5px;margin:0 2px 0 6px;padding:1px 8px 1px 6px;border-radius:999px;vertical-align:1px;
-      font:500 11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;text-decoration:none;white-space:nowrap;
-      color:${t.color};background:rgba(5,8,7,.92);box-shadow:inset 0 0 0 1px ${t.color}55;`;
+    // Small and square-ish like the labels other X tools draw, so it sits next to them without shouting.
+    a.style.cssText = `display:inline-flex;align-items:center;gap:6px;height:18px;margin:0 2px 0 6px;padding:0 7px 0 6px;border-radius:5px;vertical-align:-3px;
+      font:500 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;text-decoration:none;white-space:nowrap;
+      color:${t.color};background:#121214;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);`;
     const dot = document.createElement("span");
-    dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${t.color};box-shadow:0 0 6px ${t.color}`;
-    a.append(dot, document.createTextNode(`X-Ray · ${t.label}`));
+    dot.style.cssText = `width:5px;height:5px;border-radius:50%;background:${t.color};box-shadow:0 0 5px ${t.color}`;
+    const brand = document.createElement("span");
+    brand.style.cssText = "color:rgba(238,237,233,.45);letter-spacing:.14em";
+    brand.textContent = "X-RAY";
+    a.append(dot, brand, document.createTextNode(t.label));
     return a;
   }
 
