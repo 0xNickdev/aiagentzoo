@@ -45,6 +45,18 @@ const onCurve = (address: string) => {
 
 export const holdersEnabled = () => Boolean(RPC());
 
+/** The SOL a PumpSwap pool holds right now, from its wrapped-SOL vault: the tape only knows the last trade it saw. */
+export async function poolSolOf(pool: string, f: typeof fetch = fetch): Promise<number | null> {
+  if (!RPC()) return null;
+  const r = await rpc<{ value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } } } }> }>(
+    "getTokenAccountsByOwner",
+    [pool, { mint: "So11111111111111111111111111111111111111112" }, { encoding: "jsonParsed" }],
+    f,
+  );
+  if (!r?.value?.length) return null;
+  return r.value.reduce((n, a) => n + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
+}
+
 export async function holderReport(mint: string, f: typeof fetch = fetch, now = Date.now()): Promise<HolderReport | null> {
   if (!RPC()) return null;
   const hit = cache.get(mint);

@@ -768,6 +768,23 @@ export class PumpTape {
     t.bundlePeak = Math.max(t.bundlePeak ?? 0, t.bundleHeld ?? 0);
   }
 
+  /** A token's main pool, to read its balance from the chain. */
+  poolOf(mint: string): string | null {
+    return this.tokens.get(mint)?.pool ?? null;
+  }
+
+  /** What the pool holds, read from the chain: replaces the last trade's reading, and a drain shows up at once. */
+  notePoolSol(mint: string, sol: number, now = Date.now()): void {
+    const t = this.tokens.get(mint);
+    if (!t) return;
+    t.poolSol = sol;
+    t.poolPeak = Math.max(t.poolPeak ?? 0, sol);
+    if (!t.drained && t.poolPeak >= DRAIN_MIN_PEAK && sol < t.poolPeak * DRAIN_SHARE) {
+      t.drained = true;
+      this.emit(now, "drained", t, `pool drained to ${sol.toFixed(1)} SOL after graduation`);
+    }
+  }
+
   /** The PumpSwap pools the tape follows, for the stream's pool filter. Sorted, so an unchanged set reads the same. */
   poolAddresses(): string[] {
     return [...this.pools.keys()].sort();

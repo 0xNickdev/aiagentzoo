@@ -14,7 +14,7 @@ import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
-import { holderReport, holdersEnabled } from "./chain/holders.ts";
+import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { checkToken, RateGate } from "./chain/check.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
@@ -412,13 +412,20 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         void usage.bump(deep, caller);
         const mint = (checkOf ?? xrayOf)![1]!;
         const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
-        const found = tape.token(mint);
+        let found = tape.token(mint);
         const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
-        const [holders] = await Promise.all([
+        const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
+        const [holders, , poolSol] = await Promise.all([
           deep && found && holdersEnabled() ? within(holderReport(mint)) : Promise.resolve(undefined),
           deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
+          // The pool's SOL as it is now, not as the last trade the tape saw left it.
+          pool ? within(poolSolOf(pool)) : Promise.resolve(null),
         ]);
+        if (poolSol !== null && poolSol !== undefined) {
+          tape.notePoolSol(mint, poolSol);
+          found = tape.token(mint);
+        }
         let funding: LineageView | null | undefined;
         if (found && fundersEnabled()) {
           funding = lineage.view(found.creator);
