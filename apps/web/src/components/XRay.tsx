@@ -454,6 +454,9 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
   );
 }
 
+type Tab = "overview" | "dev" | "five" | "bundles" | "holders" | "wallets";
+
+/** A report laid out like a terminal: the verdict and a menu of what decides it on the left, one section at a time on the right. */
 function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
   const c = r.check;
   const f = c.facts;
@@ -462,12 +465,23 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const took = early.reduce((n, e) => n + e.bought, 0);
   const holds = early.reduce((n, e) => n + e.held, 0);
   const fund = r.funding;
+  const rec = r.creatorRecord;
+  const [tab, setTab] = useState<Tab>("overview");
+  const [all, setAll] = useState(false);
   const [sel, setSelState] = useState<string | null>(null);
   // Where the wallet was picked: on the map its dossier opens beside the map, in the list it opens under its row.
   const [from, setFrom] = useState<"map" | "list">("map");
-  useEffect(() => setSelState(null), [r.mint]);
+  useEffect(() => {
+    setSelState(null);
+    setTab("overview");
+    setAll(false);
+  }, [r.mint]);
   const selected = early.find((e) => e.wallet === sel) ?? null;
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const open = (x: Tab) => {
+    setTab(x);
+    if (window.innerWidth < 1024) document.getElementById("xr-main")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const go = (id: string) => open(({ "xr-creator": "dev", "xr-five": "five", "xr-funder": "dev", "xr-holders": "holders" } as Record<string, Tab>)[id] ?? "overview");
   const setSel = (w: string | null) => {
     setFrom("list");
     setSelState(w);
@@ -477,106 +491,109 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
     setSelState(w);
   };
   const pool = f?.graduated ? (f.poolSol !== undefined && f.poolSol !== null ? t("graduated · pool {s} SOL", { s: f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol) }) : t("graduated")) : null;
+  const devBad = (rec?.dumped ?? 0) >= 2 || (f?.creatorSoldPct ?? 0) >= 50 || (!!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3);
+  const fiveBad = took >= 0.25 || (f?.creatorCrew ?? 0) >= 2 || (f?.ringWallets ?? 0) >= 3 || (f?.bundleSharePct ?? 0) >= 15;
+  const bundleBad = (((f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30) || (f?.churnPct ?? 0) >= 30) && !f?.mayhem;
+  const holdBad = (c.holders?.top10Pct ?? 0) >= 50 || (c.holders?.topWalletPct ?? 0) >= 20;
+  const MENU: Array<{ id: Tab; k: string; sub: string; bad?: boolean }> = [
+    { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : t("no red flags") },
+    { id: "dev", k: "The dev", sub: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
+    { id: "five", k: "First 5 seconds", sub: early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
+    { id: "bundles", k: "Bundles & volume", sub: f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
+    { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
+    ...(early.length ? [{ id: "wallets" as Tab, k: "All wallets", sub: t("{n} in the first 5 s", { n: early.length }) }] : []),
+  ];
+  const head = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : t("No red flags on the chain so far.");
+  const shown = all ? c.reasons : c.reasons.slice(0, 3);
+  const Title = ({ k, note }: { k: string; note?: string }) => (
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      <h3 className="font-display text-2xl text-white/90">{t(k)}</h3>
+      {note && <span className="font-mono text-[10.5px] text-white/40">{t(note)}</span>}
+    </div>
+  );
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-10 sm:px-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div className="liquid-glass rounded-3xl p-6 sm:p-8">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <p className="font-mono text-[11px] text-white/45">
-                ${r.symbol.replace(/^\$/, "")} · {r.name} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
-                {` · ${VENUE[f?.venue ?? "pump.fun"]}`}
-                {pool ? ` · ${pool}` : ""}
-                {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
-              </p>
-              <p className="font-display mt-2 text-4xl sm:text-5xl" style={{ color: tone.color }}>
-                {t(tone.label)}
-              </p>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] text-white/50">
-              <span className="font-mono">
-                {t("dev")} <Addr a={r.creator} />
-              </span>
-              <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="font-mono underline decoration-white/20 underline-offset-4 hover:text-white">
-                {t("token")} {short(r.mint)} ↗
-              </a>
-            </div>
-          </div>
-          {c.reasons.length > 0 && (
-            <ul className="mt-5 space-y-2">
-              {c.reasons.map((x) => (
-                <li key={x} className="flex gap-3 text-[14px] font-light leading-snug text-white/80">
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color }} />
-                  {tChain(x)}
-                </li>
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[290px_minmax(0,1fr)]">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <div className="liquid-glass rounded-3xl p-5">
+            <p className="font-mono text-[11px] text-white/45">
+              ${r.symbol.replace(/^\$/, "")} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
+            </p>
+            <p className="mt-0.5 truncate text-[13px] text-white/60">{r.name}</p>
+            <p className="font-display mt-3 text-4xl leading-none" style={{ color: tone.color }}>
+              {t(tone.label)}
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-1">
+              {(["avoid", "caution", "pass"] as const).map((v) => (
+                <span key={v} className="h-[3px] rounded-full" style={{ background: c.verdict === v ? tone.color : "rgba(255,255,255,.08)" }} />
               ))}
-            </ul>
-          )}
-          {c.notes.length > 0 && <p className="mt-4 text-[12px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
-          <KeyFacts r={r} go={go} />
-          <p className="font-mono mt-3 text-[10.5px] leading-relaxed text-white/35">{t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
-        </div>
-
-        <ShareBar r={r} />
-
-        {early.length > 0 ? (
-          <div id="xr-five" className="liquid-glass grid gap-6 rounded-3xl p-5 sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-            <div>
-              <div className="mb-2 flex items-baseline justify-between gap-3">
-                <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
-                <span className="font-mono text-[10.5px] text-white/40">{t("before anyone could see it")}</span>
-              </div>
-              <XRayRadar early={early} selected={sel} onSelect={choose} />
             </div>
-            <div className="border-white/[0.07] lg:border-l lg:pl-6">
-              <AnimatePresence mode="wait">
-                {selected && from === "map" ? (
-                  <Dossier key={selected.wallet} e={selected} creator={r.creator} onPick={onPick} onClose={() => setSel(null)} />
-                ) : (
-                  <motion.div key="sum" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <h3 className="font-display text-xl text-white/90">{t("Insiders")}</h3>
-                    <div className="mt-3">
-                      <Stat k="wallets in the first 5 seconds" v={String(early.length)} />
-                      <Stat k="supply they took" v={pct(took)} bad={took >= 0.25} />
-                      <Stat k="supply they still hold" v={pct(holds)} bad={holds >= 0.25} />
-                      <Stat k="the creator's own crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
-                      <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
-                      <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
-                    </div>
-                    <p className="font-mono mt-5 text-[11px] text-[#f2d39b]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
-                    <h3 className="font-display mt-6 text-lg text-white/85">{t("Volume")}</h3>
-                    <div className="mt-2">
-                      <Stat k="buyers" v={String(f?.buyers ?? 0)} />
-                      <Stat k="buys · sells" v={`${f?.buys ?? 0} · ${f?.sells ?? 0}`} />
-                      <Stat k="churned volume (at least)" v={f?.churnPct === null || f?.churnPct === undefined ? "-" : `${f.churnPct}%`} bad={(f?.churnPct ?? 0) >= 30 && !f?.mayhem} />
-                      <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
-                      <Stat k="bought in bundles (4+ wallets in one block)" v={`${f?.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f?.bundlesSince ? ` · ${t("counted since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`} bad={(f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30 && !f?.mayhem} />
-                      {!!f?.bundlers && <Stat k="bundlers hold now · at most" v={`${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`} bad={(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem} />}
-                      {!!f?.bundledSol && <Stat k="SOL through bundles" v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        ) : (
-          <div id="xr-five" className="liquid-glass flex flex-wrap items-center justify-between gap-4 rounded-3xl px-6 py-5">
-            <div>
-              <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
-              <p className="mt-1 text-[13px] font-light text-white/55">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
-            </div>
-            <p className="font-mono text-[12px] text-white/55">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
-            {!!f?.bundlers && (
-              <p className={`font-mono w-full text-[12px] ${(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem ? "text-[#ff8a7e]" : "text-white/55"}`}>
-                {t("later bought in bundles: {n} wallets, held up to {p}% together, {h}% now", { n: f.bundlers, p: f.bundlersPeakPct ?? 0, h: f.bundlersHeldPct ?? 0 })}
+            <p className="font-mono mt-2 text-[10.5px] leading-relaxed text-white/40">
+              {VENUE[f?.venue ?? "pump.fun"]}
+              {pool ? ` · ${pool}` : ""}
+              {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
+            </p>
+            <nav className="-mx-5 mt-4 flex gap-1 overflow-x-auto border-t border-white/[0.07] px-5 pt-3 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
+              {MENU.map((m) => (
+                <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left transition lg:w-full ${tab === m.id ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"}`}>
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${m.bad ? "bg-[#ff8a7e] shadow-[0_0_8px_#ff8a7e]" : "bg-white/25"}`} />
+                  <span className="min-w-0">
+                    <span className={`block whitespace-nowrap text-[13px] ${tab === m.id ? "text-white" : "text-white/75"}`}>{t(m.k)}</span>
+                    <span className={`font-mono hidden truncate text-[10.5px] lg:block ${m.bad ? "text-[#ff8a7e]/80" : "text-white/40"}`}>{m.sub}</span>
+                  </span>
+                </button>
+              ))}
+            </nav>
+            <div className="mt-4 hidden space-y-1.5 border-t border-white/[0.07] pt-4 text-[11px] lg:block">
+              <p className="font-mono flex justify-between text-white/45">
+                {t("dev")} <Addr a={r.creator} />
               </p>
-            )}
+              <p className="font-mono flex justify-between text-white/45">
+                {t("token")}
+                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                  {short(r.mint)} ↗
+                </a>
+              </p>
+            </div>
           </div>
-        )}
+        </aside>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div id="xr-creator">
-            <Panel title="The creator" note="last 48 hours">
+        <div id="xr-main" className="min-w-0 scroll-mt-24 space-y-4">
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
+              {tab === "overview" && (
+                <>
+                  <div className="liquid-glass rounded-3xl p-6 sm:p-8">
+                    <p className="font-display text-2xl leading-snug text-white/90 sm:text-[28px]">{head}</p>
+                    {c.reasons.length > 1 && (
+                      <ul className="mt-5 divide-y divide-white/[0.06] border-y border-white/[0.06]">
+                        {shown.map((x, i) => (
+                          <li key={x} className="flex gap-3 py-2.5 text-[14px] font-light leading-snug text-white/75">
+                            <span className="font-mono w-6 shrink-0 text-[11px] leading-6" style={{ color: tone.color }}>
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            {tChain(x)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {c.reasons.length > 3 && (
+                      <button type="button" onClick={() => setAll(!all)} className="font-mono mt-3 text-[11.5px] text-white/50 hover:text-white">
+                        {all ? t("show fewer") : t("+ {n} more reasons", { n: c.reasons.length - 3 })}
+                      </button>
+                    )}
+                    {c.notes.length > 0 && <p className="mt-4 text-[12px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
+                    <KeyFacts r={r} go={go} />
+                    <p className="font-mono mt-3 text-[10.5px] leading-relaxed text-white/35">{t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
+                  </div>
+                  <ShareBar r={r} />
+                </>
+              )}
+
+              {tab === "dev" && (
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div id="xr-creator">
+                    <Panel title="The creator" note="last 48 hours">
               <Stat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
               <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
               <Stat k="sold of their own bag" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought") : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
@@ -605,9 +622,9 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                 </div>
               )}
             </Panel>
-          </div>
-          <div id="xr-funder">
-            <Panel title="Who paid for the creator" note="traced on Solana">
+                  </div>
+                  <div id="xr-funder">
+                    <Panel title="Who paid for the creator" note="traced on Solana">
               {!fund && <p className="text-[13px] font-light text-white/50">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
               {fund && !fund.funder && <p className="text-[13px] font-light text-white/50">{t("No funding transfer in the creator's recent history.")}</p>}
               {fund?.funder && (
@@ -637,9 +654,77 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                 </>
               )}
             </Panel>
+                  </div>
+                </div>
+              )}
+
+              {tab === "five" && (
+                early.length > 0 ? (
+          <div id="xr-five" className="liquid-glass grid gap-6 rounded-3xl p-5 sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <div>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
+                <span className="font-mono text-[10.5px] text-white/40">{t("before anyone could see it")}</span>
+              </div>
+              <XRayRadar early={early} selected={sel} onSelect={choose} />
+            </div>
+            <div className="border-white/[0.07] lg:border-l lg:pl-6">
+              <AnimatePresence mode="wait">
+                {selected && from === "map" ? (
+                  <Dossier key={selected.wallet} e={selected} creator={r.creator} onPick={onPick} onClose={() => setSel(null)} />
+                ) : (
+                  <motion.div key="sum" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <h3 className="font-display text-xl text-white/90">{t("Insiders")}</h3>
+                    <div className="mt-3">
+                      <Stat k="wallets in the first 5 seconds" v={String(early.length)} />
+                      <Stat k="supply they took" v={pct(took)} bad={took >= 0.25} />
+                      <Stat k="supply they still hold" v={pct(holds)} bad={holds >= 0.25} />
+                      <Stat k="the creator's own crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
+                      <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
+                      <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
+                    </div>
+                    <p className="font-mono mt-5 text-[11px] text-[#f2d39b]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
+                                      </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-          <div id="xr-holders">
-            <Panel title="Holders now" note="read from Solana">
+        ) : (
+          <div id="xr-five" className="liquid-glass flex flex-wrap items-center justify-between gap-4 rounded-3xl px-6 py-5">
+            <div>
+              <h3 className="font-display text-xl text-white/90">{t("The first 5 seconds")}</h3>
+              <p className="mt-1 text-[13px] font-light text-white/55">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
+            </div>
+            <p className="font-mono text-[12px] text-white/55">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
+            {!!f?.bundlers && (
+              <p className={`font-mono w-full text-[12px] ${(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem ? "text-[#ff8a7e]" : "text-white/55"}`}>
+                {t("later bought in bundles: {n} wallets, held up to {p}% together, {h}% now", { n: f.bundlers, p: f.bundlersPeakPct ?? 0, h: f.bundlersHeldPct ?? 0 })}
+              </p>
+            )}
+          </div>
+        )
+              )}
+
+              {tab === "bundles" && (
+                <div className="liquid-glass rounded-3xl p-6 sm:p-8">
+                  <Title k="Bundles & volume" note="4+ wallets buying in one block, any time" />
+                  <div>
+                      <Stat k="buyers" v={String(f?.buyers ?? 0)} />
+                      <Stat k="buys · sells" v={`${f?.buys ?? 0} · ${f?.sells ?? 0}`} />
+                      <Stat k="churned volume (at least)" v={f?.churnPct === null || f?.churnPct === undefined ? "-" : `${f.churnPct}%`} bad={(f?.churnPct ?? 0) >= 30 && !f?.mayhem} />
+                      <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
+                      <Stat k="bought in bundles (4+ wallets in one block)" v={`${f?.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f?.bundlesSince ? ` · ${t("counted since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`} bad={(f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30 && !f?.mayhem} />
+                      {!!f?.bundlers && <Stat k="bundlers hold now · at most" v={`${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`} bad={(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem} />}
+                      {!!f?.bundledSol && <Stat k="SOL through bundles" v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
+                    </div>
+                  {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
+                  <p className="mt-4 text-[12.5px] font-light leading-relaxed text-white/45">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
+                </div>
+              )}
+
+              {tab === "holders" && (
+                <div id="xr-holders">
+                  <Panel title="Holders now" note="read from Solana">
               {!c.holders && <p className="text-[13px] font-light text-white/50">{t("Holders could not be read right now.")}</p>}
               {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-light text-white/50">{t("Nobody holds it outside the curve: everyone sold back.")}{c.holders.programPct ? ` ${t("{p}% sits in the curve or pool", { p: c.holders.programPct })}.` : ""}</p>}
               {c.holders && c.holders.top10Pct > 0 && !!c.holders.programPct && <Stat k="in the curve or pool" v={`${c.holders.programPct}%`} />}
@@ -651,10 +736,11 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                 </>
               )}
             </Panel>
-          </div>
-        </div>
+                </div>
+              )}
 
-        {early.length > 0 && (
+              {tab === "wallets" && (
+                
           <div className="liquid-glass overflow-hidden rounded-3xl">
             <div className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[10.5px] text-white/40 sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7">
               <span>{t("wallet")}</span>
@@ -698,10 +784,14 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               );
             })}
           </div>
-        )}
-        <p className="font-mono text-center text-[11px] text-white/40">
-          {t("raw:")} <a href={`${NORTH}/v1/xray/${r.mint}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a> · {t("Not financial advice. Read from public chain data.")}
-        </p>
+        
+              )}
+            </motion.div>
+          </AnimatePresence>
+          <p className="font-mono text-center text-[11px] text-white/40">
+            {t("raw:")} <a href={`${NORTH}/v1/xray/${r.mint}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a> · {t("Not financial advice. Read from public chain data.")}
+          </p>
+        </div>
       </div>
     </motion.section>
   );
