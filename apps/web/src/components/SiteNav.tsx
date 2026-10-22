@@ -23,6 +23,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
       { label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
       { label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
       { label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun" },
+      { label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
       { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
       { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
       { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },

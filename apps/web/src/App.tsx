@@ -30,6 +30,7 @@ import { closePassport, usePassport } from "./passportStore";
 import { Cycle, Footer, Token } from "./components/Story";
 import RoadmapTeaser from "./components/roadmap/RoadmapTeaser";
 import RoadmapPage from "./components/roadmap/RoadmapPage";
+import Radar from "./components/Radar";
 import { type Route, TITLES, useRoute } from "./router";
 import { pick, t, t as tr } from "./i18n";
 
@@ -149,6 +150,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/connect": Connect,
   "/stats": Stats,
   "/roadmap": RoadmapPage,
+  "/radar": Radar,
 };
 
 export default function App() {

@@ -98,6 +98,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/radar",
+      "destination": "/index.html"
+    },
+    {
       "source": "/xray",
       "destination": "/xray.html"
     }

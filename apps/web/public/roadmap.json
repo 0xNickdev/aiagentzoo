@@ -541,17 +541,23 @@
     {
       "id": "radar",
       "chapter": "2026-11",
-      "status": "next",
+      "status": "building",
       "title": "Holder radar",
       "text": "Fresh coins with no red flags so far, for holders. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and you are pinged first.",
-      "why": "Not a buy list. A clean x-ray means we have not caught anything yet, nothing more. What a holder gets is the minute it stops being true.",
+      "why": "The page is live: holders watch it now, and pings in the tab work. The Telegram ping when a coin turns comes once the nodes run on our own servers.",
       "zh": {
         "title": "持有者雷达",
         "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。",
-        "why": "这不是买入清单。干净的透视只代表我们还没抓到问题。持有者得到的是情况变化的那一分钟。",
-        "when": "11 月上旬"
+        "why": "页面已上线：持有者现在就能看，标签页提醒也已可用。代币变化时的 Telegram 提醒，会在节点迁到我们自己的服务器后上线。",
+        "when": "进行中"
       },
-      "when": "Early Nov"
+      "when": "Now",
+      "proof": [
+        {
+          "label": "/radar",
+          "href": "/radar"
+        }
+      ]
     },
     {
       "id": "operators",

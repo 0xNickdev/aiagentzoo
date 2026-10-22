@@ -197,7 +197,7 @@ export function Products() {
 export function Holders() {
   const perks = [
     { k: t("Hear it first"), v: t("Alerts on the coins you watch land at once for holders, later for everyone else.") },
-    { k: t("The radar"), v: t("Fresh coins with no red flags so far, and a ping the moment one turns. Coming in November.") },
+    { k: t("The radar"), v: t("Fresh coins with no red flags so far, re-checked all the time, and the moment one turns it goes red. Open now at /radar.") },
     { k: t("A real vote"), v: t("Holders pick the order of what we build next. Signed votes, counted in public.") },
   ];
   return (
