@@ -1229,4 +1229,5 @@ export const ZH: Record<string, string> = {
   "Still holding": "仍在持有",
   "sold {p}": "卖出 {p}",
   "Thickness is the share of supply. Where the SOL went after the sell comes once our nodes trace outgoing transfers.": "线条粗细代表供应占比。卖出后 SOL 流向哪里，会在我们的节点追踪转出交易后加上。",
+  "Open this dev's wallet": "打开这个开发者的钱包",
 };

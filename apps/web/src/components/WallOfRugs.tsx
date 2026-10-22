@@ -60,28 +60,37 @@ export default function WallOfRugs() {
         {list?.map((r, i) => (
           <div
             key={r.wallet}
-            className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
+            role="link"
+            tabIndex={0}
+            onClick={() => goWallet(r.wallet)}
+            onKeyDown={(e) => e.key === "Enter" && goWallet(r.wallet)}
+            title={t("Open this dev's wallet")}
+            className="font-mono grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
             <span className="text-white/60">{String(i + 1).padStart(2, "0")}</span>
-            <button
-              type="button"
-              onClick={() => {
-                void navigator.clipboard?.writeText(r.wallet).catch(() => {});
-                setCopied(r.wallet);
-                window.setTimeout(() => setCopied(null), 1200);
-              }}
-              className="truncate text-left text-white/85 hover:text-white"
-              title={t("Copy the wallet")}
-            >
-              {copied === r.wallet ? t("copied") : short(r.wallet)}
-            </button>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-white/90 underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigator.clipboard?.writeText(r.wallet).catch(() => {});
+                  setCopied(r.wallet);
+                  window.setTimeout(() => setCopied(null), 1200);
+                }}
+                className="shrink-0 text-[11.5px] text-white/50 hover:text-white"
+                title={t("Copy the wallet")}
+              >
+                {copied === r.wallet ? t("copied") : t("copy")}
+              </button>
+            </span>
             <span className="text-right text-white/70">{r.launches48h}</span>
             <span className="text-right text-[#ff8a7e]">{r.dumped}</span>
             <span className="hidden text-right text-white/60 sm:block">{r.medianDumpMin === null ? "-" : t("{m} min", { m: r.medianDumpMin })}</span>
             <span className="hidden truncate sm:block">
               {r.lastDump ? (
-                <a href={r.lastDump.tx ? `https://solscan.io/tx/${r.lastDump.tx}` : `/xray?mint=${r.lastDump.mint}`} target={r.lastDump.tx ? "_blank" : undefined} rel="noopener noreferrer" className="text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
-                  ${r.lastDump.symbol} · {tChain(r.lastDump.text)}
+                <a href={`/xray?mint=${r.lastDump.mint}`} onClick={(e) => e.stopPropagation()} className="text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
+                  ${r.lastDump.symbol.replace(/^\$/, "")} · {tChain(r.lastDump.text)}
                 </a>
               ) : (
                 <span className="text-white/55">-</span>
