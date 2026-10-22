@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { navigate } from "../router";
 import SiteNav from "./SiteNav";
@@ -32,19 +32,46 @@ const VERDICT: Record<Check["verdict"], { label: string; line: string; color: st
   unknown: { label: "Not seen yet", line: "We have not read this token on the chain yet.", color: "rgba(255,255,255,0.7)" },
 };
 
+/** Where the lit sphere sits in /backdrops/roadmap-trail.webp (2400 x 1348): its flame, and the glass around it. */
+const IMG = { w: 2400, h: 1348, focusX: 0.6 };
+const FLAME = { x: 1624, y: 925, r: 78 };
+
 /**
- * The glass sphere from the forest, and the verdict's display: it waits with a small flame, flares while the chain is
- * read, then burns steady, shakes, or goes out. Only state uses amber.
+ * The forest is the verdict display: the sphere burning on the trail is the one that answers. While the chain is read
+ * its light swells; then it burns steady, shakes, or goes out, leaving an ember. Nothing is drawn on top that is not
+ * light: a glow, a shadow over the flame, a coal.
  */
-function Sphere({ state, className = "" }: { state: Flame; className?: string }) {
+function Forest({ state }: { state: Flame }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState<{ x: number; y: number; r: number } | null>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      const k = Math.max(width / IMG.w, height / IMG.h);
+      const ox = (width - IMG.w * k) * IMG.focusX;
+      const oy = (height - IMG.h * k) * 0.5;
+      setAt({ x: ox + FLAME.x * k, y: oy + FLAME.y * k, r: FLAME.r * k });
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => ro.disconnect();
+  }, []);
   return (
-    <div className={`zoo-sphere relative aspect-square ${className}`} data-state={state} aria-hidden>
-      <div className="zoo-sphere-glow absolute inset-[-30%] rounded-full" />
-      <div className="absolute inset-0 rounded-full border border-white/25 bg-[radial-gradient(circle_at_32%_28%,rgba(255,255,255,0.35),rgba(255,255,255,0.04)_38%,rgba(255,255,255,0.02)_62%,rgba(255,255,255,0.12)_100%)] shadow-[inset_0_0_40px_rgba(255,255,255,0.06),0_30px_60px_rgba(0,0,0,0.5)] backdrop-blur-[2px]" />
-      <div className="zoo-flame absolute bottom-[24%] left-1/2 h-[38%] w-[22%] -translate-x-1/2" />
-      <div className="zoo-ember absolute bottom-[22%] left-1/2 h-[6%] w-[16%] -translate-x-1/2 rounded-full" />
-      <div className="absolute left-[22%] top-[14%] h-[16%] w-[26%] rotate-[-25deg] rounded-full bg-white/35 blur-[6px]" />
-      <div className="absolute -bottom-[6%] left-1/2 h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/50 blur-[6px]" />
+    <div ref={box} aria-hidden className="absolute inset-0 overflow-hidden">
+      <div className="zoo-drift absolute inset-0">
+        <img src="/backdrops/roadmap-trail.webp" alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: `${IMG.focusX * 100}% 50%` }} />
+        {at && (
+          <div className="zoo-light absolute" data-state={state} style={{ left: at.x, top: at.y, width: at.r * 2, height: at.r * 2, marginLeft: -at.r, marginTop: -at.r }}>
+            <span className="zoo-light-glow absolute inset-[-260%] rounded-full" />
+            <span className="zoo-light-dark absolute inset-[-220%] rounded-full" />
+            <span className="zoo-light-out absolute inset-[-12%] rounded-full" />
+            <span className="zoo-light-coal absolute left-1/2 top-[78%] h-[14%] w-[34%] -translate-x-1/2 rounded-full" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -81,13 +108,13 @@ export default function Hero() {
 
   return (
     <div className="relative min-h-[100svh] overflow-hidden">
-      <img src="/backdrops/roadmap-trail.webp" alt="" aria-hidden className="zoo-drift absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "60% 50%" }} />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#030504]/95 via-[#030504]/70 to-[#030504]/25" />
+      <Forest state={state} />
+      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,5,4,0.95)_0%,rgba(3,5,4,0.8)_38%,rgba(3,5,4,0.15)_62%,transparent_80%)]" />
       <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#030504] via-transparent to-[#030504]/60" />
 
       <SiteNav overlay />
 
-      <main className="relative z-10 mx-auto grid min-h-[calc(100svh-80px)] max-w-7xl items-center gap-10 px-5 pb-20 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+      <main className="relative z-10 mx-auto grid min-h-[calc(100svh-80px)] max-w-7xl items-center gap-10 px-5 pb-20 pt-8 sm:px-8 ">
         <div>
           <motion.div {...rise(0.05)} className="mb-8 max-w-full">
             <CAPill />
@@ -145,7 +172,6 @@ export default function Hero() {
                 style={{ borderColor: v.color }}
                 aria-live="polite"
               >
-                <Sphere state={state} className="float-right ml-4 w-16 lg:hidden" />
                 <p className="text-[13px] uppercase tracking-[0.14em]" style={{ color: v.color }}>
                   {check.symbol ? `$${check.symbol} · ` : ""}
                   {t(v.label)}
@@ -178,9 +204,6 @@ export default function Hero() {
           )}
         </div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.4, delay: 0.3, ease: [0.215, 0.61, 0.355, 1] }} className="hidden justify-center lg:flex">
-          <Sphere state={state} className="w-[min(360px,28vw)]" />
-        </motion.div>
       </main>
     </div>
   );
