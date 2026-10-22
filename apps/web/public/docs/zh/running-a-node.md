@@ -58,9 +58,9 @@ docker compose --env-file .env.federation up --build
 
 | 服务 | 公开地址 |
 |---|---|
-| north | https://north-production-3f77.up.railway.app |
-| marsh | https://marsh-production.up.railway.app |
-| canyon | https://canyon-production.up.railway.app |
+| north | https://north.zooaiagency.com |
+| marsh | https://marsh.zooaiagency.com |
+| canyon | https://canyon.zooaiagency.com |
 
 每个服务：
 

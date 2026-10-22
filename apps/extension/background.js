@@ -1,5 +1,6 @@
 // The extension's one place that talks to the zoo: cached reads, the toolbar colour per tab, right click, and watch alerts.
-const NORTH = "https://north-production-3f77.up.railway.app";
+// Through the site, so the nodes can move house without a new extension release.
+const NORTH = "https://zooaiagency.com/api/north";
 const SITE = "https://zooaiagency.com";
 const TONE = {
   avoid: { label: "AVOID", badge: "!!", bg: "#d9584b" },
@@ -39,7 +40,7 @@ const tokenOfPair = (addr) =>
 
 /** The light check (verdict and reasons). An address the stream never saw is tried as a pool before giving up. */
 async function check(addr) {
-  const read = (m) => cached(`check:${m}`, 60_000, async () => (await getJson(`${NORTH}/v1/check/${m}`)).body);
+  const read = (m) => cached(`check:${m}`, 60_000, async () => (await getJson(`${NORTH}/v1/check/${m}?holders=1`)).body);
   let c = await read(addr);
   let mint = addr;
   if (!c || c.verdict === "unknown") {

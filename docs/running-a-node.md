@@ -58,9 +58,9 @@ The public federation runs on Railway: one service per enclosure, built from `ap
 
 | Service | Public URL |
 |---|---|
-| north | https://north-production-3f77.up.railway.app |
-| marsh | https://marsh-production.up.railway.app |
-| canyon | https://canyon-production.up.railway.app |
+| north | https://north.zooaiagency.com |
+| marsh | https://marsh.zooaiagency.com |
+| canyon | https://canyon.zooaiagency.com |
 
 Per service:
 

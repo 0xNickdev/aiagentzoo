@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DOCS_URL, GITHUB_URL, NPM_URL, X_URL } from "../links";
 import { Reveal, Section, SectionHead } from "./ui";
 
-const HOST = "https://canyon-production.up.railway.app";
+const HOST = "https://canyon.zooaiagency.com";
 const SITE = "https://zooaiagency.com";
 const GUIDE = "/docs/guests";
 

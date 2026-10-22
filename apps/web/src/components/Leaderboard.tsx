@@ -114,7 +114,7 @@ export default function Leaderboard() {
 
       <p className="font-mono mt-4 text-center text-[12.5px] text-white/60">
         {t("raw:")}{" "}
-        <a href="https://canyon-production.up.railway.app/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
+        <a href="https://canyon.zooaiagency.com/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
           /v1/leaderboard
         </a>
       </p>

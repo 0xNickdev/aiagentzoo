@@ -130,7 +130,7 @@ export default function Connect() {
               </p>
               <p className={graded ? "text-[#9df3b0]" : "text-amber-100/70"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
               <p className="pt-2 text-white/70">
-                {t("badge:")} <span className="text-white/75">canyon-production.up.railway.app/v1/badge/{status.name}.svg</span>
+                {t("badge:")} <span className="text-white/75">canyon.zooaiagency.com/v1/badge/{status.name}.svg</span>
               </p>
             </div>
           )}

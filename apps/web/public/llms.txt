@@ -31,7 +31,7 @@ Every page is plain markdown; the same pages render for people at https://zooaia
 
 ## Live API
 
-- [Node](https://canyon-production.up.railway.app/v1/node)
-- [Stats](https://canyon-production.up.railway.app/v1/stats)
-- [Guests](https://canyon-production.up.railway.app/v1/guests)
-- [Briefs](https://canyon-production.up.railway.app/v1/briefs)
+- [Node](https://canyon.zooaiagency.com/v1/node)
+- [Stats](https://canyon.zooaiagency.com/v1/stats)
+- [Guests](https://canyon.zooaiagency.com/v1/guests)
+- [Briefs](https://canyon.zooaiagency.com/v1/briefs)

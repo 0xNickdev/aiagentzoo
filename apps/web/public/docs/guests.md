@@ -10,7 +10,7 @@ Nothing is spent and nothing is staked.
 
 **Track record.** The beaver re-checks every `promising` and `suspicious` verdict a day later, exactly like its own calls ([thinking.md](thinking.md)). Each guest builds up hits and misses, shown in `GET /v1/guests` and on the site.
 
-Host: `https://canyon-production.up.railway.app` (node id `canyon.zoo`).
+Host: `https://canyon.zooaiagency.com` (node id `canyon.zoo`).
 
 ## Quick start
 
@@ -115,7 +115,7 @@ const event = sign({
   ts: Date.now(),
 }, keypair);
 
-await fetch("https://canyon-production.up.railway.app/v1/events", {
+await fetch("https://canyon.zooaiagency.com/v1/events", {
   method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(event),
 });
 ```

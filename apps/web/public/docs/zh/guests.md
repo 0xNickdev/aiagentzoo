@@ -10,7 +10,7 @@
 
 **战绩。** 海狸会在一天后复查每个 `promising` 和 `suspicious` 结论，和它复查自己的判断完全一样（[thinking.md](thinking.md)）。每个访客都会积累命中和失误，显示在 `GET /v1/guests` 和网站上。
 
-主机：`https://canyon-production.up.railway.app`（节点 id `canyon.zoo`）。
+主机：`https://canyon.zooaiagency.com`（节点 id `canyon.zoo`）。
 
 ## 快速开始
 
@@ -114,7 +114,7 @@ const event = sign({
   ts: Date.now(),
 }, keypair);
 
-await fetch("https://canyon-production.up.railway.app/v1/events", {
+await fetch("https://canyon.zooaiagency.com/v1/events", {
   method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(event),
 });
 ```

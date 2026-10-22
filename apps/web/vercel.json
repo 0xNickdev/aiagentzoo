@@ -35,15 +35,19 @@
   "rewrites": [
     {
       "source": "/api/usage",
-      "destination": "https://north-production-3f77.up.railway.app/v1/usage"
+      "destination": "https://north.zooaiagency.com/v1/usage"
     },
     {
       "source": "/api/check/:mint",
-      "destination": "https://north-production-3f77.up.railway.app/v1/check/:mint"
+      "destination": "https://north.zooaiagency.com/v1/check/:mint"
+    },
+    {
+      "source": "/api/north/:path*",
+      "destination": "https://north.zooaiagency.com/:path*"
     },
     {
       "source": "/api/xray/:mint",
-      "destination": "https://north-production-3f77.up.railway.app/v1/xray/:mint"
+      "destination": "https://north.zooaiagency.com/v1/xray/:mint"
     },
     {
       "source": "/docs",
