@@ -1182,4 +1182,6 @@ export const ZH: Record<string, string> = {
   "Reads every launch and trade on": "读取每一次发射和交易：",
   "Launched on": "发射于",
   "Built on": "构建于",
+  "Two builds.": "两个项目。",
+  "December's two builds both ship by the end of the year. Holders of $ZOOAGENCY pick which comes first, and the trail above moves to match.": "十二月的两个项目都会在年底前上线。$ZOOAGENCY 持有者决定哪个先做，上面的路线会随之调整。",
 };

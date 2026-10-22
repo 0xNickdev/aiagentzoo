@@ -17,22 +17,22 @@
       "id": "2026-11",
       "label": "Nov 2026",
       "name": "Own ground",
-      "line": "Our own machines, a swap and a pro tier that pay for the zoo, and the first vote on what comes next.",
+      "line": "Our own machines, the holder radar and the money map, a swap and a pro tier that pay for the zoo, and the first vote.",
       "zh": {
         "label": "2026 年 11 月",
         "name": "自己的地盘",
-        "line": "自己的服务器，让项目自给自足的兑换和专业版，以及第一次决定下一步的投票。"
+        "line": "自己的服务器，持有者雷达和资金流向图，让项目自给自足的兑换和专业版，以及第一次投票。"
       }
     },
     {
       "id": "2026-12",
       "label": "Dec 2026",
       "name": "Guard",
-      "line": "A seatbelt for agents that trade alone, and three builds in the order holders choose.",
+      "line": "A seatbelt for agents that trade alone, and two builds in the order holders choose.",
       "zh": {
         "label": "2026 年 12 月",
         "name": "守卫",
-        "line": "给独自交易的智能体系上安全带，以及按持有者选定顺序完成的三个项目。"
+        "line": "给独自交易的智能体系上安全带，以及按持有者选定顺序完成的两个项目。"
       }
     },
     {
@@ -554,6 +554,21 @@
       "when": "Early Nov"
     },
     {
+      "id": "operators",
+      "chapter": "2026-11",
+      "status": "next",
+      "title": "Money map",
+      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Where the SOL went after the dump follows once the nodes run on our own servers.",
+      "why": "Holders asked for a Bubblemaps-style view, only simpler. We know the order things happened in, so we draw the money's path, not just clusters.",
+      "zh": {
+        "title": "资金流向图",
+        "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及谁已经卖出。砸盘后 SOL 流向哪里，会在节点迁到我们自己的服务器后加上。",
+        "why": "持有者希望有类似 Bubblemaps 的视图，但更简单。我们知道事情发生的先后顺序，所以画的是资金的路径，而不只是集群。",
+        "when": "11 月"
+      },
+      "when": "Nov"
+    },
+    {
       "id": "swap",
       "chapter": "2026-11",
       "status": "next",
@@ -588,11 +603,11 @@
       "chapter": "2026-11",
       "status": "next",
       "title": "Holders' vote, round one",
-      "text": "Holders choose the order of December's three builds. Each vote signed by a wallet and published, the result hashed on chain.",
+      "text": "Holders choose which of December's two builds comes first. Each vote signed by a wallet and published, the result hashed on chain.",
       "why": "The gene vote already works this way inside the nursery. Now it decides the product.",
       "zh": {
         "title": "持有者投票 · 第一轮",
-        "text": "持有者决定十二月三个项目的顺序。每一票由钱包签名并公开，结果的哈希写在链上。",
+        "text": "持有者决定十二月两个项目哪个先做。每一票由钱包签名并公开，结果的哈希写在链上。",
         "why": "基因投票已经在育婴室里这样运行。现在由它来决定产品。",
         "when": "11 月底"
       },
@@ -646,19 +661,6 @@
         "title": "智能体护照",
         "text": "为 ClawPump 上每个智能体代币建立公开记录：智能体是否真的在运作，创建者是否领取并卖掉手续费，发射后创建者钱包在做什么。任何发射平台都能展示的徽章。",
         "why": "智能体代币卖的是智能体能做什么，但没有人核实它真的在做。"
-      }
-    },
-    {
-      "id": "operators",
-      "chapter": "2026-12",
-      "status": "vote",
-      "title": "Money map",
-      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and where the SOL went after the dump. Plus an alert when an operator who rugged comes back under a new name.",
-      "why": "Holders asked for a Bubblemaps-style view, only simpler. We know the order things happened in, so we draw the money's path, not just clusters.",
-      "zh": {
-        "title": "资金流向图",
-        "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及砸盘后 SOL 流向了哪里。跑路过的团伙换个名字回来时，你会收到提醒。",
-        "why": "持有者希望有类似 Bubblemaps 的视图，但更简单。我们知道事情发生的先后顺序，所以画的是资金的路径，而不只是集群。"
       }
     },
     {

@@ -563,18 +563,18 @@ function Vote({ plan }: { plan: Plan }) {
       <div className="mx-auto w-full max-w-7xl">
         <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-white/65">{t("Holders' vote · end of November")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
-          {t("Three builds.")} <span className="accent">{t("You set the order.")}</span>
+          {t("Two builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
         <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
-          {t("December's three builds all ship by the end of the year. Holders of $ZOOAGENCY pick the order, and the trail above moves to match.")}
+          {t("December's two builds both ship by the end of the year. Holders of $ZOOAGENCY pick which comes first, and the trail above moves to match.")}
         </p>
-        <div className="mt-14 grid gap-x-10 md:grid-cols-3">
+        <div className="mt-14 grid gap-x-10 md:grid-cols-2">
           {options.map((o, i) => (
             <div key={o.id} className="pb-8">
               <Rule />
               <div className="flex items-baseline justify-between pt-6">
                 <span className="font-mono text-[12.5px] text-white/60">{String.fromCharCode(65 + i)}</span>
-                <span className="font-mono text-[12.5px] text-white/60">? / 3</span>
+                <span className="font-mono text-[12.5px] text-white/60">? / 2</span>
               </div>
               <h3 className="font-display mt-6 text-[28px] leading-tight text-white">{tx(o, "title", o.title)}</h3>
               <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{tx(o, "text", o.text)}</p>
