@@ -122,7 +122,9 @@ export function Footer() {
           <span>{tr("Not financial advice. Everything here is read from public chain data.")}</span>
         </div>
       </div>
-      <img src="/logo-wordmark.png" alt="" aria-hidden className="pointer-events-none mx-auto -mb-[3.5vw] block w-[92vw] max-w-none select-none opacity-[0.06]" />
+      <div aria-hidden className="pointer-events-none mx-auto -mb-[6.5vw] mt-4 max-w-7xl select-none overflow-hidden">
+        <p className="font-display text-center text-[21vw] font-semibold leading-[0.8] tracking-[-0.06em] text-white/[0.035] xl:text-[290px]">ZOOAI</p>
+      </div>
     </footer>
   );
 }
