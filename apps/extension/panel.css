@@ -139,3 +139,10 @@
 @keyframes zoo-sh { to { background-position: -200% 0; } }
 .zoo .err { font-size: 12px; color: #ff9a8f; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .zoo .skeleton i { animation: none; } }
+
+/* Chinese: a CJK face after Geist (and after Geist Mono for numbers and labels), and no wide letter-spacing. */
+.zoo:lang(zh) { font-family: ZooGeist, Geist, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+.zoo:lang(zh) .mono, .zoo:lang(zh) .fact span, .zoo:lang(zh) .fact b, .zoo:lang(zh) .reasons li b, .zoo:lang(zh) .addr { font-family: ZooGeistMono, "Geist Mono", ui-monospace, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", monospace; }
+.zoo:lang(zh) .btn { font-family: ZooGeist, Geist, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+.zoo:lang(zh), .zoo:lang(zh) * { letter-spacing: 0 !important; }
+.zoo:lang(zh) .fact span { text-transform: none; }

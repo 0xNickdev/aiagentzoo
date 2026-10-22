@@ -34,24 +34,26 @@
   }
 
   function chip(v) {
-    const t = TONE[v.verdict];
+    const tone = TONE[v.verdict];
+    const zh = lang() === "zh";
     const a = document.createElement("a");
     a.href = `${SITE}/xray?mint=${v.mint}`;
     a.target = "_blank";
     a.rel = "noopener";
-    a.title = `ZOOAI X-Ray: ${t.label}${v.why ? ` · ${v.why}` : ""}`;
+    a.title = `ZOOAI X-Ray: ${tone.label}${v.why ? ` · ${tChain(v.why)}` : ""}`;
+    if (zh) a.lang = "zh-CN";
     a.dataset.zooChip = "1";
     a.addEventListener("click", (e) => e.stopPropagation());
     // Small and square-ish like the labels other X tools draw, so it sits next to them without shouting.
     a.style.cssText = `display:inline-flex;align-items:center;gap:6px;height:18px;margin:0 2px 0 6px;padding:0 7px 0 6px;border-radius:5px;vertical-align:-3px;
-      font:500 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;text-decoration:none;white-space:nowrap;
-      color:${t.color};background:#121214;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);`;
+      font:500 10.5px/1 ui-monospace,SFMono-Regular,Menlo,${zh ? `"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",` : ""}monospace;letter-spacing:${zh ? 0 : ".06em"};text-decoration:none;white-space:nowrap;
+      color:${tone.color};background:#121214;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);`;
     const dot = document.createElement("span");
-    dot.style.cssText = `width:5px;height:5px;border-radius:50%;background:${t.color};box-shadow:0 0 5px ${t.color}`;
+    dot.style.cssText = `width:5px;height:5px;border-radius:50%;background:${tone.color};box-shadow:0 0 5px ${tone.color}`;
     const brand = document.createElement("span");
     brand.style.cssText = "color:rgba(238,237,233,.45);letter-spacing:.14em";
     brand.textContent = "X-RAY";
-    a.append(dot, brand, document.createTextNode(t.label));
+    a.append(dot, brand, document.createTextNode(tone.label));
     return a;
   }
 
@@ -76,10 +78,10 @@
 
   const SEL = '[data-testid="tweetText"], [data-testid="UserDescription"]';
   const sweep = () => document.querySelectorAll(SEL).forEach((el) => void scan(el));
-  let t = 0;
+  let timer = 0;
   new MutationObserver(() => {
-    clearTimeout(t);
-    t = setTimeout(sweep, 400);
+    clearTimeout(timer);
+    timer = setTimeout(sweep, 400);
   }).observe(document.body, { childList: true, subtree: true });
   sweep();
 })();

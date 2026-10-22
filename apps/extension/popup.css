@@ -28,3 +28,10 @@ input::placeholder { color: var(--tx4); }
 .li .rm:hover { color: var(--tx); }
 footer.foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
 #out .foot { display: none; }
+header .hr { display: flex; align-items: center; gap: 10px; }
+.lang { display: inline-flex; gap: 2px; padding: 2px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line2); }
+.lang button { all: unset; cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; color: var(--tx3); }
+.lang button:hover { color: var(--tx); }
+.lang button[aria-pressed="true"] { background: var(--tx); color: #0b0b0c; }
+/* Chinese: a CJK face after Geist, and no wide tracking. */
+:lang(zh) #go, :lang(zh) .intro h1 { font-family: ZooGeist, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif; letter-spacing: 0; }

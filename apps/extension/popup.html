@@ -9,42 +9,42 @@
 <body class="zoo">
   <header>
     <span class="brand mono"><img src="icons/32.png" alt="" /><b>ZOOAI</b><span class="sep"></span>X-RAY</span>
-    <span class="live mono"><i></i>SOLANA</span>
+    <span class="hr"><span class="lang mono" id="lang" role="group" aria-label="Language" data-t-label><button type="button" data-lang="en">EN</button><button type="button" data-lang="zh">中文</button></span><span class="live mono"><i></i>SOLANA</span></span>
   </header>
 
   <form id="form">
     <span class="prompt mono">&gt;</span>
-    <input id="mint" class="mono" placeholder="token or wallet address, or a link" spellcheck="false" autocomplete="off" />
-    <button type="submit" id="go">X-ray</button>
+    <input id="mint" class="mono" placeholder="token or wallet address, or a link" data-t-ph spellcheck="false" autocomplete="off" />
+    <button type="submit" id="go" data-t>X-ray</button>
   </form>
 
   <section id="out"></section>
   <section id="home">
     <section class="frame intro">
-      <h1>See who you're buying from.</h1>
+      <h1 data-t>See who you're buying from.</h1>
       <ol class="steps">
-        <li><b class="mono">01</b><span>Open a token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX: the verdict shows up on the page.</span></li>
-        <li><b class="mono">02</b><span>On X, token addresses in posts get a verdict chip.</span></li>
-        <li><b class="mono">03</b><span>Anywhere: select an address, right click, X-Ray this token.</span></li>
+        <li><b class="mono">01</b><span data-t>Open a token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX: the verdict shows up on the page.</span></li>
+        <li><b class="mono">02</b><span data-t>On X, token addresses in posts get a verdict chip.</span></li>
+        <li><b class="mono">03</b><span data-t>Anywhere: select an address, right click, X-Ray this token.</span></li>
       </ol>
     </section>
     <div id="watch-wrap" hidden>
-      <div class="sec mono"><span>ALERTS ON</span><span class="rule"></span></div>
+      <div class="sec mono"><span data-t>ALERTS ON</span><span class="rule"></span></div>
       <div id="watch" class="list"></div>
     </div>
     <div id="hist-wrap" hidden>
-      <div class="sec mono"><span>RECENT</span><span class="rule"></span></div>
+      <div class="sec mono"><span data-t>RECENT</span><span class="rule"></span></div>
       <div id="hist" class="list"></div>
     </div>
     <div id="boards" hidden>
-      <div class="sec mono"><span>SERIAL DUMPERS</span><span class="rule"></span><span class="aside">48 hours</span></div>
+      <div class="sec mono"><span data-t>SERIAL DUMPERS</span><span class="rule"></span><span class="aside" data-t>48 hours</span></div>
       <div id="rug" class="list"></div>
-      <div class="sec mono"><span>BUILDERS</span><span class="rule"></span><span class="aside">48 hours</span></div>
+      <div class="sec mono"><span data-t>BUILDERS</span><span class="rule"></span><span class="aside" data-t>48 hours</span></div>
       <div id="built" class="list"></div>
     </div>
   </section>
 
-  <footer class="foot mono">read from public Solana data · not financial advice · <a href="https://zooaiagency.com/xray" target="_blank" rel="noopener">zooaiagency.com</a></footer>
+  <footer class="foot mono"><span data-t>read from public Solana data · not financial advice · </span><a href="https://zooaiagency.com/xray" target="_blank" rel="noopener">zooaiagency.com</a></footer>
   <script src="shared.js"></script>
   <script src="panel.js"></script>
   <script src="popup.js"></script>

@@ -1,11 +1,12 @@
 // The extension's one place that talks to the zoo: cached reads, the toolbar colour per tab, right click, and watch alerts.
 // Through the site, so the nodes can move house without a new extension release.
+importScripts("shared.js"); // t(), tChain() and the reader's language
 const NORTH = "https://zooaiagency.com/api/north";
 const SITE = "https://zooaiagency.com";
 const TONE = {
-  avoid: { label: "AVOID", badge: "!!", bg: "#d9584b" },
-  caution: { label: "CAUTION", badge: "!", bg: "#b8913f" },
-  pass: { label: "NO RED FLAGS", badge: "ok", bg: "#3f8f55" },
+  avoid: { get label() { return t("AVOID"); }, badge: "!!", bg: "#d9584b" },
+  caution: { get label() { return t("CAUTION"); }, badge: "!", bg: "#b8913f" },
+  pass: { get label() { return t("NO RED FLAGS"); }, badge: "ok", bg: "#3f8f55" },
 };
 const B58 = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
 
@@ -57,8 +58,8 @@ async function xray(addr) {
   const { mint } = await check(addr);
   return cached(`xray:${mint}`, 90_000, async () => {
     const { status, ok, body } = await getJson(`${NORTH}/v1/xray/${mint}`);
-    if (status === 429) return { error: "Ten full x-rays a minute on the free tier. Try again in a minute." };
-    if (!ok) return { error: "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)." };
+    if (status === 429) return { error: t("Ten full x-rays a minute on the free tier. Try again in a minute.") };
+    if (!ok) return { error: t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") };
     void remember(body);
     return { report: body };
   }).then((r) => {
@@ -71,8 +72,8 @@ async function xray(addr) {
 const wallet = (w) =>
   cached(`wallet:${w}`, 60_000, async () => {
     const { status, ok, body } = await getJson(`${NORTH}/v1/wallet/${w}`);
-    if (status === 429) return { error: "Too many lookups this minute. Try again in a minute." };
-    if (!ok) return { error: "This wallet did not launch, snipe or fund a launch the stream saw in the last two days." };
+    if (status === 429) return { error: t("Too many lookups this minute. Try again in a minute.") };
+    if (!ok) return { error: t("This wallet did not launch, snipe or fund a launch the stream saw in the last two days.") };
     return { profile: body };
   }).then((r) => {
     if (r.error) cache.delete(`wallet:${w}`);
@@ -94,10 +95,10 @@ async function remember(r) {
 }
 
 function badge(tabId, verdict, title) {
-  const t = TONE[verdict];
-  chrome.action.setBadgeText({ tabId, text: t ? t.badge : "" });
-  if (t) chrome.action.setBadgeBackgroundColor({ tabId, color: t.bg });
-  chrome.action.setTitle({ tabId, title: t ? `ZOOAI X-Ray · ${t.label}${title ? ` · ${title}` : ""}` : "ZOOAI X-Ray" });
+  const tone = TONE[verdict];
+  chrome.action.setBadgeText({ tabId, text: tone ? tone.badge : "" });
+  if (tone) chrome.action.setBadgeBackgroundColor({ tabId, color: tone.bg });
+  chrome.action.setTitle({ tabId, title: tone ? `ZOOAI X-Ray · ${tone.label}${title ? ` · ${tChain(title)}` : ""}` : "ZOOAI X-Ray" });
 }
 
 const tabMint = new Map();
@@ -139,8 +140,13 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 chrome.tabs.onRemoved.addListener((id) => tabMint.delete(id));
 
 // Right click on any selected address, anywhere: open its x-ray.
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: "xray", title: "X-Ray this token", contexts: ["selection", "link"] });
+chrome.runtime.onInstalled.addListener(async () => {
+  await ZOO_LANG_READY;
+  chrome.contextMenus.create({ id: "xray", title: t("X-Ray this token"), contexts: ["selection", "link"] });
+});
+// The menu follows the popup's language switch.
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === "local" && ch.lang) chrome.contextMenus.update("xray", { title: t("X-Ray this token") }, () => void chrome.runtime.lastError);
 });
 chrome.contextMenus.onClicked.addListener((info) => {
   const m = String(info.selectionText || info.linkUrl || "").match(B58)?.[0];
@@ -158,7 +164,7 @@ async function watch(mint, symbol, on) {
   return { ok: true, watched };
 }
 
-const SAY = { dump: "the dev sold", drained: "the pool was drained", graduated: "it graduated", whale: "a whale bought" };
+const SAY = { dump: "the dev sold", drained: "the pool was drained", graduated: "it graduated", whale: "a whale bought" }; // English keys for t()
 chrome.alarms.onAlarm.addListener(async (a) => {
   if (a.name !== "watch") return;
   const { watched = {} } = await chrome.storage.local.get("watched");
@@ -169,14 +175,15 @@ chrome.alarms.onAlarm.addListener(async (a) => {
       continue;
     }
     try {
+      await ZOO_LANG_READY;
       const { body } = await getJson(`${NORTH}/v1/chain/moments?mint=${mint}&limit=20`);
       const fresh = (body.moments || []).filter((e) => e.at > w.since && e.seq > (w.seq || 0) && SAY[e.kind]).sort((x, y) => x.seq - y.seq);
       for (const e of fresh) {
         chrome.notifications.create(`${mint}:${e.seq}`, {
           type: "basic",
           iconUrl: "icons/128.png",
-          title: `$${String(e.symbol || w.symbol || "?").replace(/^\$+/, "")}: ${SAY[e.kind]}`,
-          message: e.text,
+          title: `$${String(e.symbol || w.symbol || "?").replace(/^\$+/, "")}: ${t(SAY[e.kind])}`,
+          message: tChain(e.text),
           priority: e.kind === "dump" || e.kind === "drained" ? 2 : 0,
         });
         w.seq = Math.max(w.seq || 0, e.seq);

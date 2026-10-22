@@ -39,6 +39,9 @@
     .wrap .x { all:unset; cursor:pointer; height:22px; padding:0 8px; display:inline-flex; align-items:center; border-radius:6px; color:rgba(238,237,233,.5); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); letter-spacing:.06em; font-size:10px; }
     .wrap .x:hover { color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.22); }
     [hidden] { display:none !important; }
+    .wrap:lang(zh) .pill, .wrap:lang(zh) .head, .wrap:lang(zh) .x { font-family:ZooGeist, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+    .wrap:lang(zh) .pill .brand, .wrap:lang(zh) .pill .v { font-family:ZooGeistMono, ui-monospace, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", monospace; }
+    .wrap:lang(zh) .pill *, .wrap:lang(zh) .head, .wrap:lang(zh) .x { letter-spacing:0 !important; }
   `;
 
   const wrap = h("div", { class: "wrap zoo" });
@@ -90,22 +93,23 @@
       return;
     }
     if (!host.isConnected) document.documentElement.append(host);
+    wrap.setAttribute("lang", lang() === "zh" ? "zh-CN" : "en");
     const tone = TONE[state.verdict];
     pill = h(
       "button",
-      { class: "pill", title: "ZOOAI X-Ray: click to open, drag to move", onclick: () => (dragged ? (dragged = false) : toggle(!open)) },
+      { class: "pill", title: t("ZOOAI X-Ray: click to open, drag to move"), onclick: () => (dragged ? (dragged = false) : toggle(!open)) },
       h("i", { class: "dot", style: { background: tone.color, color: tone.color, boxShadow: `0 0 8px ${tone.color}` } }),
       h("span", { class: "brand" }, "X-RAY"),
       h("span", { class: "bar" }),
       h("span", { class: "v", style: { color: tone.color } }, tone.label),
-      state.why ? h("span", { class: "why" }, state.why) : null,
+      state.why ? h("span", { class: "why" }, tChain(state.why)) : null,
     );
     if (!card || card.dataset.mint !== current) {
       const body = h("div", {});
       card = h(
         "div",
         { class: "card", "data-mint": current },
-        h("div", { class: "head" }, h("span", {}, h("b", {}, "ZOOAI"), "  X-RAY"), h("span", { class: "tools" }, h("a", { class: "x", href: `${ZOO.SITE}/xray?mint=${current}`, target: "_blank", rel: "noopener" }, "site ↗"), h("button", { class: "x", onclick: () => toggle(false) }, "minimize"))),
+        h("div", { class: "head" }, h("span", {}, h("b", {}, "ZOOAI"), "  X-RAY"), h("span", { class: "tools" }, h("a", { class: "x", href: `${ZOO.SITE}/xray?mint=${current}`, target: "_blank", rel: "noopener" }, t("site ↗")), h("button", { class: "x", onclick: () => toggle(false) }, t("minimize")))),
         body,
       );
       card.loaded = false;
@@ -125,7 +129,7 @@
             ZooPanel.render(c.body, report, { scroller: c });
           } else {
             c.loaded = false;
-            c.body.replaceChildren(h("p", { class: "err" }, r?.error || "Something went wrong."));
+            c.body.replaceChildren(h("p", { class: "err" }, r?.error || t("Something went wrong.")));
           }
         });
       }
