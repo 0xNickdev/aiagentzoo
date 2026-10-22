@@ -66,14 +66,6 @@ const tx = (o: { zh?: Zh }, k: keyof Zh, en: string | undefined) => (zh() && o.z
 const num = (n: number) => n.toLocaleString("en-US");
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : num(n));
 
-const STATUS: Record<Status, { label: string; chip: string; dot: string }> = {
-  shipped: { label: "shipped", chip: "text-amber-100/85 bg-amber-200/[0.08] ring-amber-200/20", dot: "bg-amber-200 shadow-[0_0_18px_4px_rgba(253,230,138,0.45)]" },
-  building: { label: "building", chip: "text-emerald-200/90 bg-emerald-300/[0.08] ring-emerald-300/25", dot: "bg-emerald-300 shadow-[0_0_18px_4px_rgba(110,231,183,0.45)]" },
-  next: { label: "next", chip: "text-white/70 bg-white/[0.04] ring-white/15", dot: "bg-[#030504] ring-2 ring-white/50" },
-  vote: { label: "holders vote", chip: "text-sky-200/90 bg-sky-300/[0.07] ring-sky-300/25", dot: "bg-[#030504] ring-2 ring-sky-300/70 ring-offset-0 [outline:1px_dashed_rgba(125,211,252,0.5)] [outline-offset:3px]" },
-  exploring: { label: "exploring", chip: "text-white/45 bg-white/[0.02] ring-white/10", dot: "bg-white/25" },
-};
-
 function usePlan(): Plan | null {
   const [plan, setPlan] = useState<Plan | null>(null);
   useEffect(() => {
@@ -168,15 +160,125 @@ function ago(at: number): string {
 const fmtDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString(zh() ? "zh-CN" : "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const days = (a: string, b: string) => Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000) + 1);
 
-function Chip({ status }: { status: Status }) {
-  const s = STATUS[status];
-  return <span className={`font-mono inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] uppercase tracking-[0.12em] ring-1 ${s.chip}`}>{t(s.label)}</span>;
+
+/** Status marks: white hairlines, amber only where something is lit. */
+const STATUS: Record<Status, { label: string; mark: string; tone: string }> = {
+  shipped: { label: "shipped", mark: "●", tone: "text-amber-100/85" },
+  building: { label: "building", mark: "◐", tone: "text-amber-100/85" },
+  next: { label: "next", mark: "○", tone: "text-white/60" },
+  vote: { label: "holders vote", mark: "◇", tone: "text-white/60" },
+  exploring: { label: "exploring", mark: "·", tone: "text-white/40" },
+};
+
+/** Which of the four frames of the trail sits behind each part of the page. */
+const SCENES = [
+  { src: "/backdrops/roadmap-trail.webp" },
+  { src: "/backdrops/roadmap-trail-2.webp" },
+  { src: "/backdrops/roadmap-trail-3.webp" },
+  { src: "/backdrops/roadmap-clearing.webp", mobile: "/backdrops/roadmap-clearing-mobile.webp" },
+];
+const CHAPTER_SCENE: Record<string, number> = { "2026-10": 0, "2026-11": 0, "2026-12": 1, "2027-01": 2, "2027-02": 2, "2027-03": 2, "2027-04": 2 };
+/** How deep in the fog a chapter sits: the further ahead, the softer until you reach for it. */
+const CHAPTER_FOG: Record<string, string> = { "2027-01": "fog-1", "2027-02": "fog-1", "2027-03": "fog-2", "2027-04": "fog-2" };
+
+/**
+ * The camera: the four frames stacked behind the page. The part of the page at the middle of the screen decides
+ * which frame shows; frames cross-fade, and the whole stack pushes in slowly as you scroll, so the walk never stops.
+ */
+function Scene() {
+  const [active, setActive] = useState(0);
+  const { scrollYProgress } = useScroll();
+  const push = useSpring(scrollYProgress, { stiffness: 60, damping: 30 });
+  const [scale, setScale] = useState(1.04);
+  useEffect(() => push.on("change", (v) => setScale(1.04 + v * 0.14)), [push]);
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.scene ?? 0));
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    const watch = () => document.querySelectorAll("[data-scene]").forEach((el) => io.observe(el));
+    watch();
+    // Sections mount after the plan loads: look again once they are there.
+    const mo = new MutationObserver(watch);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
+  }, []);
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#030504]">
+      {SCENES.map((s, i) => (
+        <picture key={s.src}>
+          {s.mobile && <source media="(max-width: 640px)" srcSet={s.mobile} />}
+          <img
+            src={s.src}
+            alt=""
+            loading={i === 0 ? "eager" : "lazy"}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1600ms] ease-out"
+            style={{ opacity: active === i ? 1 : 0, transform: `scale(${scale})`, objectPosition: "58% 50%" }}
+          />
+        </picture>
+      ))}
+      {/* Mist that drifts on its own, thicker deeper in. */}
+      <div className="roadmap-fog absolute inset-0 transition-opacity duration-[1600ms]" style={{ opacity: active === 2 ? 0.9 : active === 3 ? 0.5 : 0.35 }} />
+      <Fireflies />
+      {/* Reading light: dark on the left where the text sits, and at the bottom. */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#030504]/90 via-[#030504]/60 to-[#030504]/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#030504]/80 via-transparent to-[#030504]/40" />
+    </div>
+  );
 }
 
-function ProofLinks({ proof }: { proof?: Link[] }) {
+/** A few dozen points of warm light, placed the same way every time, each on its own slow loop. */
+function Fireflies() {
+  const flies = useMemo(
+    () =>
+      Array.from({ length: 26 }, (_, i) => {
+        const r = (n: number) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
+        return { left: 30 + r(1) * 68, top: 35 + r(2) * 60, delay: r(3) * 9, dur: 6 + r(4) * 7, size: 2 + r(5) * 2.5 };
+      }),
+    [],
+  );
+  return (
+    <div className="absolute inset-0">
+      {flies.map((f, i) => (
+        <span
+          key={i}
+          className="roadmap-firefly absolute rounded-full bg-amber-200"
+          style={{ left: `${f.left}%`, top: `${f.top}%`, width: f.size, height: f.size, animationDelay: `${f.delay}s`, animationDuration: `${f.dur}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** A hairline with a "+" at each end, the page's only ornament. */
+function Rule({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`relative h-px bg-white/[0.12] ${className}`}>
+      <span className="font-mono absolute -left-[3px] -top-[9px] text-[11px] text-white/35">+</span>
+      <span className="font-mono absolute -right-[3px] -top-[9px] text-[11px] text-white/35">+</span>
+    </div>
+  );
+}
+
+function Mark({ status }: { status: Status }) {
+  const s = STATUS[status];
+  return (
+    <span className={`font-mono inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] ${s.tone}`}>
+      <span className={status === "building" ? "animate-pulse" : ""}>{s.mark}</span>
+      {t(s.label)}
+    </span>
+  );
+}
+
+function ProofLinks({ proof, className = "mt-4" }: { proof?: Link[]; className?: string }) {
   if (!proof?.length) return null;
   return (
-    <div className="mt-4 flex flex-wrap gap-1.5">
+    <div className={`flex flex-wrap gap-x-4 gap-y-1.5 ${className}`}>
       {proof.map((p) => {
         const sha = /^[0-9a-f]{7}$/.test(p.label) || p.label.includes(" ");
         const external = p.href.startsWith("http");
@@ -187,7 +289,7 @@ function ProofLinks({ proof }: { proof?: Link[] }) {
             target={external ? "_blank" : undefined}
             rel={external ? "noopener noreferrer" : undefined}
             onClick={(e) => e.stopPropagation()}
-            className="font-mono inline-flex items-center gap-1 rounded-lg bg-white/[0.04] px-2 py-1 text-[11px] text-white/60 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white"
+            className="font-mono inline-flex items-center gap-1 border-b border-white/15 pb-px text-[11px] text-white/55 transition hover:border-white/60 hover:text-white"
           >
             {sha ? <GitCommit size={11} className="opacity-60" /> : null}
             {p.label}
@@ -199,98 +301,103 @@ function ProofLinks({ proof }: { proof?: Link[] }) {
   );
 }
 
-/** A dot on the trail, centred on the line whatever the screen. */
-function Dot({ status }: { status: Status }) {
-  return (
-    <span aria-hidden className="absolute -left-[32px] top-7 flex h-3.5 w-3.5 items-center justify-center md:-left-[40px]">
-      {status === "building" && <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/40" />}
-      <span className={`relative h-3.5 w-3.5 rounded-full ${STATUS[status].dot}`} />
-    </span>
-  );
-}
-
-function Card({ item, metric }: { item: Item; metric: string | null }) {
+/** One item ahead: a hairline row, the reason behind it one tap away. */
+function Row({ item, metric }: { item: Item; metric: string | null }) {
   const [open, setOpen] = useState(false);
   const why = tx(item, "why", item.why);
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="relative"
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className="roadmap-row group"
     >
-      <Dot status={item.status} />
+      <Rule />
       <div
         role={why ? "button" : undefined}
         tabIndex={why ? 0 : undefined}
+        aria-expanded={why ? open : undefined}
         onClick={() => why && setOpen((o) => !o)}
         onKeyDown={(e) => why && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((o) => !o))}
-        className={`liquid-glass rounded-3xl p-6 sm:p-7 ${why ? "cursor-pointer" : ""} ${item.status === "exploring" ? "opacity-75" : ""}`}
+        className={`grid gap-3 py-7 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8 ${why ? "cursor-pointer" : ""}`}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip status={item.status} />
-          {item.date && <span className="font-mono text-[11px] text-white/35">{fmtDate(item.date)}</span>}
-          {metric && <span className="font-mono ml-auto text-[11px] text-amber-100/70">{metric}</span>}
+        <div className="flex items-center justify-between gap-3 sm:block">
+          <Mark status={item.status} />
+          {item.date && <p className="font-mono text-[11px] text-white/35 sm:mt-2">{fmtDate(item.date)}</p>}
         </div>
-        <h3 className="font-display mt-4 text-2xl leading-tight text-white sm:text-[28px]">{tx(item, "title", item.title)}</h3>
-        <p className="mt-2 max-w-2xl text-[14.5px] font-light leading-relaxed text-white/65">{tx(item, "text", item.text)}</p>
-        <AnimatePresence initial={false}>
-          {open && why && (
-            <motion.p
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35 }}
-              className="max-w-2xl overflow-hidden border-l border-white/15 pl-4 text-[13.5px] font-light leading-relaxed text-white/55"
-            >
-              <span className="mt-4 block">{why}</span>
-            </motion.p>
-          )}
-        </AnimatePresence>
-        {why && <p className="font-mono mt-4 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{open ? t("− less") : t("+ why")}</p>}
-        <ProofLinks proof={item.proof} />
+        <div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <h3 className="font-display text-[26px] leading-tight text-white sm:text-[32px]">{tx(item, "title", item.title)}</h3>
+            {metric && <span className="font-mono text-[11.5px] text-amber-100/75">{metric}</span>}
+          </div>
+          <p className="mt-2 max-w-2xl text-[14.5px] font-light leading-relaxed text-white/65">{tx(item, "text", item.text)}</p>
+          <AnimatePresence initial={false}>
+            {open && why && (
+              <motion.p
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="max-w-2xl overflow-hidden text-[13.5px] font-light leading-relaxed text-white/50"
+              >
+                <span className="mt-4 block border-l border-amber-100/30 pl-4">{why}</span>
+              </motion.p>
+            )}
+          </AnimatePresence>
+          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+            {why && <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/35 group-hover:text-white/60">{open ? t("− less") : t("+ why")}</span>}
+            <ProofLinks proof={item.proof} className="" />
+          </div>
+        </div>
       </div>
     </motion.article>
   );
 }
 
-/** October: too many shipped things for big cards, so a dense wall of small ones, each with its commit. */
-function ShippedWall({ items, metrics }: { items: Item[]; metrics: Record<string, string | null> }) {
-  // On a phone the wall would be a long scroll: the first six, then all of it on request.
-  const [all, setAll] = useState(false);
+/** October in one screen: every shipped thing a cell; point at one and its commit and number open beside. */
+function ShippedMatrix({ items, metrics }: { items: Item[]; metrics: Record<string, string | null> }) {
+  const [sel, setSel] = useState(items[items.length - 1]?.id ?? "");
+  const cur = items.find((i) => i.id === sel) ?? items[0];
+  const m = cur?.metric ? metrics[cur.metric] : null;
   return (
-    <div className="relative">
-      <Dot status="shipped" />
-      <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.07] ring-1 ring-white/[0.07] sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((it, i) => {
-          const m = it.metric ? metrics[it.metric] : null;
-          return (
-            <motion.div
-              key={it.id}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: (i % 6) * 0.05 }}
-              className={`group flex-col bg-[#050807]/95 p-5 transition-colors hover:bg-[#0a0f0c] ${i < 6 || all ? "flex" : "hidden sm:flex"}`}
-            >
-              <div className="font-mono flex items-center justify-between text-[10.5px] text-white/35">
-                <span>{it.date ? fmtDate(it.date) : ""}</span>
-                <span className="text-amber-100/70">●</span>
-              </div>
-              <h4 className="font-display mt-3 text-[17px] text-white">{tx(it, "title", it.title)}</h4>
-              <p className="mt-1.5 flex-1 text-[13px] font-light leading-relaxed text-white/55">{tx(it, "text", it.text)}</p>
-              {m && <p className="font-mono mt-3 text-[11px] text-amber-100/70">{m}</p>}
-              <ProofLinks proof={it.proof} />
-            </motion.div>
-          );
-        })}
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div>
+        <Rule />
+        <div className="grid grid-cols-2 sm:grid-cols-3">
+          {items.map((it) => {
+            const on = it.id === cur?.id;
+            return (
+              <button
+                key={it.id}
+                type="button"
+                onMouseEnter={() => setSel(it.id)}
+                onFocus={() => setSel(it.id)}
+                onClick={() => setSel(it.id)}
+                className={`relative border-b border-white/[0.08] px-3 py-3.5 text-left transition-colors ${on ? "bg-amber-100/[0.06]" : "hover:bg-white/[0.03]"}`}
+              >
+                <span className="font-mono flex items-center gap-1.5 text-[10px] text-white/35">
+                  <span className={on ? "text-amber-200" : "text-amber-100/50"}>●</span>
+                  {it.date ? fmtDate(it.date) : ""}
+                </span>
+                <span className={`mt-1 block truncate text-[13.5px] ${on ? "text-white" : "text-white/70"}`}>{tx(it, "title", it.title)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      {!all && items.length > 6 && (
-        <button type="button" onClick={() => setAll(true)} className="font-mono mt-3 w-full rounded-2xl py-3 text-[11px] uppercase tracking-[0.14em] text-white/55 ring-1 ring-white/10 sm:hidden">
-          {t("show all {n}", { n: items.length })}
-        </button>
+      {cur && (
+        <AnimatePresence mode="wait">
+          <motion.div key={cur.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="lg:pt-6">
+            <Mark status="shipped" />
+            <p className="font-mono mt-2 text-[11px] text-white/35">{cur.date ? fmtDate(cur.date) : ""}</p>
+            <h3 className="font-display mt-4 text-[34px] leading-tight text-white">{tx(cur, "title", cur.title)}</h3>
+            <p className="mt-3 text-[15px] font-light leading-relaxed text-white/65">{tx(cur, "text", cur.text)}</p>
+            {m && <p className="font-mono mt-5 text-[13px] text-amber-100/80">{m}</p>}
+            <ProofLinks proof={cur.proof} className="mt-6" />
+          </motion.div>
+        </AnimatePresence>
       )}
     </div>
   );
@@ -301,9 +408,6 @@ const FILTERS: Filter[] = ["all", "shipped", "building", "next", "vote", "explor
 
 function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string | null> }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 70%", "end 70%"] });
-  const grow = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 });
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: plan.items.length };
     for (const i of plan.items) c[i.status] = (c[i.status] ?? 0) + 1;
@@ -312,62 +416,64 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
   const shown = (i: Item) => filter === "all" || i.status === filter;
 
   return (
-    <section id="trail" className="relative px-5 pb-10 sm:px-8">
-      <div className="sticky top-[61px] z-30 -mx-5 mb-12 border-b border-white/[0.06] bg-[#030504]/80 px-5 py-3 backdrop-blur-xl sm:top-[69px] sm:-mx-8 sm:px-8">
-        <div className="mx-auto flex max-w-7xl gap-1.5 overflow-x-auto [scrollbar-width:none]">
+    <section id="trail" className="relative">
+      <div className="sticky top-[61px] z-30 border-b border-white/[0.06] bg-[#030504]/55 px-5 py-3 backdrop-blur-xl sm:top-[69px] sm:px-8">
+        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto [scrollbar-width:none]">
           {FILTERS.filter((f) => counts[f]).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`font-mono relative shrink-0 rounded-full px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] transition ${filter === f ? "text-black" : "text-white/55 hover:text-white"}`}
+              className={`font-mono relative shrink-0 px-3 py-1.5 text-[10.5px] uppercase tracking-[0.14em] transition ${filter === f ? "text-white" : "text-white/45 hover:text-white/80"}`}
             >
-              {filter === f && <motion.span layoutId="roadmap-filter" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
-              <span className="relative">
-                {t(f === "all" ? "everything" : STATUS[f].label)} <span className="opacity-50">{counts[f]}</span>
-              </span>
+              {filter === f && <motion.span layoutId="roadmap-filter" className="absolute inset-x-2 -bottom-[13px] h-px bg-amber-200" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
+              {t(f === "all" ? "everything" : STATUS[f].label)} <span className="opacity-50">{counts[f]}</span>
             </button>
           ))}
-          <a href="#buried" className="font-mono shrink-0 rounded-full px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-white/40 transition hover:text-white">
+          <a href="#buried" className="font-mono shrink-0 px-3 py-1.5 text-[10.5px] uppercase tracking-[0.14em] text-white/35 transition hover:text-white/80">
             {t("buried")} <span className="opacity-50">{plan.buried.length}</span>
           </a>
         </div>
       </div>
 
-      <div ref={ref} className="relative mx-auto max-w-7xl">
-        {/* The trail: a faint line for the whole way, a lit one for how far you have scrolled. */}
-        <div aria-hidden className="absolute bottom-0 left-[14px] top-0 w-[2px] bg-white/[0.07] md:left-[250px]" />
-        <motion.div
-          aria-hidden
-          style={{ scaleY: grow }}
-          className="absolute bottom-0 left-[14px] top-0 w-[2px] origin-top bg-gradient-to-b from-amber-200 via-emerald-200/80 to-sky-200/30 shadow-[0_0_14px_rgba(253,230,138,0.5)] md:left-[250px]"
-        />
-        {plan.chapters.map((ch) => {
-          const items = plan.items.filter((i) => i.chapter === ch.id && shown(i));
-          if (!items.length) return null;
-          const wall = ch.id === "2026-10";
-          return (
-            <motion.div layout key={ch.id} className="relative grid gap-6 pb-20 pl-10 md:grid-cols-[220px_minmax(0,1fr)] md:gap-16 md:pl-0">
-              <div className="md:sticky md:top-40 md:self-start md:pr-4 md:text-right">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/40">{tx(ch, "label", ch.label)}</p>
-                <h2 className="font-display mt-2 text-3xl text-white md:text-4xl">{tx(ch, "name", ch.name)}</h2>
-                {tx(ch, "line", ch.line) && <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/50">{tx(ch, "line", ch.line)}</p>}
+      {plan.chapters.map((ch, n) => {
+        const items = plan.items.filter((i) => i.chapter === ch.id && shown(i));
+        if (!items.length) return null;
+        const wall = ch.id === "2026-10";
+        const line = tx(ch, "line", ch.line);
+        return (
+          <motion.div
+            layout
+            key={ch.id}
+            data-scene={CHAPTER_SCENE[ch.id] ?? 0}
+            className={`relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8 ${CHAPTER_FOG[ch.id] ?? ""}`}
+          >
+            <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-16">
+              <div className="lg:sticky lg:top-40 lg:self-start">
+                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
+                  {String(n + 1).padStart(2, "0")} / {String(plan.chapters.length).padStart(2, "0")} · {tx(ch, "label", ch.label)}
+                </p>
+                <h2 className="font-display mt-3 text-5xl leading-none text-white sm:text-6xl">{tx(ch, "name", ch.name)}</h2>
+                {line && <p className="mt-5 max-w-xs text-[14px] font-light leading-relaxed text-white/55">{line}</p>}
               </div>
-              <div className="grid gap-5">
+              <div className="roadmap-chapter-body">
                 {wall ? (
-                  <ShippedWall items={items} metrics={metrics} />
+                  <ShippedMatrix items={items} metrics={metrics} />
                 ) : (
-                  <AnimatePresence mode="popLayout">
-                    {items.map((it) => (
-                      <Card key={it.id} item={it} metric={it.metric ? metrics[it.metric] : null} />
-                    ))}
-                  </AnimatePresence>
+                  <>
+                    <AnimatePresence mode="popLayout">
+                      {items.map((it) => (
+                        <Row key={it.id} item={it} metric={it.metric ? metrics[it.metric] : null} />
+                      ))}
+                    </AnimatePresence>
+                    <Rule />
+                  </>
                 )}
               </div>
-            </motion.div>
-          );
-        })}
-      </div>
+            </div>
+          </motion.div>
+        );
+      })}
     </section>
   );
 }
@@ -381,38 +487,35 @@ function Vote({ plan }: { plan: Plan }) {
     ["The result on chain", "At the close, a hash of every vote and every balance goes into one Solana transaction."],
   ];
   return (
-    <section id="vote" className="relative px-5 py-24 sm:px-8 sm:py-28">
-      <div className="mx-auto max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sky-200/70">{t("Holders' vote · opens in November")}</p>
-        <h2 className="font-display mt-3 max-w-4xl text-4xl leading-[1.05] text-white sm:text-6xl">
+    <section id="vote" data-scene={2} className="relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("Holders' vote · opens in November")}</p>
+        <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("Three builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
         <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
           {t("January, February and March are not decided by us. Holders of $ZOOAGENCY pick which comes first, and the trail above moves to match.")}
         </p>
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-14 grid gap-x-10 md:grid-cols-3">
           {options.map((o, i) => (
-            <motion.div
-              key={o.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: i * 0.1 }}
-              className="liquid-glass relative rounded-3xl p-7"
-            >
-              <span className="font-mono absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full text-[13px] text-sky-200/80 ring-1 ring-dashed ring-sky-300/40 [outline:1px_dashed_rgba(125,211,252,0.35)] [outline-offset:4px]">?</span>
-              <p className="font-mono text-[11px] text-white/35">{String.fromCharCode(65 + i)}</p>
-              <h3 className="font-display mt-8 text-2xl text-white">{tx(o, "title", o.title)}</h3>
+            <div key={o.id} className="pb-8">
+              <Rule />
+              <div className="flex items-baseline justify-between pt-6">
+                <span className="font-mono text-[11px] text-white/40">{String.fromCharCode(65 + i)}</span>
+                <span className="font-mono text-[11px] text-white/40">? / 3</span>
+              </div>
+              <h3 className="font-display mt-6 text-[28px] leading-tight text-white">{tx(o, "title", o.title)}</h3>
               <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{tx(o, "text", o.text)}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
-        <div className="mt-14 grid gap-px overflow-hidden rounded-3xl bg-white/[0.07] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-4">
           {rules.map(([h, d], i) => (
-            <div key={h} className="bg-[#050807]/95 p-6">
-              <p className="font-mono text-[11px] text-white/30">{String(i + 1).padStart(2, "0")}</p>
-              <h4 className="mt-5 text-[15.5px] text-white">{t(h)}</h4>
-              <p className="mt-2 text-[13px] font-light leading-relaxed text-white/50">{t(d)}</p>
+            <div key={h} className="pb-6">
+              <Rule />
+              <p className="font-mono pt-5 text-[11px] text-white/30">{String(i + 1).padStart(2, "0")}</p>
+              <h4 className="mt-3 text-[15px] text-white">{t(h)}</h4>
+              <p className="mt-1.5 text-[13px] font-light leading-relaxed text-white/50">{t(d)}</p>
             </div>
           ))}
         </div>
@@ -420,7 +523,7 @@ function Vote({ plan }: { plan: Plan }) {
           href="https://t.me/zooaiagency_bot"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-10 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition hover:bg-white/90"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition hover:bg-white/90"
         >
           {t("Get pinged when it opens")} <ArrowUpRight size={15} />
         </a>
@@ -431,30 +534,24 @@ function Vote({ plan }: { plan: Plan }) {
 
 function Graveyard({ plan }: { plan: Plan }) {
   return (
-    <section id="buried" className="relative overflow-hidden px-5 py-24 sm:px-8 sm:py-32">
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[url('/backdrops/strip-nightfall.webp')] bg-cover bg-center opacity-[0.22]"
-        style={{ maskImage: "linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent)", WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent)" }}
-      />
-      <div className="relative mx-auto max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/40">{t("The clearing")}</p>
-        <h2 className="font-display mt-3 max-w-3xl text-4xl leading-[1.05] text-white sm:text-6xl">
+    <section id="buried" data-scene={3} className="relative flex min-h-[100svh] items-end px-5 pb-24 pt-40 sm:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("The clearing")}</p>
+        <h2 className="font-display mt-3 max-w-3xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("What we buried,")} <span className="accent">{t("and why.")}</span>
         </h2>
         <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
           {t("A roadmap that only grows is a wish list. These were planned, some were built, and we dropped them on purpose.")}
         </p>
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plan.buried.map((b, i) => (
             <motion.article
               key={b.id}
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.9, delay: i * 0.12, ease: "easeOut" }}
-              whileHover={{ y: -6, rotate: i % 2 ? 0.6 : -0.6 }}
-              className="relative flex flex-col rounded-b-2xl rounded-t-[999px] bg-gradient-to-b from-white/[0.07] via-white/[0.025] to-emerald-950/30 px-6 pb-6 pt-16 text-center ring-1 ring-white/10"
+              className="relative flex flex-col rounded-t-[999px] border border-b-0 border-white/[0.14] bg-[#030504]/55 px-6 pb-7 pt-16 text-center backdrop-blur-md"
             >
               <p className="font-mono text-[10.5px] tracking-[0.4em] text-white/35">R.I.P.</p>
               <h3 className="font-display mt-4 text-[22px] leading-tight text-white/90">{tx(b, "title", b.title)}</h3>
@@ -462,12 +559,11 @@ function Graveyard({ plan }: { plan: Plan }) {
                 {b.born ? `${fmtDate(b.born)} - ${fmtDate(b.buried)} · ${t("lived")} ${days(b.born, b.buried)}${t("d")}` : `${t("never built")} · ${fmtDate(b.buried)}`}
               </p>
               <p className="mt-4 text-[13px] font-light leading-relaxed text-white/45">{tx(b, "text", b.text)}</p>
-              <div className="mx-auto my-5 h-px w-12 bg-white/15" />
-              <p className="flex-1 text-[14px] leading-relaxed text-white/75">“{tx(b, "reason", b.reason)}”</p>
+              <div className="mx-auto my-5 h-px w-10 bg-white/20" />
+              <p className="flex-1 text-[14px] leading-relaxed text-white/80">“{tx(b, "reason", b.reason)}”</p>
               <div className="flex justify-center">
-                <ProofLinks proof={b.proof} />
+                <ProofLinks proof={b.proof} className="mt-5" />
               </div>
-              <div aria-hidden className="pointer-events-none absolute inset-x-4 -bottom-2 h-6 rounded-full bg-emerald-900/40 blur-xl" />
             </motion.article>
           ))}
         </div>
@@ -479,27 +575,26 @@ function Graveyard({ plan }: { plan: Plan }) {
 function Today({ commits }: { commits: { total: number | null; recent: Commit[] } | null }) {
   if (!commits?.recent.length) return null;
   return (
-    <section className="relative px-5 pb-28 sm:px-8">
+    <section data-scene={3} className="relative px-5 pb-28 sm:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="liquid-glass rounded-3xl p-6 sm:p-8">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl text-white sm:text-3xl">{t("The trail, today")}</h2>
-            <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/45 hover:text-white">
-              {t("this page is a file · its history")} ↗
-            </a>
-          </div>
-          <ol className="mt-6 divide-y divide-white/[0.06]">
-            {commits.recent.map((c) => (
-              <li key={c.sha}>
-                <a href={c.url} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-3">
-                  <span className="font-mono shrink-0 text-[12px] text-amber-100/70">{c.sha}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-light text-white/65 group-hover:text-white">{c.message}</span>
-                  <span className="font-mono shrink-0 text-[11px] text-white/35">{ago(c.at)}</span>
-                </a>
-              </li>
-            ))}
-          </ol>
+        <div className="flex flex-wrap items-baseline justify-between gap-3 pb-5">
+          <h2 className="font-display text-2xl text-white sm:text-3xl">{t("The trail, today")}</h2>
+          <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/45 hover:text-white">
+            {t("this page is a file · its history")} ↗
+          </a>
         </div>
+        <Rule />
+        <ol>
+          {commits.recent.map((c) => (
+            <li key={c.sha} className="border-b border-white/[0.07]">
+              <a href={c.url} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-3.5">
+                <span className="font-mono shrink-0 text-[12px] text-amber-100/70">{c.sha}</span>
+                <span className="min-w-0 flex-1 truncate text-[13.5px] font-light text-white/60 group-hover:text-white">{c.message}</span>
+                <span className="font-mono shrink-0 text-[11px] text-white/35">{ago(c.at)}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -509,77 +604,54 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
   const shipped = plan?.items.filter((i) => i.status === "shipped").length;
   const ahead = plan?.items.filter((i) => i.status !== "shipped").length;
   const last = commits?.recent[0]?.at;
+  const stats: Array<[string | number | null | undefined, string]> = [
+    [commits?.total, t("commits since Oct 6")],
+    [shipped, t("shipped")],
+    [ahead, t("ahead")],
+    [plan?.buried.length, t("buried")],
+  ];
   return (
-    <section className="relative flex min-h-[88vh] items-end overflow-hidden px-5 pb-16 pt-32 sm:px-8 sm:pb-24">
-      <video
-        aria-hidden
-        className="absolute inset-0 h-full w-full object-cover opacity-60"
-        src="/video/roadmap-1912.mp4"
-        poster="/video/roadmap-poster.webp"
-        autoPlay
-        muted
-        loop
-        playsInline
-      />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#030504] via-[#030504]/55 to-[#030504]/30" />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#030504]/80 via-transparent to-transparent" />
-      <div className="relative mx-auto w-full max-w-7xl">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/50">
+    <section data-scene={0} className="relative flex min-h-[100svh] items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
+      <div className="mx-auto w-full max-w-7xl">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55">
           {t("Roadmap · Oct 2026 - Apr 2027")}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
-          className="font-display mt-4 max-w-4xl text-[52px] leading-[0.95] text-white sm:text-7xl md:text-[96px]"
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          className="font-display mt-4 max-w-4xl text-[56px] leading-[0.95] text-white sm:text-8xl md:text-[112px]"
         >
           {t("The trail.")} <span className="accent">{t("Walked, and ahead.")}</span>
         </motion.h1>
-        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.25 }} className="mt-6 max-w-xl text-[15.5px] font-light leading-relaxed text-white/65">
+        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.3 }} className="mt-7 max-w-lg text-[15.5px] font-light leading-relaxed text-white/70">
           {t("Everything we shipped, with the commit that proves it. Everything next, and the part holders decide. Everything we buried, and why.")}
         </motion.p>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.5 }} className="font-mono mt-10 flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-white/50">
-          {commits?.total != null && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.55 }} className="mt-12 max-w-4xl">
+          <Rule />
+          <div className="grid grid-cols-2 sm:grid-cols-4">
+            {stats.map(([v, k]) => (
+              <div key={k} className="py-5 pr-4">
+                <p className="font-mono text-[28px] leading-none text-white sm:text-[34px]">{v == null ? "-" : num(Number(v))}</p>
+                <p className="font-mono mt-2 text-[10.5px] uppercase tracking-[0.14em] text-white/40">{k}</p>
+              </div>
+            ))}
+          </div>
+          <Rule />
+          <div className="font-mono flex flex-wrap items-center gap-x-8 gap-y-2 pt-4 text-[12px] text-white/55">
+            {last && (
+              <span>
+                <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-200 align-middle" />
+                {t("last one")} {ago(last)}
+              </span>
+            )}
             <span>
-              <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300 align-middle" />
-              {num(commits.total)} {t("commits since Oct 6")}
+              <span className="text-white/35">{t("free")}</span> {t("see who you're buying from")}
             </span>
-          )}
-          {last && (
             <span>
-              {t("last one")} {ago(last)}
+              <span className="text-amber-100/70">{t("holders")}</span> {t("see it first, and decide what we build next")}
             </span>
-          )}
-          {shipped != null && (
-            <span>
-              <span className="text-amber-100/80">{shipped}</span> {t("shipped")}
-            </span>
-          )}
-          {ahead != null && (
-            <span>
-              <span className="text-white/80">{ahead}</span> {t("ahead")}
-            </span>
-          )}
-          {plan && (
-            <span>
-              {plan.buried.length} {t("buried")}
-            </span>
-          )}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.7 }}
-          className="liquid-glass mt-10 inline-flex flex-col gap-1 rounded-2xl px-5 py-4 sm:flex-row sm:gap-6"
-        >
-          <p className="text-[13.5px] text-white/80">
-            <span className="font-mono mr-2 text-[10.5px] uppercase tracking-[0.14em] text-white/40">{t("free")}</span>
-            {t("see who you're buying from")}
-          </p>
-          <p className="text-[13.5px] text-white/80">
-            <span className="font-mono mr-2 text-[10.5px] uppercase tracking-[0.14em] text-amber-100/60">{t("holders")}</span>
-            {t("see it first, and decide what we build next")}
-          </p>
+          </div>
         </motion.div>
       </div>
     </section>
@@ -592,6 +664,7 @@ export default function RoadmapPage() {
   const metrics = useMetrics();
   return (
     <>
+      <Scene />
       <Hero plan={plan} commits={commits} />
       {plan ? (
         <>

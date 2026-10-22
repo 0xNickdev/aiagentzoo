@@ -157,3 +157,40 @@ body {
 :root:lang(zh-CN) .font-instrument {
   letter-spacing: 0;
 }
+
+/* Roadmap: mist that drifts on its own over the trail. */
+.roadmap-fog {
+  background:
+    radial-gradient(45% 30% at 30% 70%, rgba(170, 195, 210, 0.16), transparent 70%),
+    radial-gradient(40% 25% at 75% 60%, rgba(160, 190, 205, 0.14), transparent 70%),
+    radial-gradient(60% 35% at 55% 85%, rgba(150, 180, 195, 0.12), transparent 70%);
+  filter: blur(18px);
+  animation: roadmap-fog 38s ease-in-out infinite alternate;
+}
+@keyframes roadmap-fog {
+  from { transform: translate3d(-4%, 0, 0) scale(1.05); }
+  to { transform: translate3d(4%, -2%, 0) scale(1.12); }
+}
+.roadmap-firefly {
+  opacity: 0;
+  box-shadow: 0 0 8px 2px rgba(253, 230, 138, 0.55);
+  animation-name: roadmap-firefly;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+@keyframes roadmap-firefly {
+  0%, 100% { opacity: 0; transform: translate3d(0, 0, 0); }
+  40% { opacity: 0.85; }
+  50% { transform: translate3d(14px, -22px, 0); }
+  70% { opacity: 0.4; }
+}
+/* Months further ahead sit in the fog; pointing at one clears it. Touch screens read them clear. */
+@media (hover: hover) {
+  .fog-1 .roadmap-chapter-body { filter: blur(0.35px); opacity: 0.85; transition: filter 0.6s, opacity 0.6s; }
+  .fog-2 .roadmap-chapter-body { filter: blur(0.8px); opacity: 0.72; transition: filter 0.6s, opacity 0.6s; }
+  .fog-1 .roadmap-chapter-body:hover, .fog-2 .roadmap-chapter-body:hover,
+  .fog-1 .roadmap-chapter-body:focus-within, .fog-2 .roadmap-chapter-body:focus-within { filter: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-fog, .roadmap-firefly { animation: none; }
+}
