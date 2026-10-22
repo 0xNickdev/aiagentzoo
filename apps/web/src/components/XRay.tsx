@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
+import MoneyMap from "./MoneyMap";
 import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
@@ -454,7 +455,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
   );
 }
 
-type Tab = "overview" | "dev" | "five" | "bundles" | "holders" | "wallets";
+type Tab = "overview" | "dev" | "five" | "map" | "bundles" | "holders" | "wallets";
 
 /** A report laid out like a terminal: the verdict and a menu of what decides it on the left, one section at a time on the right. */
 function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
@@ -499,6 +500,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
     { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : t("no red flags") },
     { id: "dev", k: "The dev", sub: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
     { id: "five", k: "First 5 seconds", sub: early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
+    ...(early.length ? [{ id: "map" as Tab, k: "Money map", sub: t("who paid, who sold") }] : []),
     { id: "bundles", k: "Bundles & volume", sub: f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
     { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
     ...(early.length ? [{ id: "wallets" as Tab, k: "All wallets", sub: t("{n} in the first 5 s", { n: early.length }) }] : []),
@@ -704,6 +706,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           </div>
         )
               )}
+
+              {tab === "map" && <MoneyMap r={r} />}
 
               {tab === "bundles" && (
                 <div className="liquid-glass rounded-3xl p-6 sm:p-8">
