@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
+import { CAPill } from "./TokenAddress";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 export const EXTENSION_URL = "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl";
@@ -210,6 +211,17 @@ export function Holders() {
           <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/75">
             {t("61.5% of the token's creator fees buy it back and burn it, every buyback on the ClawPump page. From November, 10% of every swap fee joins them.")}
           </p>
+          <div className="mt-7">
+            <CAPill />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[14.5px]">
+            <a href="https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-white/75 hover:text-white">
+              DexScreener ↗
+            </a>
+            <a href="https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-white/75 hover:text-white">
+              Solscan ↗
+            </a>
+          </div>
           <a
             href="https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"
             target="_blank"
@@ -227,6 +239,31 @@ export function Holders() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/** What the zoo reads and where it lives, said plainly under the hero. */
+export function TrustStrip() {
+  const reads = ["pump.fun", "PumpSwap", "Raydium LaunchLab", "Meteora"];
+  return (
+    <section className="relative border-t border-white/[0.08] bg-[#050706] px-5 py-6 sm:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-10 gap-y-4">
+        <span className="text-[14px] text-white/60">{t("Reads every launch and trade on")}</span>
+        {reads.map((r) => (
+          <span key={r} className="font-display text-[18px] font-medium text-white/85">
+            {r}
+          </span>
+        ))}
+        <span className="hidden h-5 w-px bg-white/15 md:block" />
+        <a href="https://clawpump.tech" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[14px] text-white/60 hover:text-white">
+          {t("Launched on")}
+          <img src="/clawpump.png" alt="ClawPump" className="h-6 w-auto" />
+        </a>
+        <span className="text-[14px] text-white/60">
+          {t("Built on")} <span className="font-display text-[18px] font-medium text-white/85">Solana</span>
+        </span>
       </div>
     </section>
   );

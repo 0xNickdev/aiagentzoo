@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Hero from "./components/Hero";
-import { Holders, NumbersBand, Products, XRayShowcase } from "./components/HomeSections";
+import { Holders, NumbersBand, Products, TrustStrip, XRayShowcase } from "./components/HomeSections";
 import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
@@ -84,6 +84,7 @@ function Home() {
   return (
     <>
       <Hero />
+      <TrustStrip />
       <NumbersBand />
       <XRayShowcase />
       <Products />
