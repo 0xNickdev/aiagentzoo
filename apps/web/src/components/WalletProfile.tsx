@@ -60,28 +60,37 @@ function Box({ title, note, children }: { title: string; note?: string; children
 function Num({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="bg-[#070a09]/90 px-4 py-3">
-      <p className="text-[12.5px] text-white/65">{t(k)}</p>
-      <p className={`font-mono mt-1 text-[18px] ${bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{v}</p>
+      <p className="flex items-center gap-1.5 text-[12.5px] text-white/65">
+        {bad && <span className="h-1.5 w-1.5 rounded-full bg-[#ff8a7e]" />}
+        {t(k)}
+      </p>
+      <p className="font-mono mt-1 text-[18px] text-white/90">{v}</p>
     </div>
   );
 }
 
-/** One sentence for the whole wallet, from the facts, no adjectives the facts do not carry. */
-function lead(p: Profile): { text: string; bad: boolean; good?: boolean } {
+type Tone = "bad" | "good" | "plain";
+/** The wallet in three parts: a small tag that carries the colour, a short white headline with the numbers, a quiet line under it. */
+function lead(p: Profile): { tag: string; title: string; sub?: string; tone: Tone } {
   const d = p.dev;
   if (d && d.builder?.isBuilder)
-    return { text: t("A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.", { g: d.builder.grew, n: d.builder.launches }), bad: false, good: true };
+    return { tag: t("Track record"), title: t("{g} of {n} launches grew.", { g: d.builder.grew, n: d.builder.launches }), sub: t("They still hold liquidity, and this dev has not dumped them."), tone: "good" };
   if (d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6))
-    return { text: t("A serial dumper: launched {n} tokens in two days and dumped {d} of them, usually {m} min after launch.", { n: d.launches48h, d: d.dumped, m: d.medianDumpMin ?? 0 }), bad: true };
+    return {
+      tag: t("Serial dumper"),
+      title: t("{n} launches in two days. {d} dumped.", { n: d.launches48h, d: d.dumped }),
+      sub: (d.medianDumpMin ?? 0) === 0 ? t("Usually in the same minute it launched.") : t("Usually {m} min after launch.", { m: d.medianDumpMin ?? 0 }),
+      tone: "bad",
+    };
   if (p.funded.creators.length >= 2 && !p.funded.hot) {
     const dumps = p.funded.creators.reduce((n, c) => n + c.dumped, 0);
-    return { text: t("Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.", { n: p.funded.creators.length, d: dumps }), bad: dumps >= 3 };
+    return { tag: t("Pays for other devs"), title: t("Funded {n} launch wallets.", { n: p.funded.creators.length }), sub: t("{d} dumps between them in two days.", { d: dumps }), tone: dumps >= 3 ? "bad" : "plain" };
   }
   if (p.sniper && p.sniper.snipes48h >= 10)
-    return { text: t("A sniper: bought {n} launches in their first seconds in two days and sold out of {o}, usually {x} after buying.", { n: p.sniper.snipes48h, o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), bad: true };
-  if (d && d.graduated >= 1 && d.dumped === 0) return { text: t("A dev whose launches graduated and who has not dumped one in two days."), bad: false };
-  if (d) return { text: t("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), bad: d.dumped >= 2 };
-  return { text: t("Seen in the first seconds of {n} launches in two days.", { n: p.sniper?.snipes48h ?? 0 }), bad: false };
+    return { tag: t("Sniper"), title: t("{n} launches sniped in two days.", { n: p.sniper.snipes48h }), sub: t("Sold out of {o}, usually {x} after buying.", { o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), tone: "bad" };
+  if (d && d.graduated >= 1 && d.dumped === 0) return { tag: t("Dev"), title: t("{g} launches graduated.", { g: d.graduated }), sub: t("No dump from this dev in two days."), tone: "plain" };
+  if (d) return { tag: t("Dev"), title: t("{n} launches in two days. {d} dumped.", { n: d.launches48h, d: d.dumped }), tone: d.dumped >= 2 ? "bad" : "plain" };
+  return { tag: t("First-second buyer"), title: t("In the first seconds of {n} launches.", { n: p.sniper?.snipes48h ?? 0 }), sub: t("Over the last two days."), tone: "plain" };
 }
 
 /** A wallet's page: as a dev, as a first-second buyer and as the one who pays for devs. Every address leads on. */
@@ -132,7 +141,14 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </span>
           </div>
           <p className="font-mono mt-2 break-all text-[15px] text-white/85">{wallet}</p>
-          <p className={`font-display mt-4 max-w-4xl text-2xl leading-snug sm:text-3xl ${l.good ? "text-[#9df3b0]" : l.bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{l.text}</p>
+          <div className="mt-6">
+            <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.12em]" style={{ color: l.tone === "bad" ? "#ff8a7e" : l.tone === "good" ? "#9df3b0" : "rgba(255,255,255,0.6)" }}>
+              <span className="h-2 w-2 rounded-full" style={{ background: "currentColor" }} />
+              {l.tag}
+            </p>
+            <h2 className="font-display mt-3 max-w-4xl text-[32px] font-semibold leading-[1.05] text-white sm:text-[44px]">{l.title}</h2>
+            {l.sub && <p className="mt-2 text-[17px] text-white/65">{l.sub}</p>}
+          </div>
           {d && (
             <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-5">
               <Num k="launches · 48h" v={String(d.launches48h)} bad={d.launches48h >= 5} />
