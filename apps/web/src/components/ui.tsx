@@ -10,7 +10,7 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.8, delay, ease: "easeOut" }}
+      transition={{ duration: 0.9, delay, ease: [0.215, 0.61, 0.355, 1] }}
     >
       {children}
     </motion.div>
@@ -21,16 +21,16 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
   return (
     <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
       <Reveal>
-        <p className="font-mono mb-5 text-[12px] text-white/70">{eyebrow}</p>
+        <p className="mb-4 text-[15px] text-white/70">{eyebrow}</p>
       </Reveal>
-      <h2 className="font-display text-4xl leading-[1.05] text-white sm:text-5xl md:text-6xl">
+      <h2 className="font-display text-[40px] font-semibold leading-[1.02] text-white sm:text-[56px] md:text-[64px]">
         {title.map((line) => (
           <StaggeredFade key={line} text={line} />
         ))}
       </h2>
       {text && (
         <Reveal delay={0.4}>
-          <p className="mx-auto mt-6 max-w-xl text-sm font-light leading-relaxed text-white/60 sm:text-base">{text}</p>
+          <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-white/75">{text}</p>
         </Reveal>
       )}
     </div>
