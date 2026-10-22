@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, GitCommit } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NODE_URLS } from "../../sim/live";
@@ -181,16 +181,23 @@ const CHAPTER_SCENE: Record<string, number> = { "2026-10": 0, "2026-11": 0, "202
 /** How deep in the fog a chapter sits: the further ahead, the softer until you reach for it. */
 const CHAPTER_FOG: Record<string, string> = { "2027-01": "fog-1", "2027-02": "fog-1", "2027-03": "fog-2", "2027-04": "fog-2" };
 
+/** Seconds into the trail film where each part of the page sits: the walk starts at the top and stops in the clearing. */
+const FILM = { dec: 7, fog: 11, clearing: 16.5, end: 19.9 };
+const VIDEO_DESKTOP = "/video/trail-1920.mp4";
+const VIDEO_MOBILE = "/video/trail-1080.mp4";
+
 /**
- * The camera: the four frames stacked behind the page. The part of the page at the middle of the screen decides
- * which frame shows; frames cross-fade, and the whole stack pushes in slowly as you scroll, so the walk never stops.
+ * The camera. One film of the forest path, scrubbed by the scroll: the top of the page is the start of the trail,
+ * December is where a sphere catches fire, the months holders pick are in the fog, and the buried ideas are the
+ * clearing at the end. The four stills sit underneath and cross-fade by section until the film is ready, and for
+ * anyone who asked for less motion they are all there is.
  */
 function Scene() {
   const [active, setActive] = useState(0);
-  const { scrollYProgress } = useScroll();
-  const push = useSpring(scrollYProgress, { stiffness: 60, damping: 30 });
-  const [scale, setScale] = useState(1.04);
-  useEffect(() => push.on("change", (v) => setScale(1.04 + v * 0.14)), [push]);
+  const [film, setFilm] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
+  const still = useMemo(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
+
   useEffect(() => {
     const io = new IntersectionObserver(
       (entries) => {
@@ -208,6 +215,53 @@ function Scene() {
       mo.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    const v = video.current;
+    if (!v || still) return;
+    let raf = 0;
+    let shown = 0;
+    const top = (sel: string) => {
+      const el = document.querySelector(sel);
+      return el ? el.getBoundingClientRect().top + window.scrollY : null;
+    };
+    // Where the page should be in the film: straight lines between the section marks.
+    const target = () => {
+      const y = window.scrollY + window.innerHeight * 0.5;
+      const end = document.documentElement.scrollHeight;
+      const marks: Array<[number | null, number]> = [
+        [0, 0],
+        [top('[data-scene="1"]'), FILM.dec],
+        [top('[data-scene="2"]'), FILM.fog],
+        [top("#buried"), FILM.clearing],
+        [end, FILM.end],
+      ];
+      const pts = marks.filter((m): m is [number, number] => m[0] != null).sort((a, b) => a[0] - b[0]);
+      for (let i = 1; i < pts.length; i++) {
+        const [y0, t0] = pts[i - 1];
+        const [y1, t1] = pts[i];
+        if (y <= y1) return t0 + ((t1 - t0) * Math.max(0, y - y0)) / Math.max(1, y1 - y0);
+      }
+      return FILM.end;
+    };
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      if (v.readyState < 2 || v.seeking) return;
+      const want = target();
+      // Ease toward the scroll so a flick of the wheel glides instead of jumping frames.
+      shown += (want - shown) * 0.14;
+      if (Math.abs(v.currentTime - shown) > 1 / 30) v.currentTime = shown;
+    };
+    const ready = () => setFilm(true);
+    v.addEventListener("loadeddata", ready);
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      v.removeEventListener("loadeddata", ready);
+    };
+  }, [still]);
+
+  const src = typeof window !== "undefined" && window.innerWidth <= 820 ? VIDEO_MOBILE : VIDEO_DESKTOP;
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#030504]">
       {SCENES.map((s, i) => (
@@ -217,13 +271,24 @@ function Scene() {
             src={s.src}
             alt=""
             loading={i === 0 ? "eager" : "lazy"}
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1600ms] ease-out"
-            style={{ opacity: active === i ? 1 : 0, transform: `scale(${scale})`, objectPosition: "58% 50%" }}
+            className="absolute inset-0 h-full w-full scale-105 object-cover transition-opacity duration-[1600ms] ease-out"
+            style={{ opacity: !film && active === i ? 1 : 0, objectPosition: "58% 50%" }}
           />
         </picture>
       ))}
+      {!still && (
+        <video
+          ref={video}
+          src={src}
+          muted
+          playsInline
+          preload="auto"
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
+          style={{ opacity: film ? 1 : 0, objectPosition: "58% 50%" }}
+        />
+      )}
       {/* Mist that drifts on its own, thicker deeper in. */}
-      <div className="roadmap-fog absolute inset-0 transition-opacity duration-[1600ms]" style={{ opacity: active === 2 ? 0.9 : active === 3 ? 0.5 : 0.35 }} />
+      <div className="roadmap-fog absolute inset-0 transition-opacity duration-[1600ms]" style={{ opacity: active === 2 ? 0.7 : active === 3 ? 0.35 : 0.25 }} />
       <Fireflies />
       {/* Reading light: dark on the left where the text sits, and at the bottom. */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#030504]/90 via-[#030504]/60 to-[#030504]/40" />
