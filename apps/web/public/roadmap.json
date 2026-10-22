@@ -7,294 +7,720 @@
       "label": "Oct 2026",
       "name": "Built",
       "line": "Sixteen days from the first commit to an x-ray traders use. Every card links the commit that shipped it.",
-      "zh": { "label": "2026 年 10 月", "name": "已建成", "line": "从第一次提交到交易者每天在用的透视，用了十六天。每张卡片都链接到上线它的那次提交。" }
+      "zh": {
+        "label": "2026 年 10 月",
+        "name": "已建成",
+        "line": "从第一次提交到交易者每天在用的透视，用了十六天。每张卡片都链接到上线它的那次提交。"
+      }
     },
     {
       "id": "2026-11",
       "label": "Nov 2026",
       "name": "Own ground",
-      "line": "Our own machines, a page for holders, and the first vote on what comes next.",
-      "zh": { "label": "2026 年 11 月", "name": "自己的地盘", "line": "自己的服务器，持有者专属页面，以及第一次决定下一步的投票。" }
+      "line": "Our own machines, a swap and a pro tier that pay for the zoo, and the first vote on what comes next.",
+      "zh": {
+        "label": "2026 年 11 月",
+        "name": "自己的地盘",
+        "line": "自己的服务器，让项目自给自足的兑换和专业版，以及第一次决定下一步的投票。"
+      }
     },
     {
       "id": "2026-12",
       "label": "Dec 2026",
       "name": "Guard",
-      "line": "A seatbelt for the agents that trade without a human watching.",
-      "zh": { "label": "2026 年 12 月", "name": "守卫", "line": "给无人看管、自己交易的智能体系上安全带。" }
+      "line": "A seatbelt for agents that trade alone, and three builds in the order holders choose.",
+      "zh": {
+        "label": "2026 年 12 月",
+        "name": "守卫",
+        "line": "给独自交易的智能体系上安全带，以及按持有者选定顺序完成的三个项目。"
+      }
     },
     {
-      "id": "2027-01",
-      "label": "Jan 2027",
-      "name": "Holders pick",
-      "line": "January, February and March are three builds. Holders set the order.",
-      "zh": { "label": "2027 年 1 月", "name": "持有者来选", "line": "一月、二月、三月是三个项目，顺序由持有者投票决定。" }
-    },
-    {
-      "id": "2027-02",
-      "label": "Feb 2027",
-      "name": "Holders pick",
-      "line": "",
-      "zh": { "label": "2027 年 2 月", "name": "持有者来选", "line": "" }
-    },
-    {
-      "id": "2027-03",
-      "label": "Mar 2027",
-      "name": "Holders pick",
-      "line": "",
-      "zh": { "label": "2027 年 3 月", "name": "持有者来选", "line": "" }
-    },
-    {
-      "id": "2027-04",
-      "label": "Apr 2027",
-      "name": "Open truth",
-      "line": "Our verdicts tested against outside data, in the terminals people already use, and six months of numbers in public.",
-      "zh": { "label": "2027 年 4 月", "name": "公开的真相", "line": "用外部数据检验我们的判断，进入大家已经在用的终端，公开六个月的全部数字。" }
+      "id": "later",
+      "label": "No date",
+      "name": "Exploring",
+      "line": "Ideas we are working on that depend on others or on what we learn first. No date until there is one.",
+      "zh": {
+        "label": "暂无日期",
+        "name": "探索中",
+        "line": "取决于合作方或我们先学到什么的想法。有日期之前不写日期。"
+      }
     }
   ],
   "items": [
     {
-      "id": "runtime", "chapter": "2026-10", "status": "shipped", "date": "2026-10-06",
+      "id": "runtime",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-06",
       "title": "Agents with permissions",
       "text": "An agent's species is what it may do, enforced by the runtime. Signed signals, budgets, a hash-chained public log.",
-      "proof": [{ "label": "cf7b6dd", "href": "https://github.com/0xNickdev/aiagentzoo/commit/cf7b6dd" }],
+      "proof": [
+        {
+          "label": "cf7b6dd",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/cf7b6dd"
+        }
+      ],
       "metric": "logEntries",
-      "zh": { "title": "带权限的智能体", "text": "物种决定一个智能体能做什么，由运行时强制执行。签名信号、预算、哈希链公开日志。" }
+      "zh": {
+        "title": "带权限的智能体",
+        "text": "物种决定一个智能体能做什么，由运行时强制执行。签名信号、预算、哈希链公开日志。"
+      }
     },
     {
-      "id": "brief", "chapter": "2026-10", "status": "shipped", "date": "2026-10-07",
+      "id": "brief",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-07",
       "title": "Morning Brief",
       "text": "Out every day at 07:00 UTC with no human in the loop, every issue hashed and archived.",
-      "proof": [{ "label": "9290efc", "href": "https://github.com/0xNickdev/aiagentzoo/commit/9290efc" }, { "label": "/brief", "href": "/brief" }],
+      "proof": [
+        {
+          "label": "9290efc",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/9290efc"
+        },
+        {
+          "label": "/brief",
+          "href": "/brief"
+        }
+      ],
       "metric": "briefs",
-      "zh": { "title": "早报", "text": "每天 UTC 07:00 自动发布，无人参与，每一期都有哈希并存档。" }
+      "zh": {
+        "title": "早报",
+        "text": "每天 UTC 07:00 自动发布，无人参与，每一期都有哈希并存档。"
+      }
     },
     {
-      "id": "graded", "chapter": "2026-10", "status": "shipped", "date": "2026-10-07",
+      "id": "graded",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-07",
       "title": "Judges graded in public",
       "text": "Every call is re-checked the next day and the score is public. The beaver rewrites its own playbook from it.",
-      "proof": [{ "label": "4a23338", "href": "https://github.com/0xNickdev/aiagentzoo/commit/4a23338" }, { "label": "/agents", "href": "/agents" }],
+      "proof": [
+        {
+          "label": "4a23338",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/4a23338"
+        },
+        {
+          "label": "/agents",
+          "href": "/agents"
+        }
+      ],
       "metric": "beaver",
-      "zh": { "title": "公开打分的评委", "text": "每个判断第二天都会被复查，分数公开。海狸根据分数重写自己的规则手册。" }
+      "zh": {
+        "title": "公开打分的评委",
+        "text": "每个判断第二天都会被复查，分数公开。海狸根据分数重写自己的规则手册。"
+      }
     },
     {
-      "id": "guests", "chapter": "2026-10", "status": "shipped", "date": "2026-10-07",
+      "id": "guests",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-07",
       "title": "Bring your own agent",
       "text": "Outside agents move in with a Solana wallet and earn a public record. A wing for ClawPump agents.",
-      "proof": [{ "label": "b6e0856", "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6e0856" }, { "label": "/connect", "href": "/connect" }],
+      "proof": [
+        {
+          "label": "b6e0856",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6e0856"
+        },
+        {
+          "label": "/connect",
+          "href": "/connect"
+        }
+      ],
       "metric": "guests",
-      "zh": { "title": "带上你自己的智能体", "text": "外部智能体用一个 Solana 钱包入驻，赢得公开战绩。ClawPump 智能体有专属区。" }
+      "zh": {
+        "title": "带上你自己的智能体",
+        "text": "外部智能体用一个 Solana 钱包入驻，赢得公开战绩。ClawPump 智能体有专属区。"
+      }
     },
     {
-      "id": "chain", "chapter": "2026-10", "status": "shipped", "date": "2026-10-10",
+      "id": "chain",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-10",
       "title": "Reading Solana directly",
       "text": "Every pump.fun launch and trade straight from a Yellowstone stream, not from someone else's API.",
-      "proof": [{ "label": "45d410d", "href": "https://github.com/0xNickdev/aiagentzoo/commit/45d410d" }, { "label": "/live", "href": "/live" }],
+      "proof": [
+        {
+          "label": "45d410d",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/45d410d"
+        },
+        {
+          "label": "/live",
+          "href": "/live"
+        }
+      ],
       "metric": "trades",
-      "zh": { "title": "直接读取 Solana", "text": "每一个 pump.fun 发射和交易都直接来自 Yellowstone 数据流，而不是别人的 API。" }
+      "zh": {
+        "title": "直接读取 Solana",
+        "text": "每一个 pump.fun 发射和交易都直接来自 Yellowstone 数据流，而不是别人的 API。"
+      }
     },
     {
-      "id": "nursery", "chapter": "2026-10", "status": "shipped", "date": "2026-10-10",
+      "id": "nursery",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-10",
       "title": "Judges that evolve",
       "text": "Eight judges sit the same exam every night. The weakest dies, the strongest breed.",
-      "proof": [{ "label": "8367ed4", "href": "https://github.com/0xNickdev/aiagentzoo/commit/8367ed4" }, { "label": "/evolution", "href": "/evolution" }],
-      "zh": { "title": "会进化的评委", "text": "八个评委每晚参加同一场考试。最弱的死去，最强的繁衍。" }
+      "proof": [
+        {
+          "label": "8367ed4",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/8367ed4"
+        },
+        {
+          "label": "/evolution",
+          "href": "/evolution"
+        }
+      ],
+      "zh": {
+        "title": "会进化的评委",
+        "text": "八个评委每晚参加同一场考试。最弱的死去，最强的繁衍。"
+      }
     },
     {
-      "id": "rugs", "chapter": "2026-10", "status": "shipped", "date": "2026-10-14",
+      "id": "rugs",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-14",
       "title": "Wall of rugs",
       "text": "The devs who dumped the most of their own launches in 48 hours, each with the transaction.",
-      "proof": [{ "label": "005a9ef", "href": "https://github.com/0xNickdev/aiagentzoo/commit/005a9ef" }, { "label": "/rugs", "href": "/rugs" }],
-      "zh": { "title": "跑路墙", "text": "48 小时内砸盘自己发射次数最多的开发者，每一笔都附交易。" }
+      "proof": [
+        {
+          "label": "005a9ef",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/005a9ef"
+        },
+        {
+          "label": "/rugs",
+          "href": "/rugs"
+        }
+      ],
+      "zh": {
+        "title": "跑路墙",
+        "text": "48 小时内砸盘自己发射次数最多的开发者，每一笔都附交易。"
+      }
     },
     {
-      "id": "bundles", "chapter": "2026-10", "status": "shipped", "date": "2026-10-14",
+      "id": "bundles",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-14",
       "title": "Bundle detection",
       "text": "Wallets that buy together in one block, how much supply they took and how much they still hold.",
-      "proof": [{ "label": "3d14fa4", "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d14fa4" }, { "label": "4b29674", "href": "https://github.com/0xNickdev/aiagentzoo/commit/4b29674" }],
-      "zh": { "title": "捆绑检测", "text": "在同一个区块里一起买入的钱包，拿走了多少供应，现在还剩多少。" }
+      "proof": [
+        {
+          "label": "3d14fa4",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d14fa4"
+        },
+        {
+          "label": "4b29674",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/4b29674"
+        }
+      ],
+      "zh": {
+        "title": "捆绑检测",
+        "text": "在同一个区块里一起买入的钱包，拿走了多少供应，现在还剩多少。"
+      }
     },
     {
-      "id": "telegram", "chapter": "2026-10", "status": "shipped", "date": "2026-10-14",
+      "id": "telegram",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-14",
       "title": "Telegram bot and app",
       "text": "Paste a CA in any chat. Watch a token and get pinged when the dev dumps or the pool drains.",
-      "proof": [{ "label": "594e998", "href": "https://github.com/0xNickdev/aiagentzoo/commit/594e998" }, { "label": "25c0f7d", "href": "https://github.com/0xNickdev/aiagentzoo/commit/25c0f7d" }],
-      "zh": { "title": "Telegram 机器人和小程序", "text": "在任何群里粘贴合约地址。关注一个代币，开发者砸盘或池子被抽干时提醒你。" }
+      "proof": [
+        {
+          "label": "594e998",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/594e998"
+        },
+        {
+          "label": "25c0f7d",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/25c0f7d"
+        }
+      ],
+      "zh": {
+        "title": "Telegram 机器人和小程序",
+        "text": "在任何群里粘贴合约地址。关注一个代币，开发者砸盘或池子被抽干时提醒你。"
+      }
     },
     {
-      "id": "play", "chapter": "2026-10", "status": "shipped", "date": "2026-10-14",
+      "id": "play",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-14",
       "title": "Humans vs the beaver",
       "text": "People answer the same nightly exam as the AI, graded the same way. Weekly standings, SOL prizes.",
-      "proof": [{ "label": "fb7b75d", "href": "https://github.com/0xNickdev/aiagentzoo/commit/fb7b75d" }, { "label": "/play", "href": "/play" }],
-      "zh": { "title": "人类对战海狸", "text": "人和 AI 回答同一场夜间考试，用同样的方式打分。每周排名，SOL 奖励。" }
+      "proof": [
+        {
+          "label": "fb7b75d",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/fb7b75d"
+        },
+        {
+          "label": "/play",
+          "href": "/play"
+        }
+      ],
+      "zh": {
+        "title": "人类对战海狸",
+        "text": "人和 AI 回答同一场夜间考试，用同样的方式打分。每周排名，SOL 奖励。"
+      }
     },
     {
-      "id": "holders", "chapter": "2026-10", "status": "shipped", "date": "2026-10-15",
+      "id": "holders",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-15",
       "title": "Holders hear first",
       "text": "Holders of $ZOOAGENCY get alerts at once, everyone else later. More asks, more watched tokens.",
-      "proof": [{ "label": "963441c", "href": "https://github.com/0xNickdev/aiagentzoo/commit/963441c" }],
-      "zh": { "title": "持有者先知道", "text": "$ZOOAGENCY 持有者立刻收到提醒，其他人稍后。更多提问次数，更多关注代币。" }
+      "proof": [
+        {
+          "label": "963441c",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/963441c"
+        }
+      ],
+      "zh": {
+        "title": "持有者先知道",
+        "text": "$ZOOAGENCY 持有者立刻收到提醒，其他人稍后。更多提问次数，更多关注代币。"
+      }
     },
     {
-      "id": "gene", "chapter": "2026-10", "status": "shipped", "date": "2026-10-15",
+      "id": "gene",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-15",
       "title": "Holders vote the gene",
       "text": "Every week holders pick a rule for the next newborn judge. Balance read at the close too, the smaller counts.",
-      "proof": [{ "label": "ba8d8f3", "href": "https://github.com/0xNickdev/aiagentzoo/commit/ba8d8f3" }],
-      "zh": { "title": "持有者投票基因", "text": "每周持有者为下一个新生评委选一条规则。结束时再读一次余额，取较小值。" }
+      "proof": [
+        {
+          "label": "ba8d8f3",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/ba8d8f3"
+        }
+      ],
+      "zh": {
+        "title": "持有者投票基因",
+        "text": "每周持有者为下一个新生评委选一条规则。结束时再读一次余额，取较小值。"
+      }
     },
     {
-      "id": "zh", "chapter": "2026-10", "status": "shipped", "date": "2026-10-15",
+      "id": "zh",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-15",
       "title": "中文",
       "text": "The site, the bot and the alerts in Simplified Chinese.",
-      "proof": [{ "label": "3f2ee9c", "href": "https://github.com/0xNickdev/aiagentzoo/commit/3f2ee9c" }, { "label": "fa6b238", "href": "https://github.com/0xNickdev/aiagentzoo/commit/fa6b238" }],
-      "zh": { "title": "中文", "text": "网站、机器人和提醒全部支持简体中文。" }
+      "proof": [
+        {
+          "label": "3f2ee9c",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/3f2ee9c"
+        },
+        {
+          "label": "fa6b238",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/fa6b238"
+        }
+      ],
+      "zh": {
+        "title": "中文",
+        "text": "网站、机器人和提醒全部支持简体中文。"
+      }
     },
     {
-      "id": "drained", "chapter": "2026-10", "status": "shipped", "date": "2026-10-15",
+      "id": "drained",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-15",
       "title": "Drained pools",
       "text": "A graduated coin whose pool falls to a fifth of its best is called out, on the map and in alerts.",
-      "proof": [{ "label": "5f05cfc", "href": "https://github.com/0xNickdev/aiagentzoo/commit/5f05cfc" }],
-      "zh": { "title": "池子被抽干", "text": "已毕业代币的池子跌到峰值的五分之一，地图和提醒里都会标出来。" }
+      "proof": [
+        {
+          "label": "5f05cfc",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/5f05cfc"
+        }
+      ],
+      "zh": {
+        "title": "池子被抽干",
+        "text": "已毕业代币的池子跌到峰值的五分之一，地图和提醒里都会标出来。"
+      }
     },
     {
-      "id": "launchpads", "chapter": "2026-10", "status": "shipped", "date": "2026-10-17",
+      "id": "launchpads",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-17",
       "title": "LaunchLab and Meteora",
       "text": "Raydium LaunchLab and Meteora's curve read from the chain, beside pump.fun.",
-      "proof": [{ "label": "c7ec1d2", "href": "https://github.com/0xNickdev/aiagentzoo/commit/c7ec1d2" }],
+      "proof": [
+        {
+          "label": "c7ec1d2",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/c7ec1d2"
+        }
+      ],
       "metric": "launches",
-      "zh": { "title": "LaunchLab 和 Meteora", "text": "Raydium LaunchLab 和 Meteora 的曲线直接从链上读取，与 pump.fun 并列。" }
+      "zh": {
+        "title": "LaunchLab 和 Meteora",
+        "text": "Raydium LaunchLab 和 Meteora 的曲线直接从链上读取，与 pump.fun 并列。"
+      }
     },
     {
-      "id": "xray", "chapter": "2026-10", "status": "shipped", "date": "2026-10-17",
+      "id": "xray",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-17",
       "title": "X-Ray",
       "text": "The dev's history, who funded them, the first five seconds as a radar, snipers that turn out to be the dev.",
-      "proof": [{ "label": "35965bc", "href": "https://github.com/0xNickdev/aiagentzoo/commit/35965bc" }, { "label": "cbd8042", "href": "https://github.com/0xNickdev/aiagentzoo/commit/cbd8042" }, { "label": "/xray", "href": "/xray" }],
+      "proof": [
+        {
+          "label": "35965bc",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/35965bc"
+        },
+        {
+          "label": "cbd8042",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/cbd8042"
+        },
+        {
+          "label": "/xray",
+          "href": "/xray"
+        }
+      ],
       "metric": "xrays",
-      "zh": { "title": "透视", "text": "开发者的历史，谁给他打的钱，前五秒的雷达图，以及其实就是开发者本人的狙击手。" }
+      "zh": {
+        "title": "透视",
+        "text": "开发者的历史，谁给他打的钱，前五秒的雷达图，以及其实就是开发者本人的狙击手。"
+      }
     },
     {
-      "id": "api", "chapter": "2026-10", "status": "shipped", "date": "2026-10-17",
+      "id": "api",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-17",
       "title": "API for builders",
       "text": "A verdict in one call, a free tier, and a holder key signed with one wallet signature.",
-      "proof": [{ "label": "cafc2c0", "href": "https://github.com/0xNickdev/aiagentzoo/commit/cafc2c0" }, { "label": "b6586c3", "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6586c3" }],
+      "proof": [
+        {
+          "label": "cafc2c0",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/cafc2c0"
+        },
+        {
+          "label": "b6586c3",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6586c3"
+        }
+      ],
       "metric": "checks",
-      "zh": { "title": "开发者 API", "text": "一次调用得到判断，有免费额度，持有者用一次钱包签名就能拿到密钥。" }
+      "zh": {
+        "title": "开发者 API",
+        "text": "一次调用得到判断，有免费额度，持有者用一次钱包签名就能拿到密钥。"
+      }
     },
     {
-      "id": "extension", "chapter": "2026-10", "status": "shipped", "date": "2026-10-19",
+      "id": "extension",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-19",
       "title": "Chrome extension",
       "text": "The x-ray on gmgn, Axiom, pump.fun and DexScreener, and a tag next to every CA on X.",
-      "proof": [{ "label": "3d0882f", "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d0882f" }, { "label": "2f4bf6e", "href": "https://github.com/0xNickdev/aiagentzoo/commit/2f4bf6e" }],
-      "zh": { "title": "Chrome 插件", "text": "在 gmgn、Axiom、pump.fun 和 DexScreener 上直接透视，X 上每个合约地址旁都有标记。" }
+      "proof": [
+        {
+          "label": "3d0882f",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d0882f"
+        },
+        {
+          "label": "2f4bf6e",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/2f4bf6e"
+        }
+      ],
+      "zh": {
+        "title": "Chrome 插件",
+        "text": "在 gmgn、Axiom、pump.fun 和 DexScreener 上直接透视，X 上每个合约地址旁都有标记。"
+      }
     },
     {
-      "id": "relay", "chapter": "2026-10", "status": "shipped", "date": "2026-10-20",
+      "id": "relay",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-20",
       "title": "Our own chain relay",
       "text": "The cloud saw a tenth of pump.fun. A relay on our own machine sees all of it.",
-      "proof": [{ "label": "08ae972", "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972" }],
+      "proof": [
+        {
+          "label": "08ae972",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972"
+        }
+      ],
       "metric": "tradesPerMin",
-      "zh": { "title": "自己的链上中继", "text": "云服务器只能看到 pump.fun 的十分之一。我们自己机器上的中继能看到全部。" }
+      "zh": {
+        "title": "自己的链上中继",
+        "text": "云服务器只能看到 pump.fun 的十分之一。我们自己机器上的中继能看到全部。"
+      }
     },
     {
-      "id": "stats", "chapter": "2026-10", "status": "shipped", "date": "2026-10-20",
+      "id": "stats",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-20",
       "title": "Our numbers, in public",
       "text": "Usage by day as it is, and how often coins we flagged really died.",
-      "proof": [{ "label": "d29d255", "href": "https://github.com/0xNickdev/aiagentzoo/commit/d29d255" }, { "label": "/stats", "href": "/stats" }],
-      "zh": { "title": "公开我们的数字", "text": "每天的真实使用量，以及我们标记的代币里有多少真的死了。" }
+      "proof": [
+        {
+          "label": "d29d255",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/d29d255"
+        },
+        {
+          "label": "/stats",
+          "href": "/stats"
+        }
+      ],
+      "zh": {
+        "title": "公开我们的数字",
+        "text": "每天的真实使用量，以及我们标记的代币里有多少真的死了。"
+      }
     },
     {
-      "id": "terminal", "chapter": "2026-10", "status": "shipped", "date": "2026-10-21",
+      "id": "terminal",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-21",
       "title": "X-Ray as a terminal",
       "text": "The verdict on the left with what decides it, one reason at a time on the right.",
-      "proof": [{ "label": "cc7a99e", "href": "https://github.com/0xNickdev/aiagentzoo/commit/cc7a99e" }],
-      "zh": { "title": "终端式透视", "text": "左边是判断和决定它的因素，右边一次看一个理由。" }
+      "proof": [
+        {
+          "label": "cc7a99e",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/cc7a99e"
+        }
+      ],
+      "zh": {
+        "title": "终端式透视",
+        "text": "左边是判断和决定它的因素，右边一次看一个理由。"
+      }
     },
-
     {
-      "id": "own-ground", "chapter": "2026-11", "status": "building",
+      "id": "own-ground",
+      "chapter": "2026-11",
+      "status": "building",
       "title": "Our own servers",
       "text": "Every node moves onto machines we run, next to the relay that already reads Solana for us. No shared cloud, keys only we hold.",
       "why": "Our cloud host had a security incident in October. The nodes kept running, but a tool that tells people who to trust should not depend on someone else's keys.",
-      "proof": [{ "label": "relay 08ae972", "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972" }],
-      "zh": { "title": "自己的服务器", "text": "所有节点迁到我们自己的机器上，和已经在为我们读取 Solana 的中继放在一起。不用共享云，密钥只在我们手里。", "why": "我们的云服务商十月出了安全事件。节点一直在运行，但一个告诉别人该信谁的工具，不应该依赖别人的密钥。" }
+      "proof": [
+        {
+          "label": "relay 08ae972",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972"
+        }
+      ],
+      "zh": {
+        "title": "自己的服务器",
+        "text": "所有节点迁到我们自己的机器上，和已经在为我们读取 Solana 的中继放在一起。不用共享云，密钥只在我们手里。",
+        "why": "我们的云服务商十月出了安全事件。节点一直在运行，但一个告诉别人该信谁的工具，不应该依赖别人的密钥。",
+        "when": "进行中"
+      },
+      "when": "Now"
     },
     {
-      "id": "roadmap", "chapter": "2026-11", "status": "shipped", "date": "2026-10-22",
+      "id": "roadmap",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-10-22",
       "title": "This roadmap",
       "text": "One file in the repo. Shipped means a commit, buried means a reason, and every edit to the plan is in the git history.",
-      "proof": [{ "label": "history", "href": "https://github.com/0xNickdev/aiagentzoo/commits/main/apps/web/public/roadmap.json" }, { "label": "roadmap.json", "href": "/roadmap.json" }],
-      "zh": { "title": "这份路线图", "text": "仓库里的一个文件。已上线意味着有提交，被放弃意味着有理由，计划的每一次修改都在 git 历史里。" }
+      "proof": [
+        {
+          "label": "history",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commits/main/apps/web/public/roadmap.json"
+        },
+        {
+          "label": "roadmap.json",
+          "href": "/roadmap.json"
+        }
+      ],
+      "zh": {
+        "title": "这份路线图",
+        "text": "仓库里的一个文件。已上线意味着有提交，被放弃意味着有理由，计划的每一次修改都在 git 历史里。"
+      }
     },
     {
-      "id": "radar", "chapter": "2026-11", "status": "next",
+      "id": "radar",
+      "chapter": "2026-11",
+      "status": "next",
       "title": "Holder radar",
       "text": "Fresh coins with no red flags so far, for holders. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and you are pinged first.",
       "why": "Not a buy list. A clean x-ray means we have not caught anything yet, nothing more. What a holder gets is the minute it stops being true.",
-      "zh": { "title": "持有者雷达", "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。", "why": "这不是买入清单。干净的透视只代表我们还没抓到问题。持有者得到的是情况变化的那一分钟。" }
+      "zh": {
+        "title": "持有者雷达",
+        "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。",
+        "why": "这不是买入清单。干净的透视只代表我们还没抓到问题。持有者得到的是情况变化的那一分钟。",
+        "when": "11 月上旬"
+      },
+      "when": "Early Nov"
     },
     {
-      "id": "vote", "chapter": "2026-11", "status": "next",
+      "id": "swap",
+      "chapter": "2026-11",
+      "status": "next",
+      "when": "Mid Nov",
+      "title": "Swap inside the X-Ray",
+      "text": "Buy whatever coin you just checked without leaving the page, routed through Jupiter, signed in your own wallet. A small fee: 10% of it buys back and burns $ZOOAGENCY, the rest keeps the zoo running. If the verdict is avoid, you see why before you sign.",
+      "why": "We will never tell you what to buy. But you were going to buy it anyway, so now the check and the buy are two clicks apart, and the warning sits right on the button.",
+      "zh": {
+        "title": "透视页面内直接兑换",
+        "text": "刚查完的币不用离开页面就能买，通过 Jupiter 路由，用你自己的钱包签名。收取少量手续费：其中 10% 用于回购并销毁 $ZOOAGENCY，其余用于维持项目运转。如果结论是避开，签名前你会先看到原因。",
+        "why": "我们永远不会告诉你该买什么。但你本来就要买，所以现在检查和买入只隔两下点击，警告就在按钮上。",
+        "when": "11 月中旬"
+      }
+    },
+    {
+      "id": "pro",
+      "chapter": "2026-11",
+      "status": "next",
+      "when": "Mid Nov",
+      "title": "Pro",
+      "text": "The verdict and its main reasons stay free for everyone. Pro opens the deep x-ray, every wallet, the first five seconds radar, who funded the dev, plus live alerts on your own bags and more checks. Pay in SOL, or hold $ZOOAGENCY.",
+      "why": "If nobody pays for it, we have not proven anyone needs it. This is how we find out, in public.",
+      "zh": {
+        "title": "专业版",
+        "text": "判断结论和主要理由对所有人一直免费。专业版开放深度透视：所有钱包、前五秒雷达、谁给开发者打的钱，以及你持仓代币的实时提醒和更多检查次数。用 SOL 支付，或者持有 $ZOOAGENCY。",
+        "why": "如果没人愿意付费，就说明我们还没证明有人需要它。这就是我们公开验证的方式。",
+        "when": "11 月中旬"
+      }
+    },
+    {
+      "id": "vote",
+      "chapter": "2026-11",
+      "status": "next",
       "title": "Holders' vote, round one",
-      "text": "Holders choose the order of the next three builds. Each vote signed by a wallet and published, the result hashed on chain.",
+      "text": "Holders choose the order of December's three builds. Each vote signed by a wallet and published, the result hashed on chain.",
       "why": "The gene vote already works this way inside the nursery. Now it decides the product.",
-      "zh": { "title": "持有者投票 · 第一轮", "text": "持有者决定接下来三个项目的顺序。每一票由钱包签名并公开，结果的哈希写在链上。", "why": "基因投票已经在育婴室里这样运行。现在由它来决定产品。" }
+      "zh": {
+        "title": "持有者投票 · 第一轮",
+        "text": "持有者决定十二月三个项目的顺序。每一票由钱包签名并公开，结果的哈希写在链上。",
+        "why": "基因投票已经在育婴室里这样运行。现在由它来决定产品。",
+        "when": "11 月底"
+      },
+      "when": "End of Nov"
     },
-
     {
-      "id": "guard", "chapter": "2026-12", "status": "next",
+      "id": "guard",
+      "chapter": "2026-12",
+      "status": "next",
       "title": "ZOO Guard for agents",
       "text": "One call before every swap: who is behind this coin. If the answer is avoid, the swap does not go through. Agents pay per check, a fraction of a cent, through x402.",
       "why": "AI agents trade real money with nobody watching. To a bundler they are the easiest buyers on the chain. Agents pay per call without thinking twice, so checks stay free for people.",
-      "zh": { "title": "ZOO 守卫 · 给智能体", "text": "每次兑换前调用一次：这个币背后是谁。如果结论是避开，交易就不会执行。智能体通过 x402 按次付费，每次不到一美分。", "why": "AI 智能体在无人看管的情况下用真钱交易。对捆绑者来说，它们是链上最好收割的买家。智能体按次付费不会犹豫，所以对人的检查可以一直免费。" }
+      "zh": {
+        "title": "ZOO 守卫 · 给智能体",
+        "text": "每次兑换前调用一次：这个币背后是谁。如果结论是避开，交易就不会执行。智能体通过 x402 按次付费，每次不到一美分。",
+        "why": "AI 智能体在无人看管的情况下用真钱交易。对捆绑者来说，它们是链上最好收割的买家。智能体按次付费不会犹豫，所以对人的检查可以一直免费。"
+      }
     },
     {
-      "id": "guard-tools", "chapter": "2026-12", "status": "exploring",
-      "title": "Guard in ClawPump's agent tools",
-      "text": "Guard as an MCP tool, one line in an agent's config, offered to the launchpad we came from.",
-      "why": "This one depends on ClawPump, so it says exploring until they say yes.",
-      "zh": { "title": "守卫进入 ClawPump 智能体工具", "text": "守卫作为 MCP 工具，在智能体配置里加一行就能用，提供给我们出身的发射平台。", "why": "这一项取决于 ClawPump，所以在他们同意之前标为探索中。" }
+      "id": "brief-everywhere",
+      "chapter": "2026-12",
+      "status": "next",
+      "title": "Morning Brief everywhere",
+      "text": "The Morning Brief posted on its own to X and Telegram every morning, the same issue that lands on the site.",
+      "zh": {
+        "title": "早报全网发布",
+        "text": "早报每天早上自动发到 X 和 Telegram，和网站上的是同一期。"
+      }
     },
-
     {
-      "id": "caller-truth", "chapter": "2027-01", "status": "vote",
+      "id": "caller-truth",
+      "chapter": "2026-12",
+      "status": "vote",
       "title": "Caller Truth",
       "text": "We line up the minute a caller posts with the wallets that bought before it and sold into the people who followed. Every caller gets a record, and the extension shows it next to their name on X.",
       "why": "Trackers show a caller's trades. Nobody lines them up against the post itself.",
-      "zh": { "title": "喊单者真相", "text": "把喊单者发帖的那一分钟，和在帖子之前买入、再卖给跟单者的钱包对齐。每个喊单者都有公开战绩，插件会在 X 上把它显示在名字旁边。", "why": "现有工具只显示喊单者的交易，没有人把交易和帖子本身对齐。" }
+      "zh": {
+        "title": "喊单者真相",
+        "text": "把喊单者发帖的那一分钟，和在帖子之前买入、再卖给跟单者的钱包对齐。每个喊单者都有公开战绩，插件会在 X 上把它显示在名字旁边。",
+        "why": "现有工具只显示喊单者的交易，没有人把交易和帖子本身对齐。"
+      }
     },
     {
-      "id": "passport", "chapter": "2027-02", "status": "vote",
+      "id": "passport",
+      "chapter": "2026-12",
+      "status": "vote",
       "title": "Agent passports",
       "text": "A public record for every agent token on ClawPump: does the agent really act, does the creator claim the fees and sell them, what the creator wallet does after launch. A badge any launchpad can show.",
       "why": "Agent tokens are sold on what the agent does. Nobody checks that it does it.",
-      "zh": { "title": "智能体护照", "text": "为 ClawPump 上每个智能体代币建立公开记录：智能体是否真的在运作，创建者是否领取并卖掉手续费，发射后创建者钱包在做什么。任何发射平台都能展示的徽章。", "why": "智能体代币卖的是智能体能做什么，但没有人核实它真的在做。" }
+      "zh": {
+        "title": "智能体护照",
+        "text": "为 ClawPump 上每个智能体代币建立公开记录：智能体是否真的在运作，创建者是否领取并卖掉手续费，发射后创建者钱包在做什么。任何发射平台都能展示的徽章。",
+        "why": "智能体代币卖的是智能体能做什么，但没有人核实它真的在做。"
+      }
     },
     {
-      "id": "operators", "chapter": "2027-03", "status": "vote",
-      "title": "Operator map",
-      "text": "Not one dev, the whole crew: wallet networks traced across every launch they touched, a free wallet to cluster lookup, and an alert when an operator who rugged comes back under a new name.",
-      "why": "People ask for this every week and get sent to tools that cost money and show flows instead of proof.",
-      "zh": { "title": "操盘团伙地图", "text": "不止一个开发者，而是整个团伙：追踪他们参与过的每次发射里的钱包网络，免费查询钱包所属的集群，跑路过的团伙换名字回来时发出提醒。", "why": "每周都有人问这个，得到的推荐都是收费工具，而且只给资金流向不给证据。" }
+      "id": "operators",
+      "chapter": "2026-12",
+      "status": "vote",
+      "title": "Money map",
+      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and where the SOL went after the dump. Plus an alert when an operator who rugged comes back under a new name.",
+      "why": "Holders asked for a Bubblemaps-style view, only simpler. We know the order things happened in, so we draw the money's path, not just clusters.",
+      "zh": {
+        "title": "资金流向图",
+        "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及砸盘后 SOL 流向了哪里。跑路过的团伙换个名字回来时，你会收到提醒。",
+        "why": "持有者希望有类似 Bubblemaps 的视图，但更简单。我们知道事情发生的先后顺序，所以画的是资金的路径，而不只是集群。"
+      }
     },
-
     {
-      "id": "benchmark", "chapter": "2027-04", "status": "next",
+      "id": "benchmark",
+      "chapter": "2026-12",
+      "status": "next",
       "title": "Our verdicts against outside data",
       "text": "Our calls run against independent rug labels from published research, and the result posted whether it flatters us or not.",
-      "zh": { "title": "用外部数据检验我们的判断", "text": "用已发表研究里独立的跑路标注来检验我们的判断，不管结果好不好看都公开。" }
+      "zh": {
+        "title": "用外部数据检验我们的判断",
+        "text": "用已发表研究里独立的跑路标注来检验我们的判断，不管结果好不好看都公开。"
+      }
     },
     {
-      "id": "terminals", "chapter": "2027-04", "status": "exploring",
+      "id": "report",
+      "chapter": "2026-12",
+      "status": "next",
+      "title": "Our numbers, quarter one",
+      "text": "Every trap caught, every call we got wrong, every number on this page checked against what happened.",
+      "zh": {
+        "title": "第一季度的数字",
+        "text": "抓到的每个陷阱，判断错的每一次，这一页上的每个数字都和实际发生的对照。"
+      }
+    },
+    {
+      "id": "guard-tools",
+      "chapter": "later",
+      "status": "exploring",
+      "title": "Guard in ClawPump's agent tools",
+      "text": "Guard as an MCP tool, one line in an agent's config, offered to the launchpad we came from.",
+      "why": "This one depends on ClawPump, so it says exploring until they say yes.",
+      "zh": {
+        "title": "守卫进入 ClawPump 智能体工具",
+        "text": "守卫作为 MCP 工具，在智能体配置里加一行就能用，提供给我们出身的发射平台。",
+        "why": "这一项取决于 ClawPump，所以在他们同意之前标为探索中。"
+      }
+    },
+    {
+      "id": "terminals",
+      "chapter": "later",
+      "status": "exploring",
       "title": "Guard inside trading terminals",
       "text": "Our verdict inside the terminals people already trade on.",
       "why": "Depends on partners, so it stays exploring until a deal is signed.",
-      "zh": { "title": "守卫进入交易终端", "text": "在大家已经在用的交易终端里直接看到我们的判断。", "why": "取决于合作方，签约之前一直标为探索中。" }
+      "zh": {
+        "title": "守卫进入交易终端",
+        "text": "在大家已经在用的交易终端里直接看到我们的判断。",
+        "why": "取决于合作方，签约之前一直标为探索中。"
+      }
     },
     {
-      "id": "report", "chapter": "2027-04", "status": "next",
-      "title": "Six months, in numbers",
-      "text": "Every trap caught, every call we got wrong, every number on this page checked against what happened.",
-      "zh": { "title": "六个月的数字", "text": "抓到的每个陷阱，判断错的每一次，这一页上的每个数字都和实际发生的对照。" }
+      "id": "chains",
+      "chapter": "later",
+      "status": "exploring",
+      "title": "Other chains",
+      "text": "The same x-ray beyond Solana.",
+      "why": "Every chain we add, we want to read straight from the chain like Solana, not from someone else's API. Solana goes deep first.",
+      "zh": {
+        "title": "其他公链",
+        "text": "把同样的透视带到 Solana 以外的链。",
+        "why": "每增加一条链，我们都要像 Solana 一样直接读链上数据，而不是用别人的 API。先把 Solana 做深。"
+      }
     }
   ],
   "buried": [
@@ -302,10 +728,24 @@
       "id": "feed",
       "title": "Paying the agents in tokens",
       "text": "Holders would spend the token to feed the agents: model calls, stakes and signal fees settled on chain.",
-      "born": "2026-10-07", "buried": "2026-10-07",
+      "born": "2026-10-07",
+      "buried": "2026-10-07",
       "reason": "Paying for every check is a barrier for a trader who needs an answer in a second.",
-      "proof": [{ "label": "95c0c2d", "href": "https://github.com/0xNickdev/aiagentzoo/commit/95c0c2d" }, { "label": "21b7a76", "href": "https://github.com/0xNickdev/aiagentzoo/commit/21b7a76" }],
-      "zh": { "title": "用代币给智能体付费", "text": "持有者花代币喂养智能体：模型调用、质押和信号费用在链上结算。", "reason": "每次检查都要付费，对一个需要一秒内得到答案的交易者来说是门槛。" }
+      "proof": [
+        {
+          "label": "95c0c2d",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/95c0c2d"
+        },
+        {
+          "label": "21b7a76",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/21b7a76"
+        }
+      ],
+      "zh": {
+        "title": "用代币给智能体付费",
+        "text": "持有者花代币喂养智能体：模型调用、质押和信号费用在链上结算。",
+        "reason": "每次检查都要付费，对一个需要一秒内得到答案的交易者来说是门槛。"
+      }
     },
     {
       "id": "safe-list",
@@ -313,8 +753,17 @@
       "text": "A feed of coins that passed every check, sold as alpha.",
       "buried": "2026-10-21",
       "reason": "A clean x-ray means we caught nothing, not that the coin lives. Coins we flag avoid and coins with no flags die at almost the same rate. The next rug on a green list would be on us.",
-      "proof": [{ "label": "/stats", "href": "/stats" }],
-      "zh": { "title": "安全币清单", "text": "把通过全部检查的币做成清单，当作内幕信息卖。", "reason": "干净的透视只说明我们没抓到问题，不代表币能活下来。被我们标为避开的币和没有红旗的币，死亡率几乎一样。绿名单上的下一个跑路，责任就在我们。" }
+      "proof": [
+        {
+          "label": "/stats",
+          "href": "/stats"
+        }
+      ],
+      "zh": {
+        "title": "安全币清单",
+        "text": "把通过全部检查的币做成清单，当作内幕信息卖。",
+        "reason": "干净的透视只说明我们没抓到问题，不代表币能活下来。被我们标为避开的币和没有红旗的币，死亡率几乎一样。绿名单上的下一个跑路，责任就在我们。"
+      }
     },
     {
       "id": "watchlist",
@@ -322,7 +771,11 @@
       "text": "Follow any wallet and get pinged on its every move.",
       "buried": "2026-10-21",
       "reason": "A dozen bots already follow wallets. Another alert feed is not why anyone opens an x-ray.",
-      "zh": { "title": "钱包关注列表", "text": "关注任意钱包，它每动一下都提醒你。", "reason": "已经有十几个机器人在跟踪钱包。多一个提醒频道，不是大家打开透视的理由。" }
+      "zh": {
+        "title": "钱包关注列表",
+        "text": "关注任意钱包，它每动一下都提醒你。",
+        "reason": "已经有十几个机器人在跟踪钱包。多一个提醒频道，不是大家打开透视的理由。"
+      }
     },
     {
       "id": "api-page",
@@ -330,8 +783,17 @@
       "text": "Its own page for the API, apart from everything else for builders.",
       "buried": "2026-10-21",
       "reason": "The API lives on /connect beside everything else a builder needs. Two doors to one room was one too many.",
-      "proof": [{ "label": "/connect", "href": "/connect" }],
-      "zh": { "title": "单独的 API 页面", "text": "给 API 单独做一个页面，和其他开发者内容分开。", "reason": "API 放在 /connect，和开发者需要的其他东西在一起。一个房间开两扇门，多了一扇。" }
+      "proof": [
+        {
+          "label": "/connect",
+          "href": "/connect"
+        }
+      ],
+      "zh": {
+        "title": "单独的 API 页面",
+        "text": "给 API 单独做一个页面，和其他开发者内容分开。",
+        "reason": "API 放在 /connect，和开发者需要的其他东西在一起。一个房间开两扇门，多了一扇。"
+      }
     }
   ]
 }

@@ -12,6 +12,7 @@ interface Link {
   href: string;
 }
 interface Zh {
+  when?: string;
   label?: string;
   name?: string;
   line?: string;
@@ -32,6 +33,8 @@ interface Item {
   chapter: string;
   status: Status;
   date?: string;
+  /** Where in its month it lands, when there is no date yet: "Mid Nov". */
+  when?: string;
   title: string;
   text: string;
   why?: string;
@@ -177,9 +180,9 @@ const SCENES = [
   { src: "/backdrops/roadmap-trail-3.webp" },
   { src: "/backdrops/roadmap-clearing.webp", mobile: "/backdrops/roadmap-clearing-mobile.webp" },
 ];
-const CHAPTER_SCENE: Record<string, number> = { "2026-10": 0, "2026-11": 0, "2026-12": 1, "2027-01": 2, "2027-02": 2, "2027-03": 2, "2027-04": 2 };
+const CHAPTER_SCENE: Record<string, number> = { "2026-10": 0, "2026-11": 1, "2026-12": 2, later: 2 };
 /** How deep in the fog a chapter sits: the further ahead, the softer until you reach for it. */
-const CHAPTER_FOG: Record<string, string> = { "2027-01": "fog-1", "2027-02": "fog-1", "2027-03": "fog-2", "2027-04": "fog-2" };
+const CHAPTER_FOG: Record<string, string> = { "2026-12": "fog-1", later: "fog-2" };
 
 /** Seconds into the trail film where each part of the page sits: the walk starts at the top and stops in the clearing. */
 const FILM = { dec: 7, fog: 11, clearing: 16.5, end: 19.9 };
@@ -390,7 +393,11 @@ function Row({ item, metric }: { item: Item; metric: string | null }) {
       >
         <div className="flex items-center justify-between gap-3 sm:block">
           <Mark status={item.status} />
-          {item.date && <p className="font-mono text-[11px] text-white/35 sm:mt-2">{fmtDate(item.date)}</p>}
+          {item.date ? (
+            <p className="font-mono text-[11px] text-white/35 sm:mt-2">{fmtDate(item.date)}</p>
+          ) : (
+            item.when && <p className="font-mono text-[11px] text-white/45 sm:mt-2">{tx(item, "when", item.when)}</p>
+          )}
         </div>
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
@@ -554,12 +561,12 @@ function Vote({ plan }: { plan: Plan }) {
   return (
     <section id="vote" data-scene={2} className="relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("Holders' vote · opens in November")}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("Holders' vote · end of November")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("Three builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
         <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
-          {t("January, February and March are not decided by us. Holders of $ZOOAGENCY pick which comes first, and the trail above moves to match.")}
+          {t("December's three builds all ship by the end of the year. Holders of $ZOOAGENCY pick the order, and the trail above moves to match.")}
         </p>
         <div className="mt-14 grid gap-x-10 md:grid-cols-3">
           {options.map((o, i) => (
@@ -679,7 +686,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
     <section data-scene={0} className="relative flex min-h-[100svh] items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
       <div className="mx-auto w-full max-w-7xl">
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55">
-          {t("Roadmap · Oct 2026 - Apr 2027")}
+          {t("Roadmap · Oct - Dec 2026")}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}

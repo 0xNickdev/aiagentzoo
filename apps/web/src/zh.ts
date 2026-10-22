@@ -1105,4 +1105,7 @@ export const ZH: Record<string, string> = {
   "Roadmap - ZOOAI AGENCY": "路线图 - ZOOAI AGENCY",
   "{n} things shipped since October 6, each with the commit that proves it. Here is what comes next.": "自 10 月 6 日以来上线了 {n} 项，每一项都附有证明它的提交。接下来是这些。",
   "Open the roadmap": "打开路线图",
+  "Holders' vote · end of November": "持有者投票 · 11 月底",
+  "December's three builds all ship by the end of the year. Holders of $ZOOAGENCY pick the order, and the trail above moves to match.": "十二月的三个项目都会在年底前上线。$ZOOAGENCY 持有者决定顺序，上面的路线会随之调整。",
+  "Roadmap · Oct - Dec 2026": "路线图 · 2026 年 10 月 - 12 月",
 };
