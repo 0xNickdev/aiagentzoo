@@ -27,7 +27,7 @@ import Passport from "./components/Passport";
 import SiteNav from "./components/SiteNav";
 import { closePassport, usePassport } from "./passportStore";
 import { Cycle, Footer, Token } from "./components/Story";
-import Roadmap from "./components/roadmap/Roadmap";
+import RoadmapTeaser from "./components/roadmap/RoadmapTeaser";
 import RoadmapPage from "./components/roadmap/RoadmapPage";
 import { type Route, TITLES, useRoute } from "./router";
 import { pick, t, t as tr } from "./i18n";
@@ -89,7 +89,7 @@ function Home() {
       <Doors />
       <BringYourAgent />
       <Token />
-      <Roadmap />
+      <RoadmapTeaser />
     </>
   );
 }

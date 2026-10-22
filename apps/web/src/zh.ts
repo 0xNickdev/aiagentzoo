@@ -1103,4 +1103,6 @@ export const ZH: Record<string, string> = {
   "ZOO Guard": "ZOO 守卫",
   "One call before every swap for AI agents that trade alone: if the verdict is avoid, the swap does not go through.": "给独自交易的 AI 智能体：每次兑换前调用一次，结论是避开，交易就不会执行。",
   "Roadmap - ZOOAI AGENCY": "路线图 - ZOOAI AGENCY",
+  "{n} things shipped since October 6, each with the commit that proves it. Here is what comes next.": "自 10 月 6 日以来上线了 {n} 项，每一项都附有证明它的提交。接下来是这些。",
+  "Open the roadmap": "打开路线图",
 };
