@@ -289,6 +289,10 @@ export interface ChainFacts {
   ringWallets?: number;
   /** Early wallets that sniped ten or more launches in two days: professional snipers waiting to sell. */
   serialSnipers?: number;
+  /** Share of the supply the creator's crew and ring wallets still hold, 0..1, from the trades the tape saw. */
+  crewHeld?: number;
+  /** Its pool fell to a fifth of its best after graduation: the liquidity left. */
+  drained?: boolean;
 }
 
 /** pump.fun mints a billion tokens. */
@@ -962,6 +966,18 @@ export class PumpTape {
    * creator's (funded through an exchange or not, the pattern gives them away); wallets that keep sniping together
    * are one operator; wallets that snipe everything are bots waiting to sell into the first real buyers.
    */
+  /** What the creator's crew and ring wallets (read by crewOf just before) still hold of the supply. */
+  private crewHeldOf(t: Tracked): number {
+    const m = t.crew?.members;
+    if (!m) return 0;
+    let held = 0;
+    for (const w of new Set([...m.crew, ...m.ring])) {
+      const b = t.buyers.get(w);
+      if (b) held += Math.max(0, (b.tok ?? 0) - (b.sold ?? 0));
+    }
+    return Math.round(Math.min(1, held / supplyOf(t)) * 1000) / 1000;
+  }
+
   private crewOf(t: Tracked, now: number): Crew {
     if (t.crew && now - t.crew.at < 60_000) return t.crew.counts;
     const early = this.earlyWalletsOf(t);
@@ -1161,8 +1177,9 @@ export class PumpTape {
       ammSells: t.ammSells,
       ammSolIn: round(t.ammSolIn),
       ammSolOut: round(t.ammSolOut),
+      ...(t.drained ? { drained: true } : {}),
       ...this.earlyFacts(t),
-      ...(light ? {} : this.crewOf(t, now)),
+      ...(light ? {} : { ...this.crewOf(t, now), crewHeld: this.crewHeldOf(t) }),
     };
   }
 

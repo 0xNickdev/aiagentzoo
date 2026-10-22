@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { checkToken, DEV_GONE_REASON } from "../src/chain/check.ts";
+
+// PHP as the x-ray saw it: a serial dumper's coin they fully left, graduated, its pool grown from 85 to 386 SOL.
+const php = (over: Record<string, unknown> = {}) =>
+  ({
+    ageMin: 41 * 60, buys: 1400, sells: 900, buyers: 611, solIn: 900, solOut: 600, curveSol: null, creatorSold: 1, creatorLaunches24h: 12, graduated: true,
+    top5Share: 0.2, repeatBuyers: 80, trades15m: 300, bundleWallets: 1, bundleShare: 0.02, bundlers: 40, bundlersHeld: 0.14, bundlersPeak: 0.48,
+    poolSol: 386, ammBuys: 900, ammSells: 500, ammSolIn: 600, ammSolOut: 400, earlyWallets: 8, earlyHeld: 0.03, creatorCrew: 0, ringWallets: 0, serialSnipers: 2, crewHeld: 0, ...over,
+  }) as never;
+const serial = { wallet: "dev", launches24h: 12, launches48h: 24, dumped: 23, medianDumpMin: 3, graduated: 1, recent: [] } as never;
+const spread = (over: Record<string, unknown> = {}) => ({ top10Share: 0.2, topShare: 0.04, programShare: 0.3, creator: "dev", creatorShare: 0, ...over }) as never;
+
+test("dev gone, holders carry it: a serial dumper's coin they left, that graduated and grew, is caution, not avoid", () => {
+  const c = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial }, { holders: spread() });
+  assert.equal(c.verdict, "caution");
+  assert.equal(c.proceed, false);
+  assert.equal(c.reasons[0], DEV_GONE_REASON);
+  assert.ok(c.reasons.some((r) => r.includes("dumped 23 of their 24 launches")), "the dev's record still shows");
+  assert.ok(c.reasons.some((r) => r.includes("sold 100%")));
+  assert.equal(c.facts!.devGone, true);
+});
+
+test("dev gone does not apply when the holders are concentrated, the pool shrank, it never graduated or the holders are unknown", () => {
+  const top = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial }, { holders: spread({ top10Share: 0.45 }) });
+  assert.equal(top.verdict, "avoid");
+  assert.equal(top.facts!.devGone, false);
+  assert.notEqual(top.reasons[0], DEV_GONE_REASON);
+
+  const shrank = checkToken("PHP", { symbol: "PHP", facts: php({ poolSol: 60 }), creatorRecord: serial }, { holders: spread() });
+  assert.equal(shrank.verdict, "avoid");
+  assert.equal(shrank.facts!.devGone, false);
+
+  const drained = checkToken("PHP", { symbol: "PHP", facts: php({ drained: true }), creatorRecord: serial }, { holders: spread() });
+  assert.equal(drained.verdict, "avoid");
+
+  const curve = php({ graduated: false, poolSol: null, curveSol: 60 });
+  const before = checkToken("PHP", { symbol: "PHP", facts: curve, creatorRecord: serial });
+  const after = checkToken("PHP", { symbol: "PHP", facts: curve, creatorRecord: serial }, { holders: spread() });
+  assert.equal(after.verdict, "avoid");
+  assert.deepEqual(after.reasons, before.reasons, "not graduated: unchanged");
+  assert.equal(after.facts!.devGone, false);
+
+  const unknown = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial });
+  assert.equal(unknown.verdict, "avoid");
+  const unread = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial }, { holders: null });
+  assert.equal(unread.verdict, "avoid");
+});
+
+test("a dev who sold and came back through their own wallets stays avoid", () => {
+  const c = checkToken("PHP", { symbol: "PHP", facts: php({ crewHeld: 0.08, creatorCrew: 3 }), creatorRecord: serial }, { holders: spread() });
+  assert.equal(c.verdict, "avoid");
+  assert.match(c.reasons[0]!, /came back through their own wallets/);
+  assert.equal(c.facts!.devGone, false);
+});

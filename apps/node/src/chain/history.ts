@@ -253,7 +253,7 @@ export class HistoryStore {
       return [{ wallet, bought: bought / 10_000, held: held / 10_000, afterSec, exitSec: exitSec < 0 ? null : exitSec, bundle: Boolean(flags & F_BUNDLE), snipes48h, crew: Boolean(flags & F_CREW), ring: Boolean(flags & F_RING), serial: Boolean(flags & F_SERIAL) }];
     });
     const bundle = body.b.flatMap(([id, share]) => (names.has(id) ? [{ wallet: names.get(id)!, share: share / 10_000 }] : []));
-    const facts: ChainFacts = { ...body.f, ageMin: Math.max(0, Math.round((now - row.created_at) / 60_000)), graduated: body.f.graduated || row.graduated_at !== null };
+    const facts: ChainFacts = { ...body.f, ageMin: Math.max(0, Math.round((now - row.created_at) / 60_000)), graduated: body.f.graduated || row.graduated_at !== null, ...(row.pool_drained_at !== null ? { drained: true } : {}) };
     return {
       mint,
       symbol: row.symbol,

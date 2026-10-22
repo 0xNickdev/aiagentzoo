@@ -10,7 +10,12 @@ import type { ChainFacts, CreatorRecord } from "./pump.ts";
  */
 export type CheckVerdict = "avoid" | "caution" | "pass" | "unknown";
 
-export const CHECK_VERSION = 3;
+export const CHECK_VERSION = 4;
+/** A PumpSwap pool opens with about this much SOL when a pump.fun token graduates. */
+export const GRAD_POOL_SOL = 85;
+/** Dev gone, holders carry it: what a token must show before its dev's record stops being the reason to avoid it. */
+export const DEV_GONE = { soldPct: 0.99, poolGrowth: 2, top10: 0.3, topWallet: 0.1, bundlersHeld: 0.2, ageMin: 120, crewBack: 0.05 } as const;
+export const DEV_GONE_REASON = "the dev who launched it dumps their launches and already sold everything; it runs on its holders now, so the risk is the market, not the dev";
 /** Under this age a token has had no time to show anything but its creator's history: the check says so. */
 export const EARLY_MIN = 10;
 
@@ -63,6 +68,10 @@ export interface TokenCheck {
     creatorCrew: number | null;
     ringWallets: number | null;
     serialSnipers: number | null;
+    /** What the creator's crew and ring wallets still hold, of the supply. */
+    crewHeldPct: number | null;
+    /** The dev sold everything and left; the coin graduated, its pool doubled and its holders are spread out: the risk is the market now. */
+    devGone: boolean;
   } | null;
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
@@ -205,6 +214,16 @@ export function checkToken(
     }
   }
 
+  // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
+  // still shows, but it no longer decides: whoever holds it now does. Only when the holders were read.
+  const devGone = devGoneOf(f, opts.holders);
+  if (devGone) {
+    if ((f.crewHeld ?? 0) >= DEV_GONE.crewBack) {
+      avoid.unshift(`the dev sold to shake out the snipers and came back through their own wallets: wallets that snipe their launches hold ${pct(f.crewHeld)}% of the supply`);
+    } else {
+      caution.unshift(DEV_GONE_REASON, ...avoid.splice(0));
+    }
+  }
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
   if (early) {
     const age = Math.max(0, Math.round(f.ageMin));
@@ -249,12 +268,32 @@ export function checkToken(
       creatorCrew: f.creatorCrew ?? null,
       ringWallets: f.ringWallets ?? null,
       serialSnipers: f.serialSnipers ?? null,
+      crewHeldPct: pct(f.crewHeld),
+      devGone: devGone && (f.crewHeld ?? 0) < DEV_GONE.crewBack,
     },
     ...(holders !== undefined ? { holders } : {}),
     ...(lin !== undefined
       ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),
   };
+}
+
+/**
+ * The dev has left and the holders carry it: the creator sold all they bought, it graduated, its pool holds at least twice
+ * what it opened with and never drained, it is two hours old, and the holders read now are spread out with the bundlers mostly gone.
+ * Unknown holders never qualify.
+ */
+export function devGoneOf(f: ChainFacts, h: HolderReport | null | undefined): boolean {
+  if (!h) return false;
+  if (f.creatorSold === null || f.creatorSold < DEV_GONE.soldPct) return false;
+  if (h.creatorShare !== null && h.creatorShare >= 0.001) return false;
+  if (!f.graduated || f.quote || f.drained) return false;
+  // What it opened with: the curve's last reading at graduation, never taken as less than a pool's usual 85 SOL.
+  if (f.poolSol === null || f.poolSol < Math.max(GRAD_POOL_SOL, f.curveSol ?? 0) * DEV_GONE.poolGrowth) return false;
+  if (h.top10Share >= DEV_GONE.top10 || h.topShare >= DEV_GONE.topWallet) return false;
+  if ((f.bundlersHeld ?? 0) >= DEV_GONE.bundlersHeld) return false;
+  if (f.earlyHeld !== undefined && f.earlyHeld >= 0.5) return false;
+  return f.ageMin >= DEV_GONE.ageMin;
 }
 
 /** A sliding one-minute window per caller: cheap protection for a public endpoint agents may call in a loop. */
