@@ -170,7 +170,7 @@ const STATUS: Record<Status, { label: string; mark: string; tone: string }> = {
   building: { label: "building", mark: "◐", tone: "text-amber-100/85" },
   next: { label: "next", mark: "○", tone: "text-white/60" },
   vote: { label: "holders vote", mark: "◇", tone: "text-white/60" },
-  exploring: { label: "exploring", mark: "·", tone: "text-white/40" },
+  exploring: { label: "exploring", mark: "·", tone: "text-white/60" },
 };
 
 /** Which of the four frames of the trail sits behind each part of the page. */
@@ -327,8 +327,8 @@ function Fireflies() {
 function Rule({ className = "" }: { className?: string }) {
   return (
     <div aria-hidden className={`relative h-px bg-white/[0.12] ${className}`}>
-      <span className="font-mono absolute -left-[3px] -top-[9px] text-[11px] text-white/35">+</span>
-      <span className="font-mono absolute -right-[3px] -top-[9px] text-[11px] text-white/35">+</span>
+      <span className="font-mono absolute -left-[3px] -top-[9px] text-[12.5px] text-white/55">+</span>
+      <span className="font-mono absolute -right-[3px] -top-[9px] text-[12.5px] text-white/55">+</span>
     </div>
   );
 }
@@ -336,7 +336,7 @@ function Rule({ className = "" }: { className?: string }) {
 function Mark({ status }: { status: Status }) {
   const s = STATUS[status];
   return (
-    <span className={`font-mono inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] ${s.tone}`}>
+    <span className={`font-mono inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.16em] ${s.tone}`}>
       <span className={status === "building" ? "animate-pulse" : ""}>{s.mark}</span>
       {t(s.label)}
     </span>
@@ -357,7 +357,7 @@ function ProofLinks({ proof, className = "mt-4" }: { proof?: Link[]; className?:
             target={external ? "_blank" : undefined}
             rel={external ? "noopener noreferrer" : undefined}
             onClick={(e) => e.stopPropagation()}
-            className="font-mono inline-flex items-center gap-1 border-b border-white/15 pb-px text-[11px] text-white/55 transition hover:border-white/60 hover:text-white"
+            className="font-mono inline-flex items-center gap-1 border-b border-white/15 pb-px text-[12.5px] text-white/55 transition hover:border-white/60 hover:text-white"
           >
             {sha ? <GitCommit size={11} className="opacity-60" /> : null}
             {p.label}
@@ -394,15 +394,15 @@ function Row({ item, metric }: { item: Item; metric: string | null }) {
         <div className="flex items-center justify-between gap-3 sm:block">
           <Mark status={item.status} />
           {item.date ? (
-            <p className="font-mono text-[11px] text-white/35 sm:mt-2">{fmtDate(item.date)}</p>
+            <p className="font-mono text-[12.5px] text-white/55 sm:mt-2">{fmtDate(item.date)}</p>
           ) : (
-            item.when && <p className="font-mono text-[11px] text-white/45 sm:mt-2">{tx(item, "when", item.when)}</p>
+            item.when && <p className="font-mono text-[12.5px] text-white/65 sm:mt-2">{tx(item, "when", item.when)}</p>
           )}
         </div>
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             <h3 className="font-display text-[26px] leading-tight text-white sm:text-[32px]">{tx(item, "title", item.title)}</h3>
-            {metric && <span className="font-mono text-[11.5px] text-amber-100/75">{metric}</span>}
+            {metric && <span className="font-mono text-[13px] text-amber-100/75">{metric}</span>}
           </div>
           <p className="mt-2 max-w-2xl text-[14.5px] font-light leading-relaxed text-white/65">{tx(item, "text", item.text)}</p>
           <AnimatePresence initial={false}>
@@ -412,14 +412,14 @@ function Row({ item, metric }: { item: Item; metric: string | null }) {
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.35 }}
-                className="max-w-2xl overflow-hidden text-[13.5px] font-light leading-relaxed text-white/50"
+                className="max-w-2xl overflow-hidden text-[13.5px] font-light leading-relaxed text-white/70"
               >
                 <span className="mt-4 block border-l border-amber-100/30 pl-4">{why}</span>
               </motion.p>
             )}
           </AnimatePresence>
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-            {why && <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/35 group-hover:text-white/60">{open ? t("− less") : t("+ why")}</span>}
+            {why && <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-white/55 group-hover:text-white/60">{open ? t("− less") : t("+ why")}</span>}
             <ProofLinks proof={item.proof} className="" />
           </div>
         </div>
@@ -449,7 +449,7 @@ function ShippedMatrix({ items, metrics }: { items: Item[]; metrics: Record<stri
                 onClick={() => setSel(it.id)}
                 className={`relative border-b border-white/[0.08] px-3 py-3.5 text-left transition-colors ${on ? "bg-amber-100/[0.06]" : "hover:bg-white/[0.03]"}`}
               >
-                <span className="font-mono flex items-center gap-1.5 text-[10px] text-white/35">
+                <span className="font-mono flex items-center gap-1.5 text-[11.5px] text-white/55">
                   <span className={on ? "text-amber-200" : "text-amber-100/50"}>●</span>
                   {it.date ? fmtDate(it.date) : ""}
                 </span>
@@ -463,7 +463,7 @@ function ShippedMatrix({ items, metrics }: { items: Item[]; metrics: Record<stri
         <AnimatePresence mode="wait">
           <motion.div key={cur.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="lg:pt-6">
             <Mark status="shipped" />
-            <p className="font-mono mt-2 text-[11px] text-white/35">{cur.date ? fmtDate(cur.date) : ""}</p>
+            <p className="font-mono mt-2 text-[12.5px] text-white/55">{cur.date ? fmtDate(cur.date) : ""}</p>
             <h3 className="font-display mt-4 text-[34px] leading-tight text-white">{tx(cur, "title", cur.title)}</h3>
             <p className="mt-3 text-[15px] font-light leading-relaxed text-white/65">{tx(cur, "text", cur.text)}</p>
             {m && <p className="font-mono mt-5 text-[13px] text-amber-100/80">{m}</p>}
@@ -496,13 +496,13 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`font-mono relative shrink-0 px-3 py-1.5 text-[10.5px] uppercase tracking-[0.14em] transition ${filter === f ? "text-white" : "text-white/45 hover:text-white/80"}`}
+              className={`font-mono relative shrink-0 px-3 py-1.5 text-[12px] uppercase tracking-[0.14em] transition ${filter === f ? "text-white" : "text-white/65 hover:text-white/80"}`}
             >
               {filter === f && <motion.span layoutId="roadmap-filter" className="absolute inset-x-2 -bottom-[13px] h-px bg-amber-200" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
               {t(f === "all" ? "everything" : STATUS[f].label)} <span className="opacity-50">{counts[f]}</span>
             </button>
           ))}
-          <a href="#buried" className="font-mono shrink-0 px-3 py-1.5 text-[10.5px] uppercase tracking-[0.14em] text-white/35 transition hover:text-white/80">
+          <a href="#buried" className="font-mono shrink-0 px-3 py-1.5 text-[12px] uppercase tracking-[0.14em] text-white/55 transition hover:text-white/80">
             {t("buried")} <span className="opacity-50">{plan.buried.length}</span>
           </a>
         </div>
@@ -522,7 +522,7 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
           >
             <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-16">
               <div className="lg:sticky lg:top-40 lg:self-start">
-                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
+                <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-white/60">
                   {String(n + 1).padStart(2, "0")} / {String(plan.chapters.length).padStart(2, "0")} · {tx(ch, "label", ch.label)}
                 </p>
                 <h2 className="font-display mt-3 text-5xl leading-none text-white sm:text-6xl">{tx(ch, "name", ch.name)}</h2>
@@ -561,7 +561,7 @@ function Vote({ plan }: { plan: Plan }) {
   return (
     <section id="vote" data-scene={2} className="relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("Holders' vote · end of November")}</p>
+        <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-white/65">{t("Holders' vote · end of November")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("Three builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
@@ -573,8 +573,8 @@ function Vote({ plan }: { plan: Plan }) {
             <div key={o.id} className="pb-8">
               <Rule />
               <div className="flex items-baseline justify-between pt-6">
-                <span className="font-mono text-[11px] text-white/40">{String.fromCharCode(65 + i)}</span>
-                <span className="font-mono text-[11px] text-white/40">? / 3</span>
+                <span className="font-mono text-[12.5px] text-white/60">{String.fromCharCode(65 + i)}</span>
+                <span className="font-mono text-[12.5px] text-white/60">? / 3</span>
               </div>
               <h3 className="font-display mt-6 text-[28px] leading-tight text-white">{tx(o, "title", o.title)}</h3>
               <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{tx(o, "text", o.text)}</p>
@@ -585,9 +585,9 @@ function Vote({ plan }: { plan: Plan }) {
           {rules.map(([h, d], i) => (
             <div key={h} className="pb-6">
               <Rule />
-              <p className="font-mono pt-5 text-[11px] text-white/30">{String(i + 1).padStart(2, "0")}</p>
+              <p className="font-mono pt-5 text-[12.5px] text-white/50">{String(i + 1).padStart(2, "0")}</p>
               <h4 className="mt-3 text-[15px] text-white">{t(h)}</h4>
-              <p className="mt-1.5 text-[13px] font-light leading-relaxed text-white/50">{t(d)}</p>
+              <p className="mt-1.5 text-[13px] font-light leading-relaxed text-white/70">{t(d)}</p>
             </div>
           ))}
         </div>
@@ -608,7 +608,7 @@ function Graveyard({ plan }: { plan: Plan }) {
   return (
     <section id="buried" data-scene={3} className="relative flex min-h-[100svh] items-end px-5 pb-24 pt-40 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">{t("The clearing")}</p>
+        <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-white/65">{t("The clearing")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("What we buried,")} <span className="accent">{t("and why.")}</span>
         </h2>
@@ -625,12 +625,12 @@ function Graveyard({ plan }: { plan: Plan }) {
               transition={{ duration: 0.9, delay: i * 0.12, ease: "easeOut" }}
               className="relative flex flex-col rounded-t-[999px] border border-b-0 border-white/[0.14] bg-[#030504]/55 px-6 pb-7 pt-16 text-center backdrop-blur-md"
             >
-              <p className="font-mono text-[10.5px] tracking-[0.4em] text-white/35">R.I.P.</p>
+              <p className="font-mono text-[12px] tracking-[0.4em] text-white/55">R.I.P.</p>
               <h3 className="font-display mt-4 text-[22px] leading-tight text-white/90">{tx(b, "title", b.title)}</h3>
-              <p className="font-mono mt-3 text-[10.5px] text-white/35">
+              <p className="font-mono mt-3 text-[12px] text-white/55">
                 {b.born ? `${fmtDate(b.born)} - ${fmtDate(b.buried)} · ${t("lived")} ${days(b.born, b.buried)}${t("d")}` : `${t("never built")} · ${fmtDate(b.buried)}`}
               </p>
-              <p className="mt-4 text-[13px] font-light leading-relaxed text-white/45">{tx(b, "text", b.text)}</p>
+              <p className="mt-4 text-[13px] font-light leading-relaxed text-white/65">{tx(b, "text", b.text)}</p>
               <div className="mx-auto my-5 h-px w-10 bg-white/20" />
               <p className="flex-1 text-[14px] leading-relaxed text-white/80">“{tx(b, "reason", b.reason)}”</p>
               <div className="flex justify-center">
@@ -651,7 +651,7 @@ function Today({ commits }: { commits: { total: number | null; recent: Commit[] 
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-wrap items-baseline justify-between gap-3 pb-5">
           <h2 className="font-display text-2xl text-white sm:text-3xl">{t("The trail, today")}</h2>
-          <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-white/45 hover:text-white">
+          <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="font-mono text-[12.5px] text-white/65 hover:text-white">
             {t("this page is a file · its history")} ↗
           </a>
         </div>
@@ -662,7 +662,7 @@ function Today({ commits }: { commits: { total: number | null; recent: Commit[] 
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-3.5">
                 <span className="font-mono shrink-0 text-[12px] text-amber-100/70">{c.sha}</span>
                 <span className="min-w-0 flex-1 truncate text-[13.5px] font-light text-white/60 group-hover:text-white">{c.message}</span>
-                <span className="font-mono shrink-0 text-[11px] text-white/35">{ago(c.at)}</span>
+                <span className="font-mono shrink-0 text-[12.5px] text-white/55">{ago(c.at)}</span>
               </a>
             </li>
           ))}
@@ -685,7 +685,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
   return (
     <section data-scene={0} className="relative flex min-h-[100svh] items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
       <div className="mx-auto w-full max-w-7xl">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[12.5px] uppercase tracking-[0.22em] text-white/55">
           {t("Roadmap · Oct - Dec 2026")}
         </motion.p>
         <motion.h1
@@ -705,7 +705,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
             {stats.map(([v, k]) => (
               <div key={k} className="py-5 pr-4">
                 <p className="font-mono text-[28px] leading-none text-white sm:text-[34px]">{v == null ? "-" : num(Number(v))}</p>
-                <p className="font-mono mt-2 text-[10.5px] uppercase tracking-[0.14em] text-white/40">{k}</p>
+                <p className="font-mono mt-2 text-[12px] uppercase tracking-[0.14em] text-white/60">{k}</p>
               </div>
             ))}
           </div>
@@ -718,7 +718,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
               </span>
             )}
             <span>
-              <span className="text-white/35">{t("free")}</span> {t("see who you're buying from")}
+              <span className="text-white/55">{t("free")}</span> {t("see who you're buying from")}
             </span>
             <span>
               <span className="text-amber-100/70">{t("holders")}</span> {t("see it first, and decide what we build next")}
@@ -746,7 +746,7 @@ export default function RoadmapPage() {
           <Today commits={commits} />
         </>
       ) : (
-        <div className="font-mono mx-auto max-w-7xl px-5 py-24 text-[12px] text-white/40 sm:px-8">{t("Loading the trail...")}</div>
+        <div className="font-mono mx-auto max-w-7xl px-5 py-24 text-[12px] text-white/60 sm:px-8">{t("Loading the trail...")}</div>
       )}
     </>
   );

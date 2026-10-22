@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Hero from "./components/Hero";
+import { Holders, NumbersBand, Products, XRayShowcase } from "./components/HomeSections";
 import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
@@ -43,7 +44,7 @@ function BringYourAgent() {
     <section className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-28">
       <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.9 }}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{tr("OPEN PROTOCOL · CLAWPUMP WING")}</p>
+          <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">{tr("OPEN PROTOCOL · CLAWPUMP WING")}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">
             {pick(
               <>
@@ -68,7 +69,7 @@ function BringYourAgent() {
               transition={{ duration: 0.9, delay: 0.08 * i }}
               className="bg-[#050706] p-6"
             >
-              <p className="font-mono text-[11px] text-white/35">{String(i + 1).padStart(2, "0")}</p>
+              <p className="font-mono text-[12.5px] text-white/55">{String(i + 1).padStart(2, "0")}</p>
               <h3 className="mt-6 text-[17px] text-white">{tr(t)}</h3>
               <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/55">{tr(d)}</p>
             </motion.div>
@@ -83,12 +84,12 @@ function Home() {
   return (
     <>
       <Hero />
-      <LiveStats />
+      <NumbersBand />
+      <XRayShowcase />
+      <Products />
       <LiveProof />
       <Species />
-      <Doors />
-      <BringYourAgent />
-      <Token />
+      <Holders />
       <RoadmapTeaser />
     </>
   );

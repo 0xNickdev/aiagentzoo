@@ -26,7 +26,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           {busy ? t("Check your wallet…") : t("Sign in as guardian")}
         </button>
       )}
-      {error && <p className="mt-2 text-[11px] text-white/50">{error}</p>}
+      {error && <p className="mt-2 text-[12.5px] text-white/70">{error}</p>}
     </div>
   );
 }
@@ -73,7 +73,7 @@ export function WakeButton({ agent }: { agent: string }) {
       >
         {waiting > 0 ? t("Again in {n}s", { n: waiting }) : t("Wake the {a}", { a: t(agent) })}
       </button>
-      {state && <span className="text-[11px] font-light leading-snug text-white/55">{t(state.text)}</span>}
+      {state && <span className="text-[12.5px] font-light leading-snug text-white/55">{t(state.text)}</span>}
     </div>
   );
 }

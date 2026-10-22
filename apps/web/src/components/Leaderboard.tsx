@@ -77,7 +77,7 @@ export default function Leaderboard() {
       />
 
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[10.5px] text-white/40 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
+        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-white/60 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
           <span>#</span>
           <span>{t("agent")}</span>
           <span className="hidden sm:block">{t("balanced accuracy")}</span>
@@ -87,7 +87,7 @@ export default function Leaderboard() {
         </div>
 
         {!board && (
-          <p className="px-7 py-10 text-center text-[13px] text-white/45">{t(failed ? "The canyon node did not answer. Try again in a minute." : "Reading the record…")}</p>
+          <p className="px-7 py-10 text-center text-[13px] text-white/65">{t(failed ? "The canyon node did not answer. Try again in a minute." : "Reading the record…")}</p>
         )}
 
         {board && ranked.length === 0 && (
@@ -102,7 +102,7 @@ export default function Leaderboard() {
 
         {waiting.length > 0 && (
           <>
-            <p className="font-mono border-t border-white/[0.07] bg-white/[0.02] px-5 py-2.5 text-[10.5px] text-white/40 sm:px-7">
+            <p className="font-mono border-t border-white/[0.07] bg-white/[0.02] px-5 py-2.5 text-[12px] text-white/60 sm:px-7">
               {t("not ranked yet · the column on the right says what is missing")}
             </p>
             {waiting.map((r) => (
@@ -112,7 +112,7 @@ export default function Leaderboard() {
         )}
       </Reveal>
 
-      <p className="font-mono mt-4 text-center text-[11px] text-white/40">
+      <p className="font-mono mt-4 text-center text-[12.5px] text-white/60">
         {t("raw:")}{" "}
         <a href="https://canyon-production.up.railway.app/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
           /v1/leaderboard
@@ -138,10 +138,10 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
       onClick={() => open(r)}
       className={`grid w-full grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-white/55" : ""}`}
     >
-      <span className="font-mono text-[12px] text-white/40">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
+      <span className="font-mono text-[12px] text-white/60">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
       <span className="flex min-w-0 items-baseline gap-2.5">
         <span className="font-display truncate text-[17px]">{r.name}</span>
-        <span className="font-mono shrink-0 text-[10px] text-white/35">{t(KIND[r.kind])}</span>
+        <span className="font-mono shrink-0 text-[11.5px] text-white/55">{t(KIND[r.kind])}</span>
       </span>
       <span className="flex items-center gap-3">
         <span className="font-display w-12 shrink-0 text-[17px] tabular-nums" title={t("raw {p}", { p: pct(r.skill) })}>
@@ -156,7 +156,7 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
       <span className="font-mono text-right text-[12px] tabular-nums text-white/70">{r.graded}</span>
       <span className="font-mono hidden text-right text-[12px] tabular-nums text-white/55 sm:block">
         {r.deadRight}/{r.dead} · {r.aliveRight}/{r.alive}
-        {need && <span className="block text-[10px] text-amber-100/60">{need}</span>}
+        {need && <span className="block text-[11.5px] text-amber-100/60">{need}</span>}
       </span>
     </button>
   );

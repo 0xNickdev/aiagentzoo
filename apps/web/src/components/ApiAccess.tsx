@@ -58,19 +58,19 @@ export default function ApiAccess() {
         {tiers.map((tier, i) => (
           <div key={tier.name} className={`liquid-glass rounded-3xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
             <p className="font-display text-3xl">{tier.name}</p>
-            <p className="font-mono mt-1 text-[11px] text-white/45">{tier.who}</p>
+            <p className="font-mono mt-1 text-[12.5px] text-white/65">{tier.who}</p>
             <ul className="mt-5 space-y-2 text-[13.5px] font-light text-white/75">
               {tier.rows.map((r) => (
                 <li key={r}>· {r}</li>
               ))}
             </ul>
-            <pre className="font-mono mt-5 overflow-x-auto rounded-xl bg-black/30 p-3 text-[11.5px] text-white/70">{i === 0 ? EXAMPLE : KEYED}</pre>
+            <pre className="font-mono mt-5 overflow-x-auto rounded-xl bg-black/30 p-3 text-[13px] text-white/70">{i === 0 ? EXAMPLE : KEYED}</pre>
           </div>
         ))}
       </Reveal>
 
       <Reveal className="liquid-glass mt-3 rounded-3xl p-6">
-        <p className="font-mono text-[10.5px] text-white/45">{pick("your key", "你的密钥")}</p>
+        <p className="font-mono text-[12px] text-white/65">{pick("your key", "你的密钥")}</p>
         {key ? (
           <div className="mt-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -95,11 +95,11 @@ export default function ApiAccess() {
             <button type="button" disabled={busy} onClick={signIn} className="rounded-full bg-white px-5 py-2 text-[13px] text-black disabled:opacity-50">
               {pick("Sign in with your wallet", "用钱包登录")}
             </button>
-            <span className="text-[12.5px] font-light text-white/50">{pick("A signature, not a transaction. It costs nothing.", "只是签名，不是交易，不花钱。")}</span>
+            <span className="text-[12.5px] font-light text-white/70">{pick("A signature, not a transaction. It costs nothing.", "只是签名，不是交易，不花钱。")}</span>
           </div>
         )}
         {(error || signError) && <p className="mt-3 text-[12.5px] text-[#ff8a7e]">{error ?? signError}</p>}
-        <p className="font-mono mt-5 text-[10.5px] text-white/35">
+        <p className="font-mono mt-5 text-[12px] text-white/55">
           {pick("for agents: ", "智能体请看：")}
           <a href="/skill.md" className="underline decoration-white/20 underline-offset-4 hover:text-white">zooaiagency.com/skill.md</a>
         </p>

@@ -38,7 +38,7 @@ export function WalletLink({ a, onWallet, className = "" }: { a: string; onWalle
       <button type="button" onClick={() => onWallet(a)} className="underline decoration-white/15 underline-offset-4 transition hover:text-white hover:decoration-white/60">
         {short(a)}
       </button>
-      <a href={`https://solscan.io/account/${a}`} target="_blank" rel="noopener noreferrer" title="Solscan" className="text-[10px] text-white/35 hover:text-white">
+      <a href={`https://solscan.io/account/${a}`} target="_blank" rel="noopener noreferrer" title="Solscan" className="text-[11.5px] text-white/55 hover:text-white">
         ↗
       </a>
     </span>
@@ -50,7 +50,7 @@ function Box({ title, note, children }: { title: string; note?: string; children
     <div className="liquid-glass rounded-3xl p-5 sm:p-6">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-white/90">{t(title)}</h3>
-        {note && <span className="font-mono text-[10.5px] text-white/40">{t(note)}</span>}
+        {note && <span className="font-mono text-[12px] text-white/60">{t(note)}</span>}
       </div>
       {children}
     </div>
@@ -60,7 +60,7 @@ function Box({ title, note, children }: { title: string; note?: string; children
 function Num({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="bg-[#070a09]/90 px-4 py-3">
-      <p className="text-[11px] text-white/45">{t(k)}</p>
+      <p className="text-[12.5px] text-white/65">{t(k)}</p>
       <p className={`font-mono mt-1 text-[18px] ${bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{v}</p>
     </div>
   );
@@ -109,7 +109,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
   }, [wallet]);
 
   if (p === undefined) return <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8"><div className="liquid-glass h-64 animate-pulse rounded-3xl" /></div>;
-  if (!p) return <p className="mx-auto max-w-7xl px-5 pb-10 text-center text-[13px] text-[#ff9a8f] sm:px-8">{error}</p>;
+  if (!p) return <p className="mx-auto max-w-7xl px-5 pb-10 text-center text-[13px] text-[#ff8a7e] sm:px-8">{error}</p>;
 
   const l = lead(p);
   const roles = [p.dev && t("dev"), p.sniper && t("first-second buyer"), p.funded.creators.length > 0 && !p.funded.hot && t("pays for devs"), p.funded.hot && t("exchange or router")].filter(Boolean) as string[];
@@ -119,14 +119,14 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
       <div className="mx-auto max-w-7xl space-y-4">
         <div className="liquid-glass rounded-3xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-mono text-[11px] text-white/45">
+            <p className="font-mono text-[12.5px] text-white/65">
               {t("wallet")} · {roles.join(" · ")}
             </p>
-            <span className="flex items-center gap-3 text-[11px]">
-              <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="font-mono text-white/50 hover:text-white">
+            <span className="flex items-center gap-3 text-[12.5px]">
+              <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="font-mono text-white/70 hover:text-white">
                 {t("copy")}
               </button>
-              <a href={`https://solscan.io/account/${wallet}`} target="_blank" rel="noopener noreferrer" className="font-mono text-white/50 underline decoration-white/20 underline-offset-4 hover:text-white">
+              <a href={`https://solscan.io/account/${wallet}`} target="_blank" rel="noopener noreferrer" className="font-mono text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
                 Solscan ↗
               </a>
             </span>
@@ -147,7 +147,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
         {d && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <Box title="Its launches" note="last 48 hours · tap to x-ray">
-              <div className="font-mono grid grid-cols-[minmax(0,1fr)_5rem_4rem_8rem] gap-3 border-b border-white/[0.07] pb-2 text-[10.5px] text-white/40">
+              <div className="font-mono grid grid-cols-[minmax(0,1fr)_5rem_4rem_8rem] gap-3 border-b border-white/[0.07] pb-2 text-[12px] text-white/60">
                 <span>{t("token")}</span>
                 <span className="text-right">{t("buyers")}</span>
                 <span className="text-right">{t("first 5 s")}</span>
@@ -157,11 +157,11 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                 {d.launches.map((x) => (
                   <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="font-mono grid w-full grid-cols-[minmax(0,1fr)_5rem_4rem_8rem] items-baseline gap-3 border-t border-white/[0.04] py-2 text-left text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
                     <span className="truncate text-white/85">
-                      ${sym(x.symbol)} <span className="text-white/35">· {VENUE[x.venue] ?? x.venue} · {ago(x.createdAt)}</span>
+                      ${sym(x.symbol)} <span className="text-white/55">· {VENUE[x.venue] ?? x.venue} · {ago(x.createdAt)}</span>
                     </span>
                     <span className="text-right text-white/60">{x.buyers}</span>
                     <span className="text-right text-white/60">{x.early}</span>
-                    <span className={`text-right ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-white/85" : "text-white/50"}`}>
+                    <span className={`text-right ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-white/85" : "text-white/70"}`}>
                       {x.dumpedAfterMin !== null ? t("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? t("graduated") : t("dev holding")}
                     </span>
                   </button>
@@ -170,8 +170,8 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </Box>
             <div className="space-y-4">
               <Box title="Who paid for this dev" note="traced on Solana">
-                {!p.funding && <p className="text-[13px] font-light text-white/50">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
-                {p.funding && !p.funding.funder && <p className="text-[13px] font-light text-white/50">{t("No funding transfer in the dev's recent history.")}</p>}
+                {!p.funding && <p className="text-[13px] font-light text-white/70">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+                {p.funding && !p.funding.funder && <p className="text-[13px] font-light text-white/70">{t("No funding transfer in the dev's recent history.")}</p>}
                 {p.funding?.funder && (
                   <>
                     <div className="flex items-baseline justify-between gap-3 py-1">
@@ -186,10 +186,10 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               <Box title="Wallets that keep buying its launches" note="in their first 5 seconds">
                 {!d.regulars.length ? (
-                  <p className="text-[13px] font-light text-white/50">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
+                  <p className="text-[13px] font-light text-white/70">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
                 ) : (
                   <>
-                    <p className="mb-2 text-[12px] font-light text-white/45">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
+                    <p className="mb-2 text-[12px] font-light text-white/65">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
                     {d.regulars.map((r) => (
                       <div key={r.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.05] py-1.5 text-[12px] first:border-t-0">
                         <WalletLink a={r.wallet} onWallet={onWallet} className="text-white/80" />
@@ -201,7 +201,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               {p.accounts.length > 0 && (
                 <Box title="Accounts its tokens link to" note="from the tokens' metadata">
-                  <p className="mb-2 text-[12px] font-light text-white/45">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
+                  <p className="mb-2 text-[12px] font-light text-white/65">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
                   {p.accounts.map((a) => (
                     <div key={a.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.05] py-1.5 text-[12px] first:border-t-0">
                       <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-white/80 hover:text-white">
@@ -224,17 +224,17 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                 <Num k="sold out of" v={String(p.sniper.soldOut)} />
                 <Num k="usually out after" v={secs(p.sniper.medianExitSec)} />
               </div>
-              <p className="font-mono mb-1 mt-4 text-[10px] uppercase tracking-[0.14em] text-white/35">{t("whose launches it buys")}</p>
+              <p className="font-mono mb-1 mt-4 text-[11.5px] uppercase tracking-[0.14em] text-white/55">{t("whose launches it buys")}</p>
               {p.sniper.topCreators.map((c) => (
                 <div key={c.creator} className="flex items-baseline justify-between gap-3 border-t border-white/[0.05] py-1.5 text-[12px] first:border-t-0">
                   <WalletLink a={c.creator} onWallet={onWallet} className="text-white/80" />
                   <span className="font-mono text-white/55">{c.launches === 1 ? t("1 launch") : t("{n} launches", { n: c.launches })}</span>
                 </div>
               ))}
-              <p className="font-mono mb-2 mt-4 text-[10px] uppercase tracking-[0.14em] text-white/35">{t("its latest snipes · tap to x-ray")}</p>
+              <p className="font-mono mb-2 mt-4 text-[11.5px] uppercase tracking-[0.14em] text-white/55">{t("its latest snipes · tap to x-ray")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {p.sniper.recent.map((m) => (
-                  <button key={m.mint} type="button" onClick={() => onToken(m.mint)} className="font-mono max-w-[10rem] truncate rounded-full px-2.5 py-1 text-[11px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">
+                  <button key={m.mint} type="button" onClick={() => onToken(m.mint)} className="font-mono max-w-[10rem] truncate rounded-full px-2.5 py-1 text-[12.5px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">
                     ${sym(m.symbol)}
                   </button>
                 ))}
@@ -244,7 +244,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           {(p.funded.creators.length > 0 || p.funded.hot) && (
             <Box title="Devs it paid for" note="traced on Solana">
               {p.funded.hot ? (
-                <p className="text-[13px] font-light text-white/50">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                <p className="text-[13px] font-light text-white/70">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
               ) : (
                 p.funded.creators.map((c) => (
                   <div key={c.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.05] py-1.5 text-[12px] first:border-t-0">
@@ -256,7 +256,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </Box>
           )}
         </div>
-        <p className="font-mono text-center text-[11px] text-white/40">
+        <p className="font-mono text-center text-[12.5px] text-white/60">
           {t("raw:")} <a href={`${NORTH}/v1/wallet/${wallet}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/wallet/{short(wallet)}</a> · {t("Read from public chain data. Not financial advice.")}
         </p>
       </div>

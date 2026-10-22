@@ -39,19 +39,19 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
         <a href="/" className="flex items-center gap-2.5 text-white" aria-label="ZOOAI AGENCY">
           <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
-          <span className="font-mono mt-0.5 text-[10.5px] tracking-[0.22em] text-white/50">AGENCY</span>
+          <span className="font-mono mt-0.5 text-[12px] tracking-[0.22em] text-white/70">AGENCY</span>
         </a>
         <div className="hidden items-center gap-8 lg:flex">
           <div className="group relative">
             <button type="button" className={`flex items-center gap-1 text-[13.5px] transition-colors duration-300 hover:text-white ${TOOL_HREFS.has(route) ? "text-white" : "text-white/65"}`}>
-              {tr("Tools")} <span className="text-[10px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
+              {tr("Tools")} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
             </button>
             <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
               <div className="rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl">
                 {TOOLS.map((t) => (
                   <a key={t.href} href={t.href} className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === t.href ? "bg-white/[0.06]" : ""}`}>
                     <span className="block text-[13.5px] text-white">{tr(t.label)}</span>
-                    <span className="font-mono block text-[10.5px] text-white/45">{tr(t.note)}</span>
+                    <span className="font-mono block text-[12px] text-white/65">{tr(t.note)}</span>
                   </a>
                 ))}
               </div>

@@ -28,7 +28,7 @@ function Nav({ page, go }: { page: Page; go: (slug: string) => void }) {
     <nav className="space-y-8">
       {GROUPS.map((g) => (
         <div key={g.title}>
-          <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{t(g.title)}</p>
+          <p className="font-mono mb-3 text-[12px] uppercase tracking-[0.14em] text-white/55">{t(g.title)}</p>
           <ul className="space-y-1">
             {g.pages.map((p) => (
               <li key={p.slug}>
@@ -129,7 +129,7 @@ export default function DocsApp() {
     <div className="min-h-screen">
       <SiteNav active="/docs" />
       <div className="sticky top-[61px] z-30 border-b border-white/[0.07] bg-[#030504]/85 backdrop-blur-xl sm:top-[77px] lg:hidden">
-        <button type="button" onClick={() => setMenu((m) => !m)} className="font-mono flex w-full items-center justify-between px-5 py-3 text-[11px] tracking-[0.12em] text-white/60 sm:px-8">
+        <button type="button" onClick={() => setMenu((m) => !m)} className="font-mono flex w-full items-center justify-between px-5 py-3 text-[12.5px] tracking-[0.12em] text-white/60 sm:px-8">
           <span>{t("CONTENTS")} · {t(page.title).toUpperCase()}</span>
           {menu ? <X size={15} /> : <Menu size={15} />}
         </button>
@@ -146,7 +146,7 @@ export default function DocsApp() {
         </aside>
 
         <main className="min-w-0 py-10 sm:py-14">
-          <p className="font-mono text-[11px] text-white/40">{t(GROUPS.find((g) => g.pages.includes(page))?.title ?? "")}</p>
+          <p className="font-mono text-[12.5px] text-white/60">{t(GROUPS.find((g) => g.pages.includes(page))?.title ?? "")}</p>
           {ready ? (
             <div ref={body} className="doc" dangerouslySetInnerHTML={{ __html: html }} />
           ) : (
@@ -165,7 +165,7 @@ export default function DocsApp() {
                 }}
                 className="group rounded-2xl p-5 ring-1 ring-white/10 transition hover:ring-white/25"
               >
-                <span className="font-mono flex items-center gap-1.5 text-[11px] text-white/40">
+                <span className="font-mono flex items-center gap-1.5 text-[12.5px] text-white/60">
                   <ArrowLeft size={12} /> {t("previous")}
                 </span>
                 <span className="mt-1 block text-[16px] text-white">{t(prev.title)}</span>
@@ -182,11 +182,11 @@ export default function DocsApp() {
                 }}
                 className="group rounded-2xl p-5 text-right ring-1 ring-white/10 transition hover:ring-white/25"
               >
-                <span className="font-mono flex items-center justify-end gap-1.5 text-[11px] text-white/40">
+                <span className="font-mono flex items-center justify-end gap-1.5 text-[12.5px] text-white/60">
                   {t("next")} <ArrowRight size={12} />
                 </span>
                 <span className="mt-1 block text-[16px] text-white">{t(next.title)}</span>
-                <span className="mt-1 block text-[12.5px] text-white/45">{t(next.blurb)}</span>
+                <span className="mt-1 block text-[12.5px] text-white/65">{t(next.blurb)}</span>
               </a>
             )}
           </div>
@@ -194,11 +194,11 @@ export default function DocsApp() {
             href={`${GITHUB_URL}/blob/main/${page.source}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono mt-8 inline-block text-[11px] text-white/35 hover:text-white"
+            className="font-mono mt-8 inline-block text-[12.5px] text-white/55 hover:text-white"
           >
             {t("edit this page on GitHub ↗")}
           </a>
-          <a href={markdownUrl(page)} className="font-mono ml-6 mt-8 inline-block text-[11px] text-white/35 hover:text-white">
+          <a href={markdownUrl(page)} className="font-mono ml-6 mt-8 inline-block text-[12.5px] text-white/55 hover:text-white">
             {t("raw markdown")}
           </a>
         </main>
@@ -206,14 +206,14 @@ export default function DocsApp() {
         <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-14 xl:block">
           {headings.length > 1 && (
             <>
-              <p className="font-mono mb-3 text-[10.5px] uppercase tracking-[0.14em] text-white/35">{t("On this page")}</p>
+              <p className="font-mono mb-3 text-[12px] uppercase tracking-[0.14em] text-white/55">{t("On this page")}</p>
               <ul className="space-y-2 border-l border-white/[0.08]">
                 {headings.map((h) => (
                   <li key={h.id}>
                     <a
                       href={`#${h.id}`}
                       className={`-ml-px block border-l py-0.5 pl-3 text-[12.5px] transition ${
-                        active === h.id ? "border-amber-200/70 text-white" : "border-transparent text-white/45 hover:text-white"
+                        active === h.id ? "border-amber-200/70 text-white" : "border-transparent text-white/65 hover:text-white"
                       }`}
                     >
                       {h.text}

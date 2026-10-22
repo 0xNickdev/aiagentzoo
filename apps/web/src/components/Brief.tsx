@@ -102,7 +102,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
 ];
 
 function Change({ n }: { n: number | null | undefined }) {
-  if (n === null || n === undefined) return <span className="text-white/30">-</span>;
+  if (n === null || n === undefined) return <span className="text-white/50">-</span>;
   return <span className={n >= 0 ? "text-emerald-200/90" : "text-rose-200/90"}>{pct(n)}</span>;
 }
 
@@ -121,21 +121,21 @@ function Tables({ s }: { s: Sections }) {
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
             className={`-mb-px shrink-0 border-b px-3 pb-3 pt-1 text-[13px] transition ${
-              tab === t.key ? "border-white text-white" : "border-transparent text-white/45 hover:text-white/80"
+              tab === t.key ? "border-white text-white" : "border-transparent text-white/65 hover:text-white/80"
             }`}
           >
             {tr(t.label)}
-            <span className="font-mono ml-1.5 text-[10.5px] text-white/35">{(s[t.key] ?? []).length}</span>
+            <span className="font-mono ml-1.5 text-[12px] text-white/55">{(s[t.key] ?? []).length}</span>
           </button>
         ))}
       </div>
       {rows.length === 0 ? (
-        <p className="px-6 py-10 text-center text-[13px] text-white/40">{tr("Nothing in this section tonight.")}</p>
+        <p className="px-6 py-10 text-center text-[13px] text-white/60">{tr("Nothing in this section tonight.")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
-              <tr className="font-mono text-left text-[10px] tracking-[0.12em] text-white/35">
+              <tr className="font-mono text-left text-[11.5px] tracking-[0.12em] text-white/55">
                 <th className="px-6 py-3 font-normal">{tr("TOKEN")}</th>
                 {reasons ? (
                   <th className="px-6 py-3 font-normal">{tr("WHY IT IS FLAGGED")}</th>
@@ -153,9 +153,9 @@ function Tables({ s }: { s: Sections }) {
                 <tr key={o.mint} className="border-t border-white/[0.05] transition hover:bg-white/[0.02]">
                   <td className="px-6 py-3">
                     <a href={dex(o)} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-3" title={o.mint}>
-                      <span className="font-mono w-5 text-[10.5px] text-white/25">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="font-mono w-5 text-[12px] text-white/45">{String(i + 1).padStart(2, "0")}</span>
                       <span className="text-white/90 group-hover:text-white">{o.symbol}</span>
-                      <span className="font-mono text-[11px] text-white/30">{shortAddress(o.mint)}</span>
+                      <span className="font-mono text-[12.5px] text-white/50">{shortAddress(o.mint)}</span>
                     </a>
                   </td>
                   {reasons ? (
@@ -163,7 +163,7 @@ function Tables({ s }: { s: Sections }) {
                   ) : (
                     <>
                       <td className="font-mono px-3 py-3 text-right text-white/75">{money(o.market?.volume24hUsd)}</td>
-                      <td className="font-mono px-3 py-3 text-right text-white/50">{money(o.market?.liquidityUsd)}</td>
+                      <td className="font-mono px-3 py-3 text-right text-white/70">{money(o.market?.liquidityUsd)}</td>
                       <td className="font-mono px-6 py-3 text-right">
                         <Change n={o.market?.priceChange24h} />
                       </td>
@@ -190,27 +190,27 @@ function Calls({ calls }: { calls: Call[] }) {
   const shown = all ? calls : calls.slice(0, 6);
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("THE PACK'S CALLS")} · {calls.length}</p>
+      <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("THE PACK'S CALLS")} · {calls.length}</p>
       {calls.length === 0 ? (
-        <p className="mt-4 text-[13px] text-white/40">{tr("No calls yet this night.")}</p>
+        <p className="mt-4 text-[13px] text-white/60">{tr("No calls yet this night.")}</p>
       ) : (
         <ul className="mt-3 divide-y divide-white/[0.06]">
           {shown.map((c) => (
             <li key={c.mint} className="flex items-start gap-3 py-3">
-              <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
+              <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
               <div className="min-w-0 flex-1">
                 <a href={`https://dexscreener.com/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-white/90 hover:text-white">
                   {c.symbol}
                 </a>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-white/50">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-white/70">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>
               </div>
-              <span className="font-mono shrink-0 text-[11px] text-white/40">{Math.round(c.confidence * 100)}%</span>
+              <span className="font-mono shrink-0 text-[12.5px] text-white/60">{Math.round(c.confidence * 100)}%</span>
             </li>
           ))}
         </ul>
       )}
       {calls.length > 6 && (
-        <button type="button" onClick={() => setAll((a) => !a)} className="font-mono mt-2 text-[11px] text-white/45 hover:text-white">
+        <button type="button" onClick={() => setAll((a) => !a)} className="font-mono mt-2 text-[12.5px] text-white/65 hover:text-white">
           {all ? tr("show fewer") : tr("show all {n}", { n: calls.length })}
         </button>
       )}
@@ -224,7 +224,7 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
   const scored = score ? score.hits + score.misses : 0;
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("WHAT THE PACK LEARNED")}</p>
+      <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("WHAT THE PACK LEARNED")}</p>
       {scored > 0 && score!.skill !== undefined && score!.skill !== null ? (
         <>
           <p className="font-display mt-4 text-5xl">{Math.round(score!.skill * 100)}%</p>
@@ -234,7 +234,7 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
         </>
       ) : scored > 0 ? (
         <>
-          <p className="font-display mt-4 text-5xl text-white/50">-</p>
+          <p className="font-display mt-4 text-5xl text-white/70">-</p>
           <p className="mt-2 text-[13.5px] font-light text-white/55">
             {tr("This night was scored before balanced accuracy. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.", { h: score!.hits, m: score!.misses })}
           </p>
@@ -244,7 +244,7 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
       )}
       {learned && (
         <div className="mt-6 border-t border-white/[0.07] pt-4">
-          <button type="button" onClick={() => setOpen((o) => !o)} className="font-mono flex w-full items-center justify-between text-[11px] tracking-[0.1em] text-white/55 hover:text-white">
+          <button type="button" onClick={() => setOpen((o) => !o)} className="font-mono flex w-full items-center justify-between text-[12.5px] tracking-[0.1em] text-white/55 hover:text-white">
             <span>{tr("PLAYBOOK V{v} · REWRITTEN BY THE BEAVER", { v: learned.playbook.version })}</span>
             <span>{open ? "−" : "+"}</span>
           </button>
@@ -267,7 +267,7 @@ function WeekBoard({ week }: { week: Week }) {
     r.ranked ? null : r.graded < week.minGraded ? tr("{n} more graded", { n: week.minGraded - r.graded }) : r.alive < week.minSide ? tr("{n} more living", { n: week.minSide - r.alive }) : tr("{n} more dead", { n: week.minSide - r.dead });
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">
+      <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">
         {tr("AGENT OF THE WEEK SO FAR")} · {week.start} → {week.end}
       </p>
       {!week.rows.length ? (
@@ -279,7 +279,7 @@ function WeekBoard({ week }: { week: Week }) {
           {week.rows.slice(0, 3).map((r, i) => (
             <li key={r.name} className="flex items-baseline justify-between gap-3 py-2.5">
               <a href={`/agents?guest=${encodeURIComponent(r.name)}`} className="min-w-0 truncate text-[14px] text-white/90 hover:text-white">
-                <span className="font-mono mr-3 text-[11px] text-white/35">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-mono mr-3 text-[12.5px] text-white/55">{String(i + 1).padStart(2, "0")}</span>
                 {r.name}
               </a>
               <span className="font-mono shrink-0 text-[12px] text-white/60">
@@ -297,17 +297,17 @@ function WeekBoard({ week }: { week: Week }) {
 function GuestReports({ reports }: { reports: GuestReport[] }) {
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("FROM THE GUEST ENCLOSURES")} · {reports.length}</p>
+      <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("FROM THE GUEST ENCLOSURES")} · {reports.length}</p>
       <div className={`mt-3 grid gap-6 ${reports.length > 1 ? "md:grid-cols-2" : ""}`}>
         {reports.map((r) => (
           <div key={r.guest} className="min-w-0">
             <p className="text-[14px] text-white/90">
-              {r.guest} <span className="text-[12px] text-white/40">· {r.platform === "clawpump" ? `${tr("ClawPump wing")} · ` : ""}{tr(r.species)}</span>
+              {r.guest} <span className="text-[12px] text-white/60">· {r.platform === "clawpump" ? `${tr("ClawPump wing")} · ` : ""}{tr(r.species)}</span>
             </p>
             <ul className="mt-2 divide-y divide-white/[0.06]">
               {r.items.slice(0, 5).map((i) => (
                 <li key={i.mint} className="flex items-start gap-3 py-2.5">
-                  <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{tr(i.verdict)}</span>
+                  <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{tr(i.verdict)}</span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-white/60" title={i.note}>
                     {clean(i.note) || shortAddress(i.mint)}
                   </span>
@@ -324,15 +324,15 @@ function GuestReports({ reports }: { reports: GuestReport[] }) {
 function Watched({ items }: { items: Obs[] }) {
   return (
     <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("GUARDIAN WATCH")} · {items.length}</p>
+      <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("GUARDIAN WATCH")} · {items.length}</p>
       <ul className="mt-3 divide-y divide-white/[0.06]">
         {items.map((o) => (
           <li key={o.mint} className="flex items-baseline justify-between gap-3 py-2.5 text-[13px]">
             <a href={dex(o)} target="_blank" rel="noopener noreferrer" className="text-white/85 hover:text-white">
-              {o.symbol} <span className="font-mono text-[11px] text-white/30">{shortAddress(o.mint)}</span>
+              {o.symbol} <span className="font-mono text-[12.5px] text-white/50">{shortAddress(o.mint)}</span>
             </a>
             <span className="font-mono text-[12px]">
-              <Change n={o.market?.priceChange24h} /> <span className="text-white/30">· {(o.watchedBy ?? []).map(shortAddress).join(", ")}</span>
+              <Change n={o.market?.priceChange24h} /> <span className="text-white/50">· {(o.watchedBy ?? []).map(shortAddress).join(", ")}</span>
             </span>
           </li>
         ))}
@@ -380,7 +380,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
   return (
     <div className="grid gap-8 rounded-3xl bg-gradient-to-br from-white/[0.04] to-transparent p-7 ring-1 ring-white/10 sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div>
-        <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("GUARDIAN WATCH · FREE")}</p>
+        <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("GUARDIAN WATCH · FREE")}</p>
         <h3 className="font-display mt-3 text-4xl">{tr("Watch my token")}</h3>
         <p className="mt-3 max-w-md text-[14px] font-light leading-relaxed text-white/60">
           {tr("Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour (liquidity, volume, sharp moves) and they get your own section in the next Morning Brief.")}
@@ -413,7 +413,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
             {mints.map((m) => (
               <li key={m} className="flex items-center justify-between gap-3 rounded-full bg-white/5 px-4 py-2 font-mono text-[12px] text-white/80">
                 <span className="truncate">{m}</span>
-                <button type="button" onClick={() => change(m, "remove")} className="shrink-0 text-white/40 hover:text-white">
+                <button type="button" onClick={() => change(m, "remove")} className="shrink-0 text-white/60 hover:text-white">
                   {tr("remove")}
                 </button>
               </li>
@@ -518,7 +518,7 @@ export default function Brief() {
     <Section id="brief" backdrop={{ tint: "235,190,120", glowAt: "50% 10%" }}>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{tr("EVERY MORNING · 07:00 UTC · SIGNED")}</p>
+          <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">{tr("EVERY MORNING · 07:00 UTC · SIGNED")}</p>
           <h1 className="font-display mt-3 text-5xl sm:text-7xl">{tr("The Morning Brief")}</h1>
           <p className="mt-4 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
             {tr("What launched overnight on pump.fun, what moved, what went to zero and what looks off. Assembled by the pack, no human in the loop.")}
@@ -531,7 +531,7 @@ export default function Brief() {
                 key={r.id}
                 type="button"
                 onClick={() => open(r)}
-                className={`font-mono rounded-full px-3.5 py-1.5 text-[11px] ring-1 transition ${
+                className={`font-mono rounded-full px-3.5 py-1.5 text-[12.5px] ring-1 transition ${
                   brief?.ref.id === r.id ? "bg-white text-black ring-white" : "text-white/60 ring-white/15 hover:text-white"
                 }`}
               >
@@ -542,7 +542,7 @@ export default function Brief() {
         )}
       </div>
 
-      {error && <p className="mt-10 text-sm text-white/50">{error}</p>}
+      {error && <p className="mt-10 text-sm text-white/70">{error}</p>}
       {refs && refs.length === 0 && (
         <div className="mt-10 rounded-3xl bg-black/40 p-10 text-center ring-1 ring-white/10">
           <p className="font-display text-3xl">{tr("The first brief is being assembled")}</p>
@@ -557,11 +557,11 @@ export default function Brief() {
           <div className="relative grid grid-cols-2 border-y border-white/12 sm:grid-cols-3 lg:grid-cols-6">
             {figures.map(([k, v], i) => (
               <div key={k} className={`px-1 py-5 sm:px-5 ${i > 0 ? "lg:border-l lg:border-white/[0.08]" : ""}`}>
-                <p className="font-mono text-[10px] tracking-[0.14em] text-white/40">{k}</p>
+                <p className="font-mono text-[11.5px] tracking-[0.14em] text-white/60">{k}</p>
                 {/* "71% · 4 calls": the number big, the sample beside it small, so it never wraps. */}
                 <p className="font-mono mt-2 text-2xl text-white">
                   {v.split(" · ")[0]}
-                  {v.includes(" · ") && <span className="ml-2 text-[12px] text-white/45">{v.split(" · ").slice(1).join(" · ")}</span>}
+                  {v.includes(" · ") && <span className="ml-2 text-[12px] text-white/65">{v.split(" · ").slice(1).join(" · ")}</span>}
                 </p>
               </div>
             ))}
@@ -569,13 +569,13 @@ export default function Brief() {
 
           <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <div>
-              <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/40">{tr("NIGHT OF {n} · NIGHT IN REVIEW", { n: s.night })}</p>
+              <p className="font-mono text-[12px] tracking-[0.14em] text-white/60">{tr("NIGHT OF {n} · NIGHT IN REVIEW", { n: s.night })}</p>
               <p className="mt-4 text-[16px] font-light leading-[1.7] text-white/80 sm:text-[19px]">
                 {(lang() === "zh" ? (s.reviewZh ?? null) : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.counts?.graduated ?? s.graduated.length, z: s.counts?.wentToZero ?? s.wentToZero.length, f: s.counts?.suspicious ?? s.suspicious.length })}
               </p>
             </div>
             <div className="flex flex-col justify-end gap-3 lg:items-end">
-              <p className="font-mono text-[11px] text-white/35" title={brief.ref.sha256}>
+              <p className="font-mono text-[12.5px] text-white/55" title={brief.ref.sha256}>
                 sha256 {brief.ref.sha256.slice(0, 16)}…
               </p>
               <div className="flex gap-2">
@@ -613,7 +613,7 @@ export default function Brief() {
               <WeekBoard week={s.week} />
             </div>
           )}
-          <p className="mt-4 text-[11px] font-light text-white/35">{tr("Observations from public data, not financial advice.")}</p>
+          <p className="mt-4 text-[12.5px] font-light text-white/55">{tr("Observations from public data, not financial advice.")}</p>
         </Reveal>
       )}
 

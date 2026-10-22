@@ -82,14 +82,14 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-4">
-          <span className="font-mono text-[11px] tracking-[0.12em] text-white/40">{c ? `HOUSE ${c.house.toUpperCase()} · GEN ${c.generation}` : "LOADING"}</span>
+          <span className="font-mono text-[12.5px] tracking-[0.12em] text-white/60">{c ? `HOUSE ${c.house.toUpperCase()} · GEN ${c.generation}` : "LOADING"}</span>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-white/60 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {failed && <p className="p-8 text-center text-[13px] text-white/45">This creature could not be loaded.</p>}
+          {failed && <p className="p-8 text-center text-[13px] text-white/65">This creature could not be loaded.</p>}
           {c && (
             <>
               <header className="relative px-6 pb-8 pt-8">
@@ -102,7 +102,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   <div className="min-w-0">
                     <h3 className="font-display text-4xl leading-none">{c.name}</h3>
                     <p className="mt-2 text-[14px] font-light text-white/60">{c.temperament}</p>
-                    <p className="font-mono mt-3 text-[11px] text-white/40">
+                    <p className="font-mono mt-3 text-[12.5px] text-white/60">
                       born {c.bornNight}
                       {dead ? ` · fell ${c.diedNight}` : " · alive"}
                     </p>
@@ -115,7 +115,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   </blockquote>
                 )}
 
-                <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[10.5px] text-white/40">
+                <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] text-white/60">
                   {[
                     ["lifetime", accuracyLabel(c.lifetimeSkill, c.lifetime.hits + c.lifetime.misses)],
                     ["since last turn", accuracyLabel(c.skill, c.window.hits + c.window.misses)],
@@ -131,7 +131,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                 {(c.parents.length > 0 || c.children.length > 0) && (
                   <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[13px]">
                     {c.parents.length > 0 && (
-                      <span className="text-white/45">
+                      <span className="text-white/65">
                         child of{" "}
                         {c.parents.map((p, i) => (
                           <span key={p.id}>
@@ -144,7 +144,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                       </span>
                     )}
                     {c.children.length > 0 && (
-                      <span className="text-white/45">
+                      <span className="text-white/65">
                         parent of{" "}
                         {c.children.map((k, i) => (
                           <span key={k.id}>
@@ -161,7 +161,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </header>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="font-mono text-[11px] tracking-[0.14em] text-white/40">DNA · THE PLAYBOOK IT LIVES OR DIES BY</h4>
+                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-white/60">DNA · THE PLAYBOOK IT LIVES OR DIES BY</h4>
                 <ol className="mt-4 space-y-2">
                   {genes(c).map((g, i) => (
                     <li
@@ -172,7 +172,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                     >
                       {g.text}
                       {c.parents.length > 0 && (
-                        <span className={`font-mono mt-1.5 block text-[10px] tracking-[0.1em] ${g.mutated ? "text-amber-200/80" : "text-white/35"}`}>
+                        <span className={`font-mono mt-1.5 block text-[11.5px] tracking-[0.1em] ${g.mutated ? "text-amber-200/80" : "text-white/55"}`}>
                           {g.mutated ? "MUTATION" : g.from ? `FROM ${g.from.toUpperCase()}` : "INHERITED, REWORDED"}
                         </span>
                       )}
@@ -182,32 +182,32 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </section>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="font-mono text-[11px] tracking-[0.14em] text-white/40">EXAMS</h4>
+                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-white/60">EXAMS</h4>
                 {c.record.length === 0 ? (
-                  <p className="mt-4 text-[13px] text-white/45">No exams yet. The next one is set tonight.</p>
+                  <p className="mt-4 text-[13px] text-white/65">No exams yet. The next one is set tonight.</p>
                 ) : (
                   c.record.map((n) => (
                     <div key={n.night} className="mt-5">
-                      <p className="font-mono text-[11px] text-white/40">
+                      <p className="font-mono text-[12.5px] text-white/60">
                         night of {n.night} · {n.scored ? `${n.cases.filter((x) => x.hit === true).length} right, ${n.cases.filter((x) => x.hit === false).length} wrong` : "graded tomorrow"}
                       </p>
                       <ul className="mt-2 divide-y divide-white/[0.06]">
                         {n.cases.map((x) => (
                           <li key={x.mint} className="flex items-start gap-3 py-2.5">
-                            <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] ring-1 ${VERDICT_TONE[x.verdict]}`}>{x.verdict}</span>
+                            <span className={`font-mono mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[x.verdict]}`}>{x.verdict}</span>
                             <div className="min-w-0 flex-1">
                               <a
                                 href={`https://dexscreener.com/solana/${x.mint}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-mono text-[11.5px] text-white/80 hover:text-white"
+                                className="font-mono text-[13px] text-white/80 hover:text-white"
                               >
                                 {x.symbol && x.symbol !== "?" ? `$${x.symbol}` : shortAddress(x.mint)} ↗
                               </a>
-                              {x.why && <p className="mt-0.5 text-[12.5px] text-white/50">{x.why}</p>}
+                              {x.why && <p className="mt-0.5 text-[12.5px] text-white/70">{x.why}</p>}
                             </div>
                             <span
-                              className={`font-mono shrink-0 text-[11px] ${x.hit === true ? "text-emerald-200" : x.hit === false ? "text-rose-200" : "text-white/35"}`}
+                              className={`font-mono shrink-0 text-[12.5px] ${x.hit === true ? "text-emerald-200" : x.hit === false ? "text-rose-200" : "text-white/55"}`}
                             >
                               {x.hit === true ? "✓" : x.hit === false ? "✗" : x.verdict === "watch" ? "not scored" : n.scored ? "no market" : "pending"}
                             </span>

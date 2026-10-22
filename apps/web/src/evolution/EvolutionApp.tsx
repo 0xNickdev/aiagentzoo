@@ -25,7 +25,7 @@ function Header() {
 
 /** A thin "+" at a corner, the way instrument panels mark their frame. */
 const Plus = ({ className = "" }: { className?: string }) => (
-  <span aria-hidden className={`pointer-events-none absolute font-mono text-[11px] leading-none text-white/35 ${className}`}>
+  <span aria-hidden className={`pointer-events-none absolute font-mono text-[12.5px] leading-none text-white/55 ${className}`}>
     +
   </span>
 );
@@ -52,7 +52,7 @@ function Hero({ data }: { data: Nursery | null }) {
       <Header />
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 pb-10 pt-28 sm:px-8">
-        <motion.p {...rise(0.1)} className="font-mono text-[11px] tracking-[0.18em] text-white/55">
+        <motion.p {...rise(0.1)} className="font-mono text-[12.5px] tracking-[0.18em] text-white/55">
           {t("THE NURSERY · LIVE ON SOLANA")}
         </motion.p>
         <motion.h1 {...rise(0.2)} className="font-display mt-5 max-w-4xl text-[2.9rem] leading-[0.98] sm:text-7xl lg:text-[6rem]">
@@ -79,12 +79,12 @@ function Hero({ data }: { data: Nursery | null }) {
           <Plus className="-bottom-1.5 -right-1.5" />
           {stats.map(([k, v], i) => (
             <div key={k} className={`px-1 py-4 sm:px-5 ${i > 0 ? "sm:border-l sm:border-white/[0.08]" : ""} ${i === 4 ? "col-span-2 sm:col-span-1" : ""}`}>
-              <p className="font-mono text-[10px] tracking-[0.16em] text-white/40">{k}</p>
+              <p className="font-mono text-[11.5px] tracking-[0.16em] text-white/60">{k}</p>
               <p className="font-mono mt-1.5 text-xl text-white sm:text-2xl">{v}</p>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2.5 text-[12px] text-white/45">
+        <div className="mt-3 flex items-center gap-2.5 text-[12px] text-white/65">
           <img src="/evolution/heron.webp" alt="" className="h-6 w-6 rounded-full" />
           {t("Kept by the heron. Every birth, death and grade is signed on the public log.")}
         </div>
@@ -121,7 +121,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
     <section id="living" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <motion.div {...rise()}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">AFTER {data.generation} {data.generation === 1 ? "TURN" : "TURNS"}</p>
+          <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">AFTER {data.generation} {data.generation === 1 ? "TURN" : "TURNS"}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">The living</h2>
         </motion.div>
         <motion.p {...rise(0.1)} className="max-w-sm text-[14px] font-light leading-relaxed text-white/55">
@@ -130,7 +130,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
       </div>
 
       {data.exam && (
-        <motion.div {...rise(0.15)} className="font-mono mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-white/[0.08] py-3 text-[11px] text-white/50">
+        <motion.div {...rise(0.15)} className="font-mono mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-white/[0.08] py-3 text-[12.5px] text-white/70">
           <span className="text-white/75">TONIGHT'S EXAM</span>
           <span>{data.exam.tokens.map((t) => `$${t.symbol}`).join("  ")}</span>
           <span className="ml-auto">
@@ -151,9 +151,9 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
               className="group relative flex flex-col bg-[#050706] p-6 text-left transition-colors hover:bg-[#0a0d0b]"
             >
               <div className="flex items-start justify-between">
-                <span className="font-mono text-[11px] text-white/35">{pad(i + 1)}</span>
+                <span className="font-mono text-[12.5px] text-white/55">{pad(i + 1)}</span>
                 {tag && (
-                  <span className={`font-mono text-[10px] tracking-[0.14em] ${tag === "BREEDS NEXT" ? "text-amber-200/85" : "text-rose-200/80"}`}>{tag}</span>
+                  <span className={`font-mono text-[11.5px] tracking-[0.14em] ${tag === "BREEDS NEXT" ? "text-amber-200/85" : "text-rose-200/80"}`}>{tag}</span>
                 )}
               </div>
               <div className="relative mx-auto mt-4 h-32 w-32">
@@ -166,15 +166,15 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
                 {answered.has(c.id) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]" title="answered tonight" />}
               </div>
               <h3 className="font-display mt-5 text-2xl">{c.name}</h3>
-              <p className="mt-1 text-[13px] font-light text-white/50">{c.temperament}</p>
+              <p className="mt-1 text-[13px] font-light text-white/70">{c.temperament}</p>
               <div className="mt-5">
-                <div className="font-mono mb-2 flex justify-between text-[10.5px] text-white/40">
+                <div className="font-mono mb-2 flex justify-between text-[12px] text-white/60">
                   <span>SINCE LAST TURN</span>
                   <span className="text-white/75">{c.graded ? `${pct(c.skill)} · ${c.graded} graded` : "no grades yet"}</span>
                 </div>
                 <Bar value={c.skill ?? 0} tone={c.id === atRisk || c.starving ? "bg-rose-200/70" : breeding.has(c.id) ? "bg-amber-200/80" : "bg-white/60"} />
               </div>
-              <p className="font-mono mt-4 text-[10.5px] text-white/35">
+              <p className="font-mono mt-4 text-[12px] text-white/55">
                 lifetime {pct(c.lifetimeSkill)} · gen {c.generation}
                 {c.mutation ? " · mutant" : ""}
               </p>
@@ -194,7 +194,7 @@ function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => v
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <motion.div {...rise()} className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{data.creatures.length} CREATURES SO FAR</p>
+            <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">{data.creatures.length} CREATURES SO FAR</p>
             <h2 className="font-display mt-3 text-5xl sm:text-6xl">The bloodlines</h2>
           </div>
           <p className="max-w-sm text-[14px] font-light leading-relaxed text-white/55">
@@ -218,13 +218,13 @@ function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => v
 
 const KIND_MARK: Record<ChronicleEntry["kind"], { label: string; tone: string }> = {
   founded: { label: "FOUNDED", tone: "text-white/60" },
-  scored: { label: "GRADED", tone: "text-white/45" },
+  scored: { label: "GRADED", tone: "text-white/65" },
   death: { label: "DEATH", tone: "text-rose-200/80" },
   birth: { label: "BIRTH", tone: "text-amber-200/85" },
   extinct: { label: "EXTINCT", tone: "text-rose-200/60" },
   arrival: { label: "ARRIVAL", tone: "text-emerald-200/80" },
   correction: { label: "CORRECTION", tone: "text-white/60" },
-  quiet: { label: "QUIET TURN", tone: "text-white/50" },
+  quiet: { label: "QUIET TURN", tone: "text-white/70" },
 };
 
 function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; nextTurn: string; curveOn: string }) {
@@ -260,7 +260,7 @@ function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; ne
       {[0.25, 0.5, 0.75].map((g) => (
         <g key={g}>
           <line x1={16} x2={W - 16} y1={y(g)} y2={y(g)} className="stroke-white/[0.06]" />
-          <text x={W - 14} y={y(g) - 4} textAnchor="end" className="fill-white/30 font-mono text-[9px]">
+          <text x={W - 14} y={y(g) - 4} textAnchor="end" className="fill-white/30 font-mono text-[11px]">
             {g * 100}%
           </text>
         </g>
@@ -282,7 +282,7 @@ function Tonight({ data }: { data: Nursery }) {
   return (
     <div className="mt-10 grid gap-4 sm:grid-cols-2">
       <motion.div {...rise(0.05)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
-        <p className="font-mono flex items-center gap-2 text-[10.5px] tracking-[0.14em] text-white/45">
+        <p className="font-mono flex items-center gap-2 text-[12px] tracking-[0.14em] text-white/65">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> TONIGHT · {answered.length}/{alive} ANSWERED
         </p>
         {answered.length === 0 ? (
@@ -303,7 +303,7 @@ function Tonight({ data }: { data: Nursery }) {
                     <span className="bg-white/30" style={{ width: `${(v.watch / total) * 100}%` }} />
                     <span className="bg-emerald-200/70" style={{ width: `${(v.promising / total) * 100}%` }} />
                   </span>
-                  <span className="font-mono w-16 text-right text-[10.5px] text-white/45">
+                  <span className="font-mono w-16 text-right text-[12px] text-white/65">
                     {v.suspicious}·{v.watch}·{v.promising}
                   </span>
                 </li>
@@ -312,20 +312,20 @@ function Tonight({ data }: { data: Nursery }) {
           </ul>
         )}
         {answered.length > 0 && (
-          <p className="font-mono mt-3 text-[10px] text-white/30">
+          <p className="font-mono mt-3 text-[11.5px] text-white/50">
             <span className="text-rose-200/70">suspicious</span> · watch · <span className="text-emerald-200/70">promising</span>
           </p>
         )}
       </motion.div>
       <motion.div {...rise(0.1)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
-        <p className="font-mono text-[10.5px] tracking-[0.14em] text-white/45">COMING UP</p>
+        <p className="font-mono text-[12px] tracking-[0.14em] text-white/65">COMING UP</p>
         <ol className="mt-3 space-y-3 text-[13.5px] font-light leading-relaxed">
           <li>
-            <span className="font-mono block text-[10.5px] text-white/40">{dayOf(data.night)} · AFTER 07:00 UTC</span>
+            <span className="font-mono block text-[12px] text-white/60">{dayOf(data.night)} · AFTER 07:00 UTC</span>
             <span className="text-white/80">Tonight's exam is graded by what actually happened to the tokens.</span>
           </li>
           <li>
-            <span className="font-mono block text-[10.5px] text-white/40">
+            <span className="font-mono block text-[12px] text-white/60">
               {turnDay} · TURN {pad(data.generation + 1)}
             </span>
             <span className="text-white/80">The weakest dies and leaves an epitaph. The two best breed; the child carries one mutation.</span>
@@ -343,7 +343,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
     <section className="mx-auto grid max-w-7xl gap-14 px-5 py-24 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       <div>
         <motion.div {...rise()}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">SIGNED ON THE PUBLIC LOG</p>
+          <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">SIGNED ON THE PUBLIC LOG</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">The chronicle</h2>
         </motion.div>
         <Tonight data={data} />
@@ -351,12 +351,12 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           {[...events, ...graded].sort((a, b) => b.at - a.at).map((e, i) => (
             <motion.li key={`${e.at}-${i}`} {...rise(0.03 * i)} className="relative pb-7 pl-6">
               <span className="absolute -left-[3.5px] top-1.5 h-[7px] w-[7px] rounded-full bg-[#030504] ring-1 ring-white/30" />
-              <p className="font-mono text-[10.5px] tracking-[0.12em] text-white/35">
+              <p className="font-mono text-[12px] tracking-[0.12em] text-white/55">
                 <span className={KIND_MARK[e.kind].tone}>{KIND_MARK[e.kind].label}</span> · {e.night} · TURN {pad(e.generation)}
               </p>
               <p className="mt-1.5 text-[14.5px] font-light leading-relaxed text-white/80">{e.text}</p>
               {e.ids[0] && e.kind !== "scored" && (
-                <button type="button" onClick={() => onOpen(e.ids[0]!)} className="font-mono mt-1.5 text-[11px] text-white/40 hover:text-white">
+                <button type="button" onClick={() => onOpen(e.ids[0]!)} className="font-mono mt-1.5 text-[12.5px] text-white/60 hover:text-white">
                   open →
                 </button>
               )}
@@ -366,7 +366,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
       </div>
       <div>
         <motion.div {...rise(0.1)}>
-          <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">MEAN BALANCED ACCURACY PER TURN</p>
+          <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">MEAN BALANCED ACCURACY PER TURN</p>
           <h3 className="font-display mt-3 text-3xl">Is it working?</h3>
           <p className="mt-3 text-[14px] font-light leading-relaxed text-white/55">
             {t("If selection does its job, the nursery should be right a little more often after every turn. This is the only chart that matters here.")}
@@ -380,7 +380,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           />
         </motion.div>
         <motion.div {...rise(0.3)} className="mt-8 rounded-3xl bg-white/[0.02] p-6 ring-1 ring-white/[0.08]">
-          <p className="font-mono text-[11px] tracking-[0.14em] text-white/40">THE RULES OF THE NURSERY</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-white/60">THE RULES OF THE NURSERY</p>
           <ol className="mt-4 space-y-2.5 text-[13.5px] font-light leading-relaxed text-white/70">
             <li>{t("1. A playbook is fixed for life. Creatures never rewrite their own rules.")}</li>
             <li>{t("2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.")}</li>
@@ -399,7 +399,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
 function Waiting({ state }: { state: "loading" | "empty" | "offline" }) {
   return (
     <section className="mx-auto max-w-3xl px-5 py-32 text-center">
-      <p className="font-mono text-[11px] tracking-[0.18em] text-white/45">{state === "loading" ? "OPENING THE NURSERY" : state === "empty" ? "NOT YET" : "OFFLINE"}</p>
+      <p className="font-mono text-[12.5px] tracking-[0.18em] text-white/65">{state === "loading" ? "OPENING THE NURSERY" : state === "empty" ? "NOT YET" : "OFFLINE"}</p>
       <p className="font-display mt-4 text-3xl text-white/85">
         {state === "loading" ? "Listening for the heron…" : state === "empty" ? "The founders arrive with the next wake of the heron." : "The nursery node is unreachable right now."}
       </p>
@@ -424,7 +424,7 @@ export default function EvolutionApp() {
       ) : (
         <Waiting state={state === "ready" ? "loading" : state} />
       )}
-      <footer className="font-mono mx-auto flex max-w-7xl flex-wrap justify-between gap-4 border-t border-white/[0.07] px-5 py-8 text-[11px] text-white/35 sm:px-8">
+      <footer className="font-mono mx-auto flex max-w-7xl flex-wrap justify-between gap-4 border-t border-white/[0.07] px-5 py-8 text-[12.5px] text-white/55 sm:px-8">
         <span>ZOOAI AGENCY · THE NURSERY</span>
         <span className="flex gap-6">
           <a href="/docs/thinking" className="hover:text-white">

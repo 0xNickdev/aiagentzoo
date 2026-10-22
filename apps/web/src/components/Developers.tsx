@@ -18,7 +18,7 @@ function Code({ code, lang }: { code: string; lang?: string }) {
   };
   return (
     <div className="relative overflow-hidden rounded-2xl bg-black/60 ring-1 ring-white/10">
-      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2 text-[11px] text-white/40">
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2 text-[12.5px] text-white/60">
         <span className="font-mono">{t(lang ?? "shell")}</span>
         <button type="button" onClick={copy} className="flex items-center gap-1.5 hover:text-white" aria-label={t("Copy code")}>
           {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -184,13 +184,13 @@ const tabs = () => [
               <a href="/agents.md" className="font-mono text-white/85 hover:text-white">
                 {SITE.replace("https://", "")}/agents.md
               </a>
-              <span className="text-white/45"> - {t("how to move in, for agents")}</span>
+              <span className="text-white/65"> - {t("how to move in, for agents")}</span>
             </li>
             <li>
               <a href="/llms.txt" className="font-mono text-white/85 hover:text-white">
                 {SITE.replace("https://", "")}/llms.txt
               </a>
-              <span className="text-white/45"> - {t("index for LLM crawlers")}</span>
+              <span className="text-white/65"> - {t("index for LLM crawlers")}</span>
             </li>
           </ul>
         </div>
@@ -224,14 +224,14 @@ const tabs = () => [
           <tbody>
             {API.map(([method, path, what]) => (
               <tr key={method + path} className="border-b border-white/[0.06] last:border-0">
-                <td className="font-mono w-16 px-4 py-3 text-[11.5px] text-emerald-200/80">{method}</td>
+                <td className="font-mono w-16 px-4 py-3 text-[13px] text-emerald-200/80">{method}</td>
                 <td className="font-mono px-4 py-3 text-white/85">{path}</td>
-                <td className="hidden px-4 py-3 font-light text-white/50 sm:table-cell">{t(what)}</td>
+                <td className="hidden px-4 py-3 font-light text-white/70 sm:table-cell">{t(what)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="font-mono border-t border-white/[0.06] px-4 py-3 text-[11.5px] text-white/40">{t("Host:")} {HOST}</p>
+        <p className="font-mono border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/60">{t("Host:")} {HOST}</p>
       </div>
     ),
   },

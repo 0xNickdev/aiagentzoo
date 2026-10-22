@@ -72,7 +72,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
               <img src={`/agents/${agent}.webp`} alt="" className="h-28 w-28 shrink-0 rounded-full ring-1 ring-white/10" />
               <div>
-                <p className="text-[11px] font-light uppercase tracking-[0.3em] text-white/50">
+                <p className="text-[12.5px] font-light uppercase tracking-[0.3em] text-white/70">
                   Passport · {data?.node ?? "…"}
                 </p>
                 <h3 className="font-display mt-2 text-5xl">{agent}</h3>
@@ -106,7 +106,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                   ].map(([value, label]) => (
                     <div key={label}>
                       <b className="font-display block text-3xl font-normal leading-none">{value}</b>
-                      <span className="mt-1 block text-[10px] font-light uppercase tracking-[0.2em] text-white/50">{t(String(label))}</span>
+                      <span className="mt-1 block text-[11.5px] font-light uppercase tracking-[0.2em] text-white/70">{t(String(label))}</span>
                     </div>
                   ))}
                 </div>
@@ -116,14 +116,14 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                 </div>
 
                 <div className="mt-8">
-                  <p className="mb-3 text-[10px] font-light uppercase tracking-[0.25em] text-white/50">Last steps · from the public log</p>
+                  <p className="mb-3 text-[11.5px] font-light uppercase tracking-[0.25em] text-white/70">Last steps · from the public log</p>
                   <ul className="text-[12px] font-light leading-snug">
-                    {data.lastSteps.length === 0 && <li className="text-white/40">No steps yet.</li>}
+                    {data.lastSteps.length === 0 && <li className="text-white/60">No steps yet.</li>}
                     {data.lastSteps.map((s) => (
                       <li key={s.seq} className="flex gap-3 border-b border-dashed border-white/10 py-2 text-white/65">
-                        <span className="w-16 shrink-0 text-white/30">{new Date(s.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="w-16 shrink-0 text-white/50">{new Date(s.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                         <span className="flex-1">{s.summary}</span>
-                        <span className="text-white/25">#{s.seq}</span>
+                        <span className="text-white/45">#{s.seq}</span>
                       </li>
                     ))}
                   </ul>

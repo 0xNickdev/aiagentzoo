@@ -89,7 +89,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
         {Array.from({ length: Math.max(...nodes.map((n) => n.c.generation)) + 1 }, (_, g) => (
           <g key={g}>
             <line x1={PAD_X + g * COL} x2={PAD_X + g * COL} y1={14} y2={svgHeight - 8} className="stroke-white/[0.05]" strokeDasharray="2 6" />
-            <text x={PAD_X + g * COL} y={12} textAnchor="middle" className="fill-white/30 font-mono text-[9.5px] tracking-[0.12em]">
+            <text x={PAD_X + g * COL} y={12} textAnchor="middle" className="fill-white/30 font-mono text-[11px] tracking-[0.12em]">
               {g === 0 ? "FOUNDERS" : `GEN ${g}`}
             </text>
           </g>
@@ -114,10 +114,10 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
             <text x={ghost.x} y={ghost.y + 5} textAnchor="middle" className="fill-white/50 font-mono text-[14px]">
               ?
             </text>
-            <text x={ghost.x} y={ghost.y + NODE / 2 + 17} textAnchor="middle" className="fill-white/75 font-mono text-[10px] tracking-[0.1em]">
+            <text x={ghost.x} y={ghost.y + NODE / 2 + 17} textAnchor="middle" className="fill-white/75 font-mono text-[11.5px] tracking-[0.1em]">
               {next!.on.toUpperCase()} · NEXT BIRTH
             </text>
-            <text x={ghost.x} y={ghost.y + NODE / 2 + 31} textAnchor="middle" className="fill-white/40 font-mono text-[9.5px]">
+            <text x={ghost.x} y={ghost.y + NODE / 2 + 31} textAnchor="middle" className="fill-white/40 font-mono text-[11px]">
               {ghost.from.length === 2 ? `if it were today: ${ghost.from[0]!.c.name} × ${ghost.from[1]!.c.name}` : "parents: the two best after tonight's grades"}
             </text>
           </g>
@@ -165,7 +165,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
                 opacity={dead ? 0.35 : 1}
               />
               {dead && <line x1={8} y1={NODE - 8} x2={NODE - 8} y2={8} className="stroke-white/40" strokeWidth={1} />}
-              <text x={NODE / 2} y={NODE + 15} textAnchor="middle" className={`font-mono text-[9.5px] ${dead ? "fill-white/25" : "fill-white/70"}`}>
+              <text x={NODE / 2} y={NODE + 15} textAnchor="middle" className={`font-mono text-[11px] ${dead ? "fill-white/25" : "fill-white/70"}`}>
                 {c.name}
               </text>
             </g>

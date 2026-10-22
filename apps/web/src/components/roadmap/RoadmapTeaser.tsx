@@ -39,7 +39,7 @@ export default function RoadmapTeaser() {
       <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#030504]/90 via-[#030504]/55 to-[#030504]/25" />
       <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#030504] via-transparent to-[#030504]" />
       <div className="relative mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55">{t("Roadmap · Oct - Dec 2026")}</p>
+        <p className="font-mono text-[12.5px] uppercase tracking-[0.22em] text-white/55">{t("Roadmap · Oct - Dec 2026")}</p>
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export default function RoadmapTeaser() {
         <div className="mt-10 grid max-w-4xl sm:grid-cols-3">
           {next.map((it) => (
             <div key={it.id} className="border-t border-white/[0.14] py-5 pr-6">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/40">
+              <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-white/60">
                 <span className={it.status === "building" ? "text-amber-100/85" : ""}>{it.status === "building" ? "◐" : "○"}</span> {month(it.chapter)}
               </p>
               <p className="mt-2 text-[17px] text-white">{(zh && it.zh?.title) || it.title}</p>

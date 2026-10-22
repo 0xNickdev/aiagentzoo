@@ -21,7 +21,7 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
   return (
     <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
       <Reveal>
-        <p className="font-mono mb-5 text-[12px] text-white/50">{eyebrow}</p>
+        <p className="font-mono mb-5 text-[12px] text-white/70">{eyebrow}</p>
       </Reveal>
       <h2 className="font-display text-4xl leading-[1.05] text-white sm:text-5xl md:text-6xl">
         {title.map((line) => (

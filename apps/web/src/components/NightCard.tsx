@@ -182,7 +182,7 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="font-mono text-[11px] tracking-[0.14em] text-white/45">THE NIGHT CARD · 1200 × 675</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-white/65">THE NIGHT CARD · 1200 × 675</p>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-white/60 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>
@@ -209,7 +209,7 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
             <XIcon size={13} /> Post on X
           </a>
         </div>
-        <p className="mt-3 text-right text-[11.5px] text-white/35">Download the card first, then attach it to the post.</p>
+        <p className="mt-3 text-right text-[13px] text-white/55">Download the card first, then attach it to the post.</p>
       </motion.div>
     </motion.div>
   );
