@@ -94,6 +94,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/roadmap",
+      "destination": "/index.html"
+    },
+    {
       "source": "/xray",
       "destination": "/xray.html"
     }

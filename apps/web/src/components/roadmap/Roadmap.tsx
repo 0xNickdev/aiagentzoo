@@ -310,6 +310,9 @@ export default function Roadmap() {
           <p className="mt-4 max-w-sm text-[14px] font-light leading-relaxed text-white/65">
             {t("{a} of {b} milestones run in production. Each glowing sphere is one; hover it to see what it builds on and what it unlocks.", { a: shipped, b: MILESTONES.length })}
           </p>
+          <a href="/roadmap" className="liquid-glass mt-6 inline-flex rounded-full px-5 py-2.5 text-[13px] text-white/90 hover:text-white">
+            {t("The full trail, to April 2027")} →
+          </a>
         </div>
       </div>
 

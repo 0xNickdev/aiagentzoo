@@ -14,6 +14,7 @@ export const NAV_LINKS = [
   { label: "Brief", href: "/brief" },
   { label: "Evolution", href: "/evolution" },
   { label: "Agents", href: "/agents" },
+  { label: "Roadmap", href: "/roadmap" },
   { label: "Docs", href: DOCS_URL },
 ];
 

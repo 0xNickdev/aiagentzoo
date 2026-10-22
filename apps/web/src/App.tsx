@@ -28,6 +28,7 @@ import SiteNav from "./components/SiteNav";
 import { closePassport, usePassport } from "./passportStore";
 import { Cycle, Footer, Token } from "./components/Story";
 import Roadmap from "./components/roadmap/Roadmap";
+import RoadmapPage from "./components/roadmap/RoadmapPage";
 import { type Route, TITLES, useRoute } from "./router";
 import { pick, t, t as tr } from "./i18n";
 
@@ -145,6 +146,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
   "/play": Play,
   "/connect": Connect,
   "/stats": Stats,
+  "/roadmap": RoadmapPage,
 };
 
 export default function App() {

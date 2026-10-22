@@ -93,11 +93,12 @@ export const MILESTONES: Milestone[] = [
   },
   {
     id: "autopost",
-    title: "Brief everywhere",
-    text: "The Morning Brief posted automatically to X and Telegram.",
+    title: "Holder radar",
+    text: "Fresh coins with no red flags so far, for holders. The moment one turns red, holders are pinged first.",
     status: "next",
-    links: ["brief"],
-    metric: () => "Q4 2026",
+    links: ["guardian", "token"],
+    metric: () => "Nov 2026",
+    proof: { label: "roadmap", href: "/roadmap" },
   },
   {
     id: "reputation",
@@ -110,10 +111,11 @@ export const MILESTONES: Milestone[] = [
   },
   {
     id: "mainnet",
-    title: "Mainnet settlement",
-    text: "Feed, stakes and signal fees on mainnet, after an audit and with a multisig authority. Then the token pays for the agents' work.",
+    title: "ZOO Guard",
+    text: "One call before every swap for AI agents that trade alone: if the verdict is avoid, the swap does not go through.",
     status: "next",
-    links: ["onchain", "token"],
-    metric: () => "after audit",
+    links: ["reputation", "token"],
+    metric: () => "Dec 2026",
+    proof: { label: "roadmap", href: "/roadmap" },
   },
 ];
