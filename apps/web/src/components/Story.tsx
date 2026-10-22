@@ -80,7 +80,7 @@ function NodeStatus() {
 export function Footer() {
   return (
     // Above the last section's backdrop, which bleeds downward to soften the seam and would otherwise cover it.
-    <footer className="relative z-20 overflow-hidden border-t border-white/[0.08] bg-[#050706] px-5 pt-16 sm:px-8">
+    <footer className="relative z-20 border-t border-white/[0.08] bg-[#050706] px-5 pt-16 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,minmax(0,1fr))]">
           <div>
@@ -121,9 +121,6 @@ export function Footer() {
           <span>ZOOAI AGENCY · 2026 · MIT</span>
           <span>{tr("Not financial advice. Everything here is read from public chain data.")}</span>
         </div>
-      </div>
-      <div aria-hidden className="pointer-events-none mx-auto -mb-[6.5vw] mt-4 max-w-7xl select-none overflow-hidden">
-        <p className="font-display text-center text-[21vw] font-semibold leading-[0.8] tracking-[-0.06em] text-white/[0.035] xl:text-[290px]">ZOOAI</p>
       </div>
     </footer>
   );
