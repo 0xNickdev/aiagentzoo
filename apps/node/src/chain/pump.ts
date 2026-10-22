@@ -512,10 +512,14 @@ export class PumpTape {
   /** Per-second counts over the last minute, a ring indexed by second. */
   private readonly seconds = Array.from({ length: 60 }, () => ({ sec: -1, launches: 0, trades: 0 }));
 
+  /** Called on every moment, launches included: the long-memory store listens here. Must stay cheap. */
+  onMoment?: (e: PulseEvent) => void;
+
   private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string; creator: string }, text: string, tx?: string): void {
     const symbol = t.symbol.replace(/\s+/g, " ").trim().slice(0, 16) || "?";
     const e: PulseEvent = { seq: ++this.pulseSeq, at, kind, mint: t.mint, symbol, text, creator: t.creator, ...(tx ? { tx } : {}) };
     this.pulse.push(e);
+    this.onMoment?.(e);
     if (this.pulse.length > PULSE_KEEP) this.pulse.splice(0, this.pulse.length - PULSE_KEEP);
     if (kind !== "launch") {
       this.moments.push(e);
@@ -1405,6 +1409,40 @@ export class PumpTape {
       facts: this.facts(mint, now)!,
       creatorRecord: this.creator(t.creator, now),
       // The biggest launch-block buyers, for anyone checking who funded them.
+      bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / supplyOf(t)) * 10_000) / 10_000 })),
+    };
+  }
+
+  /** Every mint the tape holds now, for walking it a slice at a time. */
+  mints(): string[] {
+    return [...this.tokens.keys()];
+  }
+
+  /**
+   * What the long-memory store keeps of a token: its facts, first-second wallets and launch bundle as they stand now.
+   * Crew sets worked out only for this are dropped again, so walking the whole tape does not grow it.
+   */
+  historyOf(mint: string, now = Date.now()) {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    const had = t.crew;
+    const facts = this.facts(mint, now)!;
+    const early = this.earlyOf(mint, now) ?? [];
+    if (!had) t.crew = undefined;
+    return {
+      mint,
+      symbol: t.symbol,
+      name: t.name,
+      creator: t.creator,
+      venue: t.venue ?? null,
+      createdAt: t.createdAt,
+      graduated: t.graduated,
+      drained: t.drained,
+      dumpedAt: t.dumpedAt,
+      devSoldPct: t.devBought > 0 ? Math.round(Math.min(1, t.devSold / t.devBought) * 100) : null,
+      curveSol: t.curveSol,
+      facts,
+      early,
       bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / supplyOf(t)) * 10_000) / 10_000 })),
     };
   }

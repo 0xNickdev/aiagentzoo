@@ -52,6 +52,11 @@ export class Lineage {
     return this.creators.size;
   }
 
+  /** The funder already traced for a creator, without working out its siblings; undefined when not traced. */
+  funderOf(creator: string): string | null | undefined {
+    return this.creators.get(creator)?.funder;
+  }
+
   /** Traces one creator (or returns what is known), at most one RPC trace per wallet at a time. */
   async trace(creator: string, now = Date.now()): Promise<string | null> {
     const known = this.creators.get(creator);

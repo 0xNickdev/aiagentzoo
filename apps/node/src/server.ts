@@ -23,7 +23,8 @@ import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { koiView } from "./agents/koi.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
-import { tape } from "./chain/pump.ts";
+import { type CreatorRecord, tape } from "./chain/pump.ts";
+import type { HistoryStore } from "./chain/history.ts";
 import { type GuestHouse, isGuestNode, publicGuest } from "./guests.ts";
 
 export interface ServerOptions {
@@ -56,6 +57,8 @@ export interface ServerOptions {
   asks?: AskDesk;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
   evolution?: { briefAt: string };
+  /** The chain's long memory on the north node: tokens and wallets for 90 days, after the tape forgets them. */
+  history?: HistoryStore;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -77,11 +80,28 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
   const checkGate = new RateGate(FREE_PER_MIN);
+  // A creator's two days on the tape, unless the long memory has seen more of their launches: then its counts, back to
+  // its first day. The two-day numbers stay in last48h; the check's own verdict still reads the two days.
+  const preferHistory = (rec: CreatorRecord | null, wallet: string) => {
+    const h = history?.creatorTotals(wallet);
+    if (!h || h.launches <= (rec?.launches48h ?? 0)) return rec;
+    return {
+      ...(rec ?? { wallet, launches24h: 0 }),
+      launches48h: h.launches,
+      dumped: Math.max(h.dumped, rec?.dumped ?? 0),
+      medianDumpMin: h.medianDumpMin ?? rec?.medianDumpMin ?? null,
+      graduated: Math.max(h.graduated, rec?.graduated ?? 0),
+      recent: (rec?.recent.length ?? 0) >= h.recent.length ? rec!.recent : h.recent,
+      last48h: rec ? { launches: rec.launches48h, dumped: rec.dumped } : { launches: 0, dumped: 0 },
+      counted: "history" as const,
+      historySince: history!.since(),
+    };
+  };
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
@@ -413,11 +433,13 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const mint = (checkOf ?? xrayOf)![1]!;
         const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
         let found = tape.token(mint);
+        // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
+        const past = !found && history ? history.report(mint) : null;
         const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
         const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
         const [holders, , poolSol] = await Promise.all([
-          deep && found && holdersEnabled() ? within(holderReport(mint)) : Promise.resolve(undefined),
+          deep && (found || past) && holdersEnabled() ? within(holderReport(mint)) : Promise.resolve(undefined),
           deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
           // The pool's SOL as it is now, not as the last trade the tape saw left it.
           pool ? within(poolSolOf(pool)) : Promise.resolve(null),
@@ -431,11 +453,31 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
         }
-        const linked = found ? socials.forMint(mint) : [];
-        const check = checkToken(mint, found, { stream, ...(deep && found ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        if (past) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: false, siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
+        const linked = found || past ? socials.forMint(mint) : [];
+        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
-        if (checkOf) return json(res, 200, { ...check, access: tier });
-        if (!found) return json(res, 404, { error: "not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)", check });
+        const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
+        if (checkOf) return json(res, 200, { ...check, ...memory, access: tier });
+        if (past) {
+          const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
+          return json(res, 200, {
+            mint,
+            symbol: past.symbol,
+            name: past.name,
+            creator: past.creator,
+            createdAt: past.createdAt,
+            check,
+            early: past.early,
+            creatorRecord: preferHistory(past.creatorRecord, past.creator),
+            funding: funding ?? null,
+            bundle: { wallets: past.bundle, funding: bundle },
+            socials: linked,
+            ...memory,
+            access: tier,
+          });
+        }
+        if (!found) return json(res, 404, { error: history ? "not a launch the stream saw (pump.fun, LaunchLab, Meteora)" : "not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)", check });
         const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
         return json(res, 200, {
           mint,
@@ -445,7 +487,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           createdAt: found.createdAt,
           check,
           early: tape.earlyOf(mint),
-          creatorRecord: found.creatorRecord,
+          creatorRecord: preferHistory(found.creatorRecord, found.creator),
           funding: funding ?? null,
           bundle: { wallets: found.bundle, funding: bundle },
           socials: linked,
@@ -454,8 +496,20 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && creatorOf) {
-        const found = tape.creator(creatorOf[1]!);
+        const found = preferHistory(tape.creator(creatorOf[1]!), creatorOf[1]!);
         return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
+      }
+      // The wallet dossier from the long memory: what it did as a dev, a first-second buyer, a bundler and a crew member.
+      const dossierOf = /^\/v1\/wallet\/([1-9A-HJ-NP-Za-km-z]{32,44})\/history$/.exec(path);
+      if (req.method === "GET" && dossierOf) {
+        if (!history) return json(res, 404, { error: "this node keeps no chain history; use the north node" });
+        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+        const wait = fromPeer(req) ? 0 : checkGate.take(caller);
+        if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
+        const found = history.wallet(dossierOf[1]!, clampInt(url.searchParams.get("limit"), 50, 1, 200));
+        if (!found) return json(res, 404, { error: "this wallet did not launch, snipe or bundle a launch the zoo has kept" });
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, { ...found, historySince: history.since(), keptDays: 90 });
       }
       const sniperOf = /^\/v1\/chain\/sniper\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && sniperOf) {

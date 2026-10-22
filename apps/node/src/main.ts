@@ -22,6 +22,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
+import { HistoryStore, startHistory } from "./chain/history.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -116,6 +117,9 @@ if (config.role === "north") {
     renameSync(`${momentsFile}.tmp`, momentsFile);
   }, 60_000).unref();
 }
+// The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
+const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
+const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);
 const stopStream =
@@ -204,6 +208,7 @@ const server = createNodeServer({
   guests,
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
+  ...(history ? { history } : {}),
   visitor: {
     agents: visitorAgents,
     agentCooldownMs: Number(process.env.ZOO_VISITOR_AGENT_COOLDOWN_MS ?? 60_000),
@@ -234,6 +239,12 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
         saveTape();
       } catch {
         /* the last five-minute save stands */
+      }
+      try {
+        stopHistory?.();
+        history?.close();
+      } catch {
+        /* at most the last few seconds of history are lost */
       }
     }
     stopTelegram?.();
