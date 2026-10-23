@@ -5,6 +5,8 @@ import { t, tChain } from "../i18n";
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** One re-check every few seconds, round the list: about one look per coin a minute or two, inside the free rate. */
 const CHECK_EVERY_MS = 3_500;
+/** Coins not looked at yet go faster, so a fresh radar does not sit on "checking" for two minutes. */
+const FIRST_LOOK_MS = 1_000;
 const LIST_EVERY_MS = 60_000;
 /** A coin stays watched this long after it first showed up, even once it leaves the clean list. */
 const WATCH_MS = 3 * 60 * 60_000;
@@ -88,11 +90,14 @@ export function useRadar() {
 
   useEffect(() => {
     if (!NORTH) return;
+    let last = 0;
     const tick = async () => {
       const list = Object.values(ref.current).filter((w) => !w.turnedAt);
       if (!list.length) return;
       // The coin looked at longest ago goes next.
       const w = list.sort((a, b) => (a.checkedAt ?? 0) - (b.checkedAt ?? 0))[0];
+      if (w.checkedAt !== null && Date.now() - last < CHECK_EVERY_MS) return;
+      last = Date.now();
       try {
         const r = await fetch(`${NORTH}/v1/check/${w.mint}`);
         if (!r.ok) return;
@@ -125,7 +130,7 @@ export function useRadar() {
         /* the next tick tries the next coin */
       }
     };
-    const id = window.setInterval(tick, CHECK_EVERY_MS);
+    const id = window.setInterval(tick, FIRST_LOOK_MS);
     return () => clearInterval(id);
   }, []);
 
