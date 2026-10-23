@@ -10,11 +10,18 @@ import type { ChainFacts, CreatorRecord } from "./pump.ts";
  */
 export type CheckVerdict = "avoid" | "caution" | "pass" | "unknown";
 
-export const CHECK_VERSION = 4;
+export const CHECK_VERSION = 5;
 /** A PumpSwap pool opens with about this much SOL when a pump.fun token graduates. */
 export const GRAD_POOL_SOL = 85;
 /** Dev gone, holders carry it: what a token must show before its dev's record stops being the reason to avoid it. */
 export const DEV_GONE = { soldPct: 0.99, poolGrowth: 2, top10: 0.3, topWallet: 0.1, bundlersHeld: 0.2, ageMin: 120, crewBack: 0.05 } as const;
+/** A dev who sells early but whose coins still run: enough priced launches, most past $20K. */
+export const RUNNER_DEV = { minLaunches: 5, reached20k: 0.5 } as const;
+/** Avoid reasons a runner dev's record may soften: their selling, their dump history, a bundle at launch. Nothing else. */
+const SOFT_AVOID = [/^the creator sold \d+% of their own bag$/, /^this creator dumped \d+ of their \d+ launches/, /wallets bought \d+% of the supply in the launch block/];
+const usdShort = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1e3)}K`);
+export const runnerReason = (p: NonNullable<CreatorRecord["pattern"]>) =>
+  `this dev sells early, yet ${Math.round(p.reached20k! * 100)}% of their last ${p.launches} launches went past $20K${p.peakCapUsd ? ` (usual peak ${usdShort(p.peakCapUsd)})` : ""}: selling fast is their pattern, so the risk is getting out in time, not a rug`;
 export const DEV_GONE_REASON = "the dev who launched it dumps their launches and already sold everything; it runs on its holders now, so the risk is the market, not the dev";
 /** Under this age a token has had no time to show anything but its creator's history: the check says so. */
 export const EARLY_MIN = 10;
@@ -74,6 +81,8 @@ export interface TokenCheck {
     crewHeldPct: number | null;
     /** The dev sold everything and left; the coin graduated, its pool doubled and its holders are spread out: the risk is the market now. */
     devGone: boolean;
+    /** A dev who sells early but whose coins mostly ran past $20K: their selling was softened to caution. */
+    runnerDev: boolean;
   } | null;
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
@@ -226,6 +235,11 @@ export function checkToken(
       caution.unshift(DEV_GONE_REASON, ...avoid.splice(0));
     }
   }
+  // A runner dev: sells early or launches with a bundle, yet most of their coins still went past $20K. Their selling is
+  // their pattern, not a rug, so only those reasons give way, to caution, never further.
+  const pat = c?.pattern;
+  const runner = !devGone && avoid.length > 0 && !!pat && pat.launches >= RUNNER_DEV.minLaunches && (pat.reached20k ?? 0) >= RUNNER_DEV.reached20k && avoid.every((r) => SOFT_AVOID.some((re) => re.test(r)));
+  if (runner) caution.unshift(runnerReason(pat!), ...avoid.splice(0));
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
   if (early) {
     const age = Math.max(0, Math.round(f.ageMin));
@@ -273,6 +287,7 @@ export function checkToken(
       serialSnipers: f.serialSnipers ?? null,
       crewHeldPct: pct(f.crewHeld),
       devGone: devGone && (f.crewHeld ?? 0) < DEV_GONE.crewBack,
+      runnerDev: runner,
     },
     ...(holders !== undefined ? { holders } : {}),
     ...(lin !== undefined
