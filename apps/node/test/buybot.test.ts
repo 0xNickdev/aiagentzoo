@@ -28,8 +28,8 @@ test("numbers and lines read like a person wrote them", () => {
   assert.equal(holderLine(1000, 1000, 1e9), "new holder");
   assert.equal(holderLine(1000, 500, 1e9), null);
   assert.equal(holderLine(1_000_000, 11_000_000, 1e9), "holds 11M (1.1%), +10%");
-  assert.equal(bills(1.07), "💵".repeat(11));
-  assert.equal(bills(25), "💵".repeat(40));
+  assert.equal(bills(1.07), "💰".repeat(11));
+  assert.equal(bills(25), "💰".repeat(40));
 });
 
 test("a buy message has the size, the buyer, the cap and no ads", () => {

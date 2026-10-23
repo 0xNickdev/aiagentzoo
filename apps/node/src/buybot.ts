@@ -62,9 +62,9 @@ export function holderLine(tokens: number, balance: number | null, supply: numbe
   return `holds ${compact(balance)}${share}, +${Math.round((tokens / (balance - tokens)) * 100)}%`;
 }
 
-/** A row of bills as long as the buy: one per 0.1 SOL, at most 40. */
+/** A row of money bags as long as the buy: one per 0.1 SOL, at most 40. */
 export function bills(sol: number): string {
-  return "💵".repeat(Math.max(1, Math.min(40, Math.round(sol * 10))));
+  return "💰".repeat(Math.max(1, Math.min(40, Math.round(sol * 10))));
 }
 
 /** 0.0000180583 -> $0.0000180583: six significant digits, never in exponent form. */
@@ -95,7 +95,14 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   const mint = opts.mint ?? TOKEN_MINT;
   const symbol = opts.symbol ?? "ZOOAGENCY";
   const minSol = opts.minSol ?? 1;
-  const keyboard = [[{ text: `Buy $${symbol}`, url: `https://jup.ag/swap/SOL-${mint}` }, { text: "Chart", url: `https://dexscreener.com/solana/${mint}` }]];
+  // Telegram colours buttons with a style (green for buy, blue for ours); older clients just ignore it.
+  const keyboard = [
+    [
+      { text: `🛒 Buy $${symbol}`, url: `https://jup.ag/swap/SOL-${mint}`, style: "success" },
+      { text: "📈 Chart", url: `https://dexscreener.com/solana/${mint}` },
+    ],
+    [{ text: "🔎 X-Ray any coin before you ape", url: `${SITE}/xray`, style: "primary" }],
+  ];
 
   const tg = async (method: string, body: Record<string, unknown>) => {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -109,16 +116,30 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
     }
     throw new Error(`telegram ${method}: still limited`);
   };
-  const post = async (text: string) => {
-    const base = { chat_id: opts.chat, parse_mode: "HTML", reply_markup: { inline_keyboard: keyboard }, ...(opts.thread ? { message_thread_id: opts.thread } : {}) };
+  let styled = true;
+  const plain = keyboard.map((row) => row.map(({ style: _style, ...button }) => button));
+  const send = async (text: string) => {
+    const base = { chat_id: opts.chat, parse_mode: "HTML", reply_markup: { inline_keyboard: styled ? keyboard : plain }, ...(opts.thread ? { message_thread_id: opts.thread } : {}) };
     if (opts.image) {
       try {
         return await tg("sendPhoto", { ...base, photo: opts.image, caption: text });
       } catch (error) {
+        if (/button|style|markup/i.test((error as Error).message)) throw error;
         log(`[buybot] picture failed, posting text: ${(error as Error).message}`);
       }
     }
     return tg("sendMessage", { ...base, text, link_preview_options: { is_disabled: true } });
+  };
+  const post = async (text: string) => {
+    try {
+      return await send(text);
+    } catch (error) {
+      // A Telegram that does not know coloured buttons: from now on without colours.
+      if (!styled || !/button|style|markup/i.test((error as Error).message)) throw error;
+      styled = false;
+      log(`[buybot] coloured buttons refused, posting plain ones: ${(error as Error).message}`);
+      return send(text);
+    }
   };
 
   // SOL in dollars and the token's supply (burns shrink it), both kept a while.
