@@ -53,6 +53,7 @@ interface Check {
     platform?: string;
     earlyWallets: number | null;
     earlyHeldPct: number | null;
+    crewHeldPct?: number | null;
     churnPct: number | null;
     bumps: number | null;
     creatorCrew: number | null;
@@ -538,6 +539,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {pool ? ` · ${pool}` : ""}
               {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </p>
+            <HoldStrip c={c} />
             <nav className="-mx-5 mt-4 flex gap-1 overflow-x-auto border-t border-white/[0.07] px-5 pt-3 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
               {MENU.map((m) => (
                 <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left transition lg:w-full ${tab === m.id ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"}`}>
@@ -1022,5 +1024,39 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
       <span className={o.dumped ? "text-[#ff8a7e]" : "text-white/70"}>{o.head}</span>
       {o.tail && <span className="block text-[11.5px] text-white/55">{o.tail}</span>}
     </span>
+  );
+}
+
+/**
+ * Who holds it, at a glance under the verdict on every tab: the ten largest wallets, the largest one, the dev, the
+ * bundlers, the first-five-seconds wallets and the dev's crew, and what sits in the curve or pool. Red past the line
+ * where that share alone can decide the price.
+ */
+function HoldStrip({ c }: { c: XRayReport["check"] }) {
+  const f = c.facts;
+  const h = c.holders;
+  const cells: Array<{ k: string; v: number; bad: boolean }> = [];
+  if (h && h.top10Pct > 0) {
+    cells.push({ k: t("top 10"), v: h.top10Pct, bad: h.top10Pct >= 50 });
+    cells.push({ k: t("largest"), v: h.topWalletPct, bad: h.topWalletPct >= 20 });
+  }
+  if (h?.creatorHoldsPct !== null && h?.creatorHoldsPct !== undefined) cells.push({ k: t("dev"), v: h.creatorHoldsPct, bad: h.creatorHoldsPct >= 5 });
+  if (f?.bundlers) cells.push({ k: t("bundlers"), v: f.bundlersHeldPct ?? 0, bad: (f.bundlersHeldPct ?? 0) >= 20 });
+  if (f?.earlyWallets) cells.push({ k: t("first 5 s"), v: f.earlyHeldPct ?? 0, bad: (f.earlyHeldPct ?? 0) >= 30 });
+  if (f?.crewHeldPct) cells.push({ k: t("dev's crew"), v: f.crewHeldPct, bad: f.crewHeldPct >= 5 });
+  if (h?.programPct) cells.push({ k: t("curve / pool"), v: h.programPct, bad: false });
+  if (!cells.length) return null;
+  return (
+    <div className="mt-3 border-t border-white/[0.07] pt-3">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/50">{t("who holds it")}</p>
+      <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
+        {cells.map((x) => (
+          <div key={x.k} className="min-w-0">
+            <p className={`font-mono text-[15px] leading-none ${x.bad ? "text-[#ff8a7e]" : "text-white/90"}`}>{x.v}%</p>
+            <p className="mt-1 truncate text-[11px] font-light text-white/55">{x.k}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

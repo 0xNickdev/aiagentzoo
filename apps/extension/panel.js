@@ -175,11 +175,23 @@ var ZooPanel = (() => {
       fact("dev's own wallets", String(f.creatorCrew ?? 0), t("keep sniping this dev"), (f.creatorCrew ?? 0) >= 2),
       fact("rings · serial", `${f.ringWallets ?? 0} · ${f.serialSnipers ?? 0}`, t("snipers in the first seconds"), (f.ringWallets ?? 0) >= 3),
     );
+    // Who holds it, at a glance: the same shares as under the verdict on the site, red past the line where that share alone decides the price.
+    const hd = c.holders;
+    const held = [];
+    if (hd && hd.top10Pct > 0) {
+      held.push(fact("top 10", `${hd.top10Pct}%`, t("largest {p}%", { p: hd.topWalletPct }), hd.top10Pct >= 50 || hd.topWalletPct >= 20));
+    }
+    if (hd && hd.creatorHoldsPct != null) held.push(fact("dev holds", `${hd.creatorHoldsPct}%`, "", hd.creatorHoldsPct >= 5));
+    if (f.bundlers) held.push(fact("bundlers hold", `${f.bundlersHeldPct ?? 0}%`, t("{n} wallets", { n: f.bundlers }), (f.bundlersHeldPct ?? 0) >= 20));
+    if (f.earlyWallets) held.push(fact("first 5 s hold", `${f.earlyHeldPct ?? 0}%`, t("{n} wallets", { n: f.earlyWallets }), (f.earlyHeldPct ?? 0) >= 30));
+    if (f.crewHeldPct) held.push(fact("dev's crew holds", `${f.crewHeldPct}%`, "", f.crewHeldPct >= 5));
+    if (hd && hd.programPct) held.push(fact("curve / pool", `${hd.programPct}%`, "", false));
+    const holdBlock = held.length ? [sec("02", "Who holds it"), h("div", { class: "facts" }, ...held)] : [];
     const kinds = ORDER.map((k) => [k, early.filter((e) => kindOf(e) === k).length]).filter(([, n]) => n);
     const rowsShown = compact ? 5 : 8;
     const five = early.length
       ? [
-          sec("03", "The first 5 seconds", t("{n} wallets", { n: early.length })),
+          sec(holdBlock.length ? "04" : "03", "The first 5 seconds", t("{n} wallets", { n: early.length })),
           timeline(early, (w) => openWallet(ctx, w)),
           h(
             "div",
@@ -206,7 +218,7 @@ var ZooPanel = (() => {
           ),
           early.length > rowsShown ? h("a", { class: "more mono", href: `${SITE}/xray?mint=${r.mint}`, target: "_blank", rel: "noopener" }, t("+{n} more on the full X-Ray ↗", { n: early.length - rowsShown })) : null,
         ]
-      : [sec("03", "The first 5 seconds"), h("p", { class: "p dim" }, t("Nobody bought before it was visible."))];
+      : [sec(holdBlock.length ? "04" : "03", "The first 5 seconds"), h("p", { class: "p dim" }, t("Nobody bought before it was visible."))];
     const watchBtn = h("button", { class: "btn" }, t("Alert me"));
     const setWatch = (on) => {
       watchBtn.textContent = on ? t("Alerts on ✓") : t("Alert me");
@@ -225,7 +237,8 @@ var ZooPanel = (() => {
         h("div", { class: "tok" }, h("div", { class: "tok-l" }, h("p", { class: "sym" }, `$${sym(r.symbol)}`), h("p", { class: "name" }, r.name)), caBtn),
         h("p", { class: "sub mono" }, [age, VENUE[f.venue || "pump.fun"], f.graduated ? t("graduated") : "", f.mayhem ? t("Mayhem Mode") : ""].filter(Boolean).join(" · ")),
         verdict,
-        sec("02", "Who is behind it", "tap to open"),
+        ...holdBlock,
+        sec(holdBlock.length ? "03" : "02", "Who is behind it", "tap to open"),
         facts,
         ...five,
         h(
