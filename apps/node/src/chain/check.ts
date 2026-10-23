@@ -245,7 +245,8 @@ export function checkToken(
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
   if (early) {
     const age = Math.max(0, Math.round(f.ageMin));
-    notes.unshift(verdict === "pass" ? `only ${age} min old: no red flags yet, so check again before adding` : `only ${age} min old: more can show up, check again before adding`);
+    const when = age < 1 ? "just launched" : `only ${age} min old`;
+    notes.unshift(verdict === "pass" ? `${when}: no red flags yet, so check again before adding` : `${when}: more can show up, check again before adding`);
   }
   if (verdict === "pass") notes.push("pass means no creator dump, bundle, creator's crew, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
   if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");

@@ -297,7 +297,7 @@ export interface XRayReply {
     verdict: "avoid" | "caution" | "pass" | "unknown";
     reasons: string[];
     notes: string[];
-    facts: { ageMin: number; venue?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
+    facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
   early: Array<{ bought: number }>;
   funding: { funder: string | null; funderIsHot: boolean; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
@@ -309,15 +309,25 @@ export function xrayMessage(x: XRayReply): string {
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-  const venue = { launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.venue ?? ""] ?? "pump.fun";
+  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
   const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
   if (f) {
+    // Only what is there: a line of zeros reads like a broken report.
     const took = x.early.reduce((n, e) => n + e.bought, 0);
-    lines.push(T("<b>First 5 seconds:</b> {n} wallets took {t}, still hold {h}", { n: f.earlyWallets ?? 0, t: pct(took), h: `${f.earlyHeldPct ?? 0}%` }));
-    lines.push(T("creator's crew {c} · sniper ring {r} · serial snipers {s}", { c: f.creatorCrew ?? 0, r: f.ringWallets ?? 0, s: f.serialSnipers ?? 0 }));
-    lines.push(T("<b>Volume:</b> at least {p}% churn · {b} bump bot trades", { p: f.churnPct ?? 0, b: f.bumps ?? 0 }));
+    if (!f.earlyWallets) lines.push(T("<b>First 5 seconds:</b> nobody bought before it was visible"));
+    else {
+      lines.push(T("<b>First 5 seconds:</b> {n} wallets took {t}, still hold {h}", { n: f.earlyWallets, t: pct(took), h: `${f.earlyHeldPct ?? 0}%` }));
+      const who = [
+        f.creatorCrew ? T("creator's crew {n}", { n: f.creatorCrew }) : "",
+        f.ringWallets ? T("sniper ring {n}", { n: f.ringWallets }) : "",
+        f.serialSnipers ? T("serial snipers {n}", { n: f.serialSnipers }) : "",
+      ].filter(Boolean);
+      if (who.length) lines.push(who.join(" · "));
+    }
+    const vol = [f.churnPct ? T("at least {p}% churn", { p: f.churnPct }) : "", f.bumps ? T("{b} bump bot trades", { b: f.bumps }) : ""].filter(Boolean);
+    if (vol.length) lines.push(`${T("<b>Volume:</b>")} ${vol.join(" · ")}`);
   }
   const fu = x.funding;
   if (!fu) lines.push(T("<b>Who paid for the creator:</b> not traced yet, queued"));
