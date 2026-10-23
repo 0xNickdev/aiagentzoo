@@ -49,6 +49,7 @@ interface Check {
     curveSol?: number | null;
     mayhem?: boolean;
     venue?: "pump.fun" | "launchlab" | "dbc";
+    platform?: string;
     earlyWallets: number | null;
     earlyHeldPct: number | null;
     churnPct: number | null;
@@ -85,7 +86,7 @@ export interface XRayReport {
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
@@ -186,7 +187,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
 
   ctx.font = mono(15);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(`ZOOAI AGENCY · X-RAY · ${VENUE[f?.venue ?? "pump.fun"]}`.toUpperCase(), L, 86);
+  ctx.fillText(`ZOOAI AGENCY · X-RAY · ${VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}`.toUpperCase(), L, 86);
   ctx.font = '500 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
   ctx.fillText(`$${r.symbol}`.slice(0, 16), L - 3, 166);
@@ -532,7 +533,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               ))}
             </div>
             <p className="font-mono mt-2 text-[12px] leading-relaxed text-white/60">
-              {VENUE[f?.venue ?? "pump.fun"]}
+              {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}
               {pool ? ` · ${pool}` : ""}
               {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </p>

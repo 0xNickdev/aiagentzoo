@@ -409,7 +409,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
 
 /* ---------- x-ray ---------- */
 
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 const BOT = "https://t.me/zooaiagency_bot";
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const openWalletMini = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet-mini", { detail: w }));
@@ -616,7 +616,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono truncate text-[10px] text-white/40">
-              {r.name || short(r.mint)} · {tt("{m} min old", { m: f?.ageMin ?? 0 })} · {VENUE[f?.venue ?? "pump.fun"]}
+              {r.name || short(r.mint)} · {tt("{m} min old", { m: f?.ageMin ?? 0 })} · {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}
             </p>
             <p className="font-display truncate text-[22px]">${sym(r.symbol)}</p>
           </div>

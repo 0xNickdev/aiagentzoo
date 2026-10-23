@@ -15,6 +15,11 @@ export const DBC_PROGRAM = "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN";
 /** Anchor's prefix on an event written by a program calling itself. */
 const EVENT_CPI = Buffer.from([0xe4, 0x45, 0xa5, 0x2e, 0x51, 0xcb, 0x9a, 0x1d]);
 
+/** Platforms built on LaunchLab, by their platform config account (the instruction's fourth account). */
+export const LAUNCHLAB_PLATFORMS: Record<string, string> = {
+  "6BwHHDg3u1854jC8PDLXvR4spTcLNaoBxLJNGC4nTESt": "stonk",
+};
+
 const disc = (...b: number[]) => Buffer.from(b).toString("hex");
 
 /** Instruction discriminator -> what it is and where its accounts are. */
@@ -256,7 +261,9 @@ export function parseLaunchpads(tx: LaunchpadTx, ts: number): PumpEvent[] {
           body.b8(); // decimals: the transaction's token balances say it too
           const name = body.str();
           const symbol = body.str();
-          out.push(createOf(venue, ctx.role, ctx.accounts, { name, symbol, creator, ts }, tx));
+          const created = createOf(venue, ctx.role, ctx.accounts, { name, symbol, creator, ts }, tx);
+          const platform = LAUNCHLAB_PLATFORMS[ctx.accounts[3] ?? ""];
+          out.push(platform && created.kind === "create" ? { ...created, platform } : created);
         } else if (ev === LL_TRADE && ctx?.role.kind === "trade") {
           body.key(); // pool_state
           body.u64(); // total_base_sell

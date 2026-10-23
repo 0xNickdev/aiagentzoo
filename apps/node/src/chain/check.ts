@@ -55,6 +55,8 @@ export interface TokenCheck {
     mayhem: boolean;
     /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
     venue: "pump.fun" | "launchlab" | "dbc";
+    /** The platform on that launchpad when known, e.g. "stonk" (StonkFun on LaunchLab). */
+    platform?: string;
     curveSol: number | null;
     poolSol: number | null;
     /** Wallets that bought in the first 5 seconds, and the share of the supply they still hold (curve trades). */
@@ -259,6 +261,7 @@ export function checkToken(
       quote: f.quote ?? null,
       mayhem: Boolean(f.mayhem),
       venue: f.venue ?? "pump.fun",
+      ...(f.platform ? { platform: f.platform } : {}),
       curveSol: f.curveSol,
       poolSol: f.poolSol,
       earlyWallets: f.earlyWallets ?? null,

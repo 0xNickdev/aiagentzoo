@@ -12,7 +12,7 @@ const ago = (at: number) => {
   const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
   return m < 60 ? t("{m} min ago", { m }) : m < 1440 ? t("{h}h ago", { h: Math.round(m / 60) }) : t("{d}d ago", { d: Math.round(m / 1440) });
 };
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "LaunchLab", dbc: "Meteora" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 
 interface Profile {
   wallet: string;

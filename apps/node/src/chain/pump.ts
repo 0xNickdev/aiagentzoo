@@ -55,6 +55,8 @@ export type PumpEvent =
       mayhem?: boolean;
       /** Launched somewhere other than pump.fun: Raydium LaunchLab or Meteora's bonding curve. */
       venue?: Venue;
+      /** The platform built on the launchpad, when it is one we know (StonkFun on LaunchLab). */
+      platform?: string;
       /** The whole supply, when it is not pump.fun's billion. */
       supply?: number;
       /** Where the token's metadata lives (its X, Telegram, website). */
@@ -247,6 +249,8 @@ export interface ChainFacts {
   mayhem?: boolean;
   /** Launched on Raydium LaunchLab or Meteora's bonding curve; absent for pump.fun. */
   venue?: Venue;
+  /** The platform on that launchpad, when known: StonkFun on LaunchLab. */
+  platform?: string;
   /** The token it trades against when not SOL; then solIn, solOut and curveSol are not in SOL (curveSol stays null). */
   quote?: string | null;
   buys: number;
@@ -355,6 +359,7 @@ interface Tracked {
   mayhem?: boolean;
   /** Launched on Raydium LaunchLab or Meteora's bonding curve instead of pump.fun. */
   venue?: Venue;
+  platform?: string;
   /** The whole supply, when it is not pump.fun's billion. */
   supply?: number;
   /** Where its metadata lives. */
@@ -672,6 +677,7 @@ export class PumpTape {
         quote: ev.quote ?? null,
         ...(ev.mayhem ? { mayhem: true } : {}),
         ...(ev.venue ? { venue: ev.venue } : {}),
+        ...(ev.platform ? { platform: ev.platform } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
         ...(ev.uri ? { uri: ev.uri } : {}),
         name: ev.name,
@@ -1220,6 +1226,7 @@ export class PumpTape {
       ...(t.quote ? { quote: t.quote } : {}),
       ...(t.mayhem ? { mayhem: true } : {}),
       ...(t.venue ? { venue: t.venue } : {}),
+      ...(t.platform ? { platform: t.platform } : {}),
       buys: t.buys,
       sells: t.sells,
       buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
@@ -1353,7 +1360,7 @@ export class PumpTape {
         mint: t.mint,
         symbol: t.symbol,
         createdAt: t.createdAt,
-        venue: t.venue ?? "pump.fun",
+        venue: t.platform ?? t.venue ?? "pump.fun",
         buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
         early: this.earlyWalletsOf(t).length,
         ...this.outcomeOf(t),
