@@ -77,6 +77,15 @@ function lead(p: Profile): { tag: string; title: string; sub?: string; tone: Ton
   const d = p.dev;
   if (d && d.builder?.isBuilder)
     return { tag: t("Track record"), title: t("{g} of {n} launches grew.", { g: d.builder.grew, n: d.builder.launches }), sub: t("They still hold liquidity, and this dev has not dumped them."), tone: "good" };
+  // Launch spam: dozens of coins nobody buys. "0 dumped" there means nobody to dump on, not an honest dev.
+  const empty = d ? d.launches.filter((x) => x.buyers <= 1).length : 0;
+  if (d && d.launches48h >= 10 && d.launches.length && empty / d.launches.length >= 0.6)
+    return {
+      tag: t("Launch spam"),
+      title: t("{n} coins in two days. {z} of the last {k} never got a buyer.", { n: d.launches48h, z: empty, k: d.launches.length }),
+      sub: t("Nothing to dump when nobody buys, so 0 dumped says nothing here. Buy one and you may be its only buyer."),
+      tone: "bad",
+    };
   if (d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6))
     return {
       tag: t("Serial dumper"),
@@ -185,7 +194,9 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                     </span>
                     <span className="text-right text-white/60">{x.buyers}</span>
                     <span className="text-right text-white/60">{x.early}</span>
-                    {(() => {
+                    {x.buyers === 0 ? (
+                      <span className="text-right text-white/45">{t("nobody bought")}</span>
+                    ) : (() => {
                       const o = launchOutcome(x);
                       return (
                         <span className="text-right leading-snug">

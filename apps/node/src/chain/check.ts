@@ -136,6 +136,9 @@ export function checkToken(
   if (c && c.dumped >= 3 && c.dumped / Math.max(1, c.launches48h) >= 0.5) {
     const speed = c.medianDumpMin === null ? "" : `, usually ${c.medianDumpMin} min after launch`;
     avoid.push(`this creator dumped ${c.dumped} of their ${c.launches48h} launches in 48 hours${speed}`);
+  } else if (f.creatorLaunches24h >= 30) {
+    // Nobody building a coin launches thirty a day: it is a ticker farm, and a buyer is often the only buyer.
+    avoid.push(`this wallet launched ${f.creatorLaunches24h} tokens in 24 hours: launch spam, not a project`);
   } else if (f.creatorLaunches24h >= 3) {
     caution.push(`the creator launched ${f.creatorLaunches24h} tokens in the last 24 hours`);
   }

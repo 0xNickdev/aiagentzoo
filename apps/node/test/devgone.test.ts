@@ -77,3 +77,11 @@ test("a runner dev who sells early but whose coins mostly went past $20K gets ca
   assert.equal(crew.verdict, "avoid");
   assert.equal(crew.facts!.runnerDev, false);
 });
+
+test("a wallet launching thirty or more tokens a day is launch spam: avoid, even with nothing dumped", () => {
+  const spam = { wallet: "dev", launches24h: 146, launches48h: 146, dumped: 0, medianDumpMin: null, graduated: 0, recent: [] } as never;
+  const fresh = php({ graduated: false, poolSol: null, curveSol: 0, ageMin: 1, creatorSold: 0, creatorLaunches24h: 146, buyers: 0, buys: 0, sells: 0, bundleWallets: 0, bundleShare: 0, serialSnipers: 0 });
+  const c = checkToken("LeLe", { symbol: "LeLe", facts: fresh, creatorRecord: spam });
+  assert.equal(c.verdict, "avoid");
+  assert.ok(c.reasons.some((r) => r === "this wallet launched 146 tokens in 24 hours: launch spam, not a project"));
+});

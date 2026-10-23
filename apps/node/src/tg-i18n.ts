@@ -61,6 +61,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^one wallet holds (\d+)% of the supply$/, (m) => `一个钱包持有 ${m[1]}% 的供应`],
   [/^the 10 largest wallets hold (\d+)% of the supply$/, (m) => `前十大钱包持有 ${m[1]}% 的供应`],
   [/^the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets$/, () => "开发者已经不持有，但从没在内盘卖过：筹码转去了别的钱包"],
+  [/^this wallet launched (\d+) tokens in 24 hours: launch spam, not a project$/, (m) => `这个钱包 24 小时内发了 ${m[1]} 个币：批量刷币，不是项目`],
   [/^just launched: no red flags yet, so check again before adding$/, () => "刚刚发币：暂无危险信号，加仓前再查一次"],
   [/^just launched: more can show up, check again before adding$/, () => "刚刚发币：还可能出现更多信号，加仓前再查一次"],
   [/^only (\d+) min old: no red flags yet, so check again before adding$/, (m) => `才发币 ${m[1]} 分钟：暂无危险信号，加仓前再查一次`],
