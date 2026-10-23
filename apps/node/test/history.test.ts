@@ -177,3 +177,37 @@ test("a dev's launch says how fast they sold, what they took and who was left ho
     done();
   }
 });
+
+test("a dev's launch keeps its caps and the dev's habits are read from them, live and from history", async () => {
+  const { setSolUsd } = await import("../src/chain/price.ts");
+  const { devPattern, repeatsOf } = await import("../src/chain/pump.ts");
+  setSolUsd(100);
+  const { store, done } = tempStore();
+  try {
+    const t = new PumpTape();
+    const t0 = Date.now() - 10 * 60_000;
+    const mint = pad("Mint7");
+    launch(t, mint, t0);
+    // After the dump the price falls to 10 SOL of cap.
+    t.apply({ kind: "trade", mint, sol: 0.5, tokens: 50_000_000, isBuy: true, user: pad("Late"), ts: t0 + 200_000, curveSol: 2 }, t0 + 200_000, "tx6", 500);
+    const x = t.creator(DEV)!.recent[0]!;
+    assert.equal(x.firstCapUsd, 2500); // 2 SOL for 80M tokens in the first second: 25 SOL of cap
+    assert.equal(x.peakCapUsd, 3333); // the bundler's 1 SOL for 30M
+    assert.equal(x.peakAfterSec, 2);
+    assert.equal(x.dumpCapUsd, 2500); // the dev's 1 SOL for 40M
+    assert.equal(x.afterDumpLowPct, -0.6);
+    assert.equal(x.devFirstSellSec, 120);
+    store.write([{ ...t.historyOf(mint)!, funder: null }]);
+    const past = store.creatorTotals(DEV)!.recent[0]!;
+    assert.equal(past.peakCapUsd, 3333);
+    assert.equal(past.afterDumpLowPct, -0.6);
+    const p = devPattern([x, { ...x, peakCapUsd: 30_000, firstCapUsd: 5_000 }])!;
+    assert.equal(p.launches, 2);
+    assert.equal(p.reached20k, 0.5);
+    assert.equal(p.dumps, 2);
+    assert.deepEqual(repeatsOf([{ symbol: "PAW" }, { symbol: "$paw" }, { symbol: "ZIBR" }]), [{ symbol: "PAW", n: 2 }]);
+  } finally {
+    done();
+    setSolUsd(null);
+  }
+});

@@ -8,6 +8,14 @@ export interface LaunchOutcome {
   leftHolding?: number | null;
   alive?: boolean | null;
   graduated: boolean;
+  peakCapUsd?: number | null;
+}
+
+/** 27400 -> $27K, 4500 -> $4.5K, 1250000 -> $1.3M. */
+export function money(n: number): string {
+  const [d, u] = n >= 1e6 ? [1e6, "M"] : n >= 1e3 ? [1e3, "K"] : [1, ""];
+  const v = n / d;
+  return `$${v >= 10 || u === "" ? Math.round(v) : v.toFixed(1)}${u}`;
 }
 
 /** 40 -> 40s, 130 -> 2 min, 7300 -> 2 h. */
@@ -20,6 +28,7 @@ const span = (sec: number) => (sec < 120 ? `${sec}s` : sec < 2 * 3600 ? `${Math.
  */
 export function launchOutcome(x: LaunchOutcome): { head: string; tail: string; dumped: boolean } {
   const tail: string[] = [];
+  if (x.peakCapUsd) tail.push(t("peak {c}", { c: money(x.peakCapUsd) }));
   let head: string;
   if (x.dumpedAfterMin !== null) {
     const sec = x.dumpedAfterSec ?? null;

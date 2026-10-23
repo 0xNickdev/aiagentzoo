@@ -8,6 +8,7 @@
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
+import { solUsd } from "./price.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
@@ -317,6 +318,25 @@ export interface ChainFacts {
 const SUPPLY = 1_000_000_000;
 /** In Mayhem Mode pump.fun's own bot mints a second billion to trade with for the first 24 hours. */
 const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.mayhem ? 2 * SUPPLY : SUPPLY);
+/** A token's caps in dollars at today's SOL price, and how it moved after the dev's dump. */
+export function capsFrom(c: { capFirst?: number | null; capPeak?: number | null; capPeakAt?: number | null; capDump?: number | null; capLow?: number | null; capHigh?: number | null; devFirstSellAt?: number | null; createdAt: number }) {
+  const usd = solUsd();
+  const $ = (sol: number | null | undefined) => (usd && sol ? Math.round(sol * usd) : null);
+  const sec = (at: number | null | undefined) => (at === null || at === undefined ? null : Math.max(0, Math.round((at - c.createdAt) / 1000)));
+  return {
+    firstCapUsd: $(c.capFirst),
+    peakCapUsd: $(c.capPeak),
+    peakAfterSec: c.capPeak ? sec(c.capPeakAt) : null,
+    dumpCapUsd: $(c.capDump),
+    afterDumpLowPct: c.capDump && c.capLow ? Math.round((c.capLow / c.capDump - 1) * 100) / 100 : null,
+    afterDumpHighX: c.capDump && c.capHigh ? Math.round((c.capHigh / c.capDump) * 100) / 100 : null,
+    devFirstSellSec: sec(c.devFirstSellAt),
+  };
+}
+const capsOf = (t: Tracked) => capsFrom(t);
+
+/** How long after a dump the price is still watched: what buyers who stayed went through. */
+const AFTER_DUMP_MS = 30 * 60_000;
 /** A buy this many slots after the create still counts as part of the launch bundle. */
 const BUNDLE_SLOTS = 1;
 /** Four or more wallets buying in one block is a bundle, whenever it happens. */
@@ -384,6 +404,18 @@ interface Tracked {
   devOut?: number;
   /** Wallets other than the creator still holding when the creator dumped: the people left with the bag. */
   heldAtDump?: number;
+  /** When the creator first sold anything. */
+  devFirstSellAt?: number;
+  /**
+   * Market cap in SOL, from each trade's price: the most in the first second, the peak and when, at the creator's
+   * dump, and the lowest and highest in the 30 minutes after it. Absent on tokens first seen before caps were kept.
+   */
+  capFirst?: number;
+  capPeak?: number;
+  capPeakAt?: number;
+  capDump?: number;
+  capLow?: number;
+  capHigh?: number;
   graduated: boolean;
   /** The creator has sold half of what they bought; announced once. */
   dumped: boolean;
@@ -435,6 +467,77 @@ export interface CreatorRecord {
   medianDumpMin: number | null;
   graduated: number;
   recent: LaunchOutcome[];
+  /** What this dev's launches usually do, from as many as are known; null with too few to say. */
+  pattern?: DevPattern | null;
+  /** Tickers launched more than once: a dev relaunching PAW again and again. */
+  repeats?: Array<{ symbol: string; n: number }>;
+  /** Launches a day while active, and days since the last one. */
+  tempo?: { perDay: number; idleDays: number };
+}
+
+/** A dev's habits, medians over their launches with the number each rests on. Describes, never recommends. */
+export interface DevPattern {
+  launches: number;
+  /** Market caps in dollars at today's SOL price. */
+  firstCapUsd: number | null;
+  peakCapUsd: number | null;
+  /** Peak over first-second cap. */
+  upsideX: number | null;
+  peakAfterSec: number | null;
+  /** Share of launches whose peak reached $20K, over those with a known peak. */
+  reached20k: number | null;
+  firstSellSec: number | null;
+  /** Of launches with a dev dump: cap where they dumped, how far it fell in the next 30 minutes, how often it doubled. */
+  dumpCapUsd: number | null;
+  afterDumpLowPct: number | null;
+  afterDumpDoubled: number | null;
+  dumps: number;
+}
+
+const median = (xs: number[]): number | null => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)]!;
+};
+
+/** Medians over a dev's launches; needs at least two with prices to say anything. */
+export function devPattern(list: LaunchOutcome[]): DevPattern | null {
+  const priced = list.filter((x) => x.peakCapUsd !== null && x.peakCapUsd !== undefined);
+  if (priced.length < 2) return null;
+  const dumped = list.filter((x) => x.dumpCapUsd !== null && x.dumpCapUsd !== undefined && x.afterDumpLowPct !== null && x.afterDumpLowPct !== undefined);
+  const ups = priced.filter((x) => x.firstCapUsd).map((x) => x.peakCapUsd! / x.firstCapUsd!);
+  const round = (v: number | null, k = 1) => (v === null ? null : Math.round(v * k) / k);
+  return {
+    launches: list.length,
+    firstCapUsd: round(median(priced.filter((x) => x.firstCapUsd).map((x) => x.firstCapUsd!))),
+    peakCapUsd: round(median(priced.map((x) => x.peakCapUsd!))),
+    upsideX: round(median(ups), 10),
+    peakAfterSec: median(priced.filter((x) => x.peakAfterSec !== null && x.peakAfterSec !== undefined).map((x) => x.peakAfterSec!)),
+    reached20k: round(priced.filter((x) => x.peakCapUsd! >= 20_000).length / priced.length, 100),
+    firstSellSec: median(list.filter((x) => x.devFirstSellSec !== null && x.devFirstSellSec !== undefined).map((x) => x.devFirstSellSec!)),
+    dumpCapUsd: round(median(dumped.map((x) => x.dumpCapUsd!))),
+    afterDumpLowPct: round(median(dumped.map((x) => x.afterDumpLowPct!)), 100),
+    afterDumpDoubled: dumped.length ? round(dumped.filter((x) => (x.afterDumpHighX ?? 0) >= 2).length / dumped.length, 100) : null,
+    dumps: dumped.length,
+  };
+}
+
+/** Tickers a dev used more than once, the most repeated first. */
+export function repeatsOf(list: Array<{ symbol: string }>): Array<{ symbol: string; n: number }> {
+  const n = new Map<string, number>();
+  for (const x of list) {
+    const k = x.symbol.replace(/^\$/, "").trim().toUpperCase();
+    if (k) n.set(k, (n.get(k) ?? 0) + 1);
+  }
+  return [...n].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([symbol, c]) => ({ symbol, n: c }));
+}
+
+/** Launches a day over the days they were active, and days since the last launch. */
+export function tempoOf(list: Array<{ createdAt: number }>, now = Date.now()): { perDay: number; idleDays: number } | undefined {
+  if (!list.length) return undefined;
+  const ts = list.map((x) => x.createdAt).sort((a, b) => a - b);
+  const days = new Set(ts.map((t) => Math.floor(t / DAY_MS))).size;
+  return { perDay: Math.round((ts.length / days) * 10) / 10, idleDays: Math.round(((now - ts[ts.length - 1]!) / DAY_MS) * 10) / 10 };
 }
 
 /** One of a creator's launches and how it went. Older records (from before these were counted) lack the optional ones. */
@@ -451,6 +554,15 @@ export interface LaunchOutcome {
   /** Alive now (or when last recorded): a pool with enough SOL, or a curve near graduation. */
   alive?: boolean | null;
   graduated: boolean;
+  /** Market caps in dollars at today's SOL price: first second, peak, and where the dev dumped. */
+  firstCapUsd?: number | null;
+  peakCapUsd?: number | null;
+  peakAfterSec?: number | null;
+  dumpCapUsd?: number | null;
+  /** In the 30 minutes after the dump: the lowest it went (as a fraction, -0.34) and the most it rose (as a multiple). */
+  afterDumpLowPct?: number | null;
+  afterDumpHighX?: number | null;
+  devFirstSellSec?: number | null;
 }
 
 /** A fresh token that passed the basic checks the tape can make; not a judgement of its worth. */
@@ -695,6 +807,7 @@ export class PumpTape {
         devSold: 0,
         devIn: 0,
         devOut: 0,
+        capPeak: 0,
         graduated: false,
         dumped: false,
         dumpedAt: null,
@@ -748,6 +861,7 @@ export class PumpTape {
     this.seen.trades += 1;
     this.count(now, "trades");
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
+    if (!t.quote) this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     // Five minutes in, the early and churn numbers are written down once, for the check's record.
     // Only a trade between 5 and 10 minutes in can stand for "five minutes in": a token first traded later (or one
@@ -798,12 +912,30 @@ export class PumpTape {
     if (ev.curveSol !== null && !t.quote && !t.venue) t.curveSol = ev.curveSol;
   }
 
+  /** The market cap this trade's price puts on the token, in SOL; dust trades say nothing about the price. */
+  private noteCap(t: Tracked, sol: number, tokens: number, ts: number): void {
+    if (t.capPeak === undefined || sol < 0.001 || tokens < 1) return;
+    const cap = (sol / tokens) * supplyOf(t);
+    if (!Number.isFinite(cap)) return;
+    if (ts - t.createdAt <= 1_000) t.capFirst = Math.max(t.capFirst ?? 0, cap);
+    if (cap > t.capPeak) {
+      t.capPeak = cap;
+      t.capPeakAt = ts;
+    }
+    if (t.dumpedAt !== null && t.capDump !== undefined && ts > t.dumpedAt && ts - t.dumpedAt <= AFTER_DUMP_MS) {
+      t.capLow = Math.min(t.capLow ?? cap, cap);
+      t.capHigh = Math.max(t.capHigh ?? cap, cap);
+    }
+  }
+
   private creatorSold(t: Tracked, tokens: number, sol: number, ts: number, now: number, tx?: string): void {
+    t.devFirstSellAt ??= ts;
     t.devSold += tokens;
     if (t.devOut !== undefined) t.devOut += sol;
     if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
       t.dumped = true;
       t.dumpedAt = ts;
+      if (t.capPeak !== undefined && sol >= 0.001 && tokens >= 1) t.capDump = (sol / tokens) * supplyOf(t);
       let held = 0;
       for (const [w, b] of t.buyers) if (w !== t.creator && b.tok !== undefined && b.tok - (b.sold ?? 0) > 0) held += 1;
       t.heldAtDump = held;
@@ -888,6 +1020,7 @@ export class PumpTape {
     this.seen.trades += 1;
     this.count(now, "trades");
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
+    this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     // Trades on a side pool still count, but only the main pool says how much SOL is left.
     if (ev.pool === t.pool) {
       t.poolSol = ev.poolSol;
@@ -1271,6 +1404,7 @@ export class PumpTape {
   creator(wallet: string, now = Date.now()): CreatorRecord | null {
     const tokens = (this.byCreator.get(wallet) ?? []).map((m) => this.tokens.get(m)).filter((t): t is Tracked => Boolean(t));
     if (!tokens.length) return null;
+    const all = tokens.map((t) => ({ mint: t.mint, symbol: t.symbol, createdAt: t.createdAt, ...this.outcomeOf(t) }));
     const minutes = tokens.filter((t) => t.dumpedAt !== null).map((t) => Math.max(0, Math.round((t.dumpedAt! - t.createdAt) / 60_000))).sort((a, b) => a - b);
     return {
       wallet,
@@ -1279,10 +1413,10 @@ export class PumpTape {
       dumped: minutes.length,
       medianDumpMin: minutes.length ? minutes[Math.floor(minutes.length / 2)]! : null,
       graduated: tokens.filter((t) => t.graduated).length,
-      recent: tokens
-        .slice(-12)
-        .reverse()
-        .map((t) => ({ mint: t.mint, symbol: t.symbol, createdAt: t.createdAt, ...this.outcomeOf(t) })),
+      recent: all.slice(-12).reverse(),
+      pattern: devPattern(all),
+      repeats: repeatsOf(all),
+      tempo: tempoOf(all, now),
     };
   }
 
@@ -1295,6 +1429,7 @@ export class PumpTape {
       leftHolding: t.heldAtDump ?? null,
       alive: this.aliveNow(t),
       graduated: t.graduated,
+      ...capsOf(t),
     };
   }
 
@@ -1550,6 +1685,7 @@ export class PumpTape {
       devTookSol: this.outcomeOf(t).devTookSol,
       leftHolding: t.heldAtDump ?? null,
       alive: this.aliveNow(t),
+      caps: { capFirst: t.capFirst ?? null, capPeak: t.capPeak || null, capPeakAt: t.capPeakAt ?? null, capDump: t.capDump ?? null, capLow: t.capLow ?? null, capHigh: t.capHigh ?? null, devFirstSellAt: t.devFirstSellAt ?? null },
       facts,
       early,
       bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / supplyOf(t)) * 10_000) / 10_000 })),

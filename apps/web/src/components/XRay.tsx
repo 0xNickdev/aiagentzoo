@@ -6,7 +6,8 @@ import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
 import WalletProfile, { WalletLink } from "./WalletProfile";
-import { launchOutcome } from "../outcome";
+import { type LaunchOutcome, launchOutcome } from "../outcome";
+import DevHabits, { type Habits } from "./DevHabits";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -77,7 +78,7 @@ export interface XRayReport {
   createdAt: number;
   check: Check;
   early: Early[];
-  creatorRecord: { launches48h: number; dumped: number; medianDumpMin: number | null; recent?: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }> } | null;
+  creatorRecord: ({ launches48h: number; dumped: number; medianDumpMin: number | null; recent?: Array<{ mint: string; symbol: string; createdAt: number } & LaunchOutcome> } & Habits) | null;
   /** The X account, X community or Telegram group the token links to, and its other launches. */
   socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
   funding: Funding | null;
@@ -610,6 +611,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className={`font-mono shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-white/60"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
                 </div>
               ))}
+              <DevHabits h={r.creatorRecord} />
               {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
                 <div className="mt-3 border-t border-white/[0.06] pt-3">
                   <p className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-white/55">{t("their other launches · tap to x-ray")}</p>

@@ -392,6 +392,11 @@ export function devMessage(r: CreatorRecord): string {
     T("{a} in the last 24h · {g} graduated", { a: r.launches24h, g: r.graduated }),
     "",
   ];
+  const p = r.pattern;
+  const money = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${n >= 1e4 ? Math.round(n / 1e3) : (n / 1e3).toFixed(1)}K` : `$${n}`);
+  if (p?.peakCapUsd && p.peakAfterSec !== null && p.firstSellSec !== null) lines.push(T("usually: peaks {c} in {s}, dev sells after {f}", { c: money(p.peakCapUsd), s: span(p.peakAfterSec), f: span(p.firstSellSec) }));
+  if (r.repeats?.length) lines.push(`🔁 ${T("repeats {r}", { r: r.repeats.map((x) => `${esc(x.symbol)} ×${x.n}`).join(", ") })}`);
+  if (p || r.repeats?.length) lines.push("");
   for (const t of r.recent.slice(0, 8)) {
     lines.push(`${t.dumpedAfterMin !== null ? "🔴" : t.graduated ? "🟢" : "⚪️"} $${esc(t.symbol)} · ${launchLine(t)}`);
   }

@@ -3,7 +3,8 @@ import { type ReactNode, useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t } from "../i18n";
 import { secs } from "./XRayRadar";
-import { launchOutcome } from "../outcome";
+import { type LaunchOutcome, launchOutcome } from "../outcome";
+import DevHabits, { type Habits } from "./DevHabits";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -16,16 +17,16 @@ const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Laun
 
 interface Profile {
   wallet: string;
-  dev: {
+  dev: ({
     launches24h: number;
     launches48h: number;
     dumped: number;
     medianDumpMin: number | null;
     graduated: number;
     builder: { launches: number; grew: number; graduated: number; aliveGraduated: number; dumped: number; isBuilder: boolean } | null;
-    launches: Array<{ mint: string; symbol: string; createdAt: number; venue: string; buyers: number; early: number; dumpedAfterMin: number | null; graduated: boolean }>;
+    launches: Array<{ mint: string; symbol: string; createdAt: number; venue: string; buyers: number; early: number } & LaunchOutcome>;
     regulars: Array<{ wallet: string; launches: number; snipes48h: number }>;
-  } | null;
+  } & Habits) | null;
   funding: { funder: string | null; funderIsHot: boolean; siblings: Array<{ wallet: string; launches48h: number; dumped: number }>; siblingDumped48h: number } | null;
   funded: { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> };
   sniper: { snipes48h: number; soldOut: number; medianExitSec: number | null; topCreators: Array<{ creator: string; launches: number }>; recent: Array<{ mint: string; symbol: string; createdAt: number }> } | null;
@@ -160,6 +161,12 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </div>
           )}
         </div>
+
+        {d && (d.pattern || d.repeats?.length) && (
+          <div className="liquid-glass rounded-3xl p-5 sm:p-6">
+            <DevHabits h={d} />
+          </div>
+        )}
 
         {d && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
