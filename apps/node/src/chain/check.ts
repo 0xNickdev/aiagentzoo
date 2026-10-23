@@ -211,7 +211,9 @@ export function checkToken(
   let holders: TokenCheck["holders"];
   if (opts.holders !== undefined) {
     const h = opts.holders;
-    holders = h ? { top10Pct: pct(h.top10Share)!, topWalletPct: pct(h.topShare)!, creatorHoldsPct: pct(h.creatorShare), programPct: pct(h.programShare)! } : null;
+    // Shares of the supply to one decimal: a coin where everyone sold back shows 0.3%, not a misleading 0%.
+    const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
+    holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null;
     if (!h) notes.push("holders could not be read from Solana right now");
     else {
       // Half the supply in one wallet: whoever holds it decides when the price goes to zero.
