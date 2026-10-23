@@ -3,7 +3,7 @@
 html, body { background: #030504; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 body { min-height: 100svh; }
 
-.zapp { position: relative; min-height: 100svh; color: #fff; padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 96px); }
+.zapp { position: relative; min-height: 100svh; color: #fff; padding: calc(var(--tg-safe-area-inset-top, env(safe-area-inset-top)) + var(--tg-content-safe-area-inset-top, 0px) + 10px) 14px calc(env(safe-area-inset-bottom) + 96px); }
 .zapp-main { position: relative; z-index: 2; max-width: 560px; margin: 0 auto; }
 
 /* The forest behind everything: the welcome scene, blurred and darkened, with fireflies drifting. */
@@ -21,7 +21,7 @@ body { min-height: 100svh; }
 
 /* The answer sheet: frosted bokeh behind glass, sliding up from the bottom. */
 .zapp-sheet-wrap { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); }
-.zapp-sheet { position: relative; width: 100%; max-width: 560px; max-height: calc(100% - env(safe-area-inset-top) - 8px); overflow-y: auto; padding: 10px 14px calc(env(safe-area-inset-bottom) + 18px); border-radius: 30px 30px 0 0; background: linear-gradient(180deg, rgba(3,5,4,0.55), rgba(3,5,4,0.85)), url("/app/sheet.jpg") center / cover; box-shadow: 0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14); }
+.zapp-sheet { position: relative; width: 100%; max-width: 560px; max-height: calc(100% - var(--tg-safe-area-inset-top, env(safe-area-inset-top)) - var(--tg-content-safe-area-inset-top, 0px) - 8px); overflow-y: auto; padding: 10px 14px calc(env(safe-area-inset-bottom) + 18px); border-radius: 30px 30px 0 0; background: linear-gradient(180deg, rgba(3,5,4,0.55), rgba(3,5,4,0.85)), url("/app/sheet.jpg") center / cover; box-shadow: 0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14); }
 .zapp-sheet-handle { width: 40px; height: 4px; margin: 2px auto 12px; border-radius: 4px; background: rgba(255,255,255,0.28); }
 .zapp-firefly { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #ffd99a; box-shadow: 0 0 10px 2px rgba(255, 200, 120, 0.55); opacity: 0; animation: zapp-float 7s ease-in-out infinite; }
 @keyframes zapp-float {

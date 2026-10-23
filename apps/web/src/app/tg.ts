@@ -9,6 +9,9 @@ interface TelegramWebApp {
   setBackgroundColor?(color: string): void;
   setBottomBarColor?(color: string): void;
   disableVerticalSwipes?(): void;
+  /** Bot API 8.0: the whole screen, no Telegram header; Telegram keeps its close and menu buttons over the top. */
+  requestFullscreen?(): void;
+  isVersionAtLeast?(version: string): boolean;
   openLink?(url: string): void;
   openTelegramLink?(url: string): void;
   HapticFeedback?: {
@@ -37,6 +40,9 @@ export function boot(): void {
   tg.setBackgroundColor?.("#030504");
   tg.setBottomBarColor?.("#030504");
   tg.disableVerticalSwipes?.();
+  // On a phone the zoo takes the whole screen; on desktop Telegram's own window is the better frame.
+  const phone = tg.platform === "ios" || tg.platform === "android";
+  if (phone && tg.isVersionAtLeast?.("8.0")) tg.requestFullscreen?.();
 }
 
 export const haptic = {
