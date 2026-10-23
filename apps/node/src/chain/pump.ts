@@ -477,6 +477,7 @@ export interface CreatorRecord {
 
 /** A dev's habits, medians over their launches with the number each rests on. Describes, never recommends. */
 export interface DevPattern {
+  /** Launches with a known peak: the ones the medians rest on. */
   launches: number;
   /** Market caps in dollars at today's SOL price. */
   firstCapUsd: number | null;
@@ -508,7 +509,7 @@ export function devPattern(list: LaunchOutcome[]): DevPattern | null {
   const ups = priced.filter((x) => x.firstCapUsd).map((x) => x.peakCapUsd! / x.firstCapUsd!);
   const round = (v: number | null, k = 1) => (v === null ? null : Math.round(v * k) / k);
   return {
-    launches: list.length,
+    launches: priced.length,
     firstCapUsd: round(median(priced.filter((x) => x.firstCapUsd).map((x) => x.firstCapUsd!))),
     peakCapUsd: round(median(priced.map((x) => x.peakCapUsd!))),
     upsideX: round(median(ups), 10),

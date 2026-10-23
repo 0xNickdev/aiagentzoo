@@ -202,7 +202,7 @@ test("a dev's launch keeps its caps and the dev's habits are read from them, liv
     assert.equal(past.peakCapUsd, 3333);
     assert.equal(past.afterDumpLowPct, -0.6);
     const p = devPattern([x, { ...x, peakCapUsd: 30_000, firstCapUsd: 5_000 }])!;
-    assert.equal(p.launches, 2);
+    assert.equal(p.launches, 2); // both priced
     assert.equal(p.reached20k, 0.5);
     assert.equal(p.dumps, 2);
     assert.deepEqual(repeatsOf([{ symbol: "PAW" }, { symbol: "$paw" }, { symbol: "ZIBR" }]), [{ symbol: "PAW", n: 2 }]);
