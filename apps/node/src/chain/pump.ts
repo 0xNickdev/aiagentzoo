@@ -28,6 +28,20 @@ const DISC = {
 /** Where a token was launched, when not pump.fun. */
 export type Venue = "launchlab" | "dbc";
 
+/** A trade on a followed pool, as the buy bot reads it. */
+export interface FollowedSwap {
+  seq: number;
+  mint: string;
+  pool: string;
+  isBuy: boolean;
+  sol: number;
+  tokens: number;
+  user: string;
+  ts: number;
+  poolSol: number;
+  tx: string | null;
+}
+
 export type PumpEvent =
   /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
   | {
@@ -507,6 +521,9 @@ export class PumpTape {
   seen: { launches: number; trades: number; launchlab?: number; dbc?: number } = { launches: 0, trades: 0 };
   private pulse: PulseEvent[] = [];
   private pulseSeq = 0;
+  /** Pools followed whether or not the tape tracks the token: the zoo's own, for the buy bot. */
+  private readonly followed = new Map<string, { mint: string; swaps: FollowedSwap[]; txs: Set<string> }>();
+  private followSeq = 0;
   /** Mints each creator launched, newest last, for as long as the tokens are kept. */
   private readonly byCreator = new Map<string, string[]>();
   /** PumpSwap pools of the tokens on the tape, pool to mint. */
@@ -592,6 +609,33 @@ export class PumpTape {
     return out.slice(-limit);
   }
 
+  /** Keep every trade on this pool, whatever the tape knows of the token. */
+  follow(mint: string, pool: string): void {
+    if (!this.followed.has(pool)) this.followed.set(pool, { mint, swaps: [], txs: new Set() });
+  }
+
+  /** Trades on a followed token's pools after a sequence number, oldest first. */
+  followedAfter(mint: string, after: number, limit = 50): FollowedSwap[] {
+    const out: FollowedSwap[] = [];
+    for (const f of this.followed.values()) if (f.mint === mint) out.push(...f.swaps.filter((s) => s.seq > after));
+    return out.sort((a, b) => a.seq - b.seq).slice(-limit);
+  }
+
+  private noteFollowed(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string): void {
+    const f = this.followed.get(ev.pool);
+    if (!f) return;
+    // The relay hands a restarted reader the last minute again: one trade, one entry.
+    if (tx) {
+      if (f.txs.has(tx)) return;
+      f.txs.add(tx);
+      if (f.txs.size > 2_000) f.txs = new Set([...f.txs].slice(-1_000));
+    }
+    // Sequence numbers are clock based, so a reader's cursor still holds after a restart.
+    this.followSeq = Math.max(this.followSeq + 1, now);
+    f.swaps.push({ seq: this.followSeq, mint: f.mint, pool: ev.pool, isBuy: ev.isBuy, sol: ev.sol, tokens: ev.tokens, user: ev.user, ts: ev.ts || now, poolSol: ev.poolSol, tx: tx ?? null });
+    if (f.swaps.length > 600) f.swaps = f.swaps.slice(-300);
+  }
+
   /** True while the stream is delivering; the agents only trust the tape then. */
   live(now = Date.now()): boolean {
     return this.connected && now - this.lastEventAt < 120_000;
@@ -655,7 +699,10 @@ export class PumpTape {
       }
       return;
     }
-    if (ev.kind === "swap") return this.swap(ev, now, tx, slot);
+    if (ev.kind === "swap") {
+      this.noteFollowed(ev, now, tx);
+      return this.swap(ev, now, tx, slot);
+    }
     const t = this.tokens.get(ev.mint);
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;

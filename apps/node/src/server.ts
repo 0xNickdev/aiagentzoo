@@ -628,6 +628,19 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const now = Date.now();
         return json(res, 200, { live: tape.live(now), perMinute: tape.perMinute(now), events: tape.pulseAfter(after) });
       }
+      // Trades on the zoo's own token, for the buy bot: each buyer with what the long memory knows of the wallet.
+      const swapsOf = /^\/v1\/chain\/swaps\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && swapsOf) {
+        const after = clampInt(url.searchParams.get("after"), 0, 0, Number.MAX_SAFE_INTEGER);
+        const swaps = tape.followedAfter(swapsOf[1]!, after);
+        const wallets: Record<string, { launches: number; dumped: number; snipes: number; crewHits: number; bundleHits: number; serial: boolean } | null> = {};
+        for (const s of swaps) {
+          if (!s.isBuy || s.user in wallets) continue;
+          const w = history?.wallet(s.user, 1);
+          wallets[s.user] = w ? { launches: w.launches, dumped: w.dumped, snipes: w.snipes, crewHits: w.crewHits, bundleHits: w.bundleHits, serial: w.serial } : null;
+        }
+        return json(res, 200, { live: tape.live(), swaps, wallets });
+      }
       // The koi's record and tonight's picks; it lives where the nursery does.
       if (req.method === "GET" && path === "/v1/koi") {
         if (!evolution) return json(res, 404, { error: "no koi on this node" });

@@ -4,6 +4,8 @@
  */
 
 export const TOKEN_MINT = process.env.ZOO_TOKEN_MINT ?? "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
+/** Its PumpSwap pool, followed by north for the buy bot. */
+export const TOKEN_POOL = process.env.ZOO_TOKEN_POOL ?? "CpZyjihejMJ8i6xRFL6Znmpt4HdgGirMvQh5QqdgJZ2v";
 /** Whole tokens a wallet must hold to count as a holder. */
 export const HOLDER_MIN = Number(process.env.ZOO_HOLDER_MIN ?? 500_000);
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
@@ -12,9 +14,9 @@ const CACHE_MS = 10 * 60_000;
 const cache = new Map<string, { at: number; balance: number }>();
 
 /** Whole $ZOOAGENCY tokens in a wallet, or null when the chain could not be read. */
-export async function balanceOf(owner: string, fetchFn: typeof fetch = fetch, now = Date.now()): Promise<number | null> {
+export async function balanceOf(owner: string, fetchFn: typeof fetch = fetch, now = Date.now(), fresh = false): Promise<number | null> {
   const hit = cache.get(owner);
-  if (hit && now - hit.at < CACHE_MS) return hit.balance;
+  if (hit && !fresh && now - hit.at < CACHE_MS) return hit.balance;
   try {
     const r = await fetchFn(RPC, {
       method: "POST",

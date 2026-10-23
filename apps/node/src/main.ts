@@ -27,7 +27,8 @@ import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
-import { balanceOf } from "./holders.ts";
+import { balanceOf, TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
+import { startBuyBot } from "./buybot.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 
 const config = loadConfig();
@@ -97,6 +98,8 @@ const saveTape = () => {
   renameSync(`${socialsFile}.tmp`, socialsFile);
 };
 if (config.role === "north") {
+  // Every trade on $ZOOAGENCY's pool, for the buy bot in the holders' group.
+  tape.follow(TOKEN_MINT, TOKEN_POOL);
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
@@ -182,6 +185,22 @@ const stopTelegram =
       })
     : null;
 
+// The buy bot: $ZOOAGENCY buys posted to the holders' group by the zoo's own bot, on the canyon where the bot lives.
+const buyChat = Number(process.env.ZOO_BUYBOT_CHAT ?? 0);
+const stopBuyBot =
+  config.role === "canyon" && process.env.TELEGRAM_BOT_TOKEN && buyChat && northUrl
+    ? startBuyBot({
+        token: process.env.TELEGRAM_BOT_TOKEN,
+        chat: buyChat,
+        thread: Number(process.env.ZOO_BUYBOT_THREAD ?? 0) || undefined,
+        northUrl,
+        store: enclosure.store,
+        minSol: Number(process.env.ZOO_BUYBOT_MIN_SOL ?? 0.1),
+        image: process.env.ZOO_BUYBOT_IMAGE || undefined,
+        log: (m) => console.log(`[${config.id}] ${m}`),
+      })
+    : null;
+
 // The zoo watching itself: model failures, a silent stream, a node down, a late brief, straight to the operators.
 const alertChats = String(process.env.ZOO_ALERT_CHAT ?? "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n !== 0);
 const stopWatchdog =
@@ -249,6 +268,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     }
     stopTelegram?.();
     stopWatchdog?.();
+    stopBuyBot?.();
     server.close(() => {
       db.close();
       process.exit(0);
