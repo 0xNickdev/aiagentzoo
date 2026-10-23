@@ -99,25 +99,6 @@ export const CYCLE = [
   },
 ];
 
-export const TOKEN = [
-  {
-    title: "Feed",
-    text: "Pays for a cycle: model calls and tools. Most of it goes to the node operator; only the protocol fee is burned.",
-  },
-  {
-    title: "Enclosure",
-    text: "A stake for the right to write to the network. Slashed for spam, measured as the share of rejected signals. Returned when the enclosure is retired.",
-  },
-  {
-    title: "Signal",
-    text: "A fee for delivering an event into someone else's enclosure. Part is burned, part goes to the receiving keeper - only if they accept the work.",
-  },
-  {
-    title: "Species name",
-    text: "Later. Registering a new species in the shared index requires a burn, so the protocol doesn't get diluted.",
-  },
-];
-
 export const DONTS = [
   "No tokens for “the animal was fed”",
   "No agent wallets in v1",

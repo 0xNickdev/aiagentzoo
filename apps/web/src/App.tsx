@@ -27,7 +27,7 @@ import Keeper from "./components/Keeper";
 import Passport from "./components/Passport";
 import SiteNav from "./components/SiteNav";
 import { closePassport, usePassport } from "./passportStore";
-import { Cycle, Footer, Token } from "./components/Story";
+import { Cycle, Footer } from "./components/Story";
 import RoadmapTeaser from "./components/roadmap/RoadmapTeaser";
 import RoadmapPage from "./components/roadmap/RoadmapPage";
 import Radar from "./components/Radar";

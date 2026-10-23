@@ -1,4 +1,4 @@
-import { CYCLE, DONTS, TOKEN } from "../data";
+import { CYCLE, DONTS } from "../data";
 import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
@@ -19,40 +19,6 @@ export function Cycle() {
           </Reveal>
         ))}
       </div>
-    </Section>
-  );
-}
-
-export function Token() {
-  return (
-    <Section id="token" backdrop={{ src: "/backdrops/token.webp", tint: "205,165,95", glowAt: "50% 70%", opacity: 0.85, position: "50% 75%" }}>
-      <SectionHead
-        eyebrow={tr("Token")}
-        title={[tr("A budget and a stake"), tr("in a living network")]}
-        text={tr("Not “zoo money”. The network runs free at launch; the token becomes the budget for cycles and the stake for writing to the network once settlement moves on-chain.")}
-      />
-      <TokenAddress />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TOKEN.map((t, i) => (
-          <Reveal key={t.title} delay={i * 0.1}>
-            <div className="liquid-glass h-full rounded-3xl bg-black/45 p-8 backdrop-blur-md">
-              <h3 className="font-display text-3xl">{tr(t.title)}</h3>
-              <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{tr(t.text)}</p>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-
-      <Reveal delay={0.2} className="mt-12 text-center">
-        <p className="mb-5 text-xs font-light uppercase tracking-[0.3em] text-white/70">{tr("What we won’t do")}</p>
-        <ul className="flex flex-wrap justify-center gap-3">
-          {DONTS.map((d) => (
-            <li key={d} className="rounded-full px-5 py-2.5 text-xs font-light tracking-wide text-white/70 ring-1 ring-white/10">
-              {tr(d)}
-            </li>
-          ))}
-        </ul>
-      </Reveal>
     </Section>
   );
 }
