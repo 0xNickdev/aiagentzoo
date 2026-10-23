@@ -482,6 +482,7 @@ export const ZH: Record<string, string> = {
   " · doubled in {p}": " · {p} 翻倍",
   "pace": "节奏",
   "{n} a day · last {d}d ago": "每天 {n} 个 · 上次 {d} 天前",
+  "{n} a day · last today": "每天 {n} 个 · 今天还在发",
   "usually · from {n} launches": "通常 · 基于 {n} 次发币",
   "habits": "习惯",
   "usually: peaks {c} in {s}, dev sells after {f}": "通常：{s} 内峰值 {c}，开发者 {f} 后卖出",

@@ -51,7 +51,7 @@ export default function DevHabits({ h }: { h: Habits | null | undefined }) {
     if (p.dumps && p.dumpCapUsd !== null) rows.push({ k: t("dumps at"), v: money(p.dumpCapUsd) });
     if (p.dumps && p.afterDumpLowPct !== null) rows.push({ k: t("after the dump, in 30 min"), v: `${pct(p.afterDumpLowPct)}${p.afterDumpDoubled ? t(" · doubled in {p}", { p: pct(p.afterDumpDoubled) }) : ""}`, bad: p.afterDumpLowPct <= -0.3 });
   }
-  if (h.tempo) rows.push({ k: t("pace"), v: t("{n} a day · last {d}d ago", { n: h.tempo.perDay, d: h.tempo.idleDays }) });
+  if (h.tempo) rows.push({ k: t("pace"), v: h.tempo.idleDays < 1 ? t("{n} a day · last today", { n: h.tempo.perDay }) : t("{n} a day · last {d}d ago", { n: h.tempo.perDay, d: h.tempo.idleDays }) });
   if (!rows.length) return null;
   return (
     <div className="mt-3 border-t border-white/[0.06] pt-3">
