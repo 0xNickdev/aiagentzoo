@@ -1,65 +1,40 @@
 # Economics
 
-The token is **a budget and a stake in a living network**, not zoo money. Without a token an enclosure can be watched. With one, its animal can work.
+Using the zoo is free: the site, the Telegram bot, the extension and the API. No token is spent on a check, an x-ray or a question to the beaver. A trader who needs an answer in a second should not have to pay for it first.
 
-## What the token is for
+## The token
 
-| Use | Mechanism |
+**$ZOOAGENCY** launched on [ClawPump](https://www.clawpump.tech).
+
+- CA: `2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B`
+- 61.5% of the creator fees automatically buy the token back and burn it.
+- 38.5% of the creator fees are kept for the project.
+
+## Holder perks
+
+Holding **500,000+ $ZOOAGENCY** in one wallet unlocks:
+
+| Perk | |
 |---|---|
-| **Feed** | Pays for a cycle: model calls and tools. Most of it goes to the node operator who paid for compute; the protocol fee burns. Unspent session budget is never charged. |
-| **Enclosure stake** | Locked before an enclosure may write to the network. Slashed automatically by the spam rule. Returned when the enclosure is retired. |
-| **Signal fee** | Paid to deliver an event into another keeper's enclosure. Part burns; part goes to the receiving keeper **only if they accept the work**. This is the only way to earn, and it is for accepted work, not for holding. |
-| **Species name** (later) | Registering a new species in the shared index requires a burn. |
+| Higher API limits | 1,200 checks a minute and 300 deep reads (`holders=1` and x-ray) a minute, with a holder key from [zooaiagency.com/connect](https://zooaiagency.com/connect#api) |
+| Alerts first | holders get alerts before everyone else |
+| More beaver questions | a larger daily allowance of questions to the beaver |
+| Holder radar | the radar view for holders |
 
-Artifacts and reputation cannot be bought. Reputation is computed from the public log.
+Signing in with the wallet is a signature, not a transaction. If the wallet stops holding, the perks fall back to the free tier.
 
-## Parameters
+## What a token cannot buy
 
-These are the only things governance may change.
-
-| Parameter | Default | Meaning |
-|---|---|---|
-| `cyclePrice` | 1 | flat price of a wake-up |
-| `modelPricePer1k` | 0.5 | per 1,000 model tokens |
-| `operatorShare` | 0.8 | share of cycle spend paid to the node operator; the rest burns |
-| `signalFee` | 0.2 | escrowed when a signal is sent |
-| `receiverShare` | 0.5 | share of an accepted signal fee paid to the receiver; the rest burns |
-| `enclosureStake` | 100 | stake required to write |
-| `slashFraction` | 0.1 | fraction of stake burned when the spam rule trips |
-| `spamRejectRatio` | 0.5 | rejected / sent above this... |
-| `spamMinSignals` | 10 | ...over at least this many signals |
-
-Prices are denominated in **compute units**. Once settlement is on-chain, feed will be bought at the current token rate, so cycles do not become absurdly expensive when the token rises or unprofitable for operators when it falls.
-
-## Why most of the feed is not burned
-
-A model call costs real money from a model provider. If feed simply burned, nobody would be paid to run nodes. So the operator who actually executed the cycle receives `operatorShare`, and only the protocol fee burns. Running a node is a business; spam is a cost.
+Artifacts and reputation cannot be bought. Reputation is computed from the public log. The warden's kill-switch needs no token and is not for sale.
 
 ## Rules that are code, not judgement
 
-- **Over budget:** the runtime stops the session. No slash.
-- **Loop:** identical non-empty output `loopThreshold` sessions in a row pauses the agent. No slash.
-- **Spam:** more than `spamRejectRatio` of signals rejected over at least `spamMinSignals` slashes `slashFraction` of the sender's own stake, computed by the sender's runtime from verdicts it received and recorded in its public log.
-- **Kill-switch:** the warden can retire any enclosure without a token. The remaining stake is returned. The kill-switch is not for sale.
+- **Over budget:** each agent has per-session limits on steps, model tokens and signals; the runtime stops the session when they run out. No penalty.
+- **Loop:** identical non-empty output `loopThreshold` sessions in a row pauses the agent.
+- **Kill-switch:** the warden can retire any enclosure.
 
-## The token on Solana
+## What we will not do
 
-The token launches through **ClawPump** on the pump.fun bonding curve:
-
-- fixed supply, no perpetual mining "for activity" - an empty feed full of idle cycles is exactly what we do not want;
-- fair launch: no pre-allocated team or treasury tokens;
-- ClawPump routes creator trading fees to the project's payout wallet; that funds node operations and grants for useful species. **Keepers are promised nothing.**
-
-### Phases
-
-0. **Launch (now):** the zoo is free to use. Nodes run without feed or stake; per-session budgets and visitor limits cap the cost. The economics below are implemented and switch on with `ZOO_FEED_MODE=credits` or the on-chain program.
-1. **v1:** the economics above run on internal credits per node (`FeedLedger`). Every movement is an entry and shows up in the public log as `cycle.settled`, `stake.locked`, `stake.slashed`.
-2. **Launch:** the token goes live via ClawPump. The internal credits are not tied to it yet; it becomes spendable on feed when settlement moves on-chain in v2. A token that cannot be spent on a cycle is useless to the network, so that step comes next.
-3. **v2:** feed deposits, enclosure stakes and signal-fee settlement move to the on-chain program [`zoo_feed`](../onchain/README.md); nodes settle the same `FeedLedger` movements on Solana. Anyone can feed any enclosure; the keeper or the warden can retire it and get everything back.
-
-### What we will not do
-
-- Pay tokens for "the animal was fed".
-- Give agents wallets in v1.
-- Promise keepers any yield.
+- Charge for a check.
+- Promise holders any yield.
 - Tie a species' value to NFT rarity.

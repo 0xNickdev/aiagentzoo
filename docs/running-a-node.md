@@ -32,12 +32,10 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ZOO_ADMIN_TOKEN` | unset | enables warden routes |
 | `ZOO_BRIEF_AT` | `07:00` | UTC publish time |
 | `ZOO_SCAN_EVERY_MS` | `600000` | sentinel cadence |
-| `ZOO_FEED_MODE` | `free` | `free`: no feed or stake, budgets and visitor limits still apply. `credits`: v1 internal feed ledger |
-| `ZOO_FEED_GRANT` | `10000` | credits granted at boot in `credits` mode |
 | `ZOO_CORS_ORIGIN` | `*` | for the public read routes |
-| `OPENAI_API_KEY` | unset | lets builders and archivists think with OpenAI; takes precedence over Anthropic |
-| `ANTHROPIC_API_KEY` | unset | lets builders and archivists think with Claude |
-| `ZOO_MODEL` | `gpt-5-mini` / `claude-opus-5-5` | model id for whichever provider is on |
+| model provider key | unset | the provider's API key in the environment lets builders and archivists think; without one they run on rules (see [`.env.example`](../apps/node/.env.example)) |
+| `ZOO_MODEL` | provider default | model id for the provider that is on |
+| `ZOO_HISTORY` | on (north) | `off` skips `history.db`, the 90-day memory the X-Ray reads after the 48-hour tape forgets a launch |
 | `ZOO_JUDGE_EVERY_MS` | `1800000` | how often the beaver judges the night's new tokens |
 | `ZOO_OBS_CAP` | `4000` | most tokens the beaver keeps per night |
 | `ZOO_GUESTS` | on (canyon) | `off` closes the guest wing |
@@ -52,32 +50,32 @@ docker compose --env-file .env.federation up --build
 
 Each service keeps its database in a named volume.
 
-## Railway
+## Production
 
-The public federation runs on Railway: one service per enclosure, built from `apps/node/Dockerfile`.
+The public federation runs on our own server: one docker container per enclosure, each built from `apps/node/Dockerfile`, behind Caddy for HTTPS.
 
-| Service | Public URL |
+| Node | Public URL |
 |---|---|
 | north | https://north.zooaiagency.com |
 | marsh | https://marsh.zooaiagency.com |
 | canyon | https://canyon.zooaiagency.com |
 
-Per service:
+Per container:
 
-- a volume mounted at `/data` (Railway volumes replace the Dockerfile `VOLUME`),
-- `RAILWAY_DOCKERFILE_PATH=apps/node/Dockerfile`, `PORT=8787`, `ZOO_DATA_DIR=/data`,
+- a volume mounted at `/data` (the log, state and, on north, `history.db`),
+- `PORT=8787`, `ZOO_DATA_DIR=/data`,
 - `ZOO_ROLE`, `ZOO_NODE_ID`, `ZOO_NODE_SECRET`, `ZOO_ADMIN_TOKEN`,
-- `ZOO_PEERS` pointing at the other services over the private network, e.g. `http://canyon.railway.internal:8787`.
+- `ZOO_PEERS` pointing at the other nodes, over the docker network (e.g. `http://canyon:8787`) or their public https hosts.
 
-Deploy a change with `railway up --service <id> --detach` from the repository root.
+The same setup works on any host that runs docker: build the image from the repository root with `docker build -f apps/node/Dockerfile .`, give each container its own `/data` volume and its env, and put any reverse proxy with HTTPS in front.
 
-The site reads the public URLs from `VITE_ZOO_NODES` in the Vercel project.
+The site reads the public URLs from `VITE_ZOO_NODES` in the Vercel project, and proxies north's API at `https://zooaiagency.com/api/north/<path>` (e.g. `/api/north/v1/stats`); `/api/check/<mint>` and `/api/xray/<mint>` are short forms of north's `/v1/check` and `/v1/xray`.
 
 ## Operating
 
 - **Watch:** `curl localhost:8783/v1/stream`
 - **Wake an agent:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" localhost:8783/v1/agents/tortoise/wake`
-- **Kill-switch:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" -d '{"reason":"…"}' localhost:8783/v1/warden/retire`
+- **Kill-switch:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" -d '{"reason":"..."}' localhost:8783/v1/warden/retire`
 - **Audit:** fetch `/v1/log` and run `verifyChain(entries)` from the SDK.
 
 Briefs are also written as Markdown to `$ZOO_DATA_DIR/briefs/`.

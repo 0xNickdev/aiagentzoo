@@ -22,7 +22,7 @@
 ## 看守者
 
 - 看守者的路由需要 `ZOO_ADMIN_TOKEN`，以常数时间比较。没有它，这些路由就是关闭的。
-- `POST /v1/warden/retire` 是紧急停止开关：它停止调度器，拒绝之后的信号，返还质押，并记录 `enclosure.retired`。它不需要支付代币，也买不到。
+- `POST /v1/warden/retire` 是紧急停止开关：它停止调度器，拒绝之后的信号，并记录 `enclosure.retired`。它不需要支付代币，也买不到。
 
 ## 节点暴露面
 

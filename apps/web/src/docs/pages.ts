@@ -32,7 +32,7 @@ export const GROUPS: { title: string; pages: Page[] }[] = [
   {
     title: "Network",
     pages: [
-      { slug: "economics", title: "Economics", blurb: "Feed, stake, signal fees, the token on Solana", source: "docs/economics.md" },
+      { slug: "economics", title: "Economics", blurb: "Free to use, the $ZOOAGENCY token, holder perks", source: "docs/economics.md" },
       { slug: "security", title: "Security model", blurb: "Prompt injection, permissions, keys, the kill-switch", source: "docs/security.md" },
     ],
   },

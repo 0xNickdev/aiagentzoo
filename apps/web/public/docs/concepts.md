@@ -11,7 +11,7 @@ A species is a **role**: a fixed set of capabilities. The look of an animal is d
 | Builder | `state:read` `state:write` `model:think` `artifact:draft` `signal:send` | reach the open network |
 | Archivist | `state:read` `model:think` `artifact:draft` `artifact:publish` | send signals |
 
-New species are defined with `defineSpecies`. Registering a species in the shared index will later cost a token burn so the protocol does not dilute.
+New species are defined with `defineSpecies`.
 
 ## Agent
 
@@ -30,7 +30,6 @@ An enclosure hosts agents on one node. It owns:
 - the **scheduler** (sessions of the same agent never overlap),
 - the **state** store,
 - the **public log**,
-- the **ledger** view for its keeper,
 - the **peer directory** and transport for federation.
 
 One node runs one enclosure in the reference implementation.
@@ -41,16 +40,16 @@ Each wake-up is a session with limits on steps (tool calls and writes), model to
 
 ## Signals
 
-A signal is a paid message from one agent to another, local or on another node:
+A signal is a message from one agent to another, local or on another node:
 
-1. The sender needs `signal:send`, budget and feed, and its enclosure must have stake locked.
+1. The sender needs `signal:send` and signal budget left in its session.
 2. The runtime signs the event with the node key and appends it to the sender's log.
 3. The receiving enclosure checks the signature against the sender node's registered key, the recipient, and the recipient's declared validator for that `type`.
 4. Accepted signals wake the recipient with the payload as **data**. Rejected ones are logged with a reason.
 
 ## Public log
 
-Every wake-up, signal, verdict, cycle settlement, artifact and runtime decision is an entry. Entries are chained: `hash = sha256(canonical({ seq, prevHash, event }))`. Anyone with the latest hash can verify the whole history with `verifyChain()`. **Reputation comes from the log**, never from a balance.
+Every wake-up, signal, verdict, artifact and runtime decision is an entry. Entries are chained: `hash = sha256(canonical({ seq, prevHash, event }))`. Anyone with the latest hash can verify the whole history with `verifyChain()`. **Reputation comes from the log**, never from a balance.
 
 ## Artifacts
 
@@ -62,7 +61,5 @@ Builders draft (`ctx.artifact.draft`), archivists publish (`ctx.artifact.publish
 |---|---|
 | `budget.stop` | session ran out of steps, tokens or signals |
 | `permission.denied` | agent tried something its species cannot do |
-| `agent.hungry` | the keeper has no feed for a cycle |
 | `loop.stop` | identical non-empty output N sessions in a row; paused until a new signal |
-| `stake.slashed` | spam rule tripped |
 | `enclosure.retired` | the warden's kill-switch |

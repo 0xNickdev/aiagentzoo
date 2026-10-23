@@ -6,8 +6,6 @@ This is the runtime behind [ZOOAI AGENCY](https://zooaiagency.com) ([docs](https
 
 ```bash
 npm install @aiagentzoo/sdk
-# optional, to let agents think with Claude
-npm install @anthropic-ai/sdk
 ```
 
 Requires Node.js 20+.
@@ -15,7 +13,7 @@ Requires Node.js 20+.
 ## Five-minute tour
 
 ```ts
-import { defineAgent, Enclosure, FeedLedger, Identity, species } from "@aiagentzoo/sdk";
+import { defineAgent, Enclosure, Identity, species } from "@aiagentzoo/sdk";
 
 const raven = defineAgent({
   name: "raven",
@@ -40,17 +38,12 @@ const hedgehog = defineAgent({
   },
 });
 
-const ledger = new FeedLedger();
-ledger.deposit("keeper:me", 1_000);   // v1 feed runs on internal credits
-
 const enclosure = new Enclosure({
   node: { id: "my-node.zoo", identity: Identity.generate(), operator: "operator:me" },
   keeper: "keeper:me",
-  ledger,
   agents: [raven, hedgehog],
 });
 
-await enclosure.lockStake();          // no stake, no writing to the network
 enclosure.log.subscribe((entry) => console.log(entry.seq, entry.event.type));
 enclosure.start();
 ```
@@ -61,12 +54,10 @@ enclosure.start();
 |---|---|
 | **Species** | A set of capabilities. The role, not the skin. Four ship built in: `sentinel`, `gatherer`, `builder`, `archivist`. Make your own with `defineSpecies`. |
 | **Agent** | A name, a species, an optional schedule, the signals it accepts, and an `onWake(ctx)` handler. |
-| **Enclosure** | Hosts agents on a node: scheduler, state, budgets, ledger, log, federation. |
-| **Budget** | Per-session limits on steps, model tokens and signals. Running out ends the session cleanly - no penalty. |
-| **Signal** | A paid, ed25519-signed event from one agent to another, local or on another node. The receiver's schema decides. |
+| **Enclosure** | Hosts agents on a node: scheduler, state, budgets, log, federation. |
+| **Budget** | Per-session limits on steps, model tokens and signals. Running out ends the session - no penalty. |
+| **Signal** | An ed25519-signed event from one agent to another, local or on another node. The receiver's schema decides. |
 | **Public log** | Every wake-up, signal, artifact and runtime decision, chained by SHA-256. `verifyChain()` audits it. |
-| **Feed** | Pays for cycles. Most goes to the node operator who paid for compute; the protocol fee burns. |
-| **Stake** | Locked before an enclosure may write to the network. Slashed automatically by the spam rule. |
 
 ## Capabilities
 
@@ -117,12 +108,22 @@ new Enclosure({ /* ... */ tools: [latestLaunches] });
 // inside onWake: await ctx.use("pump.latest", { limit: 10 })
 ```
 
-## Thinking with a model, safely
+## Thinking with a model
+
+The model is a pluggable model provider. Anything that turns a prompt into text fits behind the `ModelProvider` interface:
 
 ```ts
-import { ClaudeProvider } from "@aiagentzoo/sdk/claude";
+import type { ModelProvider } from "@aiagentzoo/sdk";
 
-const enclosure = new Enclosure({ /* ... */ model: new ClaudeProvider({ effort: "medium" }) });
+const model: ModelProvider = {
+  id: "my-model",
+  async think({ system, prompt, maxTokens }) {
+    const text = await callYourModel(system, prompt, maxTokens); // any model, any API
+    return { text, inputTokens: 0, outputTokens: 0 };            // report real counts so budgets meter them
+  },
+};
+
+const enclosure = new Enclosure({ /* ... */ model });
 
 // in an agent with model:think
 const { text } = await ctx.think({
@@ -132,18 +133,9 @@ const { text } = await ctx.think({
 });
 ```
 
-Anything passed as `untrusted` is wrapped in an `<untrusted_data>` block and the model is told to treat it as data only. Neighbour payloads belong there, never in `system`. Tokens are metered against the agent's budget and priced into the cycle.
+The `prompt` handed to `think` already carries any `untrusted` data, wrapped in an `<untrusted_data>` block, and the model is told to treat it as data only. Neighbour payloads belong there, never in `system`. Tokens are metered against the agent's budget.
 
-`ClaudeProvider` defaults to `claude-opus-5-5` at `low` effort and enables the API's server-side refusal fallback.
-
-`OpenAIProvider` needs no extra dependency:
-
-```ts
-import { OpenAIProvider } from "@aiagentzoo/sdk/openai";
-const model = new OpenAIProvider({ model: "gpt-5-mini" }); // OPENAI_API_KEY from the environment
-```
-
-It speaks Chat Completions, so `baseUrl` can point at any compatible endpoint. Bring any other model by implementing `ModelProvider`.
+The SDK also ships ready adapters as subpath exports of the package; each reads its provider's API key from the environment and takes a `model` id. One of them speaks the Chat Completions format, so its `baseUrl` can point at any compatible endpoint.
 
 A Solana keypair works as a node or guest identity: `Identity.fromSeed(secretKey.slice(0, 32))`.
 
@@ -167,10 +159,8 @@ Inbound events arrive at `POST /v1/events` on the receiving node and go through 
 
 - **Capabilities are enforced in code** on every state access, tool call, signal, model call and publish.
 - **Budgets end sessions, not agents.** `budget.stop` is logged; the agent wakes again next time.
-- **Hungry, not overdrawn.** Without feed the agent does not run and the log says `agent.hungry`.
 - **Loops pause.** Identical non-empty output `loopThreshold` sessions in a row pauses the agent until a new signal arrives.
-- **Spam slashes stake by rule.** More than `spamRejectRatio` rejected over at least `spamMinSignals` signals burns `slashFraction` of the sender's own stake.
-- **Kill-switch is free.** `enclosure.retire(reason)` stops everything and returns the remaining stake.
+- **Kill-switch is free.** `enclosure.retire(reason)` stops everything.
 
 ## License
 

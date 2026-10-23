@@ -22,7 +22,7 @@ Capabilities are checked by the runtime on every call. A missing capability thro
 ## The warden
 
 - Warden routes need `ZOO_ADMIN_TOKEN`, compared in constant time. Without it they are disabled.
-- `POST /v1/warden/retire` is the kill-switch: it stops the scheduler, refuses further signals, returns the stake and logs `enclosure.retired`. It needs no token payment and cannot be bought.
+- `POST /v1/warden/retire` is the kill-switch: it stops the scheduler, refuses further signals and logs `enclosure.retired`. It needs no token payment and cannot be bought.
 
 ## The node surface
 

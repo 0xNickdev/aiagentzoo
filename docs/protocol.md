@@ -74,14 +74,14 @@ The receiver accepts only if **all** hold:
 3. `from.node` is a known peer and `sig` verifies against its key
 4. the recipient declared a validator for `type` and it returns `true`
 
-Both sides log the outcome. The sender settles the signal fee from the verdict.
+Both sides log the outcome.
 
 ## Node API
 
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/health` | liveness |
-| `GET` | `/v1/node` | id, name, public key, log head, peers, feed summary |
+| `GET` | `/v1/node` | id, name, public key, log head, peers |
 | `GET` | `/v1/agents` | status of each agent |
 | `GET` | `/v1/agents/:name` | passport: stats and last steps derived from the log |
 | `GET` | `/v1/log?after=&limit=` | log entries, oldest first, max 1000 |

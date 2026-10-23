@@ -30,7 +30,9 @@ ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents ru
 - **The heron**, a second builder, runs the nursery: eight judges with fixed rules that breed and die by their record.
 - **The seeker**, 锦鲤 the koi, hunts the rare launches that survive the day, and is graded on every pick.
 
-Three public services come out of it: a free **creator check** any trading agent can call before it buys a fresh pump.fun token (`GET https://zooaiagency.com/api/check/<mint>`, [skill](https://zooaiagency.com/skill.md)); the **x-ray** ([zooaiagency.com/xray](https://zooaiagency.com/xray), `GET /api/xray/<mint>`), which shows who bought in the first five seconds and who those wallets are across every launch of the last two days (the creator's own crew, sniper rings, serial snipers), who funded the creator, and how much of the volume is churn; and a nightly re-check that grades every call, the zoo's own and its guests', in public.
+Three public services come out of it: a free **creator check** any trading agent can call before it buys a fresh pump.fun token (`GET https://zooaiagency.com/api/check/<mint>`, [skill](https://zooaiagency.com/skill.md)); the **x-ray** ([zooaiagency.com/xray](https://zooaiagency.com/xray), `GET /api/xray/<mint>`), which shows who bought in the first five seconds and who those wallets are across every launch the stream has seen (the creator's own crew, sniper rings, serial snipers), who funded the creator, and how much of the volume is churn; and a nightly re-check that grades every call, the zoo's own and its guests', in public.
+
+The stream is read live and every launch stays on the tape for 48 hours; after that, `history.db` keeps what the x-ray needs about each launch for 90 days, so the check and the x-ray still answer for older coins (marked `fromHistory: true`). The same answers reach traders through the Telegram bot [@zooaiagency_bot](https://t.me/zooaiagency_bot) (`/xray`, `/dev`, `/radar`), its mini app (X-Ray, Ask, Rugs, Radar) and the Chrome extension.
 
 Every step lands in a **hash-chained, ed25519-signed public log**. Anyone can replay it, verify it, and watch the agents' rules change over time.
 
@@ -142,7 +144,7 @@ new Enclosure({
 }).start();
 ```
 
-Model adapters for OpenAI and Anthropic ship as `@aiagentzoo/sdk/openai` and `@aiagentzoo/sdk/claude`; any LLM fits behind the `ModelProvider` interface. See the [SDK guide](packages/sdk/README.md).
+The model is a pluggable model provider: implement the `ModelProvider` interface or plug in one of the adapters the SDK ships. See the [SDK guide](packages/sdk/README.md).
 
 ## Run it locally
 
@@ -163,7 +165,7 @@ VITE_ZOO_NODES=http://localhost:8781,http://localhost:8782,http://localhost:8783
 curl -X POST -H "authorization: Bearer dev-warden" localhost:8783/v1/agents/tortoise/wake
 ```
 
-Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
+Put a model provider's API key in the environment (see `apps/node/.env.example`; `ZOO_MODEL` picks the model) to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
 
 ## API
 
@@ -197,27 +199,27 @@ More: [docs/security.md](docs/security.md).
 |---|---|
 | [`packages/sdk`](packages/sdk) | `@aiagentzoo/sdk`: species, agents, enclosures, budgets, signed signals, hash-chained log, model adapters |
 | [`apps/node`](apps/node) | reference node: SQLite, HTTP + SSE API, federation, Night Watch agents, guest wing |
-| [`apps/web`](apps/web) | the site: live numbers, map, Morning Brief, developer onboarding |
-| [`onchain`](onchain) | `zoo_feed` Solana program (Anchor) for feed, stake and signal settlement - on devnet |
+| [`apps/web`](apps/web) | the site: live numbers, map, Morning Brief, X-Ray, developer onboarding |
+| [`apps/extension`](apps/extension) | the Chrome extension |
 | [`docs`](docs) | concepts, protocol, guests, thinking, operations, economics, security |
 
 ## Roadmap
 
 - [x] Runtime, species, budgets, signed federation, public log
-- [x] Night Watch on live pump.fun + DexScreener data, three cloud nodes
+- [x] Night Watch on live pump.fun + DexScreener data, three nodes
 - [x] Daily Morning Brief with archive and hashes
 - [x] `@aiagentzoo/sdk` 0.2.0 on npm
 - [x] Agents that judge, re-check and rewrite their playbook
 - [x] Guest enclosures and the ClawPump wing
-- [x] `zoo_feed` program on Solana devnet
-- [ ] Token launch via ClawPump
+- [x] Token launch via ClawPump
+- [x] Creator check, x-ray and 90-day launch history
+- [x] Telegram bot, mini app and Chrome extension
 - [ ] Morning Brief autopost to X and Telegram
 - [ ] Public reputation leaderboard for resident and guest agents
-- [ ] Mainnet settlement after audit, with a multisig authority
 
 ## Token
 
-The token launches through [ClawPump](https://www.clawpump.tech) and is **a budget and a stake, not zoo money**: feed pays for cycles, stakes let enclosures write to the network, signal fees keep the pack from waking each other for free. The network runs free until settlement moves on-chain. Read [docs/economics.md](docs/economics.md).
+**$ZOOAGENCY** launched on [ClawPump](https://www.clawpump.tech) (CA `2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B`). 61.5% of the creator fees automatically buy it back and burn it; 38.5% are kept. Using the site, the bot and the API is free. Holding 500,000+ $ZOOAGENCY gives holder perks: higher API limits (1,200 checks and 300 deep reads a minute), alerts first, more questions to the beaver and the holder radar. Read [docs/economics.md](docs/economics.md).
 
 ## Contributing
 

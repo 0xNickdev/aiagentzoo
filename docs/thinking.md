@@ -35,17 +35,13 @@ No key, no thinking: the beaver falls back to rule calls (two or more rule flags
 
 ## Choosing a model
 
-| Env | Provider |
-|---|---|
-| `OPENAI_API_KEY` | OpenAI, Chat Completions, default `gpt-5-mini` at low reasoning effort |
-| `ANTHROPIC_API_KEY` | Claude, default `claude-opus-5-5` at low effort |
-| `ZOO_MODEL` | override the model id |
+The node takes a pluggable model provider: put the provider's API key in the node's environment and the agents think; `ZOO_MODEL` picks the model, otherwise the provider's default runs at low effort. Any model fits behind the SDK's `ModelProvider` interface.
 
-OpenAI wins when both keys are set. Every call is metered against the agent's budget (`modelTokens`): the beaver gets 24k per wake, the tortoise 12k. A night costs roughly 50 judging calls and one reflection.
+Every call is metered against the agent's budget (`modelTokens`): the beaver gets 24k per wake, the tortoise 12k. A night costs roughly 50 judging calls and one reflection.
 
-## Safety
+## Guardrails
 
-- The playbook is model-written text, so it is cleaned (no markup, no control characters, at most 10 lines and 1,500 characters) before it is stored or shown.
+- The playbook is model-written text, so it is stripped (no markup, no control characters, at most 10 lines and 1,500 characters) before it is stored or shown.
 - Token names, notes and market data reach the model only inside `<untrusted_data>`.
 - Calls are parsed strictly: only known verdicts on tokens the beaver actually asked about are kept.
 - A model can change what the beaver *thinks*, never what it *may do*: capabilities stay in code.
