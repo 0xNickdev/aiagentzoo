@@ -195,8 +195,8 @@ const stopBuyBot =
         thread: Number(process.env.ZOO_BUYBOT_THREAD ?? 0) || undefined,
         northUrl,
         store: enclosure.store,
-        minSol: Number(process.env.ZOO_BUYBOT_MIN_SOL ?? 0.1),
-        image: process.env.ZOO_BUYBOT_IMAGE || undefined,
+        minSol: Number(process.env.ZOO_BUYBOT_MIN_SOL ?? 1),
+        image: process.env.ZOO_BUYBOT_IMAGE || "https://zooaiagency.com/telegram/buybot.jpg",
         log: (m) => console.log(`[${config.id}] ${m}`),
       })
     : null;

@@ -4,8 +4,8 @@ import { balanceOf, TOKEN_MINT } from "./holders.ts";
 
 /**
  * The buy bot in the holders' group: every buy of $ZOOAGENCY above a floor, posted by the zoo's own Telegram bot.
- * North follows the token's pool on the stream; this reads its trades, asks the chain what the buyer holds now and
- * the long memory who the wallet is, and posts one quiet message per buy. No ads, no trending, no buttons for others.
+ * North follows the token's pool on the stream; this reads its trades, asks the chain what the buyer holds now
+ * and posts one message per buy. No ads, no trending, no buttons for others.
  */
 
 const API = "https://api.telegram.org";
@@ -13,15 +13,6 @@ const SITE = "https://zooaiagency.com";
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 /** At most this many buys posted one by one per round; the rest are summed in one line. */
 const PER_ROUND = 6;
-
-export interface BuyerRecord {
-  launches: number;
-  dumped: number;
-  snipes: number;
-  crewHits: number;
-  bundleHits: number;
-  serial: boolean;
-}
 
 export interface BuyBotOptions {
   token: string;
@@ -48,7 +39,6 @@ export interface BuyFacts {
   balance: number | null;
   solUsd: number | null;
   supply: number | null;
-  who: BuyerRecord | null;
 }
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
@@ -64,17 +54,6 @@ export function compact(n: number): string {
 
 const usd = (n: number) => (n >= 1000 ? `$${compact(n)}` : `$${n.toFixed(2)}`);
 
-/** What the long memory says about the buyer, worst first; nothing for a wallet it has no record of. */
-export function whoLine(r: BuyerRecord | null): string | null {
-  if (!r) return null;
-  if (r.serial) return `serial dumper: launched ${r.launches}, dumped ${r.dumped}`;
-  if (r.dumped > 0) return `dev of ${r.launches} coins, dumped ${r.dumped}`;
-  if (r.bundleHits >= 3) return `bundled ${r.bundleHits} launches`;
-  if (r.snipes >= 5) return `sniped ${r.snipes} launches`;
-  if (r.launches > 0) return `dev of ${r.launches} coins, none dumped`;
-  return null;
-}
-
 /** New holder, or how much the buyer holds now. */
 export function holderLine(tokens: number, balance: number | null, supply: number | null): string | null {
   if (balance === null || balance < tokens * 0.98) return null; // the chain has not caught up with the buy yet
@@ -83,25 +62,31 @@ export function holderLine(tokens: number, balance: number | null, supply: numbe
   return `holds ${compact(balance)}${share}, +${Math.round((tokens / (balance - tokens)) * 100)}%`;
 }
 
+/** A row of bills as long as the buy: one per 0.1 SOL, at most 40. */
+export function bills(sol: number): string {
+  return "💵".repeat(Math.max(1, Math.min(40, Math.round(sol * 10))));
+}
+
+/** 0.0000180583 -> $0.0000180583: six significant digits, never in exponent form. */
+const priceUsd = (n: number) => `$${n.toFixed(Math.max(2, 5 - Math.floor(Math.log10(n))))}`;
+
 export function buyMessage(f: BuyFacts): string {
   const s = f.swap;
   const price = s.tokens > 0 ? s.sol / s.tokens : 0;
   const cap = f.supply && f.solUsd ? price * f.supply * f.solUsd : null;
   const holder = holderLine(s.tokens, f.balance, f.supply);
-  const who = whoLine(f.who);
-  const lines = [
-    `<b>$${esc(f.symbol)} buy</b>`,
+  const wallet = `<a href="${SITE}/xray?wallet=${s.user}">${short(s.user)}</a>`;
+  return [
+    `<b>$${esc(f.symbol)} Buy!</b>`,
+    bills(s.sol),
     "",
-    `<b>${s.sol.toFixed(s.sol >= 10 ? 1 : 2)} SOL</b>${f.solUsd ? ` (${usd(s.sol * f.solUsd)})` : ""}`,
-    `${compact(s.tokens)} ${esc(f.symbol)}`,
-    `<a href="${SITE}/xray?wallet=${s.user}">${short(s.user)}</a>${holder ? ` · ${holder}` : ""}`,
-    ...(who ? [who] : []),
-    ...(cap ? [`mcap ${usd(cap)}`] : []),
-    "",
-    `<a href="https://solscan.io/tx/${s.tx ?? ""}">tx</a> · <a href="${SITE}/xray?wallet=${s.user}">x-ray the wallet</a>`,
-  ];
-  if (!s.tx) lines.pop();
-  return lines.join("\n");
+    `💲 <b>${s.sol.toFixed(s.sol >= 10 ? 1 : 2)} SOL</b>${f.solUsd ? ` (${usd(s.sol * f.solUsd)})` : ""}`,
+    `🪙 ${compact(s.tokens)} ${esc(f.symbol)}`,
+    `👀 ${wallet}${s.tx ? ` | <a href="https://solscan.io/tx/${s.tx}">Txn</a>` : ""}`,
+    ...(holder ? [holder === "new holder" ? "🆕 New holder!" : `👜 ${holder[0]!.toUpperCase()}${holder.slice(1)}`] : []),
+    ...(f.solUsd && price ? [`📊 Price ${priceUsd(price * f.solUsd)}`] : []),
+    ...(cap ? [`📈 Market Cap ${usd(cap)}`] : []),
+  ].join("\n");
 }
 
 export function startBuyBot(opts: BuyBotOptions): () => void {
@@ -109,7 +94,7 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   const log = opts.log ?? console.log;
   const mint = opts.mint ?? TOKEN_MINT;
   const symbol = opts.symbol ?? "ZOOAGENCY";
-  const minSol = opts.minSol ?? 0.1;
+  const minSol = opts.minSol ?? 1;
   const keyboard = [[{ text: `Buy $${symbol}`, url: `https://jup.ag/swap/SOL-${mint}` }, { text: "Chart", url: `https://dexscreener.com/solana/${mint}` }]];
 
   const tg = async (method: string, body: Record<string, unknown>) => {
@@ -174,7 +159,7 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
       if (cursor === null) cursor = (await opts.store.get<number>("buybot:after")) ?? -1;
       const r = await f(`${opts.northUrl}/v1/chain/swaps/${mint}?after=${Math.max(0, cursor)}`, { signal: AbortSignal.timeout(8_000) });
       if (!r.ok) return;
-      const body = (await r.json()) as { swaps: FollowedSwap[]; wallets: Record<string, BuyerRecord | null> };
+      const body = (await r.json()) as { swaps: FollowedSwap[] };
       if (!body.swaps.length) return;
       const first = cursor < 0;
       cursor = body.swaps[body.swaps.length - 1]!.seq;
@@ -185,7 +170,7 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
       const [usdNow, supplyNow] = await Promise.all([solUsd(), supply()]);
       for (const swap of buys.slice(0, PER_ROUND)) {
         const balance = await balanceOf(swap.user, f, Date.now(), true);
-        const text = buyMessage({ swap, symbol, mint, balance, solUsd: usdNow, supply: supplyNow, who: body.wallets[swap.user] ?? null });
+        const text = buyMessage({ swap, symbol, mint, balance, solUsd: usdNow, supply: supplyNow });
         await post(text).catch((e) => log(`[buybot] post failed: ${(e as Error).message}`));
       }
       const rest = buys.slice(PER_ROUND);

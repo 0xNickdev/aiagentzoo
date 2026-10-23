@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PumpTape } from "../src/chain/pump.ts";
-import { buyMessage, compact, holderLine, whoLine } from "../src/buybot.ts";
+import { bills, buyMessage, compact, holderLine } from "../src/buybot.ts";
 
 const POOL = "CpZyjihejMJ8i6xRFL6Znmpt4HdgGirMvQh5QqdgJZ2v";
 const MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -28,8 +28,8 @@ test("numbers and lines read like a person wrote them", () => {
   assert.equal(holderLine(1000, 1000, 1e9), "new holder");
   assert.equal(holderLine(1000, 500, 1e9), null);
   assert.equal(holderLine(1_000_000, 11_000_000, 1e9), "holds 11M (1.1%), +10%");
-  assert.equal(whoLine(null), null);
-  assert.equal(whoLine({ launches: 12, dumped: 9, snipes: 0, crewHits: 0, bundleHits: 0, serial: true }), "serial dumper: launched 12, dumped 9");
+  assert.equal(bills(1.07), "💵".repeat(11));
+  assert.equal(bills(25), "💵".repeat(40));
 });
 
 test("a buy message has the size, the buyer, the cap and no ads", () => {
@@ -40,11 +40,12 @@ test("a buy message has the size, the buyer, the cap and no ads", () => {
     balance: 6_140_000,
     solUsd: 103.6,
     supply: 940_000_000,
-    who: null,
   });
   assert.match(text, /<b>1\.07 SOL<\/b> \(\$110\.85\)/);
   assert.match(text, /6\.14M ZOOAGENCY/);
-  assert.match(text, /WsUA…agTN<\/a> · new holder/);
-  assert.match(text, /mcap \$17K/);
+  assert.match(text, /WsUA…agTN<\/a> \| <a href="https:\/\/solscan\.io\/tx\/sig">Txn<\/a>/);
+  assert.match(text, /New holder!/);
+  assert.match(text, /Price \$0\.0000180\d+/);
+  assert.match(text, /Market Cap \$17K/);
   assert.doesNotMatch(text, /Volume Bot|Marketing|trending/i);
 });
