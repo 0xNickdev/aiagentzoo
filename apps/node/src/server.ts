@@ -439,7 +439,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
         const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
         const [holders, , poolSol] = await Promise.all([
-          deep && (found || past) && holdersEnabled() ? within(holderReport(mint)) : Promise.resolve(undefined),
+          deep && (found || past) && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
           deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
           // The pool's SOL as it is now, not as the last trade the tape saw left it.
           pool ? within(poolSolOf(pool)) : Promise.resolve(null),

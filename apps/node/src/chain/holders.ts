@@ -57,7 +57,8 @@ export async function poolSolOf(pool: string, f: typeof fetch = fetch): Promise<
   return r.value.reduce((n, a) => n + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
 }
 
-export async function holderReport(mint: string, f: typeof fetch = fetch, now = Date.now()): Promise<HolderReport | null> {
+/** `knownCreator`: the creator as the stream saw it; pump.fun's own API (the fallback) no longer answers for most coins. */
+export async function holderReport(mint: string, f: typeof fetch = fetch, now = Date.now(), knownCreator?: string | null): Promise<HolderReport | null> {
   if (!RPC()) return null;
   const hit = cache.get(mint);
   if (hit && now - hit.at < CACHE_MS) return hit.report;
@@ -65,9 +66,11 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   const [supply, largest, coin] = await Promise.all([
     rpc<{ value: { uiAmount: number | null } }>("getTokenSupply", [mint], f),
     rpc<{ value: Array<{ address: string; uiAmount: number | null }> }>("getTokenLargestAccounts", [mint], f),
-    f(`${PUMP_API}/coins/${mint}`, { signal: AbortSignal.timeout(6_000) })
-      .then((r) => (r.ok ? (r.json() as Promise<{ creator?: string }>) : null))
-      .catch(() => null),
+    knownCreator
+      ? Promise.resolve({ creator: knownCreator })
+      : f(`${PUMP_API}/coins/${mint}`, { signal: AbortSignal.timeout(6_000) })
+          .then((r) => (r.ok ? (r.json() as Promise<{ creator?: string }>) : null))
+          .catch(() => null),
   ]);
   const total = supply?.value.uiAmount ?? 0;
   const accounts = largest?.value ?? [];
