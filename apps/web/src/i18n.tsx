@@ -97,7 +97,7 @@ export function LangSwitch({ className = "" }: { className?: string }) {
  */
 const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^this dev sells early, yet (\d+)% of their last (\d+) launches went past \$20K(?: \(usual peak (\$[\d.]+[KM])\))?: .*$/, (m) => `这个开发者习惯早卖，但他最近 ${m[2]} 次发币中有 ${m[1]}% 涨过 $20K${m[3] ? `（通常峰值 ${m[3]}）` : ""}：快速卖出是他的套路，风险在于能否及时离场，而不是跑路`],
-  [/^creator sold (\d+)% after (\d+) min$/, (m) => `开发者 ${m[2]} 分钟后卖出 ${m[1]}%`],
+  [/^creator sold (\d+)% after (\d+)(s| min| h)$/, (m) => `开发者 ${m[2]}${m[3] === "s" ? " 秒" : m[3] === " h" ? " 小时" : " 分钟"}后卖出 ${m[1]}%`],
   [/^pool drained to ([\d.]+) SOL after graduation$/, (m) => `毕业后池子被抽到只剩 ${m[1]} SOL`],
   [/^wallet's (\d+)(?:st|nd|rd|th) launch today$/, (m) => `该钱包今天第 ${m[1]} 次发币`],
   [/^\+([\d.]+) SOL buy after graduation$/, (m) => `毕业后 +${m[1]} SOL 大单买入`],

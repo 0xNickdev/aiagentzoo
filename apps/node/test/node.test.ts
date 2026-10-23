@@ -661,7 +661,7 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   // The pulse the live map reads: the launch, then the dump, announced once.
   const pulse = tape.pulseAfter(0);
   assert.deepEqual(pulse.map((e) => e.kind), ["launch", "dump"]);
-  assert.equal(pulse[1]!.text, "creator sold 80% after 0 min");
+  assert.equal(pulse[1]!.text, "creator sold 80% after 0s");
   assert.equal(tape.pulseAfter(pulse[0]!.seq).length, 1);
   tape.apply(events[3]!, now);
   assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "dump").length, 1);

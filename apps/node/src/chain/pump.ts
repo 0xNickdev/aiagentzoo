@@ -941,8 +941,9 @@ export class PumpTape {
       for (const [w, b] of t.buyers) if (w !== t.creator && b.tok !== undefined && b.tok - (b.sold ?? 0) > 0) held += 1;
       t.heldAtDump = held;
       const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
-      const min = Math.max(0, Math.round((ts - t.createdAt) / 60_000));
-      this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
+      const sec = Math.max(0, Math.round((ts - t.createdAt) / 1000));
+      const after = sec < 120 ? `${sec}s` : sec < 2 * 3600 ? `${Math.round(sec / 60)} min` : `${Math.round(sec / 3600)} h`;
+      this.emit(now, "dump", t, `creator sold ${pct}% after ${after}`, tx);
     }
   }
 
