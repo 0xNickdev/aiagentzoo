@@ -236,13 +236,22 @@ const HELP_LINES = () => [
 ];
 const helpText = () => HELP_LINES().map((l) => T(l)).join("\n");
 
+/** In groups only the x-ray and the dev check, so a chat is not buried in bot menus; everything else is in private. */
+export const GROUP_COMMANDS = [
+  { command: "xray", description: "Who you are buying from: insiders, crews, funders" },
+  { command: "dev", description: "A creator wallet's launches and dumps" },
+];
+/** A member may ask once every this often in a group, and the bot answers a group at most once every GROUP_GAP_MS. */
+export const GROUP_USER_GAP_MS = 150_000;
+export const GROUP_GAP_MS = 25_000;
+
 export const COMMANDS = [
   { command: "app", description: "Open the zoo" },
   { command: "xray", description: "Who you are buying from: insiders, crews, funders" },
   { command: "ask", description: "Is it a rug? The beaver judges any token" },
   { command: "dev", description: "A creator wallet's launches and dumps" },
   { command: "rugs", description: "Latest creator dumps, with transactions" },
-  { command: "clean", description: "Fresh launches that passed the basic checks" },
+  { command: "radar", description: "Fresh coins with no red flags so far" },
   { command: "watch", description: "Alert when a token's creator dumps" },
   { command: "unwatch", description: "Stop watching a token" },
   { command: "list", description: "Tokens you watch" },
@@ -503,7 +512,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const body = await north<{ launches: CleanLaunch[] }>("/v1/chain/clean?limit=6");
     const list = body?.launches ?? [];
     const lines = [
-      T("<b>Passed the basic checks</b>"),
+      T("<b>No red flags so far</b>"),
       T("<i>10-180 min old, creator has not sold, not a serial wallet, 25+ buyers, no 5 wallets holding most of it. Not a call, not advice: most still die.</i>"),
       "",
     ];
@@ -612,6 +621,37 @@ export function startTelegram(opts: TelegramOptions): () => void {
 
   /* ----- routing ----- */
 
+  // In groups: who asked when, and when the bot last spoke there.
+  const askedAt = new Map<string, number>();
+  const spokeAt = new Map<number, number>();
+  const groupReply = async (msg: Message, cmd: string, address: string | undefined) => {
+    const chat = msg.chat.id;
+    if (cmd === "/id") return void send(chat, `This chat's id: <code>${chat}</code>`);
+    if ((cmd !== "/xray" && cmd !== "/dev") || !address) return;
+    const now = Date.now();
+    const key = `${chat}:${msg.from?.id ?? 0}`;
+    // Over the limit the bot stays quiet: a reply saying "wait" would be the spam it is avoiding.
+    if (now - (askedAt.get(key) ?? 0) < GROUP_USER_GAP_MS || now - (spokeAt.get(chat) ?? 0) < GROUP_GAP_MS) return;
+    askedAt.set(key, now);
+    spokeAt.set(chat, now);
+    if (askedAt.size > 5_000) for (const [k, at] of askedAt) if (now - at > GROUP_USER_GAP_MS) askedAt.delete(k);
+    const reply = { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } };
+    const full = (start: string) => [[{ text: T("Full report"), url: `https://t.me/${botName}?start=${start}` }, { text: "X-Ray ↗", url: `${SITE}/xray?${cmd === "/dev" ? "wallet" : "mint"}=${address}` }]];
+    if (cmd === "/dev") {
+      const r = await north<CreatorRecord>(`/v1/chain/creator/${address}`);
+      if (!r) return void send(chat, T("No launches from this wallet in the last two days."), undefined, reply);
+      const line = r.recent[0] ? launchLine(r.recent[0]) : "";
+      return void send(chat, [`<b>${T("Dev {w}", { w: short(r.wallet) })}</b> · ${creatorLine(r)}`, line ? `${T("last:")} $${esc(r.recent[0]!.symbol)} · ${line}` : ""].filter(Boolean).join("\n"), full(`d-${address}`), reply);
+    }
+    const x = await north<XRayReply>(`/v1/xray/${address}`);
+    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), undefined, reply);
+    const c = x.check;
+    const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
+    const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
+    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
+    return void send(chat, lines.join("\n"), full(`x-${address}`), reply);
+  };
+
   const onMessage = async (msg: Message) => {
     const text = msg.text?.trim();
     if (!text) return;
@@ -622,6 +662,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const arg = rest.join(" ");
     const address = (cmd ? arg : text).match(MINT)?.[0];
     const who = `tg:${msg.from?.id ?? chat}`;
+    // A group gets the short x-ray and dev check only, rate limited; the rest of the bot lives in private.
+    if (!isPrivate) return groupReply(msg, cmd, address);
 
     // An answer to "send me the creator's wallet".
     if (!cmd && /creator's wallet|开发者钱包/.test(msg.reply_to_message?.text ?? "") && address) return dev(chat, address);
@@ -633,6 +675,9 @@ export function startTelegram(opts: TelegramOptions): () => void {
         if (arg.startsWith("link-")) return link(chat, arg.slice(5));
         // t.me/<bot>?start=w-<mint> from an x-ray on the site: watch that token in one tap.
         if (arg.startsWith("w-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return watch(chat, arg.slice(2), true);
+        // "Full report" from a group: the whole x-ray or dev record, here in private.
+        if (arg.startsWith("x-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return xray(chat, arg.slice(2));
+        if (arg.startsWith("d-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return dev(chat, arg.slice(2));
         return welcome(chat, msg.from?.first_name);
       case "/app":
         return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);
@@ -653,6 +698,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return address ? dev(chat, address) : prompt(chat, "dev");
       case "/rugs":
         return rugs(chat);
+      case "/radar":
       case "/clean":
         return clean(chat);
       case "/live":
@@ -729,9 +775,12 @@ export function startTelegram(opts: TelegramOptions): () => void {
   const setup = async () => {
     const me = await call("getMe", {}).catch(() => null);
     botName = (me?.result as { username?: string } | undefined)?.username ?? "";
-    await call("setMyCommands", { commands: COMMANDS }).catch(() => null);
-    // Chinese clients see the menu in Chinese.
-    await call("setMyCommands", { commands: inLang("zh", () => COMMANDS.map((c) => ({ ...c, description: T(c.description) }))), language_code: "zh" }).catch(() => null);
+    // The whole menu in private chats, only the x-ray and the dev check in groups; Chinese clients see it in Chinese.
+    const zh = (list: typeof COMMANDS) => inLang("zh", () => list.map((c) => ({ ...c, description: T(c.description) })));
+    for (const [scope, list] of [[{ type: "default" }, COMMANDS], [{ type: "all_private_chats" }, COMMANDS], [{ type: "all_group_chats" }, GROUP_COMMANDS]] as const) {
+      await call("setMyCommands", { commands: list, scope }).catch(() => null);
+      await call("setMyCommands", { commands: zh(list as typeof COMMANDS), scope, language_code: "zh" }).catch(() => null);
+    }
     await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open", web_app: { url: APP_URL } } }).catch(() => null);
     await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana token. Free." }).catch(() => null);
     await call("setMyDescription", {
