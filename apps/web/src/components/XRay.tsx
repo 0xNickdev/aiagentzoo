@@ -8,6 +8,7 @@ import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
 import WalletProfile, { WalletLink } from "./WalletProfile";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 import DevHabits, { type Habits } from "./DevHabits";
+import NetworkMap from "./NetworkMap";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -459,7 +460,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
   );
 }
 
-type Tab = "overview" | "dev" | "five" | "map" | "bundles" | "holders" | "wallets";
+type Tab = "overview" | "network" | "dev" | "five" | "map" | "bundles" | "holders" | "wallets";
 
 /** A report laid out like a terminal: the verdict and a menu of what decides it on the left, one section at a time on the right. */
 function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
@@ -502,6 +503,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const holdBad = (c.holders?.top10Pct ?? 0) >= 50 || (c.holders?.topWalletPct ?? 0) >= 20;
   const MENU: Array<{ id: Tab; k: string; sub: string; bad?: boolean }> = [
     { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : t("no red flags") },
+    { id: "network", k: "Network", sub: t("who is behind it, on one map") },
     { id: "dev", k: "The dev", sub: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
     { id: "five", k: "First 5 seconds", sub: early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
     ...(early.length ? [{ id: "map" as Tab, k: "Money map", sub: t("who paid, who sold") }] : []),
@@ -712,6 +714,13 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               )}
 
               {tab === "map" && <MoneyMap r={r} />}
+
+              {tab === "network" && (
+                <div className="liquid-glass rounded-3xl p-4 sm:p-6">
+                  <Title k="Network" note="the dev, his wallets, who paid, his launches" />
+                  <NetworkMap r={r} onPick={onPick} onWallet={openWallet} />
+                </div>
+              )}
 
               {tab === "bundles" && (
                 <div className="liquid-glass rounded-3xl p-6 sm:p-8">
