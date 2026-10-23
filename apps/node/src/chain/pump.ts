@@ -9,6 +9,7 @@
  */
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
 import { solUsd } from "./price.ts";
+import { isOnCurve } from "./curve.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
@@ -180,7 +181,10 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
         r.key(); // bonding curve
         const user = r.key();
         // Newer versions add the creator and a timestamp; older ones stop at the user, who is the creator.
-        const creator = r.left() >= 32 ? r.key() : user;
+        const named = r.left() >= 32 ? r.key() : user;
+        // A launch can name some other address as creator (a fee recipient, not a wallet anyone trades from); the
+        // signer is the one who buys and sells, so an off-curve name gives way to the signer.
+        const creator = !named.equals(user) && !isOnCurve(named) ? user : named;
         const ts = r.left() >= 8 ? Number(r.i64()) * 1000 : null;
         // CreateV2 goes on: four reserves, the token program, is_mayhem_mode, is_cashback_enabled, then the quote mint.
         let quote: string | null = null;
