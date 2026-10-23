@@ -6,9 +6,10 @@ import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 import { TONE as XTONE, type XRayReport } from "../components/XRay";
 import XRayRadar, { secs } from "../components/XRayRadar";
+import { useRadar, type Watched } from "../components/radarCore";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 
-type Tab = "xray" | "ask" | "rugs" | "clean";
+type Tab = "xray" | "ask" | "rugs" | "radar";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
 type Seed = { mint: string; n: number };
 
@@ -16,7 +17,7 @@ const TABS: Array<{ id: Tab; label: string; icon: ReactNode }> = [
   { id: "xray", label: "X-Ray", icon: <IconXRay /> },
   { id: "ask", label: "Ask", icon: <IconAsk /> },
   { id: "rugs", label: "Rugs", icon: <IconRugs /> },
-  { id: "clean", label: "Clean", icon: <IconClean /> },
+  { id: "radar", label: "Radar", icon: <IconClean /> },
 ];
 
 const TONE = {
@@ -94,7 +95,7 @@ export default function MiniApp() {
             {tab === "xray" && <XRayTab seed={seeds.xray ?? null} onAsk={(m) => send("ask", m)} />}
             {tab === "ask" && <AskTab seed={seeds.ask ?? null} />}
             {tab === "rugs" && <RugsTab />}
-            {tab === "clean" && <CleanTab onXRay={(m) => send("xray", m)} />}
+            {tab === "radar" && <RadarTab onXRay={(m) => send("xray", m)} />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -907,56 +908,62 @@ function RugsTab() {
   );
 }
 
-/* ---------- clean ---------- */
+/* ---------- radar ---------- */
 
-function CleanTab({ onXRay }: { onXRay: (mint: string) => void }) {
-  const [list, setList] = useState<CleanLaunch[] | null>(null);
-  useEffect(() => {
-    const load = async () => {
-      const b = await get<{ launches: CleanLaunch[] }>(`${NORTH}/v1/chain/clean?limit=20`);
-      if (b) setList(b.launches);
-    };
-    void load();
-    const t = window.setInterval(load, 30_000);
-    return () => clearInterval(t);
-  }, []);
+/**
+ * The radar, as on the site: fresh coins with no red flags so far, each looked at again in turn, and the moment one
+ * turns (the dev sells, the bundlers leave, the pool drains) it goes to the top in red. Never a list of coins to buy.
+ */
+function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
+  const { watched } = useRadar();
+  const rank = (w: Watched) => (w.turnedAt ? 0 : w.verdict === "pass" ? 1 : 2);
+  const list = Object.values(watched).sort((a, b) => rank(a) - rank(b) || (b.turnedAt ?? 0) - (a.turnedAt ?? 0) || b.firstSeen - a.firstSeen).slice(0, 30);
+  const turned = list.filter((w) => w.turnedAt).length;
   return (
     <section>
       <TabHead
-        kicker={tt("passed the basic checks")}
-        title={tt("No rug signs. Yet.")}
-        text={tt("10 to 180 minutes old. Dev has not sold, not a serial wallet, 25+ buyers, no five wallets holding most of it. Not a call: most of these still die.")}
+        kicker={tt("radar")}
+        title={tt("No red flags. So far.")}
+        text={tt("Fresh coins that pass our checks right now, each one looked at again every minute or two. When one turns, the dev sold or the bundlers left, it jumps to the top in red. Not a call: most of these still die.")}
       />
-      {!list ? (
+      {list.length === 0 ? (
         <Skeleton rows={5} />
-      ) : list.length === 0 ? (
-        <Empty image="/app/empty-clean.jpg">{tt("Nothing passes right now. On pump.fun that is a normal hour.")}</Empty>
       ) : (
-        <div className="grid gap-2">
-          {list.map((c, i) => (
-            <motion.div key={c.mint} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-card rounded-[20px] p-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display truncate text-[17px]">${sym(c.symbol)}</span>
-                <span className="font-mono text-[10.5px] text-white/40">{tt("{m} min old", { m: c.ageMin })}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="font-mono text-[11px] text-white/55">
-                  {tt("{b} buyers · {r} back · top 5 {p}", { b: c.buyersMore ? `${c.buyers}+` : c.buyers, r: c.repeatBuyers, p: pct(c.top5Share) })}
-                </span>
-                <button
+        <>
+          {turned > 0 && <p className="font-mono mb-2 text-[11px] text-[#ff8f84]">{tt("{n} turned while you watched", { n: turned })}</p>}
+          <div className="grid gap-2">
+            {list.map((w, i) => {
+              const red = !!w.turnedAt;
+              const color = red ? (w.verdict === "avoid" ? "#ff8f84" : "#f2d39b") : w.verdict === "pass" ? "#9df3b0" : "rgba(255,255,255,0.45)";
+              const status = red ? (w.verdict === "avoid" ? tt("turned · avoid") : tt("turned · caution")) : w.verdict === "pass" ? tt("no red flags so far") : tt("checking");
+              return (
+                <motion.button
+                  layout
+                  key={w.mint}
                   type="button"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i, 10) * 0.03 }}
                   onClick={() => {
                     haptic.tap();
-                    onXRay(c.mint);
+                    onXRay(w.mint);
                   }}
-                  className="glass-btn !px-3.5 !py-1.5 text-[12px]"
+                  className="glass-card rounded-[20px] p-4 text-left"
                 >
-                  X-Ray
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-display truncate text-[17px]">${sym(w.symbol)}</span>
+                    <span className="font-mono text-[10.5px] text-white/40">{w.graduated ? tt("graduated") : tt("{n} buyers", { n: w.buyers })}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-[12px]" style={{ color }}>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
+                    {status}
+                  </div>
+                  {red && w.reason && <p className="mt-1 text-[12px] leading-snug" style={{ color }}>{tChain(w.reason)}</p>}
+                </motion.button>
+              );
+            })}
+          </div>
+        </>
       )}
     </section>
   );
