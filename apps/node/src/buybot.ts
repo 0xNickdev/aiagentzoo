@@ -178,7 +178,8 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
     busy = true;
     try {
       if (cursor === null) cursor = (await opts.store.get<number>("buybot:after")) ?? -1;
-      const r = await f(`${opts.northUrl}/v1/chain/swaps/${mint}?after=${Math.max(0, cursor)}`, { signal: AbortSignal.timeout(8_000) });
+      // North can pause for a few seconds while it prunes the tape: wait it out instead of logging a timeout.
+      const r = await f(`${opts.northUrl}/v1/chain/swaps/${mint}?after=${Math.max(0, cursor)}`, { signal: AbortSignal.timeout(20_000) });
       if (!r.ok) return;
       const body = (await r.json()) as { swaps: FollowedSwap[] };
       if (!body.swaps.length) return;

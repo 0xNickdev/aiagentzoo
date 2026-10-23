@@ -6,6 +6,7 @@ import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
 import WalletProfile, { WalletLink } from "./WalletProfile";
+import { launchOutcome } from "../outcome";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -615,9 +616,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                     {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 6).map((x) => (
                       <button key={x.mint} type="button" onClick={() => onPick(x.mint)} className="flex w-full items-baseline justify-between gap-3 rounded-lg px-1 py-1.5 text-left text-[12.5px] transition hover:bg-white/[0.04]">
                         <span className="truncate text-white/80">${x.symbol.replace(/^\$/, "")}</span>
-                        <span className={`font-mono shrink-0 text-[12.5px] ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : "text-white/70"}`}>
-                          {x.dumpedAfterMin !== null ? t("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? t("graduated") : t("dev holding")}
-                        </span>
+                        <Outcome x={x} />
                       </button>
                     ))}
                   </div>
@@ -1009,5 +1008,16 @@ export default function XRay() {
         {wallet && !report && <WalletProfile key={wallet} wallet={wallet} onWallet={showWallet} onToken={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}</AnimatePresence>
       {!report && !wallet && !busy && <Start onPick={(m) => { setInput(m); void run(m); }} />}
     </>
+  );
+}
+
+/** A dev's launch, right-aligned: how fast they sold (red when they did), then what they took and who was left holding. */
+function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
+  const o = launchOutcome(x);
+  return (
+    <span className="font-mono shrink-0 text-right text-[12.5px] leading-snug">
+      <span className={o.dumped ? "text-[#ff8a7e]" : "text-white/70"}>{o.head}</span>
+      {o.tail && <span className="block text-[11.5px] text-white/55">{o.tail}</span>}
+    </span>
   );
 }

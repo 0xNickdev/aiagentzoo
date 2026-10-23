@@ -5,6 +5,7 @@ import { X_URL, XIcon } from "../links";
 import { nodeOf, useGuardian } from "../zoo";
 import { Reveal, Section } from "./ui";
 import { lang, pick, t, t as tr } from "../i18n";
+import { type LaunchOutcome, launchOutcome } from "../outcome";
 
 type Verdict = "promising" | "watch" | "suspicious";
 type Outcome = "dead" | "alive" | "unknown";
@@ -28,7 +29,7 @@ interface CreatorRecord {
   dumped: number;
   medianDumpMin: number | null;
   graduated: number;
-  recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }>;
+  recent: Array<{ mint: string; symbol: string; createdAt: number } & LaunchOutcome>;
 }
 
 interface CleanLaunch {
@@ -617,7 +618,7 @@ function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boolean }) {
             <li key={x.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
               <span className="truncate text-white/80">${x.symbol}</span>
               <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#9df3b0]" : "text-white/65"}>
-                {x.dumpedAfterMin !== null ? tr("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? tr("graduated") : tr("creator holding")}
+                {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
               </span>
             </li>
           ))}

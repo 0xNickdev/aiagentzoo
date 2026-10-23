@@ -115,16 +115,21 @@ export class HistoryStore {
       ) WITHOUT ROWID;
       CREATE INDEX IF NOT EXISTS wallet_tokens_token ON wallet_tokens (token_id);
     `);
+    // Columns added after the first stores were written: what the dev took out, who was left holding, alive at last look.
+    const have = new Set((this.db.prepare("PRAGMA table_info(tokens)").all() as Array<{ name: string }>).map((c) => c.name));
+    for (const [name, type] of [["dev_took", "REAL"], ["left_holding", "INTEGER"], ["alive", "INTEGER"]] as const) {
+      if (!have.has(name)) this.db.exec(`ALTER TABLE tokens ADD COLUMN ${name} ${type}`);
+    }
     const p = (sql: string) => this.db.prepare(sql);
     this.s = {
       wallet: p("INSERT INTO wallets (wallet, first_seen, last_seen) VALUES (?, ?, ?) ON CONFLICT (wallet) DO UPDATE SET last_seen = max(last_seen, excluded.last_seen) RETURNING id"),
       walletRow: p("SELECT * FROM wallets WHERE wallet = ?"),
       prev: p("SELECT id, dev_dumped_at FROM tokens WHERE mint = ?"),
-      insertToken: p(`INSERT INTO tokens (mint, symbol, name, creator_id, venue, created_at, first_seen, graduated_at, dev_sold_pct, dev_dumped_at, peak_curve_sol, pool_drained_at, funder, body, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
+      insertToken: p(`INSERT INTO tokens (mint, symbol, name, creator_id, venue, created_at, first_seen, graduated_at, dev_sold_pct, dev_dumped_at, peak_curve_sol, pool_drained_at, funder, body, updated_at, dev_took, left_holding, alive)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
       updateToken: p(`UPDATE tokens SET symbol = ?, name = ?, graduated_at = coalesce(graduated_at, ?), dev_sold_pct = coalesce(?, dev_sold_pct),
         dev_dumped_at = coalesce(dev_dumped_at, ?), peak_curve_sol = max(coalesce(peak_curve_sol, 0), coalesce(?, 0)), pool_drained_at = coalesce(pool_drained_at, ?),
-        funder = coalesce(?, funder), body = ?, updated_at = ? WHERE id = ?`),
+        funder = coalesce(?, funder), body = ?, updated_at = ?, dev_took = coalesce(?, dev_took), left_holding = coalesce(left_holding, ?), alive = coalesce(?, alive) WHERE id = ?`),
       link: p("INSERT OR IGNORE INTO wallet_tokens (wallet_id, token_id, role, took, at) VALUES (?, ?, ?, ?, ?)"),
       relink: p("UPDATE wallet_tokens SET took = ? WHERE wallet_id = ? AND token_id = ? AND role = ?"),
       dumped: p("UPDATE wallets SET dumped = dumped + 1 WHERE id = ?"),
@@ -132,7 +137,7 @@ export class HistoryStore {
       ...Object.fromEntries(ROLE_NAME.map((r) => [`count_${r}`, p(`UPDATE wallets SET ${COUNTER[r]} = ${COUNTER[r]} + 1 WHERE id = ?`)])),
       has: p("SELECT 1 FROM tokens WHERE mint = ?"),
       token: p("SELECT t.*, w.wallet AS creator FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.mint = ?"),
-      recent: p("SELECT mint, symbol, created_at, dev_dumped_at, graduated_at FROM tokens WHERE creator_id = ? ORDER BY created_at DESC LIMIT 12"),
+      recent: p("SELECT mint, symbol, created_at, dev_dumped_at, graduated_at, pool_drained_at, dev_took, left_holding, alive FROM tokens WHERE creator_id = ? ORDER BY created_at DESC LIMIT 12"),
       dumpMins: p("SELECT dev_dumped_at - created_at AS ms FROM tokens WHERE creator_id = ? AND dev_dumped_at IS NOT NULL AND created_at > ? AND created_at <= ? ORDER BY ms LIMIT 2000"),
       window: p(`SELECT count(*) AS n, sum(created_at > ?) AS n24, sum(dev_dumped_at IS NOT NULL) AS dumped, sum(graduated_at IS NOT NULL) AS graduated
         FROM tokens WHERE creator_id = ? AND created_at > ? AND created_at <= ?`),
@@ -202,10 +207,10 @@ export class HistoryStore {
     let tokenId: number;
     if (!prev) {
       if (this.sinceAt === null) this.sinceAt = now;
-      tokenId = Number((this.s.insertToken!.get(r.mint, r.symbol, r.name, creatorId, r.venue, r.createdAt, now, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now) as { id: number | bigint }).id);
+      tokenId = Number((this.s.insertToken!.get(r.mint, r.symbol, r.name, creatorId, r.venue, r.createdAt, now, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now, r.devTookSol ?? null, r.leftHolding ?? null, r.alive === undefined ? null : r.alive ? 1 : 0) as { id: number | bigint }).id);
     } else {
       tokenId = Number(prev.id);
-      this.s.updateToken!.run(r.symbol, r.name, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now, tokenId);
+      this.s.updateToken!.run(r.symbol, r.name, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now, r.devTookSol ?? null, r.leftHolding ?? null, r.alive === undefined ? null : r.alive ? 1 : 0, tokenId);
     }
     this.link(creatorId, tokenId, "dev", null, r.createdAt);
     if (r.dumpedAt !== null && (!prev || prev.dev_dumped_at === null)) this.s.dumped!.run(creatorId);
@@ -312,11 +317,16 @@ export class HistoryStore {
   }
 
   private recentOf(creatorId: number): CreatorRecord["recent"] {
-    return (this.s.recent!.all(creatorId) as Array<{ mint: string; symbol: string; created_at: number; dev_dumped_at: number | null; graduated_at: number | null }>).map((t) => ({
+    type Row = { mint: string; symbol: string; created_at: number; dev_dumped_at: number | null; graduated_at: number | null; pool_drained_at: number | null; dev_took: number | null; left_holding: number | null; alive: number | null };
+    return (this.s.recent!.all(creatorId) as Row[]).map((t) => ({
       mint: t.mint,
       symbol: t.symbol,
       createdAt: t.created_at,
       dumpedAfterMin: t.dev_dumped_at === null ? null : Math.max(0, Math.round((t.dev_dumped_at - t.created_at) / 60_000)),
+      dumpedAfterSec: t.dev_dumped_at === null ? null : Math.max(0, Math.round((t.dev_dumped_at - t.created_at) / 1000)),
+      devTookSol: t.dev_took,
+      leftHolding: t.left_holding,
+      alive: t.pool_drained_at !== null ? false : t.alive === null ? null : t.alive === 1,
       graduated: t.graduated_at !== null,
     }));
   }

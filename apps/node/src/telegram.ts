@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
 import type { Ask, AskDesk } from "./ask.ts";
-import type { CleanLaunch, CreatorRecord, PulseEvent } from "./chain/pump.ts";
+import type { CleanLaunch, CreatorRecord, LaunchOutcome, PulseEvent } from "./chain/pump.ts";
 import type { BoardRow } from "./stats.ts";
 import { HOLDER_MIN, isHolder as holds } from "./holders.ts";
 import { type BotLang, botLang, chatLang, inLang, setChatLang, T, TC } from "./tg-i18n.ts";
@@ -368,6 +368,21 @@ export function alertMessage(e: PulseEvent): string {
   return `${icon} <b>$${esc(e.symbol)}</b>: ${esc(TC(e.text))}${tx}\n<code>${e.mint}</code>`;
 }
 
+const span = (sec: number) => (sec < 120 ? `${sec}s` : sec < 2 * 3600 ? `${Math.round(sec / 60)} min` : `${Math.round(sec / 3600)} h`);
+
+/** sold in 40s · took +1.3 SOL · 23 left holding · dead: "dumped after 0 min" told launches apart from nothing. */
+export function launchLine(t: LaunchOutcome): string {
+  const parts: string[] = [];
+  if (t.dumpedAfterMin !== null) {
+    const sec = t.dumpedAfterSec ?? null;
+    parts.push(sec !== null ? T("sold in {s}", { s: span(sec) }) : t.dumpedAfterMin === 0 ? T("sold within a minute") : T("dumped after {m} min", { m: t.dumpedAfterMin }));
+    if (t.devTookSol !== null && t.devTookSol !== undefined && Math.abs(t.devTookSol) >= 0.05) parts.push(t.devTookSol > 0 ? T("took +{n} SOL", { n: t.devTookSol.toFixed(t.devTookSol >= 10 ? 0 : 1) }) : T("sold at a loss"));
+    if (t.leftHolding) parts.push(T("{n} left holding", { n: t.leftHolding }));
+  } else parts.push(T(t.graduated ? "graduated" : "creator holding"));
+  if (t.alive === false) parts.push(T("dead"));
+  return parts.join(" · ");
+}
+
 export function devMessage(r: CreatorRecord): string {
   const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
   const lines = [
@@ -378,7 +393,7 @@ export function devMessage(r: CreatorRecord): string {
     "",
   ];
   for (const t of r.recent.slice(0, 8)) {
-    lines.push(`${t.dumpedAfterMin !== null ? "🔴" : t.graduated ? "🟢" : "⚪️"} $${esc(t.symbol)} · ${t.dumpedAfterMin !== null ? T("dumped after {m} min", { m: t.dumpedAfterMin }) : T(t.graduated ? "graduated" : "creator holding")}`);
+    lines.push(`${t.dumpedAfterMin !== null ? "🔴" : t.graduated ? "🟢" : "⚪️"} $${esc(t.symbol)} · ${launchLine(t)}`);
   }
   lines.push("", `<code>${r.wallet}</code>`);
   return lines.join("\n");

@@ -6,6 +6,7 @@ import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 import { TONE as XTONE, type XRayReport } from "../components/XRay";
 import XRayRadar, { secs } from "../components/XRayRadar";
+import { type LaunchOutcome, launchOutcome } from "../outcome";
 
 type Tab = "xray" | "ask" | "rugs" | "clean" | "nursery" | "ranks";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
@@ -395,7 +396,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
               <div key={t.mint} className="flex items-center justify-between py-2 text-[13px]">
                 <span className="truncate">${sym(t.symbol)}</span>
                 <span className={`font-mono text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
-                  {t.dumpedAfterMin !== null ? tt("rugged in {m} min", { m: t.dumpedAfterMin }) : tt(t.graduated ? "graduated" : "dev holding")}
+                  {[launchOutcome(t).head, launchOutcome(t).tail].filter(Boolean).join(" · ")}
                 </span>
               </div>
             ))}
@@ -688,7 +689,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onPick(x.mint); }} className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left text-[13px] active:opacity-70">
                 <span className="truncate text-white/85">${sym(x.symbol)}</span>
                 <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : "text-white/50"}`}>
-                  {x.dumpedAfterMin !== null ? tt("dumped after {m} min", { m: x.dumpedAfterMin }) : tt(x.graduated ? "graduated" : "dev holding")}
+                  {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
             ))}
@@ -752,7 +753,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
 
 interface WalletView {
   wallet: string;
-  dev: { launches24h: number; launches48h: number; dumped: number; medianDumpMin: number | null; graduated: number; builder: { launches: number; grew: number; isBuilder: boolean } | null; launches: Array<{ mint: string; symbol: string; venue: string; buyers: number; early: number; dumpedAfterMin: number | null; graduated: boolean }>; regulars: Array<{ wallet: string; launches: number }> } | null;
+  dev: { launches24h: number; launches48h: number; dumped: number; medianDumpMin: number | null; graduated: number; builder: { launches: number; grew: number; isBuilder: boolean } | null; launches: Array<{ mint: string; symbol: string; venue: string; buyers: number; early: number } & LaunchOutcome>; regulars: Array<{ wallet: string; launches: number }> } | null;
   funding: { funder: string | null; funderIsHot: boolean; siblings: Array<unknown>; siblingDumped48h: number } | null;
   funded: { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> };
   sniper: { snipes48h: number; soldOut: number; medianExitSec: number | null; topCreators: Array<{ creator: string; launches: number }>; recent: Array<{ mint: string; symbol: string }> } | null;
@@ -805,7 +806,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onToken(x.mint); }} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2.5 text-left active:bg-white/[0.04]">
                 <span className="truncate text-[13px] text-white/85">${sym(x.symbol)}</span>
                 <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : x.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
-                  {x.dumpedAfterMin !== null ? tt("dumped after {m} min", { m: x.dumpedAfterMin }) : tt(x.graduated ? "graduated" : "dev holding")}
+                  {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
             ))}

@@ -152,3 +152,28 @@ test("the recorder writes launches as they settle and dumps at once; the X-Ray f
     done();
   }
 });
+
+test("a dev's launch says how fast they sold, what they took and who was left holding, live and from history", () => {
+  const { store, done } = tempStore();
+  try {
+    const t = new PumpTape();
+    const t0 = Date.now() - 10 * 60_000;
+    const mint = pad("Mint9");
+    launch(t, mint, t0);
+    // A second sale after the dump: what the dev took keeps counting, who was left holding stays as it was.
+    t.apply({ kind: "trade", mint, sol: 0.6, tokens: 10_000_000, isBuy: false, user: DEV, ts: t0 + 130_000, curveSol: 1 }, t0 + 130_000, "tx5", 420);
+    const live = t.creator(DEV)!.recent[0]!;
+    assert.equal(live.dumpedAfterSec, 120);
+    assert.equal(live.devTookSol, 0.6);
+    assert.equal(live.leftHolding, 2);
+    assert.equal(live.alive, false);
+    store.write([{ ...t.historyOf(mint)!, funder: null }]);
+    const past = store.creatorTotals(DEV)!.recent[0]!;
+    assert.equal(past.dumpedAfterSec, 120);
+    assert.equal(past.devTookSol, 0.6);
+    assert.equal(past.leftHolding, 2);
+    assert.equal(past.alive, false);
+  } finally {
+    done();
+  }
+});

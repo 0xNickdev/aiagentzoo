@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t } from "../i18n";
 import { secs } from "./XRayRadar";
+import { launchOutcome } from "../outcome";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -163,7 +164,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
         {d && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <Box title="Its launches" note="last 48 hours · tap to x-ray">
-              <div className="font-mono grid grid-cols-[minmax(0,1fr)_5rem_4rem_8rem] gap-3 border-b border-white/[0.07] pb-2 text-[12px] text-white/60">
+              <div className="font-mono grid grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] gap-3 border-b border-white/[0.07] pb-2 text-[12px] text-white/60">
                 <span>{t("token")}</span>
                 <span className="text-right">{t("buyers")}</span>
                 <span className="text-right">{t("first 5 s")}</span>
@@ -171,15 +172,21 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </div>
               <div className="max-h-[440px] overflow-auto">
                 {d.launches.map((x) => (
-                  <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="font-mono grid w-full grid-cols-[minmax(0,1fr)_5rem_4rem_8rem] items-baseline gap-3 border-t border-white/[0.04] py-2 text-left text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
+                  <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="font-mono grid w-full grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] items-baseline gap-3 border-t border-white/[0.04] py-2 text-left text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
                     <span className="truncate text-white/85">
                       ${sym(x.symbol)} <span className="text-white/55">· {VENUE[x.venue] ?? x.venue} · {ago(x.createdAt)}</span>
                     </span>
                     <span className="text-right text-white/60">{x.buyers}</span>
                     <span className="text-right text-white/60">{x.early}</span>
-                    <span className={`text-right ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-white/85" : "text-white/70"}`}>
-                      {x.dumpedAfterMin !== null ? t("dumped after {m} min", { m: x.dumpedAfterMin }) : x.graduated ? t("graduated") : t("dev holding")}
-                    </span>
+                    {(() => {
+                      const o = launchOutcome(x);
+                      return (
+                        <span className="text-right leading-snug">
+                          <span className={o.dumped ? "text-[#ff8a7e]" : x.graduated ? "text-white/85" : "text-white/70"}>{o.head}</span>
+                          {o.tail && <span className="block text-[11px] text-white/55">{o.tail}</span>}
+                        </span>
+                      );
+                    })()}
                   </button>
                 ))}
               </div>

@@ -374,6 +374,11 @@ interface Tracked {
   curveSol: number | null;
   devBought: number;
   devSold: number;
+  /** SOL the creator put in and took out, curve and pool; absent on tokens first seen before it was counted. */
+  devIn?: number;
+  devOut?: number;
+  /** Wallets other than the creator still holding when the creator dumped: the people left with the bag. */
+  heldAtDump?: number;
   graduated: boolean;
   /** The creator has sold half of what they bought; announced once. */
   dumped: boolean;
@@ -424,7 +429,23 @@ export interface CreatorRecord {
   /** Median minutes from launch to that sale. */
   medianDumpMin: number | null;
   graduated: number;
-  recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null; graduated: boolean }>;
+  recent: LaunchOutcome[];
+}
+
+/** One of a creator's launches and how it went. Older records (from before these were counted) lack the optional ones. */
+export interface LaunchOutcome {
+  mint: string;
+  symbol: string;
+  createdAt: number;
+  dumpedAfterMin: number | null;
+  dumpedAfterSec?: number | null;
+  /** SOL the dev took out beyond what they put in; negative when they sold at a loss. */
+  devTookSol?: number | null;
+  /** Buyers still holding when the dev sold. */
+  leftHolding?: number | null;
+  /** Alive now (or when last recorded): a pool with enough SOL, or a curve near graduation. */
+  alive?: boolean | null;
+  graduated: boolean;
 }
 
 /** A fresh token that passed the basic checks the tape can make; not a judgement of its worth. */
@@ -666,6 +687,8 @@ export class PumpTape {
         curveSol: null,
         devBought: 0,
         devSold: 0,
+        devIn: 0,
+        devOut: 0,
         graduated: false,
         dumped: false,
         dumpedAt: null,
@@ -747,8 +770,10 @@ export class PumpTape {
         if (ev.user !== t.creator && ev.ts - t.createdAt <= EARLY_MS) this.noteEarly(ev.user, t.mint, now);
       }
       else if ((t.moreBuyers?.size ?? 0) < BUYERS_MAX - BUYERS_FULL) (t.moreBuyers ??= new Set()).add(hash32(ev.user));
-      if (ev.user === t.creator) t.devBought += ev.tokens;
-      else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
+      if (ev.user === t.creator) {
+        t.devBought += ev.tokens;
+        if (t.devIn !== undefined) t.devIn += ev.sol;
+      } else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
       }
       // Paired with another token, the amount is in that token, not SOL: no whale call on it.
@@ -761,17 +786,21 @@ export class PumpTape {
         b.out = (b.out ?? 0) + ev.sol;
         if (b.exitAt === undefined && (b.tok ?? 0) > 0 && b.sold >= (b.tok ?? 0) * 0.9) b.exitAt = ev.ts;
       }
-      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
+      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.sol, ev.ts, now, tx);
     }
     // The curve lines the zoo grades by are pump.fun's; another launchpad's curve is not read against them.
     if (ev.curveSol !== null && !t.quote && !t.venue) t.curveSol = ev.curveSol;
   }
 
-  private creatorSold(t: Tracked, tokens: number, ts: number, now: number, tx?: string): void {
+  private creatorSold(t: Tracked, tokens: number, sol: number, ts: number, now: number, tx?: string): void {
     t.devSold += tokens;
+    if (t.devOut !== undefined) t.devOut += sol;
     if (!t.dumped && t.devBought > 0 && t.devSold / t.devBought >= 0.5) {
       t.dumped = true;
       t.dumpedAt = ts;
+      let held = 0;
+      for (const [w, b] of t.buyers) if (w !== t.creator && b.tok !== undefined && b.tok - (b.sold ?? 0) > 0) held += 1;
+      t.heldAtDump = held;
       const pct = Math.round(Math.min(1, t.devSold / t.devBought) * 100);
       const min = Math.max(0, Math.round((ts - t.createdAt) / 60_000));
       this.emit(now, "dump", t, `creator sold ${pct}% after ${min} min`, tx);
@@ -872,6 +901,7 @@ export class PumpTape {
         b.tok = (b.tok ?? 0) + ev.tokens;
         notePeak(b);
       }
+      if (ev.user === t.creator && t.devIn !== undefined) t.devIn += ev.sol;
       if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy after graduation`, tx);
     } else {
       t.ammSells += 1;
@@ -880,7 +910,7 @@ export class PumpTape {
         b.sold = (b.sold ?? 0) + ev.tokens;
         if (b.exitAt === undefined && (b.tok ?? 0) > 0 && b.sold >= (b.tok ?? 0) * 0.9) b.exitAt = ev.ts;
       }
-      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.ts, now, tx);
+      if (ev.user === t.creator) this.creatorSold(t, ev.tokens, ev.sol, ev.ts, now, tx);
     }
   }
 
@@ -1245,13 +1275,19 @@ export class PumpTape {
       recent: tokens
         .slice(-12)
         .reverse()
-        .map((t) => ({
-          mint: t.mint,
-          symbol: t.symbol,
-          createdAt: t.createdAt,
-          dumpedAfterMin: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000)),
-          graduated: t.graduated,
-        })),
+        .map((t) => ({ mint: t.mint, symbol: t.symbol, createdAt: t.createdAt, ...this.outcomeOf(t) })),
+    };
+  }
+
+  /** How a launch went for the people who bought it: how fast the dev sold, what they took, who was left holding. */
+  private outcomeOf(t: Tracked) {
+    return {
+      dumpedAfterMin: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000)),
+      dumpedAfterSec: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 1000)),
+      devTookSol: t.devIn !== undefined && t.devOut !== undefined && t.devOut > 0 ? Math.round((t.devOut - t.devIn) * 100) / 100 : null,
+      leftHolding: t.heldAtDump ?? null,
+      alive: this.aliveNow(t),
+      graduated: t.graduated,
     };
   }
 
@@ -1320,8 +1356,7 @@ export class PumpTape {
         venue: t.venue ?? "pump.fun",
         buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),
         early: this.earlyWalletsOf(t).length,
-        dumpedAfterMin: t.dumpedAt === null ? null : Math.max(0, Math.round((t.dumpedAt - t.createdAt) / 60_000)),
-        graduated: t.graduated,
+        ...this.outcomeOf(t),
       }));
     return {
       ...record,
@@ -1505,6 +1540,9 @@ export class PumpTape {
       dumpedAt: t.dumpedAt,
       devSoldPct: t.devBought > 0 ? Math.round(Math.min(1, t.devSold / t.devBought) * 100) : null,
       curveSol: t.curveSol,
+      devTookSol: this.outcomeOf(t).devTookSol,
+      leftHolding: t.heldAtDump ?? null,
+      alive: this.aliveNow(t),
       facts,
       early,
       bundle: [...t.launchBuys.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([wallet, tokens]) => ({ wallet, share: Math.round((tokens / supplyOf(t)) * 10_000) / 10_000 })),
