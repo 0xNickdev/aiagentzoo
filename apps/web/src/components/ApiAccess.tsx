@@ -56,7 +56,7 @@ export default function ApiAccess() {
       />
       <Reveal className="grid gap-3 lg:grid-cols-2">
         {tiers.map((tier, i) => (
-          <div key={tier.name} className={`liquid-glass rounded-3xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
+          <div key={tier.name} className={`bg-night-surface border border-white/[0.08] rounded-2xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
             <p className="font-display text-3xl">{tier.name}</p>
             <p className="font-mono mt-1 text-[12.5px] text-fg-3">{tier.who}</p>
             <ul className="mt-5 space-y-2 text-[13.5px] font-light text-fg-3">
@@ -69,7 +69,7 @@ export default function ApiAccess() {
         ))}
       </Reveal>
 
-      <Reveal className="liquid-glass mt-3 rounded-3xl p-6">
+      <Reveal className="bg-night-surface border border-white/[0.08] mt-3 rounded-2xl p-6">
         <p className="font-mono text-[12px] text-fg-3">{pick("your key", "你的密钥")}</p>
         {key ? (
           <div className="mt-3">

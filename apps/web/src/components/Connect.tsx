@@ -82,7 +82,7 @@ export default function Connect() {
         />
         <Reveal className="grid gap-3 lg:grid-cols-3">
           {PATHS.map((p) => (
-            <div key={p.tag} className="liquid-glass flex flex-col rounded-3xl p-6">
+            <div key={p.tag} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-6">
               <div className="flex items-center gap-2.5">
                 {p.logo && <img src={p.logo} alt="ClawPump" className="h-7 w-7 rounded-lg bg-white/[0.06] p-0.5 ring-1 ring-white/10" />}
                 <p className="font-mono text-[12px] text-warn">{t(p.tag)}</p>
@@ -106,7 +106,7 @@ export default function Connect() {
       </Section>
 
       <Section className="!pt-0">
-        <Reveal className="liquid-glass mx-auto max-w-2xl rounded-3xl p-6 sm:p-8">
+        <Reveal className="bg-night-surface border border-white/[0.08] mx-auto max-w-2xl rounded-2xl p-6 sm:p-8">
           <p className="font-mono text-[12px] text-fg-3">{t("did it work?")}</p>
           <h3 className="font-display mt-1 text-2xl">{t("Check your agent")}</h3>
           <form

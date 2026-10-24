@@ -35,19 +35,14 @@ export default function WallOfRugs() {
   }, []);
 
   return (
-    <Section className="!pt-0 overflow-x-clip" backdrop={{ tint: "200,60,50", glowAt: "50% 10%", opacity: 0.4 }}>
-      {/* The wall itself, as a banner: a backdrop would stretch it past the red plaques on a page this tall. */}
-      <div className="relative left-1/2 mb-2 h-[52vh] min-h-[300px] w-screen -translate-x-1/2 overflow-hidden">
-        <img src="/backdrops/rugs.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[50%_42%]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.35)_0%,rgba(3,5,4,0)_30%,rgba(3,5,4,0.2)_70%,#030504_100%)]" />
-      </div>
+    <Section className="overflow-x-clip !pt-32 sm:!pt-40" backdrop={{ glowAt: "70% 10%" }}>
       <SectionHead
         eyebrow={t("Wall of rugs · last 48 hours · read from Solana")}
         title={[t("The devs who dump"), t("their own tokens.")]}
         text={t("Creator wallets ranked by how many of their own pump.fun launches they sold half or more of. Every row links to a real transaction. Check your dev before you buy.")}
       />
-      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
+      <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
+        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -65,7 +60,7 @@ export default function WallOfRugs() {
             onClick={() => goWallet(r.wallet)}
             onKeyDown={(e) => e.key === "Enter" && goWallet(r.wallet)}
             title={t("Open this dev's wallet")}
-            className="font-mono grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
+            className="tabular-nums grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <span className="flex min-w-0 items-center gap-2">
@@ -101,7 +96,7 @@ export default function WallOfRugs() {
       </Reveal>
       <Builders />
       <ReusedAccounts />
-      <p className="font-mono mt-4 text-center text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
         {t("check any dev:")} <a href="/ask" className="underline decoration-white/25 underline-offset-4 hover:text-white">{t("ask the beaver")}</a> · {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/ruggers`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/ruggers</a>
       </p>
@@ -151,8 +146,8 @@ function Builders() {
         title={[t("The devs whose tokens"), t("actually grew.")]}
         text={t("The other side of the list: dev wallets with launches that graduated and still hold liquidity, where the dev has not dumped. Rare. A track record, not a promise.")}
       />
-      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+      <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
+        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -162,7 +157,7 @@ function Builders() {
         </div>
         {!list && <p className="px-7 py-10 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
         {list?.map((r, i) => (
-          <div key={r.wallet} className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+          <div key={r.wallet} className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <button type="button" onClick={() => goWallet(r.wallet)} className="truncate text-left text-fg-2 underline decoration-white/15 underline-offset-4 hover:text-white">
               {short(r.wallet)}
@@ -180,7 +175,7 @@ function Builders() {
           </div>
         ))}
       </Reveal>
-      <p className="font-mono mt-4 text-center text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
         {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/builders`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/builders</a>
       </p>
@@ -203,14 +198,14 @@ function ReusedAccounts() {
   return (
     <div className="mt-16">
       <div className="mb-4 max-w-3xl">
-        <p className="font-mono mb-2 text-[12.5px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
+        <p className="tabular-nums mb-2 text-[12.5px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
         <h3 className="font-display text-3xl leading-tight">{t("The accounts behind repeat rugs.")}</h3>
         <p className="mt-3 text-[13.5px] font-light leading-relaxed text-fg-4">
           {t("A rugger switches wallets for every launch. The X account or Telegram group on the token often stays the same. These are linked, in their own metadata, to several launches whose dev sold within 5 minutes.")}
         </p>
       </div>
-      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+      <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
+        <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>{t("linked account")}</span>
           <span className="text-right">{t("launches")}</span>
           <span className="text-right">{t("dev sold ≤5 min")}</span>
@@ -220,7 +215,7 @@ function ReusedAccounts() {
         {!list && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
         {list && list.length === 0 && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("None yet: the reader fills this as new launches come in.")}</p>}
         {list?.map((a) => (
-          <div key={a.social.url} className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3 text-[12.5px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+          <div key={a.social.url} className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3 text-[12.5px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
             <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-fg-2 hover:text-white">
               {a.social.label} ↗
             </a>

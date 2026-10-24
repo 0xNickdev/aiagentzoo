@@ -27,8 +27,8 @@ function Row({ w, locked }: { w: Watched; locked: boolean }) {
         </p>
         {turned && w.reason && <p className="mt-1 text-[14px] leading-snug" style={{ color }}>{tChain(w.reason)}</p>}
       </div>
-      <p className="font-mono hidden text-[14px] tabular-nums text-fg-3 sm:block">{t("{n} buyers", { n: w.buyers })}</p>
-      <p className="font-mono hidden text-[14px] tabular-nums text-fg-3 sm:block">{w.graduated ? t("graduated") : `${w.curveSol.toFixed(1)} SOL`}</p>
+      <p className="tabular-nums hidden text-[14px] tabular-nums text-fg-3 sm:block">{t("{n} buyers", { n: w.buyers })}</p>
+      <p className="tabular-nums hidden text-[14px] tabular-nums text-fg-3 sm:block">{w.graduated ? t("graduated") : `${w.curveSol.toFixed(1)} SOL`}</p>
       <p className="flex items-center justify-end gap-2 text-right text-[14px] sm:justify-start sm:text-left" style={{ color }}>
         <span className={`h-2 w-2 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
         {status}
@@ -106,7 +106,7 @@ export default function Radar() {
         <div className="mt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-display text-[26px] text-white">{t("Watching now")}</h2>
-            <p className="font-mono text-[13px] text-fg-4">{t("{n} coins · re-checked about every minute", { n: live.length })}</p>
+            <p className="tabular-nums text-[13px] text-fg-4">{t("{n} coins · re-checked about every minute", { n: live.length })}</p>
           </div>
           <div className="relative mt-3 border-t border-white/[0.12]">
             {live.length === 0 && <p className="py-10 text-[15px] text-fg-4">{t("Reading the chain...")}</p>}

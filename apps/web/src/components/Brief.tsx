@@ -111,8 +111,8 @@ function Tables({ s }: { s: Sections }) {
   const rows = s[tab] ?? [];
   const reasons = tab === "suspicious";
   return (
-    <div className="rounded-3xl bg-black/40 ring-1 ring-white/10 backdrop-blur-md">
-      <div className="flex gap-1 overflow-x-auto border-b border-white/[0.07] px-3 pt-3" role="tablist">
+    <div className="rounded-2xl bg-black/40 ring-1 ring-white/10 backdrop-blur-md">
+      <div className="flex gap-1 overflow-x-auto border-b border-white/[0.08] px-3 pt-3" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -150,7 +150,7 @@ function Tables({ s }: { s: Sections }) {
             </thead>
             <tbody>
               {rows.slice(0, 10).map((o, i) => (
-                <tr key={o.mint} className="border-t border-white/[0.05] transition hover:bg-white/[0.02]">
+                <tr key={o.mint} className="border-t border-white/[0.08] transition hover:bg-white/[0.02]">
                   <td className="px-6 py-3">
                     <a href={dex(o)} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-3" title={o.mint}>
                       <span className="font-mono w-5 text-[12px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
@@ -189,7 +189,7 @@ function Calls({ calls }: { calls: Call[] }) {
   const [all, setAll] = useState(false);
   const shown = all ? calls : calls.slice(0, 6);
   return (
-    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+    <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">{tr("THE PACK'S CALLS")} · {calls.length}</p>
       {calls.length === 0 ? (
         <p className="mt-4 text-[13px] text-fg-4">{tr("No calls yet this night.")}</p>
@@ -223,7 +223,7 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
   const score = learned?.score;
   const scored = score ? score.hits + score.misses : 0;
   return (
-    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+    <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">{tr("WHAT THE PACK LEARNED")}</p>
       {scored > 0 && score!.skill !== undefined && score!.skill !== null ? (
         <>
@@ -243,7 +243,7 @@ function Learned({ learned }: { learned: Sections["learned"] }) {
         <p className="mt-4 text-[13.5px] font-light text-fg-4">{tr("Calls are re-checked the next night; the score lands here.")}</p>
       )}
       {learned && (
-        <div className="mt-6 border-t border-white/[0.07] pt-4">
+        <div className="mt-6 border-t border-white/[0.08] pt-4">
           <button type="button" onClick={() => setOpen((o) => !o)} className="font-mono flex w-full items-center justify-between text-[12.5px] tracking-[0.1em] text-fg-4 hover:text-white">
             <span>{tr("PLAYBOOK V{v} · REWRITTEN BY THE BEAVER", { v: learned.playbook.version })}</span>
             <span>{open ? "−" : "+"}</span>
@@ -266,7 +266,7 @@ function WeekBoard({ week }: { week: Week }) {
   const need = (r: Week["rows"][number]) =>
     r.ranked ? null : r.graded < week.minGraded ? tr("{n} more graded", { n: week.minGraded - r.graded }) : r.alive < week.minSide ? tr("{n} more living", { n: week.minSide - r.alive }) : tr("{n} more dead", { n: week.minSide - r.dead });
   return (
-    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+    <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">
         {tr("AGENT OF THE WEEK SO FAR")} · {week.start} → {week.end}
       </p>
@@ -296,7 +296,7 @@ function WeekBoard({ week }: { week: Week }) {
 
 function GuestReports({ reports }: { reports: GuestReport[] }) {
   return (
-    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+    <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">{tr("FROM THE GUEST ENCLOSURES")} · {reports.length}</p>
       <div className={`mt-3 grid gap-6 ${reports.length > 1 ? "md:grid-cols-2" : ""}`}>
         {reports.map((r) => (
@@ -323,7 +323,7 @@ function GuestReports({ reports }: { reports: GuestReport[] }) {
 
 function Watched({ items }: { items: Obs[] }) {
   return (
-    <div className="rounded-3xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
+    <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">{tr("GUARDIAN WATCH")} · {items.length}</p>
       <ul className="mt-3 divide-y divide-white/[0.06]">
         {items.map((o) => (
@@ -378,7 +378,7 @@ function WatchPanel({ brief }: { brief: BriefDoc | null }) {
   );
 
   return (
-    <div className="grid gap-8 rounded-3xl bg-gradient-to-br from-white/[0.04] to-transparent p-7 ring-1 ring-white/10 sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid gap-8 rounded-2xl bg-gradient-to-br from-white/[0.04] to-transparent p-7 ring-1 ring-white/10 sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div>
         <p className="font-mono text-[12px] tracking-[0.14em] text-fg-4">{tr("GUARDIAN WATCH · FREE")}</p>
         <h3 className="font-display mt-3 text-4xl">{tr("Watch my token")}</h3>
@@ -544,7 +544,7 @@ export default function Brief() {
 
       {error && <p className="mt-10 text-sm text-fg-3">{error}</p>}
       {refs && refs.length === 0 && (
-        <div className="mt-10 rounded-3xl bg-black/40 p-10 text-center ring-1 ring-white/10">
+        <div className="mt-10 rounded-2xl bg-black/40 p-10 text-center ring-1 ring-white/10">
           <p className="font-display text-3xl">{tr("The first brief is being assembled")}</p>
           <p className="mt-3 text-sm font-light text-fg-4">
             {tr("The tortoise publishes it {when}.", { when: nextAt ? new Date(nextAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }) : tr("at 07:00 UTC") })}
@@ -582,10 +582,10 @@ export default function Brief() {
                 <button type="button" onClick={() => void openCard()} className="rounded-full bg-white px-4 py-2 text-[12px] font-medium text-black hover:bg-white/90">
                   {tr("Night card")}
                 </button>
-                <button type="button" onClick={share} className="liquid-glass rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
+                <button type="button" onClick={share} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
                   {tr("Copy link")}
                 </button>
-                <button type="button" onClick={download} className="liquid-glass rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
+                <button type="button" onClick={download} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
                   {tr("Download .md")}
                 </button>
               </div>

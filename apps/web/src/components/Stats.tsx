@@ -61,7 +61,7 @@ function useLive<T>(path: string): T | null {
 
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
-    <div className="bg-[#070a09]/90 px-5 py-4">
+    <div className="bg-night-surface px-5 py-4">
       <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-fg-4">{k}</p>
       <p className="font-mono mt-2 text-[26px] leading-none text-fg">{v}</p>
       {sub && <p className="mt-2 text-[13px] text-fg-4">{sub}</p>}
@@ -74,7 +74,7 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
   const max = Math.max(1, ...days.map(pick));
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <div className="liquid-glass rounded-3xl p-5 sm:p-6">
+    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
         <span className="font-mono text-[12px] text-fg-4">{t(note)}</span>
@@ -104,12 +104,12 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
 
 function DevTable({ title, note, rows, good }: { title: string; note: string; rows: Dev[] | null; good?: boolean }) {
   return (
-    <div className="liquid-glass rounded-3xl p-5 sm:p-6">
+    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
         <span className="font-mono text-[12px] text-fg-4">{t(note)}</span>
       </div>
-      <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.07] pb-2 text-[12px] text-fg-4">
+      <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
         <span>{t("dev wallet")}</span>
         <span className="text-right">{t("launched")}</span>
         <span className="text-right">{t("dumped")}</span>
@@ -117,7 +117,7 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
       </div>
       {!rows && <p className="py-6 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
       {rows?.map((r) => (
-        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.04] py-2 text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
+        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
           <span className="truncate text-fg-2">{short(r.wallet)}</span>
           <span className="text-right text-fg-4">{num(r.launches48h)}</span>
           <span className={`text-right ${!good && r.dumped ? "text-[#ff8a7e]" : "text-fg-4"}`}>{num(r.dumped)}</span>
@@ -149,7 +149,7 @@ export default function Stats() {
       />
 
       <div className="mx-auto max-w-7xl space-y-4">
-        <Reveal className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
+        <Reveal className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
           <Tile k={t("full x-rays")} v={usage ? num(usage.last7.xrays) : "…"} sub={t("since the counter started, 19 Oct")} />
           <Tile k={t("verdict checks")} v={usage ? num(usage.last7.checks) : "…"} sub={t("most fired on their own by the extension and /xray")} />
           <Tile k={t("launches now")} v={chain ? `${chain.perMinute.launches}/min` : "…"} sub={chain ? (chain.live ? t("stream live") : t("stream behind")) : ""} />
@@ -168,12 +168,12 @@ export default function Stats() {
           {t("A full X-Ray is a person opening the whole report: on the site with a token pasted, in the extension's panel, in the bot or the Telegram app. A verdict check is the short answer; the extension asks for one on every token page and every address on X, and /xray asks for one per example card, so checks run well ahead of people. Callers are counted as hashes, never addresses. Days are UTC.")}
         </p>
 
-        <Reveal className="liquid-glass rounded-3xl p-5 sm:p-6">
+        <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
             <h3 className="font-display text-xl text-fg">{t("How the verdicts held up")}</h3>
             <span className="font-mono text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
           </div>
-          <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] gap-3 border-b border-white/[0.07] pb-2 text-[12px] text-fg-4">
+          <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
             <span>{t("at 5 minutes")}</span>
             <span className="text-right">{t("tokens")}</span>
             <span className="text-right">{t("dead")}</span>
@@ -184,7 +184,7 @@ export default function Stats() {
             [t("flagged avoid"), a],
             [t("not flagged"), n],
           ].map(([label, s]) => (
-            <div key={label as string} className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] items-baseline gap-3 border-t border-white/[0.04] py-2.5 text-[12.5px] first:border-t-0">
+            <div key={label as string} className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
               <span className="text-fg-2">{label as string}</span>
               <span className="text-right text-fg-3">{s ? num((s as Side).n) : "…"}</span>
               <span className="text-right text-fg-3">{s ? `${num((s as Side).dead)} · ${pctOf((s as Side).dead, (s as Side).n)}` : "…"}</span>

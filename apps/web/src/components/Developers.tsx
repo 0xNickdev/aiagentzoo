@@ -18,7 +18,7 @@ function Code({ code, lang }: { code: string; lang?: string }) {
   };
   return (
     <div className="relative overflow-hidden rounded-2xl bg-black/60 ring-1 ring-white/10">
-      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2 text-[12.5px] text-fg-4">
+      <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-2 text-[12.5px] text-fg-4">
         <span className="font-mono">{t(lang ?? "shell")}</span>
         <button type="button" onClick={copy} className="flex items-center gap-1.5 hover:text-white" aria-label={t("Copy code")}>
           {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -223,7 +223,7 @@ const tabs = () => [
         <table className="w-full text-left text-[13px]">
           <tbody>
             {API.map(([method, path, what]) => (
-              <tr key={method + path} className="border-b border-white/[0.06] last:border-0">
+              <tr key={method + path} className="border-b border-white/[0.08] last:border-0">
                 <td className="font-mono w-16 px-4 py-3 text-[13px] text-moss">{method}</td>
                 <td className="font-mono px-4 py-3 text-fg-2">{path}</td>
                 <td className="hidden px-4 py-3 font-light text-fg-3 sm:table-cell">{t(what)}</td>
@@ -231,7 +231,7 @@ const tabs = () => [
             ))}
           </tbody>
         </table>
-        <p className="font-mono border-t border-white/[0.06] px-4 py-3 text-[13px] text-fg-4">{t("Host:")} {HOST}</p>
+        <p className="font-mono border-t border-white/[0.08] px-4 py-3 text-[13px] text-fg-4">{t("Host:")} {HOST}</p>
       </div>
     ),
   },
@@ -266,7 +266,7 @@ export default function Developers() {
             </button>
           ))}
         </div>
-        <div className="rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md sm:p-8">{active.body}</div>
+        <div className="rounded-2xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md sm:p-8">{active.body}</div>
         <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-fg-4">
           <a href={GUIDE} className="hover:text-white">
             {t("Guest guide →")}

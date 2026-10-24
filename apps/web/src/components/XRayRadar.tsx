@@ -133,7 +133,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         {[0, 1, 2, 3, 4, 5].map((s) => (
           <g key={s}>
             <circle cx={CX} cy={CY} r={rOf(s)} fill="none" stroke="white" strokeOpacity={playing && Math.floor(clock) === s ? 0.22 : s === 5 ? 0.12 : 0.06} strokeDasharray={s === 0 ? "2 5" : undefined} />
-            <text x={CX + 4} y={CY - rOf(s) - 5} className="font-mono" fontSize="10" fill="white" fillOpacity="0.32">
+            <text x={CX + 4} y={CY - rOf(s) - 5} className="tabular-nums" fontSize="10" fill="white" fillOpacity="0.32">
               {s === 0 ? t("launch") : `${s}s`}
             </text>
           </g>
@@ -196,10 +196,10 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
 
         <circle cx={CX} cy={CY} r="20" fill="#050807" stroke="white" strokeOpacity="0.85" />
         <circle cx={CX} cy={CY} r="26" fill="none" stroke="white" strokeOpacity="0.12" />
-        <text x={CX} y={CY + 4} textAnchor="middle" className="font-mono" fontSize="11" fill="white" fillOpacity="0.9">
+        <text x={CX} y={CY + 4} textAnchor="middle" className="tabular-nums" fontSize="11" fill="white" fillOpacity="0.9">
           dev
         </text>
-        <text x={W - 14} y={24} textAnchor="end" className="font-mono" fontSize="12" fill="#f2d39b" fillOpacity={playing ? 0.95 : 0.5}>
+        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill="#f2d39b" fillOpacity={playing ? 0.95 : 0.5}>
           {`t+${clock.toFixed(1)}s`}
         </text>
       </svg>
@@ -216,11 +216,11 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             className="pointer-events-none absolute z-10 w-[220px] rounded-xl border border-white/10 bg-[#070a09]/95 px-3.5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
             style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%`, transform: `translate(${tip.x > W * 0.6 ? "-108%" : "12%"}, -50%)` }}
           >
-            <p className="font-mono text-[12.5px] text-fg-2">{short(tip.e.wallet)}</p>
-            <p className="font-mono mt-0.5 text-[12px]" style={{ color: KIND[tip.k].color }}>
+            <p className="tabular-nums text-[12.5px] text-fg-2">{short(tip.e.wallet)}</p>
+            <p className="tabular-nums mt-0.5 text-[12px]" style={{ color: KIND[tip.k].color }}>
               {t(KIND[tip.k].label)}
             </p>
-            <div className="font-mono mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
+            <div className="tabular-nums mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
               <span className="text-fg-3">{t("in at")}</span>
               <span className="text-right text-fg-2">{tip.e.afterSec}s</span>
               <span className="text-fg-3">{t("took")}</span>
@@ -237,7 +237,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         )}
       </AnimatePresence>
 
-      <div className="font-mono mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
+      <div className="tabular-nums mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
         {ORDER.filter((k) => present.has(k)).map((k) => (
           <button
             key={k}
@@ -253,7 +253,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>
-      <p className="font-mono mt-2 text-[11.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
+      <p className="tabular-nums mt-2 text-[11.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
     </div>
   );
 }

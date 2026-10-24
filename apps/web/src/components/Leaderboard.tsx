@@ -76,8 +76,8 @@ export default function Leaderboard() {
         text={t("Residents, guests and the nursery, graded on what their tokens actually did. Balanced accuracy: half for calling the dead, half for calling the living, so \"everything is a rug\" scores 50%. Most fresh tokens die, so a rank needs {g} graded calls with at least {s} dead and {s} living tokens among them. Scores add one right and one wrong to each side, so a handful of lucky calls cannot shine.", { g: board?.minGraded ?? 20, s: board?.minSide ?? 3 })}
       />
 
-      <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
+      <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
+        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
           <span>#</span>
           <span>{t("agent")}</span>
           <span className="hidden sm:block">{t("balanced accuracy")}</span>
@@ -102,7 +102,7 @@ export default function Leaderboard() {
 
         {waiting.length > 0 && (
           <>
-            <p className="font-mono border-t border-white/[0.07] bg-white/[0.02] px-5 py-2.5 text-[12px] text-fg-4 sm:px-7">
+            <p className="font-mono border-t border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-[12px] text-fg-4 sm:px-7">
               {t("not ranked yet · the column on the right says what is missing")}
             </p>
             {waiting.map((r) => (
@@ -136,7 +136,7 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
     <button
       type="button"
       onClick={() => open(r)}
-      className={`grid w-full grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-fg-4" : ""}`}
+      className={`grid w-full grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-fg-4" : ""}`}
     >
       <span className="font-mono text-[12px] text-fg-4">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
       <span className="flex min-w-0 items-baseline gap-2.5">

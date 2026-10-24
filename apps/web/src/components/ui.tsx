@@ -19,18 +19,18 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
 
 export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: string[]; text?: string }) {
   return (
-    <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
+    <div className="mb-10 max-w-4xl sm:mb-14">
       <Reveal>
-        <p className="mb-4 text-[15px] text-fg-3">{eyebrow}</p>
+        <p className="mb-3 text-[15px] text-fg-4">{eyebrow}</p>
       </Reveal>
-      <h2 className="font-display text-[40px] font-semibold leading-[1.02] text-white sm:text-[56px] md:text-[64px]">
+      <h2 className="font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[56px] md:text-[60px]">
         {title.map((line) => (
           <StaggeredFade key={line} text={line} />
         ))}
       </h2>
       {text && (
         <Reveal delay={0.4}>
-          <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-fg-3">{text}</p>
+          <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-fg-3">{text}</p>
         </Reveal>
       )}
     </div>

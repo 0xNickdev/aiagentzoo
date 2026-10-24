@@ -106,10 +106,10 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
   const heldY = midY + 12;
 
   return (
-    <div className="liquid-glass rounded-3xl p-6 sm:p-8">
+    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="font-display text-2xl text-fg">{t("Money map")}</h3>
-        <span className="font-mono text-[12.5px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
+        <span className="tabular-nums text-[12.5px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
       </div>
 
       {gs.length === 0 ? (
@@ -143,16 +143,16 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
           <ol className="grid gap-3 md:hidden">
             <li className="rounded-2xl border border-white/15 p-4">
               <p className="text-[15px] text-white">{funderTitle}</p>
-              <p className="font-mono mt-1 text-[12.5px] text-fg-4">{funderSub}</p>
+              <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{funderSub}</p>
             </li>
             <li className="rounded-2xl border p-4" style={{ borderColor: (f?.creatorSoldPct ?? 0) >= 50 ? RED : "rgba(255,255,255,0.15)" }}>
               <p className="text-[15px] text-white">{t("The dev {w}", { w: short(r.creator) })}</p>
-              <p className="font-mono mt-1 text-[12.5px] text-fg-4">{devSub}</p>
+              <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{devSub}</p>
             </li>
             {gs.map((g) => (
               <li key={g.key} className="rounded-2xl border p-4" style={{ borderColor: g.color }}>
                 <p className="text-[15px] text-white">{t(g.label)}</p>
-                <p className="font-mono mt-1 text-[12.5px] text-fg-4">
+                <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">
                   {t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} · {t("sold {p}", { p: pct(Math.max(0, g.took - g.held)) })}
                 </p>
               </li>

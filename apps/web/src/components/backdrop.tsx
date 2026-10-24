@@ -43,9 +43,13 @@ const STRIP_FADE =
  * optional photo that melts into the page at the top and bottom, and an
  * optional second photo revealed around the cursor.
  */
-export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%", opacity = 0.55, position = "50% 50%" }: BackdropProps) {
-  const hasBase = useImage(src);
-  const hasReveal = useImage(reveal);
+export function Backdrop({ src, reveal, glowAt = "50% 40%", opacity = 0.55, position = "50% 50%" }: BackdropProps) {
+  // Data pages sit on the night, not on photos: every section gets the same quiet moss glow, whatever it asked for.
+  const tint = "70,110,85";
+  void src;
+  void reveal;
+  const hasBase = false;
+  const hasReveal = false;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,7 +95,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
     >
       <div
         className="absolute inset-0"
-        style={{ background: `radial-gradient(70% 55% at ${glowAt}, rgba(${tint},0.16), transparent 70%)` }}
+        style={{ background: `radial-gradient(70% 55% at ${glowAt}, rgba(${tint},0.10), transparent 70%)` }}
       />
       {hasBase && (
         <img
@@ -114,8 +118,7 @@ export function Backdrop({ src, reveal, tint = "120,150,130", glowAt = "50% 40%"
           }}
         />
       )}
-      {/* keep text readable over any photo */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(1,1,1,0.55),rgba(1,1,1,0.15)_70%)]" />
+
     </div>
   );
 }

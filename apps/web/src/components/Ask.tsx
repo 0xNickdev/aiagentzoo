@@ -362,7 +362,7 @@ export default function AskPage() {
         </Reveal>
 
         <Reveal delay={0.15}>
-          <form onSubmit={submit} className="liquid-glass mx-auto mt-10 flex max-w-2xl flex-col gap-2 rounded-3xl p-2 sm:flex-row sm:rounded-full">
+          <form onSubmit={submit} className="bg-night-surface border border-white/[0.08] mx-auto mt-10 flex max-w-2xl flex-col gap-2 rounded-2xl p-2 sm:flex-row sm:rounded-full">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -405,7 +405,7 @@ export default function AskPage() {
         {ask && <Answer key={ask.id} a={ask} />}
         {wallet && !ask && (
           <motion.section key={wallet.wallet} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-6 sm:px-8">
-            <div className="liquid-glass mx-auto max-w-7xl rounded-3xl p-6 sm:p-8">
+            <div className="bg-night-surface border border-white/[0.08] mx-auto max-w-7xl rounded-2xl p-6 sm:p-8">
               <CreatorBlock r={wallet} big />
             </div>
           </motion.section>
@@ -516,7 +516,7 @@ function Answer({ a }: { a: Ask }) {
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-6 sm:px-8">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="liquid-glass rounded-3xl p-6 sm:p-8">
+        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="min-w-0">
               <p className="font-mono truncate text-[12.5px] text-fg-4">
@@ -581,7 +581,7 @@ function Answer({ a }: { a: Ask }) {
               href={`https://x.com/intent/post?text=${tweet}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-fg hover:text-white"
+              className="bg-night-surface border border-white/[0.08] inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-fg hover:text-white"
               title={`Follow ${X_URL.replace("https://x.com/", "@")}`}
             >
               <XIcon size={13} /> {t("Post on X")}

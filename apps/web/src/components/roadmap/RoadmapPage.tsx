@@ -489,7 +489,7 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
 
   return (
     <section id="trail" className="relative">
-      <div className="sticky top-[61px] z-30 border-b border-white/[0.06] bg-[#030504]/55 px-5 py-3 backdrop-blur-xl sm:top-[69px] sm:px-8">
+      <div className="sticky top-[61px] z-30 border-b border-white/[0.08] bg-[#030504]/55 px-5 py-3 backdrop-blur-xl sm:top-[69px] sm:px-8">
         <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto [scrollbar-width:none]">
           {FILTERS.filter((f) => counts[f]).map((f) => (
             <button
@@ -658,7 +658,7 @@ function Today({ commits }: { commits: { total: number | null; recent: Commit[] 
         <Rule />
         <ol>
           {commits.recent.map((c) => (
-            <li key={c.sha} className="border-b border-white/[0.07]">
+            <li key={c.sha} className="border-b border-white/[0.08]">
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-3.5">
                 <span className="font-mono shrink-0 text-[12px] text-warn">{c.sha}</span>
                 <span className="min-w-0 flex-1 truncate text-[13.5px] font-light text-fg-4 group-hover:text-white">{c.message}</span>
