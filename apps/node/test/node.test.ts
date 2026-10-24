@@ -1333,11 +1333,14 @@ test("the creator check keeps its own record: what it would have said five minut
   // A clean launch that ends the day far up the curve.
   create("Good111111111111111111111111111111111111111", GOOD, born);
   trade("Good111111111111111111111111111111111111111", "Buyer11111111111111111111111111111111111111", true, 5_000_000, born + 30 * 60_000, 40);
+  // A clean launch that ends the day in between: off the floor, short of a runner.
+  create("Mid1111111111111111111111111111111111111111", GOOD, born);
+  trade("Mid1111111111111111111111111111111111111111", "Buyer21111111111111111111111111111111111111", true, 5_000_000, born + 30 * 60_000, 15);
   // Too young to grade.
   create("Young11111111111111111111111111111111111111", GOOD, now - 3_600_000);
   const r = tape.checkRecord(now);
-  assert.deepEqual(r.flaggedAvoid, { n: 1, dead: 1, alive: 0, unknown: 0 });
-  assert.deepEqual(r.notFlagged, { n: 1, dead: 0, alive: 1, unknown: 0 });
+  assert.deepEqual(r.flaggedAvoid, { n: 1, dead: 1, alive: 0, unknown: 0, between: 0, unread: 0 });
+  assert.deepEqual(r.notFlagged, { n: 2, dead: 0, alive: 1, unknown: 1, between: 1, unread: 0 });
   assert.equal(r.avoidBecause.dumped, 1);
 });
 

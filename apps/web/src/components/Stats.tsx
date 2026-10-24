@@ -29,7 +29,16 @@ interface Side {
   dead: number;
   alive: number;
   unknown: number;
+  /** Read, between the dead and alive lines. Older nodes only send unknown. */
+  between?: number;
+  /** No curve or pool reading: left out of the table. */
+  unread?: number;
 }
+/** The table asks one thing, dead or not: everything read that did not die is still trading. */
+const tally = (s: Side) => {
+  const n = s.n - (s.unread ?? 0);
+  return { n, dead: s.dead, trading: n - s.dead };
+};
 interface CheckRecord {
   window: string;
   flaggedAvoid: Side;
@@ -173,23 +182,28 @@ export default function Stats() {
             <h3 className="font-display text-xl text-fg">{t("How the verdicts held up")}</h3>
             <span className="tabular-nums text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
           </div>
-          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
             <span>{t("at 5 minutes")}</span>
             <span className="text-right">{t("tokens")}</span>
             <span className="text-right">{t("dead")}</span>
-            <span className="text-right">{t("alive")}</span>
-            <span className="hidden text-right sm:block">{t("unknown")}</span>
+            <span className="text-right">{t("still trading")}</span>
           </div>
           {[
             [t("flagged avoid"), a],
             [t("not flagged"), n],
           ].map(([label, s]) => (
-            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
+            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
               <span className="text-fg-2">{label as string}</span>
-              <span className="text-right text-fg-3">{s ? num((s as Side).n) : "…"}</span>
-              <span className="text-right text-fg-3">{s ? `${num((s as Side).dead)} · ${pctOf((s as Side).dead, (s as Side).n)}` : "…"}</span>
-              <span className="text-right text-fg-3">{s ? num((s as Side).alive) : "…"}</span>
-              <span className="hidden text-right text-fg-3 sm:block">{s ? num((s as Side).unknown) : "…"}</span>
+              {(() => {
+                const v = s ? tally(s as Side) : null;
+                return (
+                  <>
+                    <span className="text-right text-fg-3">{v ? num(v.n) : "…"}</span>
+                    <span className="text-right text-fg-3">{v ? `${num(v.dead)} · ${pctOf(v.dead, v.n)}` : "…"}</span>
+                    <span className="text-right text-fg-3">{v ? `${num(v.trading)} · ${pctOf(v.trading, v.n)}` : "…"}</span>
+                  </>
+                );
+              })()}
             </div>
           ))}
           <p className="mt-4 text-[12.5px] leading-relaxed text-fg-3">

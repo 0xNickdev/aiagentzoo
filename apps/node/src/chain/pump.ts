@@ -1617,8 +1617,10 @@ export class PumpTape {
    * against where the token stands now (its curve or its pool, the same lines the zoo grades by).
    */
   checkRecord(now = Date.now(), atMin = 5) {
-    type Side = { n: number; dead: number; alive: number; unknown: number };
-    const side = (): Side => ({ n: 0, dead: 0, alive: 0, unknown: 0 });
+    // between: read, but between the dead and alive lines (not dead, not a runner); unread: no curve or pool reading.
+    // unknown stays as their sum for older clients.
+    type Side = { n: number; dead: number; alive: number; unknown: number; between: number; unread: number };
+    const side = (): Side => ({ n: 0, dead: 0, alive: 0, unknown: 0, between: 0, unread: 0 });
     const flagged = side();
     const clear = side();
     const why = { dumped: 0, serial: 0, bundle: 0 };
@@ -1636,25 +1638,26 @@ export class PumpTape {
       const dumpedBefore = before.filter((o) => o.dumped && o.dumpedAt !== null && o.dumpedAt <= at).length;
       const serial = dumpedBefore >= 3 && dumpedBefore / (before.length + 1) >= 0.5;
       const bundle = t.createSlot !== null && t.launchBuys.size >= 3 && [...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supplyOf(t) >= 0.15;
-      let outcome: "dead" | "alive" | "unknown" = "unknown";
+      let outcome: "dead" | "alive" | "between" | "unread" = "unread";
       if (t.graduated) {
-        if (t.poolSol !== null) outcome = t.poolSol >= POOL_ALIVE_SOL ? "alive" : t.poolSol < POOL_DEAD_SOL ? "dead" : "unknown";
+        if (t.poolSol !== null) outcome = t.poolSol >= POOL_ALIVE_SOL ? "alive" : t.poolSol < POOL_DEAD_SOL ? "dead" : "between";
       } else {
         const real = t.curveSol ?? (t.buys === 0 ? 0 : null);
         if (real !== null) {
           const cap = curveCapOf(real);
-          outcome = cap >= CURVE_ALIVE_SOL ? "alive" : cap < CURVE_DEAD_SOL ? "dead" : "unknown";
+          outcome = cap >= CURVE_ALIVE_SOL ? "alive" : cap < CURVE_DEAD_SOL ? "dead" : "between";
         }
       }
+      const count = (x: Side) => {
+        x.n += 1;
+        x[outcome] += 1;
+        if (outcome === "between" || outcome === "unread") x.unknown += 1;
+      };
       const s = dumpedEarly || serial || bundle ? flagged : clear;
-      s.n += 1;
-      s[outcome] += 1;
+      count(s);
       // Readings taken late (before this rule, a first trade a day in counted as "five minutes in") are not used.
       if (t.at5 && t.at5.at !== undefined && t.at5.at - t.createdAt < AT5_LATEST) {
-        const add = (x: Side) => {
-          x.n += 1;
-          x[outcome] += 1;
-        };
+        const add = count;
         add(signals.stillTrading);
         if (t.at5.earlyWallets >= 2 && t.at5.earlyHeld >= 0.25) add(signals.insidersHold25);
         if (t.at5.washShare >= 0.3) add(signals.churn30);
