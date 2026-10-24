@@ -1,5 +1,13 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { ZH } from "./zh";
+
+/** The Chinese strings (100+ KB) load only for readers who use them. */
+let ZH: Record<string, string> = {};
+let zhLoad: Promise<void> | null = null;
+const loadZh = () =>
+  (zhLoad ??= import("./zh").then(
+    (m) => void (ZH = m.ZH),
+    () => void (zhLoad = null),
+  ));
 
 /**
  * The site in English and Simplified Chinese. Strings are keyed by their English text: `t("Ask the beaver")`.
@@ -48,7 +56,11 @@ export function setLang(l: Lang): void {
   if (l === "zh") url.searchParams.set("lang", "zh");
   else url.searchParams.delete("lang");
   window.history.replaceState(window.history.state, "", url);
-  for (const fn of listeners) fn(l);
+  const notify = () => {
+    for (const fn of listeners) fn(l);
+  };
+  if (l === "zh") void loadZh().then(notify);
+  else notify();
 }
 
 /** Translates an English string; `{name}` placeholders are filled from `vars`. */
@@ -63,11 +75,14 @@ export const pick = <T,>(en: T, zh: T): T => (current === "zh" ? zh : en);
 /** Remounts its children when the language changes. */
 export function LangRoot({ children }: { children: (l: Lang) => ReactNode }) {
   const [l, setL] = useState<Lang>(current);
+  // A reader who opens the site in Chinese waits for the strings once, instead of seeing English flash first.
+  const [ready, setReady] = useState(current !== "zh");
   useEffect(() => {
     listeners.add(setL);
+    if (!ready) void loadZh().then(() => setReady(true));
     return () => void listeners.delete(setL);
   }, []);
-  return <>{children(l)}</>;
+  return ready ? <>{children(l)}</> : null;
 }
 
 /** EN / 中文 switch. */
