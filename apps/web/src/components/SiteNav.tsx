@@ -59,14 +59,14 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
         <a href="/" className="flex items-center gap-2.5 text-white" aria-label="ZOOAI AGENCY">
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
-          <span className="font-mono mt-0.5 text-[12px] tracking-[0.22em] text-white/70">AGENCY</span>
+          <span className="font-mono mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
         </a>
         <div className="hidden items-center gap-9 lg:flex">
           {GROUPS.map((g) => {
             const here = g.items.some((i) => i.href === route);
             return (
               <div key={g.label} className="group relative">
-                <button type="button" className={`flex items-center gap-1.5 text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-white/75"}`}>
+                <button type="button" className={`flex items-center gap-1.5 text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
                   {tr(g.label)} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
                 </button>
                 <div className="invisible absolute left-1/2 top-full z-50 w-72 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
@@ -80,7 +80,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                         className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === i.href ? "bg-white/[0.06]" : ""}`}
                       >
                         <span className="block text-[14px] text-white">{tr(i.label)}</span>
-                        {i.note && <span className="block text-[12.5px] text-white/60">{tr(i.note)}</span>}
+                        {i.note && <span className="block text-[12.5px] text-fg-4">{tr(i.note)}</span>}
                       </a>
                     ))}
                   </div>
@@ -93,7 +93,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               key={l.href}
               href={l.href}
               aria-current={route === l.href ? "page" : undefined}
-              className={`text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-white/75"}`}
+              className={`text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-fg-3"}`}
             >
               {tr(l.label)}
             </a>
@@ -101,10 +101,10 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
         </div>
         <div className="hidden items-center gap-3 lg:flex">
           <LangSwitch />
-          <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="ZOOAI AGENCY on X" className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/[0.06] hover:text-white">
+          <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="ZOOAI AGENCY on X" className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 transition hover:bg-white/[0.06] hover:text-white">
             <XIcon size={15} />
           </a>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/[0.06] hover:text-white">
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 transition hover:bg-white/[0.06] hover:text-white">
             <GitHubIcon size={16} />
           </a>
           <WalletButton />
@@ -126,7 +126,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             <WalletButton block />
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-6">
-                <p className="text-[12.5px] uppercase tracking-[0.14em] text-white/55">{tr(g.label)}</p>
+                <p className="text-[12.5px] uppercase tracking-[0.14em] text-fg-4">{tr(g.label)}</p>
                 <div className="mt-2 grid">
                   {g.items.map((i) => (
                     <a
@@ -135,7 +135,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                       target={external(i.href) ? "_blank" : undefined}
                       rel={external(i.href) ? "noopener noreferrer" : undefined}
                       onClick={() => setMenuOpen(false)}
-                      className={`py-2 text-[16px] ${route === i.href ? "text-white" : "text-white/85"}`}
+                      className={`py-2 text-[16px] ${route === i.href ? "text-white" : "text-fg-2"}`}
                     >
                       {tr(i.label)}
                     </a>
@@ -145,17 +145,17 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             ))}
             <div className="mt-6 grid border-t border-white/10 pt-4">
               {LINKS.map((l) => (
-                <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="py-2 text-[16px] text-white/85">
+                <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="py-2 text-[16px] text-fg-2">
                   {tr(l.label)}
                 </a>
               ))}
             </div>
             <div className="mt-5 flex items-center gap-5">
               <LangSwitch />
-              <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="X" className="text-white/85">
+              <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="X" className="text-fg-2">
                 <XIcon size={17} />
               </a>
-              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="text-white/85">
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="text-fg-2">
                 <GitHubIcon size={18} />
               </a>
             </div>

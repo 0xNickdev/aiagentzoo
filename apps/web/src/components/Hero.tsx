@@ -237,7 +237,7 @@ export default function Hero() {
               placeholder={t("token address or pump.fun link")}
               spellCheck={false}
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/50"
+              className="min-w-0 flex-1 bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-fg-4"
               aria-label={t("Token address")}
             />
             <button

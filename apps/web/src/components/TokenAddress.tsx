@@ -22,12 +22,12 @@ export function CAPill({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => void copy()}
       title={t("Copy the contract address")}
-      className={`liquid-glass font-mono inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[13px] text-white/80 transition hover:text-white ${className}`}
+      className={`liquid-glass font-mono inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[13px] text-fg-2 transition hover:text-white ${className}`}
     >
-      <span className="text-white/65">CA</span>
+      <span className="text-fg-3">CA</span>
       <span className="truncate sm:hidden">{TOKEN_MINT.slice(0, 6)}…{TOKEN_MINT.slice(-6)}</span>
       <span className="hidden sm:inline">{TOKEN_MINT}</span>
-      <span className={copied ? "text-emerald-300" : "text-white/65"}>{copied ? t("copied") : t("copy")}</span>
+      <span className={copied ? "text-emerald-300" : "text-fg-3"}>{copied ? t("copied") : t("copy")}</span>
     </button>
   );
 }
@@ -54,13 +54,13 @@ export function TokenAddress() {
 
   return (
     <div className="liquid-glass mx-auto mb-12 max-w-3xl rounded-3xl bg-black/45 p-6 text-center backdrop-blur-md">
-      <p className="text-[11.5px] font-light uppercase tracking-[0.3em] text-white/70">
+      <p className="text-[11.5px] font-light uppercase tracking-[0.3em] text-fg-3">
         {TOKEN_SYMBOL ? `$${TOKEN_SYMBOL} · ` : ""}{t("Solana · launched on ClawPump")}
       </p>
-      <button type="button" onClick={copy} className="mt-3 w-full break-all font-mono text-sm text-white/90 hover:text-white sm:text-base">
+      <button type="button" onClick={copy} className="mt-3 w-full break-all font-mono text-sm text-fg hover:text-white sm:text-base">
         {TOKEN_MINT}
       </button>
-      <p className="mt-1 text-[12.5px] font-light text-white/65">{copied ? t("Copied") : t("Tap to copy the contract address")}</p>
+      <p className="mt-1 text-[12.5px] font-light text-fg-3">{copied ? t("Copied") : t("Tap to copy the contract address")}</p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {links.map(([label, href]) => (
           <a
@@ -68,7 +68,7 @@ export function TokenAddress() {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full px-4 py-2 text-[12.5px] uppercase tracking-[0.18em] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white"
+            className="rounded-full px-4 py-2 text-[12.5px] uppercase tracking-[0.18em] text-fg-2 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white"
           >
             {label}
           </a>

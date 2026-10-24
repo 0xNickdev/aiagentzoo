@@ -23,16 +23,16 @@ function Row({ w, locked }: { w: Watched; locked: boolean }) {
     >
       <div className="min-w-0">
         <p className="truncate text-[17px] text-white">
-          ${w.symbol} <span className="text-[14px] text-white/55">{w.name}</span>
+          ${w.symbol} <span className="text-[14px] text-fg-4">{w.name}</span>
         </p>
         {turned && w.reason && <p className="mt-1 text-[14px] leading-snug" style={{ color }}>{tChain(w.reason)}</p>}
       </div>
-      <p className="font-mono hidden text-[14px] tabular-nums text-white/75 sm:block">{t("{n} buyers", { n: w.buyers })}</p>
-      <p className="font-mono hidden text-[14px] tabular-nums text-white/75 sm:block">{w.graduated ? t("graduated") : `${w.curveSol.toFixed(1)} SOL`}</p>
+      <p className="font-mono hidden text-[14px] tabular-nums text-fg-3 sm:block">{t("{n} buyers", { n: w.buyers })}</p>
+      <p className="font-mono hidden text-[14px] tabular-nums text-fg-3 sm:block">{w.graduated ? t("graduated") : `${w.curveSol.toFixed(1)} SOL`}</p>
       <p className="flex items-center justify-end gap-2 text-right text-[14px] sm:justify-start sm:text-left" style={{ color }}>
         <span className={`h-2 w-2 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
         {status}
-        {turned && w.turnedAt && <span className="text-white/50">· {ago(w.turnedAt)}</span>}
+        {turned && w.turnedAt && <span className="text-fg-4">· {ago(w.turnedAt)}</span>}
       </p>
     </motion.a>
   );
@@ -61,33 +61,33 @@ export default function Radar() {
   return (
     <section className="relative min-h-screen px-5 pb-28 pt-16 sm:px-8 sm:pt-24">
       <div className="mx-auto max-w-6xl">
-        <p className="text-[15px] text-white/70">{t("For holders of $ZOOAGENCY")}</p>
+        <p className="text-[15px] text-fg-3">{t("For holders of $ZOOAGENCY")}</p>
         <h1 className="font-display mt-3 max-w-3xl text-[44px] font-semibold leading-[1.02] text-white sm:text-[72px]">
           {t("Holder radar.")} <span className="accent">{t("Know first when it turns.")}</span>
         </h1>
-        <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-white/75">
+        <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-fg-3">
           {t("Fresh coins that passed our checks, re-checked against the chain all the time. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and moves to the top.")}
         </p>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-white/55">
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-4">
           {t("Not a buy list. No red flags only means we have not caught anything yet.")}
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
           {!session && <WalletButton />}
           {session && holder && !isHolder && (
-            <p className="text-[15px] text-amber-100/90">{t("Hold {n} $ZOOAGENCY to open the whole radar. Here are the first three.", { n: Math.round(holder.min).toLocaleString("en-US") })}</p>
+            <p className="text-[15px] text-warn">{t("Hold {n} $ZOOAGENCY to open the whole radar. Here are the first three.", { n: Math.round(holder.min).toLocaleString("en-US") })}</p>
           )}
           {isHolder && (
             <button
               type="button"
               onClick={askNotify}
               disabled={notify}
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[14px] text-white/85 transition hover:bg-white/[0.06] disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[14px] text-fg-2 transition hover:bg-white/[0.06] disabled:opacity-70"
             >
               <Bell size={15} /> {notify ? t("Pings on in this tab") : t("Ping me in this tab when one turns")}
             </button>
           )}
-          <span className="text-[14px] text-white/50">{t("Telegram pings arrive with our own servers in November.")}</span>
+          <span className="text-[14px] text-fg-4">{t("Telegram pings arrive with our own servers in November.")}</span>
         </div>
 
         <AnimatePresence>
@@ -106,10 +106,10 @@ export default function Radar() {
         <div className="mt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-display text-[26px] text-white">{t("Watching now")}</h2>
-            <p className="font-mono text-[13px] text-white/55">{t("{n} coins · re-checked about every minute", { n: live.length })}</p>
+            <p className="font-mono text-[13px] text-fg-4">{t("{n} coins · re-checked about every minute", { n: live.length })}</p>
           </div>
           <div className="relative mt-3 border-t border-white/[0.12]">
-            {live.length === 0 && <p className="py-10 text-[15px] text-white/55">{t("Reading the chain...")}</p>}
+            {live.length === 0 && <p className="py-10 text-[15px] text-fg-4">{t("Reading the chain...")}</p>}
             {live.map((w, i) => (
               <Row key={w.mint} w={w} locked={i >= lockAfter} />
             ))}

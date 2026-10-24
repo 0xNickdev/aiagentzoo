@@ -47,7 +47,7 @@ export default function WallOfRugs() {
         text={t("Creator wallets ranked by how many of their own pump.fun launches they sold half or more of. Every row links to a real transaction. Check your dev before you buy.")}
       />
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-white/60 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
+        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -55,8 +55,8 @@ export default function WallOfRugs() {
           <span className="hidden text-right sm:block">{t("median")}</span>
           <span className="hidden sm:block">{t("latest dump")}</span>
         </div>
-        {!list && <p className="px-7 py-10 text-center text-[13px] text-white/65">{t("Reading the chain…")}</p>}
-        {list && list.length === 0 && <p className="px-7 py-10 text-center text-[13px] text-white/65">{t("No serial dumpers in the last two days yet. The stream fills this as it watches.")}</p>}
+        {!list && <p className="px-7 py-10 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
+        {list && list.length === 0 && <p className="px-7 py-10 text-center text-[13px] text-fg-3">{t("No serial dumpers in the last two days yet. The stream fills this as it watches.")}</p>}
         {list?.map((r, i) => (
           <div
             key={r.wallet}
@@ -67,9 +67,9 @@ export default function WallOfRugs() {
             title={t("Open this dev's wallet")}
             className="font-mono grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
-            <span className="text-white/60">{String(i + 1).padStart(2, "0")}</span>
+            <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-white/90 underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
+              <span className="truncate text-fg underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -78,22 +78,22 @@ export default function WallOfRugs() {
                   setCopied(r.wallet);
                   window.setTimeout(() => setCopied(null), 1200);
                 }}
-                className="shrink-0 text-[11.5px] text-white/50 hover:text-white"
+                className="shrink-0 text-[11.5px] text-fg-4 hover:text-white"
                 title={t("Copy the wallet")}
               >
                 {copied === r.wallet ? t("copied") : t("copy")}
               </button>
             </span>
-            <span className="text-right text-white/70">{r.launches48h}</span>
+            <span className="text-right text-fg-3">{r.launches48h}</span>
             <span className="text-right text-[#ff8a7e]">{r.dumped}</span>
-            <span className="hidden text-right text-white/60 sm:block">{r.medianDumpMin === null ? "-" : t("{m} min", { m: r.medianDumpMin })}</span>
+            <span className="hidden text-right text-fg-4 sm:block">{r.medianDumpMin === null ? "-" : t("{m} min", { m: r.medianDumpMin })}</span>
             <span className="hidden truncate sm:block">
               {r.lastDump ? (
-                <a href={`/xray?mint=${r.lastDump.mint}`} onClick={(e) => e.stopPropagation()} className="text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={`/xray?mint=${r.lastDump.mint}`} onClick={(e) => e.stopPropagation()} className="text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
                   ${r.lastDump.symbol.replace(/^\$/, "")} · {tChain(r.lastDump.text)}
                 </a>
               ) : (
-                <span className="text-white/55">-</span>
+                <span className="text-fg-4">-</span>
               )}
             </span>
           </div>
@@ -101,7 +101,7 @@ export default function WallOfRugs() {
       </Reveal>
       <Builders />
       <ReusedAccounts />
-      <p className="font-mono mt-4 text-center text-[12.5px] text-white/60">
+      <p className="font-mono mt-4 text-center text-[12.5px] text-fg-4">
         {t("check any dev:")} <a href="/ask" className="underline decoration-white/25 underline-offset-4 hover:text-white">{t("ask the beaver")}</a> · {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/ruggers`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/ruggers</a>
       </p>
@@ -152,7 +152,7 @@ function Builders() {
         text={t("The other side of the list: dev wallets with launches that graduated and still hold liquidity, where the dev has not dumped. Rare. A track record, not a promise.")}
       />
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-white/60 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+        <div className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -160,19 +160,19 @@ function Builders() {
           <span className="hidden text-right sm:block">{t("dumped")}</span>
           <span className="hidden sm:block">{t("latest launches")}</span>
         </div>
-        {!list && <p className="px-7 py-10 text-center text-[13px] text-white/65">{t("Reading the chain…")}</p>}
+        {!list && <p className="px-7 py-10 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
         {list?.map((r, i) => (
           <div key={r.wallet} className="font-mono grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
-            <span className="text-white/60">{String(i + 1).padStart(2, "0")}</span>
-            <button type="button" onClick={() => goWallet(r.wallet)} className="truncate text-left text-white/85 underline decoration-white/15 underline-offset-4 hover:text-white">
+            <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+            <button type="button" onClick={() => goWallet(r.wallet)} className="truncate text-left text-fg-2 underline decoration-white/15 underline-offset-4 hover:text-white">
               {short(r.wallet)}
             </button>
-            <span className="text-right text-white/70">{r.launches48h}</span>
+            <span className="text-right text-fg-3">{r.launches48h}</span>
             <span className="text-right text-[#9df3b0]">{r.grew}</span>
-            <span className="hidden text-right text-white/70 sm:block">{r.dumped}</span>
+            <span className="hidden text-right text-fg-3 sm:block">{r.dumped}</span>
             <span className="hidden gap-1.5 overflow-hidden sm:flex">
               {r.recent.slice(0, 5).map((x) => (
-                <button key={x.mint} type="button" onClick={() => { window.history.pushState(null, "", `/xray?mint=${x.mint}`); window.dispatchEvent(new PopStateEvent("popstate")); }} className={`shrink-0 truncate ${x.alive ? "text-white/70" : "text-white/55"} hover:text-white`} title={x.graduated ? t("graduated") : ""}>
+                <button key={x.mint} type="button" onClick={() => { window.history.pushState(null, "", `/xray?mint=${x.mint}`); window.dispatchEvent(new PopStateEvent("popstate")); }} className={`shrink-0 truncate ${x.alive ? "text-fg-3" : "text-fg-4"} hover:text-white`} title={x.graduated ? t("graduated") : ""}>
                   ${x.symbol.replace(/^\$/, "")}
                 </button>
               ))}
@@ -180,7 +180,7 @@ function Builders() {
           </div>
         ))}
       </Reveal>
-      <p className="font-mono mt-4 text-center text-[12.5px] text-white/60">
+      <p className="font-mono mt-4 text-center text-[12.5px] text-fg-4">
         {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/builders`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/builders</a>
       </p>
@@ -203,31 +203,31 @@ function ReusedAccounts() {
   return (
     <div className="mt-16">
       <div className="mb-4 max-w-3xl">
-        <p className="font-mono mb-2 text-[12.5px] text-white/65">{t("same account, new token · last 48 hours")}</p>
+        <p className="font-mono mb-2 text-[12.5px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
         <h3 className="font-display text-3xl leading-tight">{t("The accounts behind repeat rugs.")}</h3>
-        <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
+        <p className="mt-3 text-[13.5px] font-light leading-relaxed text-fg-4">
           {t("A rugger switches wallets for every launch. The X account or Telegram group on the token often stays the same. These are linked, in their own metadata, to several launches whose dev sold within 5 minutes.")}
         </p>
       </div>
       <Reveal className="liquid-glass overflow-hidden rounded-3xl">
-        <div className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-white/60 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+        <div className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>{t("linked account")}</span>
           <span className="text-right">{t("launches")}</span>
           <span className="text-right">{t("dev sold ≤5 min")}</span>
           <span className="hidden text-right sm:block">{t("wallets")}</span>
           <span className="hidden sm:block">{t("tokens")}</span>
         </div>
-        {!list && <p className="px-7 py-8 text-center text-[13px] text-white/65">{t("Reading the chain…")}</p>}
-        {list && list.length === 0 && <p className="px-7 py-8 text-center text-[13px] text-white/65">{t("None yet: the reader fills this as new launches come in.")}</p>}
+        {!list && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
+        {list && list.length === 0 && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("None yet: the reader fills this as new launches come in.")}</p>}
         {list?.map((a) => (
           <div key={a.social.url} className="font-mono grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.05] px-5 py-3 text-[12.5px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
-            <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-white/85 hover:text-white">
+            <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-fg-2 hover:text-white">
               {a.social.label} ↗
             </a>
-            <span className="text-right text-white/70">{a.launches}</span>
+            <span className="text-right text-fg-3">{a.launches}</span>
             <span className="text-right text-[#ff8a7e]">{a.fastDumps}</span>
-            <span className="hidden text-right text-white/60 sm:block">{a.creators}</span>
-            <span className="hidden truncate text-white/55 sm:block">
+            <span className="hidden text-right text-fg-4 sm:block">{a.creators}</span>
+            <span className="hidden truncate text-fg-4 sm:block">
               {a.recent.slice(0, 4).map((r, i) => (
                 <a key={r.mint} href={`/xray?mint=${r.mint}`} className="hover:text-white">
                   {i ? " · " : ""}${r.symbol}
@@ -237,7 +237,7 @@ function ReusedAccounts() {
           </div>
         ))}
       </Reveal>
-      <p className="mt-3 text-[13px] font-light text-white/60">
+      <p className="mt-3 text-[13px] font-light text-fg-4">
         {t("Facts from each token's metadata and the chain, not a judgement of any person. Think one is listed by mistake? Write to x.com/zooclawagency.")}
       </p>
     </div>

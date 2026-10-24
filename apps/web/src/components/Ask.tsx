@@ -79,7 +79,7 @@ interface Recent {
 
 const TONE: Record<Verdict, { label: string; color: string; text: string }> = {
   suspicious: { label: "SUSPICIOUS", color: "#ff7a6e", text: "text-[#ff8a7e]" },
-  watch: { label: "WATCH", color: "#e9e4d8", text: "text-white/85" },
+  watch: { label: "WATCH", color: "#e9e4d8", text: "text-fg-2" },
   promising: { label: "PROMISING", color: "#8ff0a4", text: "text-[#9df3b0]" },
 };
 
@@ -349,13 +349,13 @@ export default function AskPage() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "200,170,110", glowAt: "50% 35%", opacity: 0.35 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="font-mono text-[12px] text-white/70">{t("Ask the beaver · graded by reality tomorrow")}</p>
+          <p className="font-mono text-[12px] text-fg-3">{t("Ask the beaver · graded by reality tomorrow")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("Is it a rug?")}
             <br />
             <span className="accent">{t("Ask the beaver.")}</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
+          <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-fg-4">
             {t("Paste any Solana token, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.")}{" "}
             {t("Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.")}
           </p>
@@ -369,7 +369,7 @@ export default function AskPage() {
               placeholder={t("token, creator wallet, or pump.fun link")}
               spellCheck={false}
               autoComplete="off"
-              className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-white/35"
+              className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-fg-4"
               aria-label={t("Token address")}
             />
             <button
@@ -381,17 +381,17 @@ export default function AskPage() {
             </button>
           </form>
           {error && <p className="mt-4 text-center text-[13px] text-[#ff8a7e]">{error}</p>}
-          <p className="font-mono mt-4 text-center text-[12.5px] text-white/65">
+          <p className="font-mono mt-4 text-center text-[12.5px] text-fg-3">
             {!session ? (
               <>
                 {t("holding $ZOOAGENCY?")}{" "}
-                <button type="button" onClick={() => void signIn()} disabled={signing} className="text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100">
+                <button type="button" onClick={() => void signIn()} disabled={signing} className="text-warn underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100">
                   {t("sign in with your wallet")}
                 </button>{" "}
                 {t("for 30 questions an hour instead of 6")}
               </>
             ) : holder?.holder ? (
-              <span className="text-amber-100/80">{t("● holder · 30 questions an hour · 10 tokens under watch")}</span>
+              <span className="text-warn">{t("● holder · 30 questions an hour · 10 tokens under watch")}</span>
             ) : holder ? (
               <>{t("signed in · hold {n} $ZOOAGENCY for 30 questions an hour", { n: holder.min.toLocaleString("en-US") })}</>
             ) : (
@@ -415,25 +415,25 @@ export default function AskPage() {
       <Section className="!pb-6 !pt-6">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-2xl">{t("Passed the basic checks")}</h2>
-          <p className="font-mono text-[12.5px] text-white/65">{t("fresh pump.fun launches · live from the chain")}</p>
+          <p className="font-mono text-[12.5px] text-fg-3">{t("fresh pump.fun launches · live from the chain")}</p>
         </div>
-        <p className="mb-5 max-w-3xl text-[13px] font-light leading-relaxed text-white/70">
+        <p className="mb-5 max-w-3xl text-[13px] font-light leading-relaxed text-fg-3">
           {t("10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.")}{" "}
           {t("That only means the usual rug signs are absent so far. It is not a call and not advice; most of these still die. Ask the beaver before anything else.")}
         </p>
         {!clean ? (
-          <p className="text-[13px] text-white/65">{t("Reading the chain…")}</p>
+          <p className="text-[13px] text-fg-3">{t("Reading the chain…")}</p>
         ) : clean.length === 0 ? (
-          <p className="text-[13px] text-white/65">{t("Nothing passes right now. On pump.fun that is a normal hour.")}</p>
+          <p className="text-[13px] text-fg-3">{t("Nothing passes right now. On pump.fun that is a normal hour.")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {clean.map((c) => (
               <li key={c.mint} className="rounded-2xl bg-black/40 px-4 py-3 ring-1 ring-white/10">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">${c.symbol}</span>
-                  <span className="font-mono shrink-0 text-[12px] text-white/60">{t("{n} min old", { n: c.ageMin })}</span>
+                  <span className="font-mono shrink-0 text-[12px] text-fg-4">{t("{n} min old", { n: c.ageMin })}</span>
                 </div>
-                <p className="font-mono mt-1 text-[12px] text-white/70">
+                <p className="font-mono mt-1 text-[12px] text-fg-3">
                   {t("{b} buyers · {r} came back · top 5 hold {p}", { b: c.buyersMore ? `${c.buyers}+` : c.buyers, r: c.repeatBuyers, p: pctOf(c.top5Share) })}
                 </p>
                 <button
@@ -444,7 +444,7 @@ export default function AskPage() {
                     window.scrollTo({ top: 0, behavior: "smooth" });
                     void askAbout(c.mint);
                   }}
-                  className="font-mono mt-2 text-[12.5px] text-amber-100/80 underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100 disabled:opacity-50"
+                  className="font-mono mt-2 text-[12.5px] text-warn underline decoration-amber-100/30 underline-offset-4 hover:text-amber-100 disabled:opacity-50"
                 >
                   {t("ask the beaver →")}
                 </button>
@@ -458,14 +458,14 @@ export default function AskPage() {
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-2xl">{t("Recent questions")}</h2>
           {recent && (
-            <p className="font-mono text-[12.5px] text-white/65">
+            <p className="font-mono text-[12.5px] text-fg-3">
               {t("{n} asked · beaver on asks:", { n: recent.asked.toLocaleString("en-US") })}{" "}
               {recent.record.graded ? t("{p} balanced · {n} graded", { p: pctOf(recent.record.skill), n: recent.record.graded }) : t("first grades after a day")}
             </p>
           )}
         </div>
         {!recent?.asks.length ? (
-          <p className="text-[13px] text-white/65">{t("No questions yet. Be the first.")}</p>
+          <p className="text-[13px] text-fg-3">{t("No questions yet. Be the first.")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {recent.asks.map((a) => (
@@ -483,7 +483,7 @@ export default function AskPage() {
                     <span className="font-display truncate text-[17px]">${a.symbol}</span>
                     <span className={`font-mono shrink-0 text-[12.5px] ${TONE[a.verdict].text}`}>{t(TONE[a.verdict].label)}</span>
                   </div>
-                  <p className="font-mono mt-1 truncate text-[12px] text-white/60">{graded(a)}</p>
+                  <p className="font-mono mt-1 truncate text-[12px] text-fg-4">{graded(a)}</p>
                 </button>
               </li>
             ))}
@@ -519,14 +519,14 @@ function Answer({ a }: { a: Ask }) {
         <div className="liquid-glass rounded-3xl p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-mono truncate text-[12.5px] text-white/60">
+              <p className="font-mono truncate text-[12.5px] text-fg-4">
                 {a.name ? `${a.name} · ` : ""}
                 {a.mint}
               </p>
               <h2 className="font-display mt-1 text-4xl">${a.symbol}</h2>
             </div>
             {a.facts.url && (
-              <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[12.5px] text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white">
+              <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[12.5px] text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
                 {t("chart ↗")}
               </a>
             )}
@@ -535,17 +535,17 @@ function Answer({ a }: { a: Ask }) {
           <p className="font-display mt-6 text-6xl leading-none sm:text-7xl" style={{ color: tone.color }}>
             {t(tone.label)}
           </p>
-          <p className="font-mono mt-3 text-[12.5px] text-white/65">
+          <p className="font-mono mt-3 text-[12.5px] text-fg-3">
             {t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion })}
             {a.by === "rules" ? t(" · rules only, the model was busy") : ""}
           </p>
-          <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-white/85">{whyOf(a)}</p>
+          <p className="mt-5 max-w-2xl text-[17px] font-light leading-relaxed text-fg-2">{whyOf(a)}</p>
 
           <dl className="font-mono mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] sm:grid-cols-3">
             {evidence(a).map(([k, v, bad]) => (
               <div key={k} className="bg-[#070908] px-4 py-3">
-                <dt className="text-white/60">{t(k)}</dt>
-                <dd className={`mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-white/85"}`}>{v}</dd>
+                <dt className="text-fg-4">{t(k)}</dt>
+                <dd className={`mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</dd>
               </div>
             ))}
           </dl>
@@ -555,10 +555,10 @@ function Answer({ a }: { a: Ask }) {
             </div>
           )}
           {!a.facts.chain && (
-            <p className="mt-3 text-[12px] font-light text-white/60">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
+            <p className="mt-3 text-[12px] font-light text-fg-4">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
           )}
 
-          <p className={`font-mono mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#9df3b0]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-amber-100/70"}`}>
+          <p className={`font-mono mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#9df3b0]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-warn"}`}>
             {a.graded ? "● " : "○ "}
             {graded(a)}
           </p>
@@ -581,16 +581,16 @@ function Answer({ a }: { a: Ask }) {
               href={`https://x.com/intent/post?text=${tweet}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-white/90 hover:text-white"
+              className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-fg hover:text-white"
               title={`Follow ${X_URL.replace("https://x.com/", "@")}`}
             >
               <XIcon size={13} /> {t("Post on X")}
             </a>
           </div>
-          <p className="font-mono text-[12.5px] text-white/60">
-            {t("share:")} <span className="text-white/70">{link}</span>
+          <p className="font-mono text-[12.5px] text-fg-4">
+            {t("share:")} <span className="text-fg-3">{link}</span>
           </p>
-          <p className="text-[13px] font-light text-white/55">{t("Not financial advice. A verdict from public data, checked in public a day later.")}</p>
+          <p className="text-[13px] font-light text-fg-4">{t("Not financial advice. A verdict from public data, checked in public a day later.")}</p>
         </div>
       </div>
     </motion.section>
@@ -602,22 +602,22 @@ function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boolean }) {
   const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
   return (
     <div>
-      <p className="font-mono text-[12.5px] text-white/60">
+      <p className="font-mono text-[12.5px] text-fg-4">
         {t("creator wallet · {w} · last 48h on pump.fun", { w: `${r.wallet.slice(0, 6)}…${r.wallet.slice(-6)}` })}
       </p>
       <p className={`font-display mt-2 ${big ? "text-4xl sm:text-5xl" : "text-2xl"} ${serial ? "text-[#ff8a7e]" : "text-white"}`}>
         {t(r.launches48h === 1 ? "{n} launch, dumped {d}" : "{n} launches, dumped {d}", { n: r.launches48h, d: r.dumped })}
         {r.medianDumpMin !== null ? t(", median {m} min", { m: r.medianDumpMin }) : ""}
       </p>
-      <p className="font-mono mt-2 text-[12.5px] text-white/65">
+      <p className="font-mono mt-2 text-[12.5px] text-fg-3">
         {t("{a} in the last 24h · {g} graduated", { a: r.launches24h, g: r.graduated })}{serial ? t(" · a serial dumper") : ""}
       </p>
       {big && r.recent.length > 0 && (
         <ul className="font-mono mt-5 grid gap-1.5 text-[12px] sm:grid-cols-2">
           {r.recent.map((x) => (
             <li key={x.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
-              <span className="truncate text-white/80">${x.symbol}</span>
-              <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#9df3b0]" : "text-white/65"}>
+              <span className="truncate text-fg-2">${x.symbol}</span>
+              <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#9df3b0]" : "text-fg-3"}>
                 {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
               </span>
             </li>

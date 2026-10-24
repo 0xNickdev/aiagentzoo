@@ -115,12 +115,12 @@ export default function NightWatch() {
       {/* Compact head, so the map and the panel fit one screen under it. */}
       <Reveal className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="font-mono text-[12px] text-white/55">
+          <p className="font-mono text-[12px] text-fg-4">
             {live.enabled ? t("Live enclosures · {a}/{b} nodes online", { a: live.connected, b: NODE_URLS.length }) : t("Live enclosures · simulation")}
           </p>
           <h2 className="font-display mt-2 text-4xl text-white md:text-5xl">{t("The Night Watch")}</h2>
         </div>
-        <p className="max-w-md text-[14px] font-light leading-relaxed text-white/60 md:text-right">
+        <p className="max-w-md text-[14px] font-light leading-relaxed text-fg-4 md:text-right">
           {t("Three nodes, five species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
         </p>
       </Reveal>
@@ -146,10 +146,10 @@ export default function NightWatch() {
             <span className="font-display mr-2 text-3xl text-white">{snap?.clock ?? "22:00"}</span>
             {!live.enabled && (
               <>
-                <button type="button" onClick={togglePause} className="liquid-glass rounded-full px-4 py-1.5 text-[12.5px] text-white/90">
+                <button type="button" onClick={togglePause} className="liquid-glass rounded-full px-4 py-1.5 text-[12.5px] text-fg">
                   {paused ? "Resume" : "Pause"}
                 </button>
-                <button type="button" onClick={cycleSpeed} className="liquid-glass rounded-full px-4 py-1.5 text-[12.5px] text-white/90">
+                <button type="button" onClick={cycleSpeed} className="liquid-glass rounded-full px-4 py-1.5 text-[12.5px] text-fg">
                   ×{speed}
                 </button>
               </>
@@ -163,7 +163,7 @@ export default function NightWatch() {
                   key={name}
                   type="button"
                   onClick={() => openPassport(name)}
-                  className="liquid-glass flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2.5 text-[12.5px] capitalize text-white/80 hover:text-white"
+                  className="liquid-glass flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2.5 text-[12.5px] capitalize text-fg-2 hover:text-white"
                 >
                   <img src={`/agents/${name}.webp`} alt="" className="h-6 w-6 rounded-full" />
                   {name}
@@ -173,7 +173,7 @@ export default function NightWatch() {
           )}
 
           {chain.perMinute && (
-            <div className="font-mono pointer-events-none absolute bottom-11 left-4 text-[12px] text-white/70 sm:bottom-12 sm:left-6">
+            <div className="font-mono pointer-events-none absolute bottom-11 left-4 text-[12px] text-fg-3 sm:bottom-12 sm:left-6">
               <p className="flex items-center gap-2">
                 <i className={`h-1.5 w-1.5 rounded-full ${chain.live ? "animate-pulse bg-[#f1dfb8]" : "bg-white/30"}`} />
                 {chain.live ? "solana · pump.fun, last 60s" : "chain stream paused"}
@@ -199,7 +199,7 @@ export default function NightWatch() {
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-2 truncate rounded-full bg-black/60 px-3 py-1 text-white/75 ring-1 ring-white/[0.06]"
+                    className="flex items-center gap-2 truncate rounded-full bg-black/60 px-3 py-1 text-fg-3 ring-1 ring-white/[0.06]"
                   >
                     <i className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: PULSE_COLOR[e.kind] }} />
                     <span className="text-white">${e.symbol}</span>
@@ -210,7 +210,7 @@ export default function NightWatch() {
             </ul>
           )}
 
-          <div className="font-mono absolute bottom-4 left-4 flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-white/70 sm:bottom-5 sm:left-6">
+          <div className="font-mono absolute bottom-4 left-4 flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-fg-3 sm:bottom-5 sm:left-6">
             {SPECIES.map((s) => (
               <span key={s.id} className="flex items-center gap-2">
                 <i className="h-1.5 w-1.5 rounded-full" style={{ background: SPECIES_COLOR[s.id] }} />
@@ -223,11 +223,11 @@ export default function NightWatch() {
         <aside className="flex min-h-0 min-w-0 flex-col gap-3">
           {live.enabled && (
             <div className="liquid-glass rounded-3xl bg-black/30 p-5">
-              <div className="font-mono flex items-center justify-between text-[12px] text-white/70">
+              <div className="font-mono flex items-center justify-between text-[12px] text-fg-3">
                 <span>your move</span>
                 <span>real cycles</span>
               </div>
-              <p className="mt-2 text-[13px] font-light leading-relaxed text-white/65">
+              <p className="mt-2 text-[13px] font-light leading-relaxed text-fg-3">
                 {t("Wake a sentinel on its live node: it really scans, and the step lands in the log under your name.")}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -241,21 +241,21 @@ export default function NightWatch() {
           <div className="liquid-glass rounded-3xl p-5">
             <div className="flex items-baseline justify-between">
               <h3 className="font-display text-xl">Morning Brief</h3>
-              <span className={`font-mono text-[12px] ${status === "building" ? "text-white/55" : "text-amber-100/85"}`}>{STATUS_LABEL[status]}</span>
+              <span className={`font-mono text-[12px] ${status === "building" ? "text-fg-4" : "text-warn"}`}>{STATUS_LABEL[status]}</span>
             </div>
             <div className="mt-3 h-px w-full bg-white/10">
               <div className="h-px bg-white transition-[width] duration-700" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
             <ol className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-[12px] font-light">
               {parts.map((p, i) => (
-                <li key={p} className={`flex gap-2 truncate transition-colors duration-500 ${done[i] ? "text-white/85" : "text-white/50"}`}>
+                <li key={p} className={`flex gap-2 truncate transition-colors duration-500 ${done[i] ? "text-fg-2" : "text-fg-4"}`}>
                   <span>{done[i] ? "●" : "○"}</span>
                   {t(p)}
                 </li>
               ))}
             </ol>
             {live.brief && (
-              <a href="/brief" className="font-mono mt-3 inline-block text-[12.5px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white">
+              <a href="/brief" className="font-mono mt-3 inline-block text-[12.5px] text-fg-4 underline decoration-white/25 underline-offset-4 hover:text-white">
                 {t("read {id} →", { id: live.brief.id })}
               </a>
             )}
@@ -265,16 +265,16 @@ export default function NightWatch() {
             {stats.map(([value, label]) => (
               <div key={label} className="min-w-0">
                 <b className="font-display block truncate text-2xl font-normal leading-none">{value}</b>
-                <span className="font-mono mt-1 block truncate text-[11.5px] text-white/65">{label}</span>
+                <span className="font-mono mt-1 block truncate text-[11.5px] text-fg-3">{label}</span>
               </div>
             ))}
           </div>
 
           {/* The log scrolls inside its card instead of stretching the page. */}
           <div className="liquid-glass flex min-h-[220px] flex-1 flex-col rounded-3xl p-5 lg:min-h-0">
-            <div className="font-mono flex justify-between text-[12px] text-white/70">
+            <div className="font-mono flex justify-between text-[12px] text-fg-3">
               <span>public log</span>
-              <span className="animate-pulse text-white/80">● live</span>
+              <span className="animate-pulse text-fg-2">● live</span>
             </div>
             <ul className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 text-[12px] font-light leading-snug [mask-image:linear-gradient(to_bottom,#000_85%,transparent)] [scrollbar-width:thin]">
               <AnimatePresence initial={false}>
@@ -284,11 +284,11 @@ export default function NightWatch() {
                     layout
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="border-b border-dashed border-white/10 py-2 text-white/60"
+                    className="border-b border-dashed border-white/10 py-2 text-fg-4"
                   >
-                    <span className="font-mono mr-2 text-[12px] text-white/50">{e.time}</span>
+                    <span className="font-mono mr-2 text-[12px] text-fg-4">{e.time}</span>
                     <span style={{ color: e.species ? SPECIES_COLOR[e.species] : "#fff" }}>{e.who ?? "warden"}</span> {e.text}{" "}
-                    <span className="font-mono text-[12px] text-white/45">#{e.hash}</span>
+                    <span className="font-mono text-[12px] text-fg-4">#{e.hash}</span>
                   </motion.li>
                 ))}
               </AnimatePresence>

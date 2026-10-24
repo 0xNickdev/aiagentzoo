@@ -72,7 +72,7 @@ export function NetworkPulse() {
       {stats.map(([value, label]) => (
         <div key={label} className="bg-black/45 px-4 py-5 backdrop-blur-md">
           <b className="font-display block text-3xl font-normal leading-none text-white">{value}</b>
-          <span className="mt-2 block text-[11.5px] font-light uppercase tracking-[0.2em] text-white/55">{t(label)}</span>
+          <span className="mt-2 block text-[11.5px] font-light uppercase tracking-[0.2em] text-fg-4">{t(label)}</span>
         </div>
       ))}
     </div>
@@ -104,14 +104,14 @@ export function ChainTicker() {
     <div className="mt-10 grid w-full max-w-4xl gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {links.map((l) => (
         <div key={`${l.node}#${l.seq}`} className="rounded-2xl bg-black/45 px-4 py-3 text-left ring-1 ring-white/10 backdrop-blur-md">
-          <div className="flex items-baseline justify-between text-[11.5px] uppercase tracking-[0.2em] text-white/65">
+          <div className="flex items-baseline justify-between text-[11.5px] uppercase tracking-[0.2em] text-fg-3">
             <span>{l.node}</span>
             <span>#{l.seq}</span>
           </div>
-          <p className="mt-1 truncate text-[13px] font-light text-white/90">
+          <p className="mt-1 truncate text-[13px] font-light text-fg">
             {l.agent === "warden" ? "warden" : l.agent} · {l.type}
           </p>
-          <p className="mt-1 font-mono text-[11.5px] text-white/60">{l.hash.slice(0, 16)}…</p>
+          <p className="mt-1 font-mono text-[11.5px] text-fg-4">{l.hash.slice(0, 16)}…</p>
         </div>
       ))}
     </div>

@@ -216,23 +216,23 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             className="pointer-events-none absolute z-10 w-[220px] rounded-xl border border-white/10 bg-[#070a09]/95 px-3.5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
             style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%`, transform: `translate(${tip.x > W * 0.6 ? "-108%" : "12%"}, -50%)` }}
           >
-            <p className="font-mono text-[12.5px] text-white/85">{short(tip.e.wallet)}</p>
+            <p className="font-mono text-[12.5px] text-fg-2">{short(tip.e.wallet)}</p>
             <p className="font-mono mt-0.5 text-[12px]" style={{ color: KIND[tip.k].color }}>
               {t(KIND[tip.k].label)}
             </p>
             <div className="font-mono mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
-              <span className="text-white/65">{t("in at")}</span>
-              <span className="text-right text-white/85">{tip.e.afterSec}s</span>
-              <span className="text-white/65">{t("took")}</span>
-              <span className="text-right text-white/85">{share(tip.e.bought)}</span>
-              <span className="text-white/65">{t("holds")}</span>
-              <span className={`text-right ${tip.e.held >= 0.05 ? "text-[#ff8a7e]" : "text-white/85"}`}>{share(tip.e.held)}</span>
-              <span className="text-white/65">{t("sold out")}</span>
-              <span className="text-right text-white/85">{tip.e.exitSec === null ? t("not yet") : t("after {s}", { s: secs(tip.e.exitSec) })}</span>
-              <span className="text-white/65">{t("snipes 48h")}</span>
-              <span className="text-right text-white/85">{tip.e.snipes48h}</span>
+              <span className="text-fg-3">{t("in at")}</span>
+              <span className="text-right text-fg-2">{tip.e.afterSec}s</span>
+              <span className="text-fg-3">{t("took")}</span>
+              <span className="text-right text-fg-2">{share(tip.e.bought)}</span>
+              <span className="text-fg-3">{t("holds")}</span>
+              <span className={`text-right ${tip.e.held >= 0.05 ? "text-[#ff8a7e]" : "text-fg-2"}`}>{share(tip.e.held)}</span>
+              <span className="text-fg-3">{t("sold out")}</span>
+              <span className="text-right text-fg-2">{tip.e.exitSec === null ? t("not yet") : t("after {s}", { s: secs(tip.e.exitSec) })}</span>
+              <span className="text-fg-3">{t("snipes 48h")}</span>
+              <span className="text-right text-fg-2">{tip.e.snipes48h}</span>
             </div>
-            {!onSelect && <p className="mt-2 text-[12px] font-light text-white/60">{t(KIND[tip.k].what)}</p>}
+            {!onSelect && <p className="mt-2 text-[12px] font-light text-fg-4">{t(KIND[tip.k].what)}</p>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -243,7 +243,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             key={k}
             type="button"
             onClick={() => setOnly(only === k ? null : k)}
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 transition ${only === k ? "bg-white/10 text-white ring-white/25" : only ? "text-white/50 ring-white/[0.06]" : "text-white/60 ring-white/[0.08] hover:text-white"}`}
+            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 transition ${only === k ? "bg-white/10 text-white ring-white/25" : only ? "text-fg-4 ring-white/[0.06]" : "text-fg-4 ring-white/[0.08] hover:text-white"}`}
           >
             <span className="h-2 w-2 rounded-full" style={{ background: KIND[k].color }} />
             {t(KIND[k].label)} {nodes.filter((n) => has(n.e, k)).length}
@@ -253,7 +253,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>
-      <p className="font-mono mt-2 text-[11.5px] text-white/55">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
+      <p className="font-mono mt-2 text-[11.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
     </div>
   );
 }

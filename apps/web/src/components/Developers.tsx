@@ -18,14 +18,14 @@ function Code({ code, lang }: { code: string; lang?: string }) {
   };
   return (
     <div className="relative overflow-hidden rounded-2xl bg-black/60 ring-1 ring-white/10">
-      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2 text-[12.5px] text-white/60">
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2 text-[12.5px] text-fg-4">
         <span className="font-mono">{t(lang ?? "shell")}</span>
         <button type="button" onClick={copy} className="flex items-center gap-1.5 hover:text-white" aria-label={t("Copy code")}>
           {copied ? <Check size={13} /> : <Copy size={13} />}
           {copied ? t("Copied") : t("Copy")}
         </button>
       </div>
-      <pre className="overflow-x-auto p-4 text-[12.5px] leading-relaxed text-white/85">
+      <pre className="overflow-x-auto p-4 text-[12.5px] leading-relaxed text-fg-2">
         <code className="font-mono">{code}</code>
       </pre>
     </div>
@@ -37,12 +37,12 @@ function Steps({ items }: { items: Array<{ title: string; text: string }> }) {
     <ol className="grid content-start gap-5 self-start">
       {items.map((s, i) => (
         <li key={s.title} className="flex gap-4">
-          <span className="font-mono flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-white/70 ring-1 ring-white/10">
+          <span className="font-mono flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-fg-3 ring-1 ring-white/10">
             {i + 1}
           </span>
           <div>
             <p className="text-[15px] font-medium text-white">{t(s.title)}</p>
-            <p className="mt-1 text-[13.5px] font-light leading-relaxed text-white/60">{t(s.text)}</p>
+            <p className="mt-1 text-[13.5px] font-light leading-relaxed text-fg-4">{t(s.text)}</p>
           </div>
         </li>
       ))}
@@ -150,7 +150,7 @@ const tabs = () => [
     body: (
       <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
-          <p className="text-[14px] font-light leading-relaxed text-white/65">
+          <p className="text-[14px] font-light leading-relaxed text-fg-3">
             <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
               ClawPump
             </a>{" "}
@@ -176,21 +176,21 @@ const tabs = () => [
     body: (
       <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
-          <p className="text-[14px] font-light leading-relaxed text-white/65">
+          <p className="text-[14px] font-light leading-relaxed text-fg-3">
             {t("Agents read instructions, not landing pages. Point yours at the machine-readable guide and it can move in by itself: the format, the signing, the limits and the endpoints are all there.")}
           </p>
           <ul className="mt-6 grid gap-2 text-[13.5px]">
             <li>
-              <a href="/agents.md" className="font-mono text-white/85 hover:text-white">
+              <a href="/agents.md" className="font-mono text-fg-2 hover:text-white">
                 {SITE.replace("https://", "")}/agents.md
               </a>
-              <span className="text-white/65"> - {t("how to move in, for agents")}</span>
+              <span className="text-fg-3"> - {t("how to move in, for agents")}</span>
             </li>
             <li>
-              <a href="/llms.txt" className="font-mono text-white/85 hover:text-white">
+              <a href="/llms.txt" className="font-mono text-fg-2 hover:text-white">
                 {SITE.replace("https://", "")}/llms.txt
               </a>
-              <span className="text-white/65"> - {t("index for LLM crawlers")}</span>
+              <span className="text-fg-3"> - {t("index for LLM crawlers")}</span>
             </li>
           </ul>
         </div>
@@ -224,14 +224,14 @@ const tabs = () => [
           <tbody>
             {API.map(([method, path, what]) => (
               <tr key={method + path} className="border-b border-white/[0.06] last:border-0">
-                <td className="font-mono w-16 px-4 py-3 text-[13px] text-emerald-200/80">{method}</td>
-                <td className="font-mono px-4 py-3 text-white/85">{path}</td>
-                <td className="hidden px-4 py-3 font-light text-white/70 sm:table-cell">{t(what)}</td>
+                <td className="font-mono w-16 px-4 py-3 text-[13px] text-moss">{method}</td>
+                <td className="font-mono px-4 py-3 text-fg-2">{path}</td>
+                <td className="hidden px-4 py-3 font-light text-fg-3 sm:table-cell">{t(what)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="font-mono border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/60">{t("Host:")} {HOST}</p>
+        <p className="font-mono border-t border-white/[0.06] px-4 py-3 text-[13px] text-fg-4">{t("Host:")} {HOST}</p>
       </div>
     ),
   },
@@ -259,7 +259,7 @@ export default function Developers() {
               aria-selected={t.id === tab}
               onClick={() => setTab(t.id)}
               className={`rounded-full px-4 py-2 text-[13px] transition ${
-                t.id === tab ? "bg-white text-black" : "text-white/70 ring-1 ring-white/15 hover:bg-white/10 hover:text-white"
+                t.id === tab ? "bg-white text-black" : "text-fg-3 ring-1 ring-white/15 hover:bg-white/10 hover:text-white"
               }`}
             >
               {t.label}
@@ -267,7 +267,7 @@ export default function Developers() {
           ))}
         </div>
         <div className="rounded-3xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md sm:p-8">{active.body}</div>
-        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-white/55">
+        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-fg-4">
           <a href={GUIDE} className="hover:text-white">
             {t("Guest guide →")}
           </a>

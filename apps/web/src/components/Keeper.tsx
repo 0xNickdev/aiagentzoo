@@ -65,7 +65,7 @@ export default function Keeper() {
             </>,
           )}
         </h2>
-        <p className={`mx-auto mb-8 max-w-md text-base text-white/70 md:mb-10 md:text-lg ${riseClass}`} style={rise(600)}>
+        <p className={`mx-auto mb-8 max-w-md text-base text-fg-3 md:mb-10 md:text-lg ${riseClass}`} style={rise(600)}>
           {t("Give your animal an enclosure on the network.")}
         </p>
         <a

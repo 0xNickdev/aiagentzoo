@@ -108,12 +108,12 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
   return (
     <div className="liquid-glass rounded-3xl p-6 sm:p-8">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-        <h3 className="font-display text-2xl text-white/90">{t("Money map")}</h3>
-        <span className="font-mono text-[12.5px] text-white/60">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
+        <h3 className="font-display text-2xl text-fg">{t("Money map")}</h3>
+        <span className="font-mono text-[12.5px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
       </div>
 
       {gs.length === 0 ? (
-        <p className="text-[15px] text-white/70">{t("Nobody bought in the first five seconds, so there is no operation to draw.")}</p>
+        <p className="text-[15px] text-fg-3">{t("Nobody bought in the first five seconds, so there is no operation to draw.")}</p>
       ) : (
         <>
           <svg viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Money map")}>
@@ -143,30 +143,30 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
           <ol className="grid gap-3 md:hidden">
             <li className="rounded-2xl border border-white/15 p-4">
               <p className="text-[15px] text-white">{funderTitle}</p>
-              <p className="font-mono mt-1 text-[12.5px] text-white/60">{funderSub}</p>
+              <p className="font-mono mt-1 text-[12.5px] text-fg-4">{funderSub}</p>
             </li>
             <li className="rounded-2xl border p-4" style={{ borderColor: (f?.creatorSoldPct ?? 0) >= 50 ? RED : "rgba(255,255,255,0.15)" }}>
               <p className="text-[15px] text-white">{t("The dev {w}", { w: short(r.creator) })}</p>
-              <p className="font-mono mt-1 text-[12.5px] text-white/60">{devSub}</p>
+              <p className="font-mono mt-1 text-[12.5px] text-fg-4">{devSub}</p>
             </li>
             {gs.map((g) => (
               <li key={g.key} className="rounded-2xl border p-4" style={{ borderColor: g.color }}>
                 <p className="text-[15px] text-white">{t(g.label)}</p>
-                <p className="font-mono mt-1 text-[12.5px] text-white/60">
+                <p className="font-mono mt-1 text-[12.5px] text-fg-4">
                   {t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} · {t("sold {p}", { p: pct(Math.max(0, g.took - g.held)) })}
                 </p>
               </li>
             ))}
           </ol>
 
-          <div className="mt-6 grid gap-x-8 gap-y-2 text-[14px] leading-relaxed text-white/70 md:grid-cols-2">
+          <div className="mt-6 grid gap-x-8 gap-y-2 text-[14px] leading-relaxed text-fg-3 md:grid-cols-2">
             {gs.map((g) => (
               <p key={g.key}>
                 <span style={{ color: g.color === WHITE ? "#fff" : g.color }}>{t(g.label)}</span>: {t(g.note)}.
               </p>
             ))}
           </div>
-          <p className="mt-5 text-[13px] text-white/50">
+          <p className="mt-5 text-[13px] text-fg-4">
             {t("Thickness is the share of supply. Where the SOL went after the sell comes once our nodes trace outgoing transfers.")}
           </p>
         </>

@@ -345,14 +345,14 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
   return (
     <div ref={wrap} className="relative h-[560px] overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/[0.06] sm:h-[640px]">
       <canvas ref={canvas} className="block" style={{ touchAction: "pan-y" }} />
-      {!graph && <p className="absolute inset-0 grid place-items-center text-[13px] text-white/55">{t("Drawing the network…")}</p>}
+      {!graph && <p className="absolute inset-0 grid place-items-center text-[13px] text-fg-4">{t("Drawing the network…")}</p>}
       {n && n.kind !== "dev" && (
         <div className="pointer-events-none absolute z-10 w-[240px] rounded-xl bg-[#0d0f10]/95 p-3.5 ring-1 ring-white/10" style={{ left: Math.min(hover!.x + 14, (wrap.current?.clientWidth ?? 0) - 254), top: Math.max(8, hover!.y - 20) }}>
           <p className="font-mono text-[10.5px] uppercase tracking-[0.14em]" style={{ color: COLOR[n.kind] }}>
             {{ crew: t("his crew"), ring: t("regular"), bundle: t("launch block"), serial: t("serial sniper"), early: t("first 5 seconds"), funder: t("funder"), sibling: t("another dev, same funder"), coin: t("his launch"), dev: "" }[n.kind]}
           </p>
           <p className="font-mono mt-1 text-[13px] text-white">{n.kind === "coin" ? n.label : short(n.id)}</p>
-          <div className="mt-2 space-y-1 text-[12px] text-white/65">
+          <div className="mt-2 space-y-1 text-[12px] text-fg-3">
             {n.launches !== undefined && n.kind !== "sibling" && <p>{t("in {a} of his {b} launches in 48h", { a: n.launches, b: total })}</p>}
             {n.kind === "sibling" && <p>{t("{a} launches · {d} dumped in 48h", { a: n.launches ?? 0, d: n.dumped ?? 0 })}</p>}
             {!!n.pct && <p>{t("bought {p}% of supply", { p: n.pct })}{n.sec !== undefined ? t(", {s}s after launch", { s: n.sec }) : ""}</p>}
@@ -360,7 +360,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
             {n.snipes !== undefined && <p>{t("{n} snipes in 48h", { n: n.snipes })}</p>}
             {n.kind === "coin" && <p>{n.outcome === "dumped" ? t("dev dumped it") : n.outcome === "graduated" ? t("graduated") : t("dev still holding")}</p>}
           </div>
-          <p className="mt-2 text-[11px] text-white/40">{n.kind === "coin" ? t("tap to x-ray it") : t("tap to open the wallet")}</p>
+          <p className="mt-2 text-[11px] text-fg-4">{n.kind === "coin" ? t("tap to x-ray it") : t("tap to open the wallet")}</p>
         </div>
       )}
       <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-xl bg-[#0d0f10]/90 ring-1 ring-white/10">
@@ -369,12 +369,12 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
           ["−", () => controls.current?.zoomBy(1 / 1.4), t("zoom out")],
           ["⤢", () => controls.current?.fit(), t("fit the map")],
         ].map(([label, fn, title]) => (
-          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="font-mono h-9 w-9 border-b border-white/[0.06] text-[15px] text-white/70 transition last:border-b-0 hover:bg-white/[0.06] hover:text-white">
+          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="font-mono h-9 w-9 border-b border-white/[0.06] text-[15px] text-fg-3 transition last:border-b-0 hover:bg-white/[0.06] hover:text-white">
             {label as string}
           </button>
         ))}
       </div>
-      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-white/35">{t("ctrl + scroll or two fingers to zoom · drag to move · tap a bubble")}</p>
+      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-fg-4">{t("ctrl + scroll or two fingers to zoom · drag to move · tap a bubble")}</p>
     </div>
   );
 }

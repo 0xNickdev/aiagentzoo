@@ -74,10 +74,10 @@ body {
   font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Accents are the same white, dimmed: the words fall back into the dark instead of lighting up. */
+/* Accents used to be white at half opacity; text is solid everywhere now, so an accent is just the same white. */
 .accent {
   font-style: normal;
-  color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
 }
 
 .mobile-menu-glass {

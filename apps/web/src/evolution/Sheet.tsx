@@ -34,9 +34,9 @@ function genes(c: CreatureDetail): Array<{ text: string; from: string | null; mu
 }
 
 const VERDICT_TONE = {
-  suspicious: "text-rose-200/90 ring-rose-200/25",
-  promising: "text-emerald-100/90 ring-emerald-200/25",
-  watch: "text-white/60 ring-white/15",
+  suspicious: "text-danger ring-rose-200/25",
+  promising: "text-moss ring-emerald-200/25",
+  watch: "text-fg-4 ring-white/15",
 } as const;
 
 export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: () => void; onOpen: (id: string) => void }) {
@@ -82,14 +82,14 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-4">
-          <span className="font-mono text-[12.5px] tracking-[0.12em] text-white/60">{c ? `HOUSE ${c.house.toUpperCase()} · GEN ${c.generation}` : "LOADING"}</span>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-white/60 ring-1 ring-white/15 hover:text-white">
+          <span className="font-mono text-[12.5px] tracking-[0.12em] text-fg-4">{c ? `HOUSE ${c.house.toUpperCase()} · GEN ${c.generation}` : "LOADING"}</span>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {failed && <p className="p-8 text-center text-[13px] text-white/65">This creature could not be loaded.</p>}
+          {failed && <p className="p-8 text-center text-[13px] text-fg-3">This creature could not be loaded.</p>}
           {c && (
             <>
               <header className="relative px-6 pb-8 pt-8">
@@ -101,8 +101,8 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   />
                   <div className="min-w-0">
                     <h3 className="font-display text-4xl leading-none">{c.name}</h3>
-                    <p className="mt-2 text-[14px] font-light text-white/60">{c.temperament}</p>
-                    <p className="font-mono mt-3 text-[12.5px] text-white/60">
+                    <p className="mt-2 text-[14px] font-light text-fg-4">{c.temperament}</p>
+                    <p className="font-mono mt-3 text-[12.5px] text-fg-4">
                       born {c.bornNight}
                       {dead ? ` · fell ${c.diedNight}` : " · alive"}
                     </p>
@@ -110,12 +110,12 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                 </div>
 
                 {dead && c.epitaph && (
-                  <blockquote className="mt-6 border-l border-white/20 pl-4 text-[15px] font-light italic leading-relaxed text-white/70">
+                  <blockquote className="mt-6 border-l border-white/20 pl-4 text-[15px] font-light italic leading-relaxed text-fg-3">
                     “{c.epitaph}”
                   </blockquote>
                 )}
 
-                <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] text-white/60">
+                <dl className="font-mono mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] text-fg-4">
                   {[
                     ["lifetime", accuracyLabel(c.lifetimeSkill, c.lifetime.hits + c.lifetime.misses)],
                     ["since last turn", accuracyLabel(c.skill, c.window.hits + c.window.misses)],
@@ -123,7 +123,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   ].map(([k, v]) => (
                     <div key={k} className="bg-[#070908] px-4 py-3">
                       <dt className="tracking-[0.1em]">{k!.toUpperCase()}</dt>
-                      <dd className="mt-1 whitespace-nowrap text-[15px] text-white/90 sm:text-lg">{v}</dd>
+                      <dd className="mt-1 whitespace-nowrap text-[15px] text-fg sm:text-lg">{v}</dd>
                     </div>
                   ))}
                 </dl>
@@ -131,7 +131,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                 {(c.parents.length > 0 || c.children.length > 0) && (
                   <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[13px]">
                     {c.parents.length > 0 && (
-                      <span className="text-white/65">
+                      <span className="text-fg-3">
                         child of{" "}
                         {c.parents.map((p, i) => (
                           <span key={p.id}>
@@ -144,7 +144,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                       </span>
                     )}
                     {c.children.length > 0 && (
-                      <span className="text-white/65">
+                      <span className="text-fg-3">
                         parent of{" "}
                         {c.children.map((k, i) => (
                           <span key={k.id}>
@@ -161,18 +161,18 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </header>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-white/60">DNA · THE PLAYBOOK IT LIVES OR DIES BY</h4>
+                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-fg-4">DNA · THE PLAYBOOK IT LIVES OR DIES BY</h4>
                 <ol className="mt-4 space-y-2">
                   {genes(c).map((g, i) => (
                     <li
                       key={i}
                       className={`rounded-xl px-4 py-3 text-[13.5px] leading-relaxed ring-1 ${
-                        g.mutated ? "bg-amber-200/[0.06] text-white ring-amber-200/30" : "bg-white/[0.02] text-white/75 ring-white/[0.07]"
+                        g.mutated ? "bg-amber-200/[0.06] text-white ring-amber-200/30" : "bg-white/[0.02] text-fg-3 ring-white/[0.07]"
                       }`}
                     >
                       {g.text}
                       {c.parents.length > 0 && (
-                        <span className={`font-mono mt-1.5 block text-[11.5px] tracking-[0.1em] ${g.mutated ? "text-amber-200/80" : "text-white/55"}`}>
+                        <span className={`font-mono mt-1.5 block text-[11.5px] tracking-[0.1em] ${g.mutated ? "text-warn" : "text-fg-4"}`}>
                           {g.mutated ? "MUTATION" : g.from ? `FROM ${g.from.toUpperCase()}` : "INHERITED, REWORDED"}
                         </span>
                       )}
@@ -182,13 +182,13 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </section>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-white/60">EXAMS</h4>
+                <h4 className="font-mono text-[12.5px] tracking-[0.14em] text-fg-4">EXAMS</h4>
                 {c.record.length === 0 ? (
-                  <p className="mt-4 text-[13px] text-white/65">No exams yet. The next one is set tonight.</p>
+                  <p className="mt-4 text-[13px] text-fg-3">No exams yet. The next one is set tonight.</p>
                 ) : (
                   c.record.map((n) => (
                     <div key={n.night} className="mt-5">
-                      <p className="font-mono text-[12.5px] text-white/60">
+                      <p className="font-mono text-[12.5px] text-fg-4">
                         night of {n.night} · {n.scored ? `${n.cases.filter((x) => x.hit === true).length} right, ${n.cases.filter((x) => x.hit === false).length} wrong` : "graded tomorrow"}
                       </p>
                       <ul className="mt-2 divide-y divide-white/[0.06]">
@@ -200,14 +200,14 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                                 href={`https://dexscreener.com/solana/${x.mint}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-mono text-[13px] text-white/80 hover:text-white"
+                                className="font-mono text-[13px] text-fg-2 hover:text-white"
                               >
                                 {x.symbol && x.symbol !== "?" ? `$${x.symbol}` : shortAddress(x.mint)} ↗
                               </a>
-                              {x.why && <p className="mt-0.5 text-[12.5px] text-white/70">{x.why}</p>}
+                              {x.why && <p className="mt-0.5 text-[12.5px] text-fg-3">{x.why}</p>}
                             </div>
                             <span
-                              className={`font-mono shrink-0 text-[12.5px] ${x.hit === true ? "text-emerald-200" : x.hit === false ? "text-rose-200" : "text-white/55"}`}
+                              className={`font-mono shrink-0 text-[12.5px] ${x.hit === true ? "text-emerald-200" : x.hit === false ? "text-rose-200" : "text-fg-4"}`}
                             >
                               {x.hit === true ? "✓" : x.hit === false ? "✗" : x.verdict === "watch" ? "not scored" : n.scored ? "no market" : "pending"}
                             </span>

@@ -13,9 +13,9 @@ export function Cycle() {
       <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] md:grid-cols-3">
         {CYCLE.map((c, i) => (
           <Reveal key={c.title} delay={i * 0.12} className="bg-[#030504]/85 p-8 backdrop-blur-sm sm:p-10">
-            <span className="font-display text-6xl text-white/40">0{i + 1}</span>
+            <span className="font-display text-6xl text-fg-4">0{i + 1}</span>
             <h3 className="font-display mt-6 text-3xl">{tr(c.title)}</h3>
-            <p className="mt-4 text-sm font-light leading-relaxed text-white/60">{tr(c.text)}</p>
+            <p className="mt-4 text-sm font-light leading-relaxed text-fg-4">{tr(c.text)}</p>
           </Reveal>
         ))}
       </div>
@@ -36,7 +36,7 @@ function NodeStatus() {
   const up = live?.nodesUp;
   const ok = up === 3;
   return (
-    <a href="/live" className="inline-flex items-center gap-2 text-[14px] text-white/75 hover:text-white">
+    <a href="/live" className="inline-flex items-center gap-2 text-[14px] text-fg-3 hover:text-white">
       <span className={`h-2 w-2 rounded-full ${up == null ? "bg-white/40" : ok ? "animate-pulse bg-emerald-300" : "bg-amber-200"}`} />
       {up == null ? tr("Checking the nodes...") : tr("{n} of 3 nodes live", { n: up })}
     </a>
@@ -53,7 +53,7 @@ export function Footer() {
             <p className="font-display text-[22px] leading-snug text-white">{tr("See who you're buying from.")}</p>
             <div className="mt-5 grid gap-3">
               <NodeStatus />
-              <span className="flex items-center gap-4 text-white/75">
+              <span className="flex items-center gap-4 text-fg-3">
                 <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="X" className="hover:text-white">
                   <XIcon size={16} />
                 </a>
@@ -65,7 +65,7 @@ export function Footer() {
           </div>
           {FOOTER.map((col) => (
             <nav key={col.title}>
-              <p className="text-[13px] uppercase tracking-[0.14em] text-white/55">{col.title.startsWith("$") ? col.title : tr(col.title)}</p>
+              <p className="text-[13px] uppercase tracking-[0.14em] text-fg-4">{col.title.startsWith("$") ? col.title : tr(col.title)}</p>
               <ul className="mt-4 grid gap-2.5">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
@@ -73,7 +73,7 @@ export function Footer() {
                       href={href}
                       target={href.startsWith("http") ? "_blank" : undefined}
                       rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
-                      className="text-[14.5px] text-white/80 transition-colors hover:text-white"
+                      className="text-[14.5px] text-fg-2 transition-colors hover:text-white"
                     >
                       {tr(label)}
                     </a>
@@ -83,7 +83,7 @@ export function Footer() {
             </nav>
           ))}
         </div>
-        <div className="mt-14 flex flex-wrap items-end justify-between gap-4 border-t border-white/[0.08] py-6 text-[13px] text-white/55">
+        <div className="mt-14 flex flex-wrap items-end justify-between gap-4 border-t border-white/[0.08] py-6 text-[13px] text-fg-4">
           <span>ZOOAI AGENCY · 2026 · MIT</span>
           <span>{tr("Not financial advice. Everything here is read from public chain data.")}</span>
         </div>

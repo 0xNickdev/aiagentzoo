@@ -50,7 +50,7 @@ body { min-height: 100svh; }
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
 .glass-pill { border-radius: 999px; }
-.glass-btn { border-radius: 16px; padding: 11px 0; font-size: 13.5px; color: rgba(255,255,255,0.92); transition: transform 0.15s ease, background 0.2s ease; }
+.glass-btn { border-radius: 16px; padding: 11px 0; font-size: 13.5px; color: #ffffff; transition: transform 0.15s ease, background 0.2s ease; }
 .glass-btn:active { transform: scale(0.96); background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05)); }
 
 .zapp-cta { flex-shrink: 0; min-width: 76px; display: inline-flex; align-items: center; justify-content: center; border-radius: 17px; padding: 12px 18px; font-size: 14px; font-weight: 500; color: #050505; background: linear-gradient(180deg, #ffffff, #e9e3d6); box-shadow: 0 4px 18px rgba(255, 236, 200, 0.18), inset 0 1px 0 #fff; transition: transform 0.15s ease; }
@@ -60,7 +60,7 @@ body { min-height: 100svh; }
 
 /* The tab bar floats over the content like a sheet of glass. */
 .zapp-tabs { position: fixed; z-index: 10; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); max-width: 536px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px; border-radius: 26px; }
-.zapp-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0 6px; border-radius: 20px; color: rgba(255,255,255,0.45); transition: color 0.2s ease; }
+.zapp-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0 6px; border-radius: 20px; color: #a3aaa6; transition: color 0.2s ease; }
 .zapp-tab.is-on { color: #fff; }
 .zapp-tab-glow { position: absolute; inset: 0; border-radius: 20px; background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 0 24px rgba(255, 220, 160, 0.12); }
 

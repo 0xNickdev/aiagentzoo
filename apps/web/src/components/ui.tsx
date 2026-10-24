@@ -21,7 +21,7 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
   return (
     <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
       <Reveal>
-        <p className="mb-4 text-[15px] text-white/70">{eyebrow}</p>
+        <p className="mb-4 text-[15px] text-fg-3">{eyebrow}</p>
       </Reveal>
       <h2 className="font-display text-[40px] font-semibold leading-[1.02] text-white sm:text-[56px] md:text-[64px]">
         {title.map((line) => (
@@ -30,7 +30,7 @@ export function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: 
       </h2>
       {text && (
         <Reveal delay={0.4}>
-          <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-white/75">{text}</p>
+          <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-fg-3">{text}</p>
         </Reveal>
       )}
     </div>

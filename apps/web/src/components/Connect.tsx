@@ -85,18 +85,18 @@ export default function Connect() {
             <div key={p.tag} className="liquid-glass flex flex-col rounded-3xl p-6">
               <div className="flex items-center gap-2.5">
                 {p.logo && <img src={p.logo} alt="ClawPump" className="h-7 w-7 rounded-lg bg-white/[0.06] p-0.5 ring-1 ring-white/10" />}
-                <p className="font-mono text-[12px] text-amber-100/70">{t(p.tag)}</p>
+                <p className="font-mono text-[12px] text-warn">{t(p.tag)}</p>
               </div>
               <h3 className="font-display mt-2 text-2xl">{t(p.title)}</h3>
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-white/65">{t(p.text)}</p>
+              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-fg-3">{t(p.text)}</p>
               {p.copy && (
-                <button type="button" onClick={() => copy(p.tag, p.copy!)} className="font-mono mt-4 rounded-2xl bg-black/40 p-3 text-left text-[12.5px] leading-relaxed text-white/75 ring-1 ring-white/10 hover:ring-white/30">
+                <button type="button" onClick={() => copy(p.tag, p.copy!)} className="font-mono mt-4 rounded-2xl bg-black/40 p-3 text-left text-[12.5px] leading-relaxed text-fg-3 ring-1 ring-white/10 hover:ring-white/30">
                   {p.copy}
-                  <span className="mt-2 block text-amber-100/80">{copied === p.tag ? t("copied ✓") : t("tap to copy")}</span>
+                  <span className="mt-2 block text-warn">{copied === p.tag ? t("copied ✓") : t("tap to copy")}</span>
                 </button>
               )}
               {p.link && (
-                <a href={p.link[1]} className="font-mono mt-auto pt-4 text-[13px] text-white/60 underline decoration-white/25 underline-offset-4 hover:text-white">
+                <a href={p.link[1]} className="font-mono mt-auto pt-4 text-[13px] text-fg-4 underline decoration-white/25 underline-offset-4 hover:text-white">
                   {t(p.link[0])} →
                 </a>
               )}
@@ -107,7 +107,7 @@ export default function Connect() {
 
       <Section className="!pt-0">
         <Reveal className="liquid-glass mx-auto max-w-2xl rounded-3xl p-6 sm:p-8">
-          <p className="font-mono text-[12px] text-white/65">{t("did it work?")}</p>
+          <p className="font-mono text-[12px] text-fg-3">{t("did it work?")}</p>
           <h3 className="font-display mt-1 text-2xl">{t("Check your agent")}</h3>
           <form
             onSubmit={(e) => {
@@ -125,12 +125,12 @@ export default function Connect() {
           {status && status !== "missing" && (
             <div className="font-mono mt-4 space-y-1.5 text-[12.5px]">
               <p className="text-[#9df3b0]">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
-              <p className={status.signals ? "text-[#9df3b0]" : "text-amber-100/70"}>
+              <p className={status.signals ? "text-[#9df3b0]" : "text-warn"}>
                 {status.signals ? "✓" : "○"} {t("{n} reports", { n: status.signals })} · {ago(status.lastSignalAt)}
               </p>
-              <p className={graded ? "text-[#9df3b0]" : "text-amber-100/70"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
-              <p className="pt-2 text-white/70">
-                {t("badge:")} <span className="text-white/75">canyon.zooaiagency.com/v1/badge/{status.name}.svg</span>
+              <p className={graded ? "text-[#9df3b0]" : "text-warn"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
+              <p className="pt-2 text-fg-3">
+                {t("badge:")} <span className="text-fg-3">canyon.zooaiagency.com/v1/badge/{status.name}.svg</span>
               </p>
             </div>
           )}

@@ -72,11 +72,11 @@ export default function MiniApp() {
       <header className="zapp-top">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
-          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono shrink-0 whitespace-nowrap px-2.5 py-1 text-[10.5px] text-white/75" aria-label="Language">
+          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono shrink-0 whitespace-nowrap px-2.5 py-1 text-[10.5px] text-fg-3" aria-label="Language">
             {lang() === "zh" ? "EN" : "中文"}
           </button>
         </div>
-        <div className="glass-pill font-mono flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-[10.5px] text-white/70">
+        <div className="glass-pill font-mono flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-[10.5px] text-fg-3">
           <i className="zapp-dot shrink-0" />
           {pulse ? (
             <span className="truncate">
@@ -179,13 +179,13 @@ function AskTab({ seed }: { seed: Seed | null }) {
     <section>
       {!answer && !dev && !busy && (
         <div className="zapp-intro px-1 pb-5">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">{tt("ask the beaver")}</p>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-warn">{tt("ask the beaver")}</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
             {tt("Is it a rug?")}
             <br />
-            <span className="text-white/50">{tt("Know before you ape.")}</span>
+            <span className="text-fg-4">{tt("Know before you ape.")}</span>
           </h1>
-          <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
+          <p className="mt-3 text-[13.5px] font-light leading-relaxed text-fg-4">
             {tt("Read straight from Solana: did the dev sell, how many tokens this wallet launched, who did the buying. Graded by reality tomorrow.")}
           </p>
         </div>
@@ -200,7 +200,7 @@ function AskTab({ seed }: { seed: Seed | null }) {
           spellCheck={false}
           autoComplete="off"
           enterKeyHint="search"
-          className="font-mono min-w-0 flex-1 bg-transparent px-3.5 py-3 text-[13.5px] text-white outline-none placeholder:text-white/35"
+          className="font-mono min-w-0 flex-1 bg-transparent px-3.5 py-3 text-[13.5px] text-white outline-none placeholder:text-fg-4"
         />
         {input ? (
           <button type="submit" disabled={busy} className="zapp-cta">
@@ -247,7 +247,7 @@ function AskTab({ seed }: { seed: Seed | null }) {
               >
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${sym(a.symbol)}</span>
-                  <span className="font-mono block text-[10px] text-white/40">
+                  <span className="font-mono block text-[10px] text-fg-4">
                     {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: ago(a.at) })}
                   </span>
                 </span>
@@ -304,10 +304,10 @@ function Verdict({ a }: { a: Ask }) {
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-mono truncate text-[10px] text-white/40">{a.name || `${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`}</p>
+              <p className="font-mono truncate text-[10px] text-fg-4">{a.name || `${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`}</p>
               <p className="font-display truncate text-[22px]">${sym(a.symbol)}</p>
             </div>
-            <span className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">{Math.round(a.confidence * 100)}% sure</span>
+            <span className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-fg-4">{Math.round(a.confidence * 100)}% sure</span>
           </div>
 
           <motion.p
@@ -319,18 +319,18 @@ function Verdict({ a }: { a: Ask }) {
           >
             {tt(tone.label)}
           </motion.p>
-          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-white/85">{lang() === "zh" && a.whyZh ? a.whyZh : a.why}</p>
+          <p className="mt-3 text-[14.5px] font-light leading-relaxed text-fg-2">{lang() === "zh" && a.whyZh ? a.whyZh : a.why}</p>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
             {facts.slice(0, 6).map(([k, v, bad], i) => (
               <motion.div key={k} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }} className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-white/45">{tt(k)}</p>
-                <p className={`font-mono mt-0.5 text-[15px] ${bad ? "text-[#ff8f84]" : "text-white/90"}`}>{v}</p>
+                <p className="text-[10.5px] text-fg-4">{tt(k)}</p>
+                <p className={`font-mono mt-0.5 text-[15px] ${bad ? "text-[#ff8f84]" : "text-fg"}`}>{v}</p>
               </motion.div>
             ))}
           </div>
 
-          <p className="font-mono mt-4 text-[10.5px] text-amber-100/70">
+          <p className="font-mono mt-4 text-[10.5px] text-warn">
             {a.graded
               ? a.graded.hit === null
                 ? tt("Graded · not scored")
@@ -358,7 +358,7 @@ function Verdict({ a }: { a: Ask }) {
               {tt("Chart")}
             </button>
           </div>
-          {watching && <p className="mt-3 text-center text-[12px] text-white/60">{watching}</p>}
+          {watching && <p className="mt-3 text-center text-[12px] text-fg-4">{watching}</p>}
         </div>
       </div>
     </motion.div>
@@ -372,7 +372,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
       <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
         <div className="zapp-verdict-glow" style={{ background: `radial-gradient(60% 55% at 15% 20%, rgba(${serial ? "255,110,95" : "239,232,218"},0.24), transparent 70%)` }} />
         <div className="relative">
-          <p className="font-mono text-[10px] text-white/40">dev wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h</p>
+          <p className="font-mono text-[10px] text-fg-4">dev wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h</p>
           <p className="font-display mt-3 text-[40px] leading-none" style={{ color: serial ? TONE.suspicious.color : "#fff" }}>
             {tt(serial ? "Serial rugger" : "No pattern yet")}
           </p>
@@ -383,7 +383,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
               ["Median", r.medianDumpMin === null ? "-" : `${r.medianDumpMin} min`],
             ].map(([k, v]) => (
               <div key={k} className="rounded-2xl bg-black/30 px-3 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-white/45">{tt(k)}</p>
+                <p className="text-[10.5px] text-fg-4">{tt(k)}</p>
                 <p className="font-mono mt-0.5 text-[16px]">{v}</p>
               </div>
             ))}
@@ -392,7 +392,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
             {r.recent.slice(0, 8).map((t) => (
               <div key={t.mint} className="flex items-center justify-between py-2 text-[13px]">
                 <span className="truncate">${sym(t.symbol)}</span>
-                <span className={`font-mono text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
+                <span className={`font-mono text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-fg-4"}`}>
                   {[launchOutcome(t).head, launchOutcome(t).tail].filter(Boolean).join(" · ")}
                 </span>
               </div>
@@ -479,13 +479,13 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
     <section>
       {!report && !busy && (
         <div className="zapp-intro px-1 pb-5">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">x-ray</p>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-warn">x-ray</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
             {tt("See who you are")}
             <br />
-            <span className="text-white/50">{tt("buying from.")}</span>
+            <span className="text-fg-4">{tt("buying from.")}</span>
           </h1>
-          <p className="mt-3 text-[13.5px] font-light leading-relaxed text-white/60">
+          <p className="mt-3 text-[13.5px] font-light leading-relaxed text-fg-4">
             {tt("The wallets that bought in the first five seconds, the creator's own crew, who paid for the creator. Read straight from Solana.")}
           </p>
         </div>
@@ -506,7 +506,7 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
           spellCheck={false}
           autoComplete="off"
           enterKeyHint="search"
-          className="font-mono min-w-0 flex-1 bg-transparent px-3.5 py-3 text-[13.5px] text-white outline-none placeholder:text-white/35"
+          className="font-mono min-w-0 flex-1 bg-transparent px-3.5 py-3 text-[13.5px] text-white outline-none placeholder:text-fg-4"
         />
         {input ? (
           <button type="submit" disabled={busy} className="zapp-cta">
@@ -568,9 +568,9 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
             <button key={m.mint} type="button" onClick={() => onPick(m.mint)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.04]">
               <span className="min-w-0">
                 <span className="font-display block truncate text-[15px]">${sym(m.symbol)}</span>
-                <span className={`block truncate text-[12px] font-light ${m.kind === "graduated" ? "text-white/55" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
+                <span className={`block truncate text-[12px] font-light ${m.kind === "graduated" ? "text-fg-4" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
               </span>
-              <span className="font-mono shrink-0 text-[10.5px] text-white/40">{tt("x-ray it →")}</span>
+              <span className="font-mono shrink-0 text-[10.5px] text-fg-4">{tt("x-ray it →")}</span>
             </button>
           ))}
         </div>
@@ -582,8 +582,8 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
 function XStat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-      <p className="text-[10.5px] leading-tight text-white/45">{tt(k)}</p>
-      <p className={`font-mono mt-1 text-[15px] ${bad ? "text-[#ff8f84]" : "text-white/90"}`}>{v}</p>
+      <p className="text-[10.5px] leading-tight text-fg-4">{tt(k)}</p>
+      <p className={`font-mono mt-1 text-[15px] ${bad ? "text-[#ff8f84]" : "text-fg"}`}>{v}</p>
     </div>
   );
 }
@@ -612,12 +612,12 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono truncate text-[10px] text-white/40">
+            <p className="font-mono truncate text-[10px] text-fg-4">
               {r.name || short(r.mint)} · {tt("{m} min old", { m: f?.ageMin ?? 0 })} · {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}
             </p>
             <p className="font-display truncate text-[22px]">${sym(r.symbol)}</p>
           </div>
-          <button type="button" onClick={() => openWalletMini(r.creator)} className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-white/55">
+          <button type="button" onClick={() => openWalletMini(r.creator)} className="font-mono shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-fg-4">
             {tt("dev")} {short(r.creator)} →
           </button>
         </div>
@@ -628,14 +628,14 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         {c.reasons.length > 0 && (
           <ul className="mt-4 space-y-2">
             {c.reasons.map((x) => (
-              <li key={x} className="flex gap-2.5 text-[14px] font-light leading-snug text-white/85">
+              <li key={x} className="flex gap-2.5 text-[14px] font-light leading-snug text-fg-2">
                 <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color }} />
                 {tChain(x)}
               </li>
             ))}
           </ul>
         )}
-        {c.notes.length > 0 && <p className="mt-3 text-[11.5px] font-light leading-relaxed text-white/45">{c.notes.map(tChain).join(" · ")}</p>}
+        {c.notes.length > 0 && <p className="mt-3 text-[11.5px] font-light leading-relaxed text-fg-4">{c.notes.map(tChain).join(" · ")}</p>}
 
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button type="button" onClick={() => void follow()} className="zapp-cta !min-w-0 !py-3">
@@ -652,9 +652,9 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             {tt("Share")}
           </button>
         </div>
-        <p className="mt-2 text-center text-[11.5px] font-light text-white/50">{watching ?? tt("The bot tells you the moment the dev sells, the pool is drained or it graduates.")}</p>
+        <p className="mt-2 text-center text-[11.5px] font-light text-fg-4">{watching ?? tt("The bot tells you the moment the dev sells, the pool is drained or it graduates.")}</p>
 
-        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-white/40">
+        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">
           {tt("The first 5 seconds")}
         </p>
         {r.early.length > 0 ? (
@@ -662,7 +662,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             <XRayRadar early={r.early} onSelect={(w) => w && openWalletMini(w)} />
           </div>
         ) : (
-          <p className="rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-white/60 ring-1 ring-white/[0.06]">{tt("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
+          <p className="rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-fg-4 ring-1 ring-white/[0.06]">{tt("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
         )}
         <div className="mt-2 grid grid-cols-3 gap-2">
           <XStat k="wallets" v={String(r.early.length)} />
@@ -673,7 +673,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           <XStat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
         </div>
 
-        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("The creator")} · <span className="normal-case tracking-normal">{tt("last 48 hours")}</span></p>
+        <p className="font-mono mb-2 mt-6 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">{tt("The creator")} · <span className="normal-case tracking-normal">{tt("last 48 hours")}</span></p>
         <div className="grid grid-cols-3 gap-2">
           <XStat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
           <XStat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
@@ -681,11 +681,11 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
           <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-            <p className="text-[10.5px] text-white/45">{tt("their other launches · tap to x-ray")}</p>
+            <p className="text-[10.5px] text-fg-4">{tt("their other launches · tap to x-ray")}</p>
             {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 5).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onPick(x.mint); }} className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left text-[13px] active:opacity-70">
-                <span className="truncate text-white/85">${sym(x.symbol)}</span>
-                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : "text-white/50"}`}>
+                <span className="truncate text-fg-2">${sym(x.symbol)}</span>
+                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : "text-fg-4"}`}>
                   {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
@@ -693,15 +693,15 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           </div>
         )}
         <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
-          <p className="text-[10.5px] text-white/45">{tt("Who paid for the creator")}</p>
-          {!fund && <p className="mt-1 text-[13px] font-light text-white/60">{tt("Not traced yet. It is queued: open this again in a minute.")}</p>}
-          {fund && !fund.funder && <p className="mt-1 text-[13px] font-light text-white/60">{tt("No funding transfer in the creator's recent history.")}</p>}
+          <p className="text-[10.5px] text-fg-4">{tt("Who paid for the creator")}</p>
+          {!fund && <p className="mt-1 text-[13px] font-light text-fg-4">{tt("Not traced yet. It is queued: open this again in a minute.")}</p>}
+          {fund && !fund.funder && <p className="mt-1 text-[13px] font-light text-fg-4">{tt("No funding transfer in the creator's recent history.")}</p>}
           {fund?.funder && (
             <>
-              <button type="button" onClick={() => openWalletMini(fund.funder!)} className="font-mono mt-1 text-[14px] text-white/90">
+              <button type="button" onClick={() => openWalletMini(fund.funder!)} className="font-mono mt-1 text-[14px] text-fg">
                 {short(fund.funder)} →
               </button>
-              <p className={`mt-1 text-[12.5px] font-light ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-white/60"}`}>
+              <p className={`mt-1 text-[12.5px] font-light ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-fg-4"}`}>
                 {fund.funderIsHot
                   ? tt("An exchange or a router: it funds everyone, so it ties no one together.")
                   : fund.siblings.length
@@ -713,11 +713,11 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         {r.socials?.map((s) => (
           <button key={s.social.url} type="button" onClick={() => openLink(s.social.url)} className="mt-2 flex w-full items-baseline justify-between gap-3 rounded-2xl bg-black/30 px-3.5 py-2.5 text-left ring-1 ring-white/[0.06]">
-            <span className="truncate text-[12.5px] font-light text-white/75">{s.social.label} ↗</span>
-            <span className={`font-mono shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8f84]" : "text-white/55"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
+            <span className="truncate text-[12.5px] font-light text-fg-3">{s.social.label} ↗</span>
+            <span className={`font-mono shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8f84]" : "text-fg-4"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
           </button>
         ))}
-        {c.holders && c.holders.top10Pct === 0 && <p className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-white/60 ring-1 ring-white/[0.06]">{tt("Nobody holds it outside the curve: everyone sold back.")}</p>}
+        {c.holders && c.holders.top10Pct === 0 && <p className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-light text-fg-4 ring-1 ring-white/[0.06]">{tt("Nobody holds it outside the curve: everyone sold back.")}</p>}
         {c.holders && c.holders.top10Pct > 0 && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <XStat k="largest wallet" v={`${c.holders.topWalletPct}%`} bad={c.holders.topWalletPct >= 20} />
@@ -740,7 +740,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             {tt("Full map")}
           </button>
         </div>
-        <p className="font-mono mt-4 text-center text-[10px] text-white/35">{tt("Not financial advice. Read from public chain data.")}</p>
+        <p className="font-mono mt-4 text-center text-[10px] text-fg-4">{tt("Not financial advice. Read from public chain data.")}</p>
       </div>
     </div>
   );
@@ -765,7 +765,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
   }, [wallet]);
 
   if (p === undefined) return <div className="glass-card h-56 animate-pulse rounded-[26px]" />;
-  if (!p) return <div className="glass-card rounded-[26px] p-5 text-[13px] font-light text-white/60">{tt("This wallet did not launch, snipe or fund a launch the stream saw in the last two days.")}</div>;
+  if (!p) return <div className="glass-card rounded-[26px] p-5 text-[13px] font-light text-fg-4">{tt("This wallet did not launch, snipe or fund a launch the stream saw in the last two days.")}</div>;
 
   const d = p.dev;
   const serial = d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6);
@@ -776,15 +776,15 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
       : p.sniper && p.sniper.snipes48h >= 10
         ? { text: tt("A sniper: bought {n} launches in their first seconds in two days and sold out of {o}, usually {x} after buying.", { n: p.sniper.snipes48h, o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), cls: "text-[#ff8f84]" }
         : p.funded.creators.length >= 2 && !p.funded.hot
-          ? { text: tt("Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.", { n: p.funded.creators.length, d: p.funded.creators.reduce((n, c) => n + c.dumped, 0) }), cls: "text-white/90" }
+          ? { text: tt("Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.", { n: p.funded.creators.length, d: p.funded.creators.reduce((n, c) => n + c.dumped, 0) }), cls: "text-fg" }
           : d
-            ? { text: tt("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), cls: d.dumped >= 2 ? "text-[#ff8f84]" : "text-white/90" }
-            : { text: tt("Seen in the first seconds of {n} launches in two days.", { n: p.sniper?.snipes48h ?? 0 }), cls: "text-white/90" };
+            ? { text: tt("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), cls: d.dumped >= 2 ? "text-[#ff8f84]" : "text-fg" }
+            : { text: tt("Seen in the first seconds of {n} launches in two days.", { n: p.sniper?.snipes48h ?? 0 }), cls: "text-fg" };
 
   return (
     <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
-      <p className="font-mono text-[10px] text-white/40">{tt("wallet")}</p>
-      <button type="button" onClick={() => openLink(`https://solscan.io/account/${wallet}`)} className="font-mono mt-1 block break-all text-left text-[13px] text-white/80">
+      <p className="font-mono text-[10px] text-fg-4">{tt("wallet")}</p>
+      <button type="button" onClick={() => openLink(`https://solscan.io/account/${wallet}`)} className="font-mono mt-1 block break-all text-left text-[13px] text-fg-2">
         {wallet} ↗
       </button>
       <p className={`font-display mt-3 text-[20px] leading-snug ${lead.cls}`}>{lead.text}</p>
@@ -797,12 +797,12 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
             <XStat k="graduated" v={String(d.graduated)} />
             <XStat k="still alive" v={String(d.builder?.grew ?? 0)} />
           </div>
-          <p className="font-mono mb-2 mt-5 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("Its launches")}</p>
+          <p className="font-mono mb-2 mt-5 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">{tt("Its launches")}</p>
           <div className="glass-card divide-y divide-white/[0.06] rounded-[18px]">
             {d.launches.slice(0, 8).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onToken(x.mint); }} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2.5 text-left active:bg-white/[0.04]">
-                <span className="truncate text-[13px] text-white/85">${sym(x.symbol)}</span>
-                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : x.graduated ? "text-[#9df3b0]" : "text-white/45"}`}>
+                <span className="truncate text-[13px] text-fg-2">${sym(x.symbol)}</span>
+                <span className={`font-mono shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : x.graduated ? "text-[#9df3b0]" : "text-fg-4"}`}>
                   {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
@@ -812,13 +812,13 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
       )}
 
       <div className="mt-3 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
-        <p className="text-[10.5px] text-white/45">{tt("Who paid for this dev")}</p>
+        <p className="text-[10.5px] text-fg-4">{tt("Who paid for this dev")}</p>
         {!p.funding || !p.funding.funder ? (
-          <p className="mt-1 text-[13px] font-light text-white/60">{tt("No funding transfer in the dev's recent history.")}</p>
+          <p className="mt-1 text-[13px] font-light text-fg-4">{tt("No funding transfer in the dev's recent history.")}</p>
         ) : (
           <>
-            <button type="button" onClick={() => onWallet(p.funding!.funder!)} className="font-mono mt-1 text-[14px] text-white/90">{short(p.funding.funder)} →</button>
-            <p className="mt-1 text-[12.5px] font-light text-white/60">
+            <button type="button" onClick={() => onWallet(p.funding!.funder!)} className="font-mono mt-1 text-[14px] text-fg">{short(p.funding.funder)} →</button>
+            <p className="mt-1 text-[12.5px] font-light text-fg-4">
               {p.funding.funderIsHot ? tt("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? tt("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : tt("It paid for no other dev the zoo traced.")}
             </p>
           </>
@@ -827,7 +827,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
 
       {p.sniper && (
         <>
-          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("As a first-second buyer")}</p>
+          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">{tt("As a first-second buyer")}</p>
           <div className="grid grid-cols-3 gap-2">
             <XStat k="launches sniped" v={String(p.sniper.snipes48h)} bad={p.sniper.snipes48h >= 10} />
             <XStat k="sold out of" v={String(p.sniper.soldOut)} />
@@ -835,7 +835,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {p.sniper.recent.slice(0, 6).map((m) => (
-              <button key={m.mint} type="button" onClick={() => { haptic.tap(); onToken(m.mint); }} className="font-mono max-w-[9rem] truncate rounded-full px-2.5 py-1 text-[11px] text-white/70 ring-1 ring-white/10 active:bg-white/[0.06]">${sym(m.symbol)}</button>
+              <button key={m.mint} type="button" onClick={() => { haptic.tap(); onToken(m.mint); }} className="font-mono max-w-[9rem] truncate rounded-full px-2.5 py-1 text-[11px] text-fg-3 ring-1 ring-white/10 active:bg-white/[0.06]">${sym(m.symbol)}</button>
             ))}
           </div>
         </>
@@ -843,15 +843,15 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
 
       {(p.funded.creators.length > 0 || p.funded.hot) && (
         <>
-          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{tt("Devs it paid for")}</p>
+          <p className="font-mono mb-2 mt-4 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">{tt("Devs it paid for")}</p>
           {p.funded.hot ? (
-            <p className="text-[12.5px] font-light text-white/55">{tt("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+            <p className="text-[12.5px] font-light text-fg-4">{tt("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
           ) : (
             <div className="glass-card divide-y divide-white/[0.06] rounded-[18px]">
               {p.funded.creators.slice(0, 8).map((c) => (
                 <button key={c.wallet} type="button" onClick={() => onWallet(c.wallet)} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2 text-left active:bg-white/[0.04]">
-                  <span className="font-mono text-[12px] text-white/80">{short(c.wallet)} →</span>
-                  <span className={`font-mono text-[11px] ${c.dumped >= 1 ? "text-[#ff8f84]" : "text-white/55"}`}>{tt("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
+                  <span className="font-mono text-[12px] text-fg-2">{short(c.wallet)} →</span>
+                  <span className={`font-mono text-[11px] ${c.dumped >= 1 ? "text-[#ff8f84]" : "text-fg-4"}`}>{tt("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
                 </button>
               ))}
             </div>
@@ -898,7 +898,7 @@ function RugsTab() {
                   <span className="font-display block truncate text-[15px]">${sym(e.symbol)}</span>
                   <span className="block text-[12px] font-light text-[#ffb3ab]">{tChain(e.text)}</span>
                 </span>
-                <span className="font-mono shrink-0 text-[10.5px] text-white/40">{ago(e.at)}</span>
+                <span className="font-mono shrink-0 text-[10.5px] text-fg-4">{ago(e.at)}</span>
               </motion.button>
             ))}
           </AnimatePresence>
@@ -952,7 +952,7 @@ function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="font-display truncate text-[17px]">${sym(w.symbol)}</span>
-                    <span className="font-mono text-[10.5px] text-white/40">{w.graduated ? tt("graduated") : tt("{n} buyers", { n: w.buyers })}</span>
+                    <span className="font-mono text-[10.5px] text-fg-4">{w.graduated ? tt("graduated") : tt("{n} buyers", { n: w.buyers })}</span>
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-[12px]" style={{ color }}>
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
@@ -974,22 +974,22 @@ function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
 function TabHead({ kicker, title, text }: { kicker: string; title: string; text: string }) {
   return (
     <div className="px-1 pb-4 pt-3">
-      <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-amber-100/70">{kicker}</p>
+      <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-warn">{kicker}</p>
       <h2 className="font-display mt-2 text-[28px] leading-[1.05] tracking-tight">{title}</h2>
-      <p className="mt-2 text-[13px] font-light leading-relaxed text-white/55">{text}</p>
+      <p className="mt-2 text-[13px] font-light leading-relaxed text-fg-4">{text}</p>
     </div>
   );
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <p className="font-mono mb-2 px-1 text-[10.5px] uppercase tracking-[0.16em] text-white/40">{children}</p>;
+  return <p className="font-mono mb-2 px-1 text-[10.5px] uppercase tracking-[0.16em] text-fg-4">{children}</p>;
 }
 
 function Empty({ children, image }: { children: ReactNode; image?: string }) {
   return (
     <div className="glass-card overflow-hidden rounded-[22px]">
       {image && <img src={image} alt="" className="aspect-[16/10] w-full object-cover opacity-90" />}
-      <p className="px-4 py-4 text-[13px] font-light leading-relaxed text-white/60">{children}</p>
+      <p className="px-4 py-4 text-[13px] font-light leading-relaxed text-fg-4">{children}</p>
     </div>
   );
 }
@@ -1058,10 +1058,10 @@ function Ticker() {
           className="glass-pill font-mono flex max-w-full items-center gap-2 px-3 py-1.5 text-[10.5px]"
         >
           <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6e5f] shadow-[0_0_8px_rgba(255,110,95,0.9)]" />
-          <span className="truncate text-white/80">
+          <span className="truncate text-fg-2">
             <b className="font-medium text-white">${sym(e.symbol)}</b> · {tChain(e.text)}
           </span>
-          <span className="shrink-0 text-white/40">{ago(e.at)}</span>
+          <span className="shrink-0 text-fg-4">{ago(e.at)}</span>
         </motion.button>
       </AnimatePresence>
     </div>
@@ -1101,7 +1101,7 @@ function Thinking({ lines: raw = ["Reading the chain…", "Checking the dev's wa
     <div className="glass-card mt-4 flex items-center gap-4 rounded-[26px] p-5">
       <img src={image} alt="" className="zapp-breathe h-14 w-14 rounded-full" />
       <AnimatePresence mode="wait">
-        <motion.p key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-[14px] font-light text-white/75">
+        <motion.p key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-[14px] font-light text-fg-3">
           {lines[i]}
         </motion.p>
       </AnimatePresence>

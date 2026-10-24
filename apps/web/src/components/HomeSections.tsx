@@ -53,7 +53,7 @@ export function NumbersBand() {
             className={`py-10 pr-4 sm:py-14 ${i % 2 ? "pl-5 sm:pl-8" : ""} ${i > 0 ? "lg:border-l lg:border-white/[0.08] lg:pl-8" : ""} ${i > 1 ? "border-t border-white/[0.08] lg:border-t-0" : ""}`}
           >
             <p className="font-display text-[44px] font-medium leading-none tabular-nums text-white sm:text-[64px]">{v ?? "-"}</p>
-            <p className="mt-3 text-[15px] leading-snug text-white/70">{k}</p>
+            <p className="mt-3 text-[15px] leading-snug text-fg-3">{k}</p>
           </motion.div>
         ))}
       </div>
@@ -102,7 +102,7 @@ export function XRayShowcase() {
   return (
     <section className="relative px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-7xl">
-        <p className="text-[15px] text-white/70">{t("A real one, from the last few hours")}</p>
+        <p className="text-[15px] text-fg-3">{t("A real one, from the last few hours")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-[40px] font-semibold leading-[1.02] text-white sm:text-[64px]">
           {t("This is what the X-Ray sees.")} <span className="accent">{t("Before you buy.")}</span>
         </h2>
@@ -116,7 +116,7 @@ export function XRayShowcase() {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] px-6 py-5 sm:px-8">
             <div className="flex items-center gap-4">
               <span className="font-display text-[28px] text-white">${c.symbol || "?"}</span>
-              <span className="font-mono hidden text-[13px] text-white/50 sm:inline">
+              <span className="font-mono hidden text-[13px] text-fg-4 sm:inline">
                 {c.mint.slice(0, 6)}…{c.mint.slice(-6)}
               </span>
             </div>
@@ -126,7 +126,7 @@ export function XRayShowcase() {
             {stats.map(([v, k], i) => (
               <div key={k} className={`px-6 py-6 sm:px-8 ${i % 2 ? "border-l border-white/[0.08]" : ""} ${i > 1 ? "border-t border-white/[0.08] lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}>
                 <p className="font-display text-[34px] font-medium tabular-nums text-white">{v}</p>
-                <p className="mt-1 text-[14px] leading-snug text-white/65">{k}</p>
+                <p className="mt-1 text-[14px] leading-snug text-fg-3">{k}</p>
               </div>
             ))}
           </div>
@@ -134,12 +134,12 @@ export function XRayShowcase() {
             {c.reasons.slice(0, 4).map((r, i) => (
               <li key={r} className="flex gap-5 px-6 py-5 sm:px-8">
                 <span className="font-mono mt-0.5 shrink-0 text-[14px] text-[#ff8a7e]">{String(i + 1).padStart(2, "0")}</span>
-                <span className="text-[16px] leading-relaxed text-white/85">{tChain(r).replace(/^./, (x) => x.toUpperCase())}</span>
+                <span className="text-[16px] leading-relaxed text-fg-2">{tChain(r).replace(/^./, (x) => x.toUpperCase())}</span>
               </li>
             ))}
           </ol>
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.08] px-6 py-5 sm:px-8">
-            <p className="text-[14px] text-white/60">{t("Every line is read from the chain. Nothing here is an opinion.")}</p>
+            <p className="text-[14px] text-fg-4">{t("Every line is read from the chain. Nothing here is an opinion.")}</p>
             <a href={`/xray?mint=${c.mint}`} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-medium text-black hover:bg-white/90">
               {t("Open this X-Ray")} <ArrowRight size={15} />
             </a>
@@ -229,21 +229,21 @@ export function Holders() {
     <section className="relative px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-20">
         <div>
-          <p className="text-[15px] text-white/70">$ZOOAGENCY</p>
+          <p className="text-[15px] text-fg-3">$ZOOAGENCY</p>
           <h2 className="font-display mt-3 text-[40px] font-semibold leading-[1.02] text-white sm:text-[64px]">
             {t("The check is free.")} <span className="accent">{t("Holders see it first.")}</span>
           </h2>
-          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/75">
+          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-fg-3">
             {t("61.5% of the token's creator fees buy it back and burn it, every buyback on the ClawPump page. From November, 10% of every swap fee joins them.")}
           </p>
           <div className="mt-7">
             <CAPill />
           </div>
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[14.5px]">
-            <a href="https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-white/75 hover:text-white">
+            <a href="https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
               DexScreener ↗
             </a>
-            <a href="https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-white/75 hover:text-white">
+            <a href="https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
               Solscan ↗
             </a>
           </div>
@@ -260,7 +260,7 @@ export function Holders() {
           {perks.map((p) => (
             <div key={p.k} className="grid gap-2 border-b border-white/[0.12] py-7 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-8">
               <p className="font-display text-[22px] text-white">{p.k}</p>
-              <p className="text-[16px] leading-relaxed text-white/75">{p.v}</p>
+              <p className="text-[16px] leading-relaxed text-fg-3">{p.v}</p>
             </div>
           ))}
         </div>
@@ -275,19 +275,19 @@ export function TrustStrip() {
   return (
     <section className="relative border-t border-white/[0.08] bg-[#050706] px-5 py-6 sm:px-8">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-10 gap-y-4">
-        <span className="text-[14px] text-white/60">{t("Reads every launch and trade on")}</span>
+        <span className="text-[14px] text-fg-4">{t("Reads every launch and trade on")}</span>
         {reads.map((r) => (
-          <span key={r} className="font-display text-[18px] font-medium text-white/85">
+          <span key={r} className="font-display text-[18px] font-medium text-fg-2">
             {r}
           </span>
         ))}
         <span className="hidden h-5 w-px bg-white/15 md:block" />
-        <a href="https://clawpump.tech" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[14px] text-white/60 hover:text-white">
+        <a href="https://clawpump.tech" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[14px] text-fg-4 hover:text-white">
           {t("Launched on")}
           <img src="/clawpump.png" alt="ClawPump" className="h-6 w-auto" />
         </a>
-        <span className="text-[14px] text-white/60">
-          {t("Built on")} <span className="font-display text-[18px] font-medium text-white/85">Solana</span>
+        <span className="text-[14px] text-fg-4">
+          {t("Built on")} <span className="font-display text-[18px] font-medium text-fg-2">Solana</span>
         </span>
       </div>
     </section>

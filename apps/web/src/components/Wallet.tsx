@@ -71,27 +71,27 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
             transition={{ duration: 0.2 }}
             className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-4 text-left shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl"
           >
-            <p className="font-mono text-[12.5px] text-white/60">{shortAddress(session.publicKey)}</p>
+            <p className="font-mono text-[12.5px] text-fg-4">{shortAddress(session.publicKey)}</p>
             {holder ? (
               holder.holder ? (
                 <p className="mt-2 text-[15px] text-amber-100">{t("Holder · alerts first, more checks, the vote")}</p>
               ) : (
-                <p className="mt-2 text-[14px] leading-relaxed text-white/75">
+                <p className="mt-2 text-[14px] leading-relaxed text-fg-3">
                   {t("Not a holder yet. Holding {n} $ZOOAGENCY opens alerts first, more checks and the vote.", { n: fmt(holder.min) })}
                 </p>
               )
             ) : (
-              <p className="mt-2 text-[14px] text-white/60">{t("Reading your balance...")}</p>
+              <p className="mt-2 text-[14px] text-fg-4">{t("Reading your balance...")}</p>
             )}
-            {holder?.balance != null && <p className="font-mono mt-1 text-[12.5px] text-white/55">{t("balance {n}", { n: fmt(holder.balance) })}</p>}
+            {holder?.balance != null && <p className="font-mono mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: fmt(holder.balance) })}</p>}
             <div className="mt-4 grid gap-1 border-t border-white/10 pt-3 text-[14px]">
-              <a href="/ask" className="rounded-lg px-2 py-1.5 text-white/85 hover:bg-white/[0.06] hover:text-white">
+              <a href="/ask" className="rounded-lg px-2 py-1.5 text-fg-2 hover:bg-white/[0.06] hover:text-white">
                 {t("Watch a token in Telegram")}
               </a>
-              <a href="/connect#api" className="rounded-lg px-2 py-1.5 text-white/85 hover:bg-white/[0.06] hover:text-white">
+              <a href="/connect#api" className="rounded-lg px-2 py-1.5 text-fg-2 hover:bg-white/[0.06] hover:text-white">
                 {t("Your API key")}
               </a>
-              <button type="button" onClick={() => (signOut(), setOpen(false))} className="rounded-lg px-2 py-1.5 text-left text-white/60 hover:bg-white/[0.06] hover:text-white">
+              <button type="button" onClick={() => (signOut(), setOpen(false))} className="rounded-lg px-2 py-1.5 text-left text-fg-4 hover:bg-white/[0.06] hover:text-white">
                 {t("Disconnect")}
               </button>
             </div>

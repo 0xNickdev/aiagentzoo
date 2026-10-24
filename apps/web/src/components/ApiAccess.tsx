@@ -58,19 +58,19 @@ export default function ApiAccess() {
         {tiers.map((tier, i) => (
           <div key={tier.name} className={`liquid-glass rounded-3xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
             <p className="font-display text-3xl">{tier.name}</p>
-            <p className="font-mono mt-1 text-[12.5px] text-white/65">{tier.who}</p>
-            <ul className="mt-5 space-y-2 text-[13.5px] font-light text-white/75">
+            <p className="font-mono mt-1 text-[12.5px] text-fg-3">{tier.who}</p>
+            <ul className="mt-5 space-y-2 text-[13.5px] font-light text-fg-3">
               {tier.rows.map((r) => (
                 <li key={r}>· {r}</li>
               ))}
             </ul>
-            <pre className="font-mono mt-5 overflow-x-auto rounded-xl bg-black/30 p-3 text-[13px] text-white/70">{i === 0 ? EXAMPLE : KEYED}</pre>
+            <pre className="font-mono mt-5 overflow-x-auto rounded-xl bg-black/30 p-3 text-[13px] text-fg-3">{i === 0 ? EXAMPLE : KEYED}</pre>
           </div>
         ))}
       </Reveal>
 
       <Reveal className="liquid-glass mt-3 rounded-3xl p-6">
-        <p className="font-mono text-[12px] text-white/65">{pick("your key", "你的密钥")}</p>
+        <p className="font-mono text-[12px] text-fg-3">{pick("your key", "你的密钥")}</p>
         {key ? (
           <div className="mt-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -79,13 +79,13 @@ export default function ApiAccess() {
                 {copied ? pick("copied", "已复制") : pick("copy", "复制")}
               </button>
             </div>
-            <p className="mt-3 text-[12.5px] font-light text-white/55">
+            <p className="mt-3 text-[12.5px] font-light text-fg-4">
               {pick("Shown once. Keep it out of public code. Asking for a new key replaces this one. If the wallet drops under 500,000, the key falls back to the free limits.", "只显示一次。不要放进公开代码。重新申请会替换这个密钥。如果钱包持仓低于 500,000，密钥会退回免费额度。")}
             </p>
           </div>
         ) : session ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="font-mono text-[12.5px] text-white/60">{shortAddress(session.publicKey)}</span>
+            <span className="font-mono text-[12.5px] text-fg-4">{shortAddress(session.publicKey)}</span>
             <button type="button" disabled={working} onClick={getKey} className="rounded-full bg-white px-5 py-2 text-[13px] text-black disabled:opacity-50">
               {working ? pick("checking your holding…", "正在检查持仓…") : pick("Get my key", "获取密钥")}
             </button>
@@ -95,11 +95,11 @@ export default function ApiAccess() {
             <button type="button" disabled={busy} onClick={signIn} className="rounded-full bg-white px-5 py-2 text-[13px] text-black disabled:opacity-50">
               {pick("Sign in with your wallet", "用钱包登录")}
             </button>
-            <span className="text-[12.5px] font-light text-white/70">{pick("A signature, not a transaction. It costs nothing.", "只是签名，不是交易，不花钱。")}</span>
+            <span className="text-[12.5px] font-light text-fg-3">{pick("A signature, not a transaction. It costs nothing.", "只是签名，不是交易，不花钱。")}</span>
           </div>
         )}
         {(error || signError) && <p className="mt-3 text-[12.5px] text-[#ff8a7e]">{error ?? signError}</p>}
-        <p className="font-mono mt-5 text-[12px] text-white/55">
+        <p className="font-mono mt-5 text-[12px] text-fg-4">
           {pick("for agents: ", "智能体请看：")}
           <a href="/skill.md" className="underline decoration-white/20 underline-offset-4 hover:text-white">zooaiagency.com/skill.md</a>
         </p>
