@@ -1,7 +1,5 @@
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
-import { polygonHull } from "d3-polygon";
 import { select } from "d3-selection";
-import { curveCatmullRomClosed, line } from "d3-shape";
 import { zoom, type ZoomTransform, zoomIdentity } from "d3-zoom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
@@ -9,9 +7,10 @@ import { t } from "../i18n";
 import type { XRayReport } from "./XRay";
 
 /**
- * The network around a token, Bubblemaps-style: the dev, his crew and regulars, the launch block, the serial snipers,
- * who paid for him and who else that wallet paid for, and his last launches. Each group is a soft hull with its story
- * written on it; bubble size is what a wallet took or how often it shows up. Canvas, d3-force, no other renderer.
+ * The network around a token: the dev, his crew and regulars, the launch block, the serial snipers, who paid for him
+ * and who else that wallet paid for, and his last launches. Drawn like the home page's scene: each wallet a glowing
+ * clump of dust sized by what it took or how often it shows up, links as thin arcs with money running along them,
+ * each group named in plain words. Canvas + d3-force + d3-zoom.
  */
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -43,7 +42,8 @@ interface DevProfile {
   launches: Array<{ mint: string; symbol: string; dumpedAfterMin: number | null; graduated: boolean }>;
 }
 
-const COLOR: Record<Kind, string> = { dev: "#ff6a5c", crew: "#ff8d7a", ring: "#f4b65f", bundle: "#5fc6f2", serial: "#cfc6ad", early: "#e9e9e9", funder: "#b6e3c6", sibling: "#ff8d7a", coin: "#ff6a5c" };
+// The brand's four: danger for the dev and his people, warn for the regulars and the block, moss for money's source, white for the rest.
+const COLOR: Record<Kind, string> = { dev: "#ff8a7e", crew: "#ff8a7e", ring: "#ffc27a", bundle: "#ffc27a", serial: "#d9dddb", early: "#e6e9e7", funder: "#a6e3b4", sibling: "#ff8a7e", coin: "#ff8a7e" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const rgba = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
@@ -110,14 +110,48 @@ const radius = (n: Node, total: number) => {
   return Math.max(a, b);
 };
 
+/** A wallet as the hero draws it: a soft core and a seeded spray of dust, pre-rendered once per colour and size. */
+function sprite(col: string, r: number, seed: number, strong: boolean): HTMLCanvasElement {
+  const S = 2;
+  const size = Math.ceil(r * 3.2) * 2;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size * S;
+  const g = cv.getContext("2d")!;
+  g.scale(S, S);
+  const c = size / 2;
+  const glow = g.createRadialGradient(c, c, 0, c, c, r * 1.6);
+  glow.addColorStop(0, rgba(col, strong ? 0.55 : 0.32));
+  glow.addColorStop(0.45, rgba(col, strong ? 0.18 : 0.1));
+  glow.addColorStop(1, rgba(col, 0));
+  g.fillStyle = glow;
+  g.beginPath();
+  g.arc(c, c, r * 1.6, 0, Math.PI * 2);
+  g.fill();
+  let x = seed * 9301 + 49297;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const n = Math.round(Math.min(520, 30 + r * r * 1.4));
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const u = rnd() || 1e-6, v = rnd();
+    const rr = r * Math.sqrt(-2 * Math.log(u)) * 0.38;
+    const a = v * Math.PI * 2;
+    const px = c + Math.cos(a) * rr, py = c + Math.sin(a) * rr;
+    const near = 1 - Math.min(1, rr / (r * 1.2));
+    g.fillStyle = i % 9 === 0 ? `rgba(255,255,255,${0.55 + near * 0.4})` : rgba(col, 0.35 + near * 0.6);
+    const d = rnd() < 0.85 ? 0.9 : 1.5;
+    g.fillRect(px - d / 2, py - d / 2, d, d);
+  }
+  return cv;
+}
+
 export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onPick: (mint: string) => void; onWallet: (wallet: string) => void }) {
   const [dev, setDev] = useState<DevProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [hover, setHover] = useState<{ n: Node; x: number; y: number } | null>(null);
+  const [picked, setPicked] = useState<{ n: Node; x: number; y: number } | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  const lit = useRef<Node | null>(null);
   const controls = useRef<{ zoomBy: (k: number) => void; fit: () => void } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const reticle = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let live = true;
@@ -136,23 +170,25 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
   useEffect(() => {
     const el = wrap.current;
     const cv = canvas.current;
-    if (!graph || !el || !cv) return;
+    const ret = reticle.current;
+    if (!graph || !el || !cv || !ret) return;
     const { nodes, links, total, record } = graph;
     const ctx = cv.getContext("2d")!;
-    const DPR = window.devicePixelRatio || 1;
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
     let W = el.clientWidth;
     let H = el.clientHeight;
     const mobile = W < 640;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Each group has a home; on a phone they stack closer.
     const s = mobile ? 0.62 : 1;
     const home: Record<string, [number, number]> = { dev: [0, 0], crew: [-60, -20], ring: [190, -130], bundle: [-320, 40], serial: [350, 110], funder: [-230, -210], coin: [10, 290] };
-    const R = (n: Node) => radius(n, total) * (mobile ? 0.8 : 1);
+    const R = (n: Node) => radius(n, total) * (mobile ? 0.8 : 1) * (n.kind === "dev" ? 0.7 : 0.85);
     const sim = forceSimulation<Node>(nodes)
       .force("link", forceLink<Node, Link>(links).id((d) => d.id).distance((l) => ({ crew: 70, sniped: 260, bundle: 30, launched: 240, funded: 60 })[l.kind] * s).strength((l) => (l.kind === "bundle" || l.kind === "funded" ? 0.7 : l.kind === "crew" ? 0.25 : 0.01)))
       .force("charge", forceManyBody<Node>().strength((d) => (d.kind === "dev" ? -300 : -40)))
       .force("x", forceX<Node>((d) => home[d.group]![0] * s).strength((d) => (d.kind === "dev" ? 1 : 0.14)))
       .force("y", forceY<Node>((d) => home[d.group]![1] * s).strength((d) => (d.kind === "dev" ? 1 : 0.14)))
-      .force("collide", forceCollide<Node>((d) => R(d) + 2.5).strength(1).iterations(3))
+      .force("collide", forceCollide<Node>((d) => R(d) * 1.25 + (d.kind === "coin" ? 22 : 4)).strength(1).iterations(3))
       .stop();
     for (let i = 0; i < 500; i++) sim.tick();
 
@@ -161,15 +197,32 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
     const blockPct = nodes.filter((n) => n.group === "bundle").reduce((a, n) => a + n.pct, 0);
     const sibs = nodes.filter((n) => n.kind === "sibling");
     const GROUPS: Record<Group, { color: string; title: string; sub: string }> = {
-      crew: { color: COLOR.crew, title: t("HIS CREW"), sub: top ? t("{n} wallets · in {a} of his {b} launches in 48h", { n: count("crew"), a: top.launches ?? 0, b: total }) : t("{n} of his own wallets", { n: count("crew") }) },
-      ring: { color: COLOR.ring, title: t("REGULARS"), sub: t("{n} wallets · back in launch after launch", { n: count("ring") }) },
-      bundle: { color: COLOR.bundle, title: t("LAUNCH BLOCK"), sub: t("{n} wallets · {p}% bought in one slot", { n: count("bundle"), p: blockPct.toFixed(1) }) },
-      serial: { color: COLOR.serial, title: t("SERIAL SNIPERS"), sub: t("{n} wallets · first seconds of everything", { n: count("serial") }) },
-      funder: { color: COLOR.funder, title: t("SAME FUNDER"), sub: sibs.length ? t("paid for {n} other devs · {d} dumps", { n: sibs.length, d: sibs.reduce((a, x) => a + (x.dumped ?? 0), 0) }) : t("one wallet paid for these") },
-      coin: { color: COLOR.coin, title: t("HIS LAST LAUNCHES"), sub: t("{n} shown · {d} of {b} dumped", { n: count("coin"), d: record.dumped, b: record.launches }) },
+      crew: { color: COLOR.crew, title: t("His crew"), sub: top ? t("{n} wallets · in {a} of his {b} launches in 48h", { n: count("crew"), a: top.launches ?? 0, b: total }) : t("{n} of his own wallets", { n: count("crew") }) },
+      ring: { color: COLOR.ring, title: t("Regulars"), sub: t("{n} wallets · back in launch after launch", { n: count("ring") }) },
+      bundle: { color: COLOR.bundle, title: t("Launch block"), sub: t("{n} wallets · {p}% bought in one slot", { n: count("bundle"), p: blockPct.toFixed(1) }) },
+      serial: { color: COLOR.serial, title: t("Serial snipers"), sub: t("{n} wallets · first seconds of everything", { n: count("serial") }) },
+      funder: { color: COLOR.funder, title: t("Same funder"), sub: sibs.length ? t("paid for {n} other devs · {d} dumps", { n: sibs.length, d: sibs.reduce((a, x) => a + (x.dumped ?? 0), 0) }) : t("one wallet paid for these") },
+      coin: { color: COLOR.coin, title: t("His last launches"), sub: t("{n} shown · {d} of {b} dumped", { n: count("coin"), d: record.dumped, b: record.launches }) },
     };
+    const colOf = (n: Node) => (n.kind === "coin" ? (n.outcome === "graduated" ? "#a6e3b4" : n.outcome === "dumped" ? "#ff8a7e" : "#e6e9e7") : COLOR[n.kind]);
+    const sprites = new Map<Node, HTMLCanvasElement>();
+    nodes.forEach((n, i) => sprites.set(n, sprite(colOf(n), R(n), i + 1, n.kind === "dev")));
+    // where each group's name goes: above its highest member
+    const groupLabels = (Object.keys(GROUPS) as Group[])
+      .map((g) => {
+        const m = nodes.filter((n) => n.group === g);
+        if (!m.length) return null;
+        const x = m.reduce((a, n) => a + n.x!, 0) / m.length;
+        const y = Math.min(...m.map((n) => n.y! - R(n)));
+        return { g, x, y };
+      })
+      .filter((x): x is { g: Group; x: number; y: number } => !!x);
+    // money running along the links: a few dots per link, each at its own phase
+    const flows = links.flatMap((l, i) => Array.from({ length: l.kind === "sniped" ? 1 : 2 }, (_, k) => ({ l, ph: ((i * 0.37 + k * 0.5) % 1), sp: 0.08 + ((i * 13) % 7) * 0.012 })));
 
     let tr: ZoomTransform = zoomIdentity;
+    let hot: Node | null = null;
+    let pin: Node | null = null;
     const resize = () => {
       W = el.clientWidth;
       H = el.clientHeight;
@@ -181,103 +234,112 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
     const fit = () => {
       const xs = nodes.map((n) => n.x!);
       const ys = nodes.map((n) => n.y!);
-      const [x0, x1, y0, y1] = [Math.min(...xs) - 60, Math.max(...xs) + 60, Math.min(...ys) - 90, Math.max(...ys) + 40];
+      const [x0, x1, y0, y1] = [Math.min(...xs) - 70, Math.max(...xs) + 70, Math.min(...ys) - 90, Math.max(...ys) + 50];
       const k = Math.min(W / (x1 - x0), H / (y1 - y0), 1.3);
       return zoomIdentity.translate((W - k * (x1 + x0)) / 2, (H - k * (y1 + y0)) / 2).scale(k);
     };
+    const curvePt = (a: Node, b: Node, u: number) => {
+      // a gentle arc: the control point sits off the middle, always to the same side
+      const mx = (a.x! + b.x!) / 2, my = (a.y! + b.y!) / 2;
+      const dx = b.x! - a.x!, dy = b.y! - a.y!;
+      const cx = mx - dy * 0.12, cy = my + dx * 0.12;
+      const v = 1 - u;
+      return [v * v * a.x! + 2 * v * u * cx + u * u * b.x!, v * v * a.y! + 2 * v * u * cy + u * u * b.y!] as const;
+    };
 
+    let time = 0;
     const draw = () => {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(255,255,255,0.04)";
-      for (let x = 13; x < W; x += 26) for (let y = 13; y < H; y += 26) ctx.fillRect(x, y, 1, 1);
       ctx.save();
       ctx.translate(tr.x, tr.y);
       ctx.scale(tr.k, tr.k);
-      const labels: Array<{ g: Group; x: number; y: number }> = [];
-      const curve = line().curve(curveCatmullRomClosed.alpha(0.9)).context(ctx);
-      for (const g of Object.keys(GROUPS) as Group[]) {
-        const members = nodes.filter((n) => n.group === g || (g === "crew" && n.kind === "dev"));
-        if (members.length < 2 && g !== "funder") continue;
-        if (!members.length) continue;
-        const pts: Array<[number, number]> = [];
-        for (const p of members) for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) pts.push([p.x! + Math.cos(a) * (R(p) + 16), p.y! + Math.sin(a) * (R(p) + 16)]);
-        const h = polygonHull(pts);
-        if (!h) continue;
-        ctx.beginPath();
-        curve(h);
-        ctx.fillStyle = rgba(GROUPS[g].color, 0.055);
-        ctx.fill();
-        ctx.setLineDash([2, 5]);
-        ctx.strokeStyle = rgba(GROUPS[g].color, 0.35);
-        ctx.lineWidth = 1 / tr.k;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        const topPt = h.reduce((a, b) => (b[1] < a[1] ? b : a));
-        labels.push({ g, x: h.reduce((a, p) => a + p[0], 0) / h.length, y: topPt[1] });
-      }
-      const hot = lit.current;
+      const focus = pin ?? hot;
+      // links: hairline arcs, brighter for the focused node
       for (const l of links) {
-        const a = l.source as Node;
-        const b = l.target as Node;
-        const lit = hot && (a === hot || b === hot);
+        const a = l.source as Node, b = l.target as Node;
+        const on = focus && (a === focus || b === focus);
+        const mx = (a.x! + b.x!) / 2, my = (a.y! + b.y!) / 2;
+        const dx = b.x! - a.x!, dy = b.y! - a.y!;
         ctx.beginPath();
         ctx.moveTo(a.x!, a.y!);
-        ctx.lineTo(b.x!, b.y!);
-        ctx.strokeStyle = lit ? "rgba(255,255,255,0.85)" : { crew: "rgba(255,141,122,0.35)", bundle: "rgba(95,198,242,0.5)", sniped: "rgba(255,255,255,0.05)", launched: "rgba(255,106,92,0.12)", funded: "rgba(182,227,198,0.45)" }[l.kind];
-        ctx.lineWidth = lit ? 1.8 : l.kind === "crew" ? 0.6 + 2 * l.w : 0.8;
+        ctx.quadraticCurveTo(mx - dy * 0.12, my + dx * 0.12, b.x!, b.y!);
+        const base = { crew: 0.28, bundle: 0.34, sniped: 0.07, launched: 0.12, funded: 0.34 }[l.kind];
+        ctx.strokeStyle = on ? "rgba(255,255,255,0.75)" : rgba(colOf(b.kind === "coin" ? b : a), focus ? base * 0.45 : base);
+        ctx.lineWidth = (on ? 1.4 : l.kind === "crew" ? 0.6 + 1.4 * l.w : 0.7) / Math.sqrt(tr.k);
         ctx.stroke();
       }
-      for (const n of [...nodes].sort((a, b) => R(a) - R(b))) {
-        const col = n.kind === "coin" ? (n.outcome === "graduated" ? "#8fe3a5" : COLOR.coin) : COLOR[n.kind];
-        const rad = R(n);
-        const gone = n.held === 0;
-        ctx.beginPath();
-        ctx.arc(n.x!, n.y!, rad, 0, Math.PI * 2);
-        ctx.fillStyle = rgba(col, n.kind === "dev" ? 0.9 : n.kind === "coin" ? 0.14 : gone ? 0.18 : 0.32);
-        ctx.fill();
-        ctx.lineWidth = n.kind === "dev" ? 2 : 1.3;
-        ctx.strokeStyle = n === hot ? "#fff" : rgba(col, gone && n.kind !== "dev" ? 0.55 : 0.95);
-        ctx.stroke();
-        if (n.kind === "dev") {
-          ctx.beginPath();
-          ctx.arc(n.x!, n.y!, rad + 8, 0, Math.PI * 2);
-          ctx.strokeStyle = rgba(col, 0.25);
-          ctx.lineWidth = 6;
-          ctx.stroke();
-        }
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        if (n.kind === "dev") {
-          ctx.font = '600 11px "Geist Mono", monospace';
-          ctx.fillStyle = "#170807";
-          ctx.fillText(t("DEV"), n.x!, n.y! - (n.dumped !== undefined ? 6 : 0));
-          if (n.dumped !== undefined) {
-            ctx.font = '500 8.5px "Geist Mono", monospace';
-            ctx.fillText(t("{d}/{n} dumped", { d: record.dumped, n: record.launches }), n.x!, n.y! + 7);
-          }
-        } else if (rad * tr.k >= 15 && n.kind !== "coin") {
-          ctx.font = '500 9px "Geist Mono", monospace';
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
-          ctx.fillText(n.launches ? `${n.launches}×` : n.pct ? `${n.pct}%` : "", n.x!, n.y! - 5);
-          ctx.font = '400 7px "Geist Mono", monospace';
-          ctx.fillStyle = "rgba(255,255,255,0.55)";
-          ctx.fillText(short(n.id), n.x!, n.y! + 6);
-        }
+      ctx.globalCompositeOperation = "lighter";
+      for (const f of flows) {
+        const a = f.l.source as Node, b = f.l.target as Node;
+        const u = (f.ph + time * f.sp) % 1;
+        const [x, y] = curvePt(a, b, u);
+        const on = focus && (a === focus || b === focus);
+        ctx.fillStyle = on ? "rgba(255,255,255,0.95)" : rgba(colOf(b.kind === "coin" ? b : a), focus ? 0.25 : 0.7);
+        const d = 1.6 / Math.sqrt(tr.k);
+        ctx.fillRect(x - d / 2, y - d / 2, d, d);
       }
+      // wallets as glowing dust
+      for (const n of [...nodes].sort((x, y) => R(x) - R(y))) {
+        const sp = sprites.get(n)!;
+        const size = sp.width / 2;
+        const dim = focus && n !== focus && !links.some((l) => (l.source === focus && l.target === n) || (l.target === focus && l.source === n));
+        ctx.globalAlpha = dim ? 0.35 : n.held === 0 && n.kind !== "dev" ? 0.6 : 1;
+        ctx.drawImage(sp, n.x! - size / 2, n.y! - size / 2, size, size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
       ctx.restore();
-      for (const l of labels) {
+      // names: the dev's pill, the coins, the groups
+      ctx.textBaseline = "middle";
+      for (const n of nodes) {
+        const [x, y] = tr.apply([n.x!, n.y!]);
+        const rad = R(n) * tr.k;
+        if (n.kind === "dev") {
+          const label = `${t("DEV")} · ${t("{d}/{n} dumped", { d: record.dumped, n: record.launches })}`;
+          ctx.font = "600 11px Geist, system-ui, sans-serif";
+          const w = ctx.measureText(label).width + 16;
+          const lx = x + rad + 10, ly = y;
+          ctx.fillStyle = "rgba(20,8,7,0.8)";
+          ctx.strokeStyle = "rgba(255,138,126,0.55)";
+          ctx.beginPath();
+          ctx.roundRect(lx, ly - 11, w, 22, 11);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffb3aa";
+          ctx.textAlign = "left";
+          ctx.fillText(label, lx + 8, ly + 0.5);
+        } else if (n.kind === "coin" && n.label && (tr.k > 0.95 || n === focus)) {
+          ctx.font = "500 11px Geist, system-ui, sans-serif";
+          ctx.fillStyle = n === focus ? "#ffffff" : "#c9cecb";
+          ctx.textAlign = "left";
+          ctx.fillText(n.label, x + rad + 6, y);
+        } else if ((n.kind === "crew" || n.kind === "ring") && n.launches && rad > 9) {
+          ctx.font = "600 10.5px Geist, system-ui, sans-serif";
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.fillText(`${n.launches}×`, x, y);
+        }
+      }
+      for (const l of groupLabels) {
         const [x, y] = tr.apply([l.x, l.y]);
         const g = GROUPS[l.g];
         ctx.textAlign = "center";
         ctx.textBaseline = "alphabetic";
-        ctx.font = '500 10px "Geist Mono", monospace';
-        ctx.fillStyle = rgba(g.color, 0.95);
-        ctx.fillText(g.title, x, y - 24);
-        ctx.font = `400 ${mobile ? 11 : 12}px Geist, sans-serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        ctx.fillText(g.sub, x, y - 9);
+        ctx.font = "600 12px Geist, system-ui, sans-serif";
+        ctx.fillStyle = g.color;
+        ctx.fillText(g.title, x, y - 28);
+        ctx.font = `400 ${mobile ? 11 : 12}px Geist, system-ui, sans-serif`;
+        ctx.fillStyle = "#c9cecb";
+        ctx.fillText(g.sub, x, y - 12);
       }
+      // the scanner's reticle on the focused node
+      if (focus) {
+        const [x, y] = tr.apply([focus.x!, focus.y!]);
+        const sc = Math.max(0.6, (R(focus) * tr.k * 2 + 18) / 40);
+        ret.style.opacity = "1";
+        ret.style.transform = `translate(${x}px, ${y}px) scale(${sc.toFixed(3)})`;
+      } else ret.style.opacity = "0";
     };
 
     resize();
@@ -293,8 +355,8 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
       })
       .on("zoom", (e) => {
         tr = e.transform;
-        lit.current = null;
-        setHover(null);
+        if (pin) setPicked(null);
+        pin = null;
         draw();
       });
     const sel = select(cv).call(z).call(z.transform, tr);
@@ -305,23 +367,22 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
     const pick = (ev: { offsetX: number; offsetY: number }) => {
       const [x, y] = tr.invert([ev.offsetX, ev.offsetY]);
       let best: Node | null = null;
-      for (const n of nodes) if (Math.hypot(n.x! - x, n.y! - y) <= R(n) + 3 && (!best || R(n) < R(best))) best = n;
+      for (const n of nodes) if (Math.hypot(n.x! - x, n.y! - y) <= R(n) + 6 / tr.k && (!best || R(n) < R(best))) best = n;
       return best;
     };
     const move = (ev: MouseEvent) => {
       const n = pick(ev);
-      cv.style.cursor = n && n.kind !== "dev" ? "pointer" : "grab";
-      if (lit.current !== n) {
-        lit.current = n;
+      cv.style.cursor = n ? "pointer" : "grab";
+      if (hot !== n) {
+        hot = n;
         draw();
       }
-      setHover(n ? { n, x: ev.offsetX, y: ev.offsetY } : null);
     };
     const click = (ev: MouseEvent) => {
       const n = pick(ev);
-      if (!n) return;
-      if (n.kind === "coin") onPick(n.id.slice(2));
-      else onWallet(n.id);
+      pin = n;
+      setPicked(n ? { n, x: ev.offsetX, y: ev.offsetY } : null);
+      draw();
     };
     cv.addEventListener("mousemove", move);
     cv.addEventListener("click", click);
@@ -330,9 +391,27 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
       draw();
     });
     ro.observe(el);
+    // animate only while the map is on screen
+    let raf = 0;
+    let visible = true;
+    const io = new IntersectionObserver(([e]) => (visible = !!e?.isIntersecting));
+    io.observe(el);
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (visible && !reduce) {
+        time += dt;
+        draw();
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
     void document.fonts?.ready.then(draw);
     draw();
     return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
       ro.disconnect();
       cv.removeEventListener("mousemove", move);
       cv.removeEventListener("click", click);
@@ -340,41 +419,63 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
     };
   }, [graph, onPick, onWallet, dev]);
 
-  const n = hover?.n;
+  const n = picked?.n;
   const total = graph?.total ?? 1;
+  const kindName: Record<Kind, string> = { crew: t("His crew"), ring: t("Regular"), bundle: t("Launch block"), serial: t("Serial sniper"), early: t("First 5 seconds"), funder: t("Funder"), sibling: t("Another dev, same funder"), coin: t("His launch"), dev: t("The dev") };
   return (
-    <div ref={wrap} className="relative h-[560px] overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/[0.06] sm:h-[640px]">
+    <div ref={wrap} className="relative h-[560px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[radial-gradient(60%_60%_at_50%_45%,rgba(70,110,85,0.10),transparent_70%)] bg-night sm:h-[640px]">
       <canvas ref={canvas} className="block" style={{ touchAction: "pan-y" }} />
+      <div ref={reticle} aria-hidden className="pointer-events-none absolute left-0 top-0 -ml-5 -mt-5 h-10 w-10 opacity-0 transition-opacity duration-150">
+        {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((c) => {
+          const [v, h] = c.split("-") as ["top" | "bottom", "left" | "right"];
+          const edge = "1.5px solid rgba(255,255,255,0.95)";
+          return <i key={c} className="absolute h-[9px] w-[9px] drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]" style={{ [v]: 0, [h]: 0, [`border${v === "top" ? "Top" : "Bottom"}`]: edge, [`border${h === "left" ? "Left" : "Right"}`]: edge }} />;
+        })}
+      </div>
       {!graph && <p className="absolute inset-0 grid place-items-center text-[13px] text-fg-4">{t("Drawing the network…")}</p>}
-      {n && n.kind !== "dev" && (
-        <div className="pointer-events-none absolute z-10 w-[240px] rounded-xl bg-[#0d0f10]/95 p-3.5 ring-1 ring-white/10" style={{ left: Math.min(hover!.x + 14, (wrap.current?.clientWidth ?? 0) - 254), top: Math.max(8, hover!.y - 20) }}>
-          <p className="tabular-nums text-[10.5px] [&::first-letter]:uppercase" style={{ color: COLOR[n.kind] }}>
-            {{ crew: t("his crew"), ring: t("regular"), bundle: t("launch block"), serial: t("serial sniper"), early: t("first 5 seconds"), funder: t("funder"), sibling: t("another dev, same funder"), coin: t("his launch"), dev: "" }[n.kind]}
-          </p>
-          <p className="tabular-nums mt-1 text-[13px] text-white">{n.kind === "coin" ? n.label : short(n.id)}</p>
-          <div className="mt-2 space-y-1 text-[12px] text-fg-3">
+      {n && picked && (
+        <div
+          role="dialog"
+          className="absolute z-10 w-[260px] rounded-xl border border-white/[0.14] bg-night-surface/95 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+          style={{ left: Math.max(8, Math.min(picked.x + 18, (wrap.current?.clientWidth ?? 0) - 276)), top: Math.max(8, Math.min(picked.y - 24, (wrap.current?.clientHeight ?? 0) - 230)) }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-medium" style={{ color: COLOR[n.kind] }}>{kindName[n.kind]}</p>
+              <p className="mt-0.5 truncate text-[15px] font-semibold text-white">{n.kind === "coin" ? n.label : n.kind === "dev" ? short(r.creator) : short(n.id)}</p>
+            </div>
+            <button type="button" onClick={() => setPicked(null)} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-fg-4 hover:text-white">
+              ×
+            </button>
+          </div>
+          <div className="mt-3 space-y-1.5 border-t border-white/[0.08] pt-3 text-[13px] text-fg-3">
+            {n.kind === "dev" && <p>{t("{d} of {n} launches dumped in 48h", { d: graph?.record.dumped ?? 0, n: graph?.record.launches ?? 0 })}</p>}
             {n.launches !== undefined && n.kind !== "sibling" && <p>{t("in {a} of his {b} launches in 48h", { a: n.launches, b: total })}</p>}
             {n.kind === "sibling" && <p>{t("{a} launches · {d} dumped in 48h", { a: n.launches ?? 0, d: n.dumped ?? 0 })}</p>}
             {!!n.pct && <p>{t("bought {p}% of supply", { p: n.pct })}{n.sec !== undefined ? t(", {s}s after launch", { s: n.sec }) : ""}</p>}
-            {n.held === 0 && <p>{t("already sold out")}</p>}
+            {n.held === 0 && <p className="text-danger">{t("already sold out")}</p>}
             {n.snipes !== undefined && <p>{t("{n} snipes in 48h", { n: n.snipes })}</p>}
-            {n.kind === "coin" && <p>{n.outcome === "dumped" ? t("dev dumped it") : n.outcome === "graduated" ? t("graduated") : t("dev still holding")}</p>}
+            {n.kind === "coin" && <p className={n.outcome === "dumped" ? "text-danger" : ""}>{n.outcome === "dumped" ? t("dev dumped it") : n.outcome === "graduated" ? t("graduated") : t("dev still holding")}</p>}
           </div>
-          <p className="mt-2 text-[11px] text-fg-4">{n.kind === "coin" ? t("tap to x-ray it") : t("tap to open the wallet")}</p>
+          {n.kind !== "dev" && (
+            <button type="button" onClick={() => (n.kind === "coin" ? onPick(n.id.slice(2)) : onWallet(n.id))} className="mt-3 text-[13.5px] font-medium text-white hover:underline">
+              {n.kind === "coin" ? t("Open X-Ray") : t("Open the wallet")} →
+            </button>
+          )}
         </div>
       )}
-      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-xl bg-[#0d0f10]/90 ring-1 ring-white/10">
+      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-night-surface/90">
         {[
           ["+", () => controls.current?.zoomBy(1.4), t("zoom in")],
           ["−", () => controls.current?.zoomBy(1 / 1.4), t("zoom out")],
           ["⤢", () => controls.current?.fit(), t("fit the map")],
         ].map(([label, fn, title]) => (
-          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="tabular-nums h-9 w-9 border-b border-white/[0.08] text-[15px] text-fg-3 transition last:border-b-0 hover:bg-white/[0.06] hover:text-white">
+          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="h-9 w-9 border-b border-white/[0.08] text-[15px] text-fg-3 transition last:border-b-0 hover:bg-white/[0.06] hover:text-white">
             {label as string}
           </button>
         ))}
       </div>
-      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-fg-4">{t("ctrl + scroll or two fingers to zoom · drag to move · tap a bubble")}</p>
+      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[12px] text-fg-4">{t("Drag to move · pinch or ⌘ scroll to zoom · click a dot")}</p>
     </div>
   );
 }

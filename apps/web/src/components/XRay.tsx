@@ -472,14 +472,19 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const holds = early.reduce((n, e) => n + e.held, 0);
   const fund = r.funding;
   const rec = r.creatorRecord;
-  const [tab, setTab] = useState<Tab>("overview");
+  // ?tab=network opens a tab straight away, so a link can point at the map
+  const askedTab = () => {
+    const q = new URLSearchParams(window.location.search).get("tab");
+    return (["overview", "network", "dev", "five", "map", "bundles", "holders", "wallets"] as Tab[]).includes(q as Tab) ? (q as Tab) : "overview";
+  };
+  const [tab, setTab] = useState<Tab>(askedTab);
   const [all, setAll] = useState(false);
   const [sel, setSelState] = useState<string | null>(null);
   // Where the wallet was picked: on the map its dossier opens beside the map, in the list it opens under its row.
   const [from, setFrom] = useState<"map" | "list">("map");
   useEffect(() => {
     setSelState(null);
-    setTab("overview");
+    setTab(askedTab());
     setAll(false);
   }, [r.mint]);
   const selected = early.find((e) => e.wallet === sel) ?? null;
@@ -951,7 +956,8 @@ export default function XRay() {
       }
       if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
       setReport(body);
-      history.pushState(null, "", `/xray?mint=${mint}`);
+      const keepTab = new URLSearchParams(window.location.search).get("tab");
+      history.pushState(null, "", `/xray?mint=${mint}${keepTab ? `&tab=${encodeURIComponent(keepTab)}` : ""}`);
     } catch (err) {
       setReport(null);
       setError((err as Error).message);
