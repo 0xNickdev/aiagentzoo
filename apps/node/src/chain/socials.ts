@@ -39,7 +39,8 @@ export function socialsOf(meta: { twitter?: unknown; telegram?: unknown }): Soci
 /** IPFS through gateways that answer servers; the uri's own host otherwise. */
 function metadataUrls(uri: string): string[] {
   const cid = /\/ipfs\/([A-Za-z0-9]{40,80})/.exec(uri)?.[1];
-  if (cid) return [`https://4everland.io/ipfs/${cid}`, `https://gateway.pinata.cloud/ipfs/${cid}`];
+  // Pinata answers our server; ipfs.io rate-limits it and 4everland often hangs, so they are only the fallbacks.
+  if (cid) return [`https://gateway.pinata.cloud/ipfs/${cid}`, `https://4everland.io/ipfs/${cid}`, `https://ipfs.io/ipfs/${cid}`];
   return /^https:\/\//.test(uri) ? [uri] : [];
 }
 
@@ -47,7 +48,7 @@ function metadataUrls(uri: string): string[] {
 export function imageUrl(v: unknown): string | null {
   if (typeof v !== "string" || v.length > 300) return null;
   const cid = /(?:\/ipfs\/|^ipfs:\/\/)([A-Za-z0-9]{40,80})/.exec(v)?.[1];
-  if (cid) return `https://ipfs.io/ipfs/${cid}`;
+  if (cid) return `https://gateway.pinata.cloud/ipfs/${cid}`;
   return /^https:\/\/[^\s"'<>]+$/.test(v) ? v : null;
 }
 
@@ -100,7 +101,7 @@ export class SocialsRegistry {
     let refused = false;
     for (const url of metadataUrls(uri)) {
       try {
-        const r = await this.fetchFn(url, { headers: { "user-agent": "Mozilla/5.0 (zooaiagency)" }, signal: AbortSignal.timeout(6_000) });
+        const r = await this.fetchFn(url, { headers: { "user-agent": "Mozilla/5.0 (zooaiagency)" }, signal: AbortSignal.timeout(4_000) });
         if (r.status === 429 || r.status === 403) {
           refused = true;
           continue;
