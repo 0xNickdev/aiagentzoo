@@ -105,6 +105,7 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
   const edgeA = new Float32Array(N * 3);
   const edgeB = new Float32Array(N * 3);
   const isEdge = new Float32Array(N);
+  const nodeOf = new Float32Array(N).fill(-1);
   const col = new Float32Array(N * 3);
   const C = {
     dev: [1.35, 0.42, 0.36],
@@ -128,6 +129,7 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
       pos[i * 3 + 2] = n.z + rr * Math.cos(ph);
       const cc = n.kind === "dev" ? C.dev : n.kind === "wallet" ? C.wallet : n.dumped ? C.dumped : C.coin;
       col.set(cc, i * 3);
+      nodeOf[i] = k;
     }
   });
   // the rest: links. a particle sits somewhere on its link and the shader moves it along.
@@ -149,7 +151,7 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
     label: n.kind === "dev" ? "dev" : labelled.has(n) ? "coin" : null,
   }));
   return {
-    pos, edgeA, edgeB, isEdge, col, meta,
+    pos, edgeA, edgeB, isEdge, col, meta, nodeOf,
     caption: caption(short(dev.wallet), dev.launches48h, dev.dumped, regs.length),
   };
 }
@@ -160,8 +162,9 @@ const vert = /* glsl */ `
   uniform float uTime, uT, uPixel, uScan, uFlash;
   uniform int uFrom, uTo;
   uniform vec3 uMouse;
+  uniform float uHover;
   attribute vec3 aDust, aEyes, aNet, aEdgeA, aEdgeB, aColNet;
-  attribute float aSeed, aIsEdge;
+  attribute float aSeed, aIsEdge, aNode;
   varying vec3 vCol;
   varying float vAlpha;
 
@@ -205,12 +208,17 @@ const vert = /* glsl */ `
     // the cursor pushes particles aside, as if something is looking through them
     vec2 m = p.xy - uMouse.xy;
     float md = length(m);
-    p.xy += normalize(m + 1e-4) * max(0.0, 70.0 - md) * 0.55;
+    // (in the network the cursor reads nodes instead of pushing them)
+    float push = 1.0 - (uFrom == 2 ? 1.0 - e : 0.0) - (uTo == 2 ? e : 0.0);
+    p.xy += normalize(m + 1e-4) * max(0.0, 70.0 - md) * 0.55 * clamp(push, 0.0, 1.0);
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = mix(sizeOf(uFrom), sizeOf(uTo), e) * uPixel * (420.0 / -mv.z);
     vCol = mix(colOf(uFrom, p), colOf(uTo, p), e);
+    float lit = (uFrom == 2 && uTo == 2 && abs(aNode - uHover) < 0.5) ? 1.0 : 0.0;
+    vCol = mix(vCol, vec3(1.7, 1.75, 1.7), lit * 0.55);
+    gl_PointSize *= 1.0 + lit * 0.35;
     vAlpha = mix(0.55, 1.0, step(0.5, aSeed)) * clamp(1.4 - (-mv.z - 280.0) / 520.0, 0.25, 1.0);
   }
 `;
@@ -237,6 +245,8 @@ export interface SceneOptions {
   devLabel: (short: string) => string;
   /** A card the page renders; the scene keeps it pinned to the node it is about. */
   popover: HTMLElement;
+  /** "Drag to move · pinch to zoom", shown while the network is on screen. */
+  exploreHint: string;
   /** A node was clicked (or the card dismissed, with null). */
   onPick: (info: NetInfo | null) => void;
 }
@@ -272,12 +282,14 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   geo.setAttribute("aEdgeB", new THREE.BufferAttribute(new Float32Array(N * 3), 3));
   geo.setAttribute("aIsEdge", new THREE.BufferAttribute(new Float32Array(N), 1));
   geo.setAttribute("aColNet", new THREE.BufferAttribute(new Float32Array(N * 3).fill(0.9), 3));
+  geo.setAttribute("aNode", new THREE.BufferAttribute(new Float32Array(N).fill(-1), 1));
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 2000);
 
   const uniforms = {
     uTime: { value: 0 }, uT: { value: 0 }, uPixel: { value: renderer.getPixelRatio() },
     uScan: { value: -999 }, uFlash: { value: 0 }, uFrom: { value: 0 }, uTo: { value: 0 },
     uMouse: { value: new THREE.Vector3(9999, 9999, 0) },
+    uHover: { value: -1 },
   };
   const mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const pts = new THREE.Points(geo, mat);
@@ -291,6 +303,7 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
+  const home = { x: 0, y: 0 };
   // the art sits right of the headline on wide screens, centred and quieter on phones
   const place = () => {
     renderer.setSize(W(), H());
@@ -298,8 +311,8 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     camera.aspect = W() / H();
     camera.updateProjectionMatrix();
     const halfW = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect;
-    group.position.x = small ? 0 : halfW * 0.5;
-    group.position.y = small ? 60 : 10;
+    home.x = small ? 0 : halfW * 0.5;
+    home.y = small ? 60 : 10;
     group.scale.setScalar(small ? 0.62 : 1);
   };
   addEventListener("resize", place);
@@ -321,9 +334,20 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease";
   host.appendChild(overlay);
+  // a scanner's reticle: four thin corners closing in on the node
   const ring = document.createElement("div");
-  ring.style.cssText = "position:absolute;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:1px solid rgba(255,255,255,.7);box-shadow:0 0 18px rgba(255,255,255,.25);opacity:0;transition:opacity .2s";
+  ring.style.cssText = "position:absolute;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;opacity:0;transition:opacity .18s ease";
+  for (const [v, h] of [["top", "left"], ["top", "right"], ["bottom", "left"], ["bottom", "right"]]) {
+    const c = document.createElement("i");
+    c.style.cssText = `position:absolute;${v}:0;${h}:0;width:9px;height:9px;border-${v}:1.5px solid rgba(255,255,255,.95);border-${h}:1.5px solid rgba(255,255,255,.95);filter:drop-shadow(0 0 4px rgba(255,255,255,.5))`;
+    ring.appendChild(c);
+  }
   overlay.appendChild(ring);
+  let ringScale = 1.6;
+  const hint = document.createElement("div");
+  hint.textContent = o.exploreHint;
+  hint.style.cssText = "position:absolute;right:32px;bottom:196px;font:500 12px Geist,system-ui,sans-serif;color:rgba(220,226,223,.7);padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(6,9,8,.6);backdrop-filter:blur(8px)";
+  if (!small) overlay.appendChild(hint);
   type Meta = { x: number; y: number; z: number; r: number; info: NetInfo; label: string | null; el?: HTMLElement; sx: number; sy: number; pr: number };
   let meta: Meta[] = [];
   let hovered: Meta | null = null;
@@ -353,6 +377,7 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     }
   };
   const onClick = (e: MouseEvent) => {
+    if (suppressClick) return;
     if (interactive(e.target) || (e.target instanceof Element && o.popover.contains(e.target))) return;
     const h = netAlpha() > 0.7 ? findNode(e.clientX, e.clientY) : null;
     picked = h;
@@ -362,6 +387,60 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape" && picked) { picked = null; o.onPick(null); }
   };
+  let zoom = 1, panX = 0, panY = 0, lastTouch = -99;
+  let drag: { x: number; y: number; px: number; py: number; moved: boolean } | null = null;
+  // the left part of the hero is the headline and the form: exploring starts only right of it
+  const inHost = (cx: number, cy: number) => {
+    const r = host.getBoundingClientRect();
+    return cx >= r.left + (small ? 0 : r.width * 0.42) && cx <= r.right && cy >= r.top && cy <= r.bottom;
+  };
+  const worldPerPx = () => (2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z) / H();
+  const onDown = (e: PointerEvent) => {
+    if (e.button !== 0 || netAlpha() < 0.7 || interactive(e.target) || !inHost(e.clientX, e.clientY) || o.popover.contains(e.target as Node)) return;
+    drag = { x: e.clientX, y: e.clientY, px: panX, py: panY, moved: false };
+  };
+  const onDrag = (e: PointerEvent) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) > 4) {
+      drag.moved = true;
+      document.documentElement.style.cursor = "grabbing";
+    }
+    if (drag.moved) {
+      const k = worldPerPx();
+      panX = drag.px + dx * k;
+      panY = drag.py - dy * k;
+      lastTouch = performance.now() / 1000;
+    }
+  };
+  const onUp = () => {
+    if (drag?.moved) {
+      document.documentElement.style.cursor = "";
+      suppressClick = true;
+      setTimeout(() => (suppressClick = false), 0);
+    }
+    drag = null;
+  };
+  let suppressClick = false;
+  const onWheel = (e: WheelEvent) => {
+    // only a pinch (ctrl) or cmd + scroll zooms; a plain scroll keeps scrolling the page
+    if (!(e.ctrlKey || e.metaKey) || netAlpha() < 0.7 || !inHost(e.clientX, e.clientY)) return;
+    e.preventDefault();
+    const before = zoom;
+    zoom = Math.min(3, Math.max(0.6, zoom * Math.exp(-e.deltaY * 0.01)));
+    // zoom toward the cursor: keep the point under it where it is
+    const r = host.getBoundingClientRect();
+    const k = worldPerPx();
+    const cx = (e.clientX - r.left - r.width / 2) * k, cy = -(e.clientY - r.top - r.height / 2) * k;
+    // the world spans `before/zoom` as much after; shift so the point under the cursor stays put
+    panX += cx * (before / zoom - 1);
+    panY += cy * (before / zoom - 1);
+    lastTouch = performance.now() / 1000;
+  };
+  addEventListener("pointerdown", onDown);
+  addEventListener("pointermove", onDrag);
+  addEventListener("pointerup", onUp);
+  addEventListener("wheel", onWheel, { passive: false });
   addEventListener("pointermove", onHoverMove);
   addEventListener("click", onClick);
   addEventListener("keydown", onKey);
@@ -383,6 +462,8 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
       geo.getAttribute("aIsEdge").needsUpdate = true;
       geo.getAttribute("aColNet").array.set(n.col);
       geo.getAttribute("aColNet").needsUpdate = true;
+      geo.getAttribute("aNode").array.set(n.nodeOf);
+      geo.getAttribute("aNode").needsUpdate = true;
       caps[2] = n.caption;
       meta = n.meta.map((m) => ({ ...m, sx: -999, sy: -999, pr: 8 }));
       for (const m of meta) {
@@ -425,7 +506,13 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     const dt = Math.min(0.05, clock.getDelta());
     uniforms.uTime.value += reduce ? 0 : dt;
     // someone is looking at a node: the network stays
-    if ((hovered || picked) && phase === "hold" && state === 2) t0 += dt;
+    const exploring = now - lastTouch < 7 || !!drag;
+    if ((hovered || picked || exploring) && phase === "hold" && state === 2) t0 += dt;
+    if (!exploring && !picked) {
+      zoom += (1 - zoom) * 0.03;
+      panX += (0 - panX) * 0.03;
+      panY += (0 - panY) * 0.03;
+    }
     const el = now - t0;
     if (phase === "hold" && el > HOLD[state] && !reduce && pin == null) {
       next = state === 0 ? 1 : state === 1 ? (haveNet ? 2 : 0) : 0;
@@ -455,6 +542,9 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     rot += (turn - rot) * 0.02;
     group.rotation.y = Math.sin(uniforms.uTime.value * 0.11) * rot * 2.2;
     group.rotation.x = Math.cos(uniforms.uTime.value * 0.09) * 0.05;
+    group.position.x = home.x + panX;
+    group.position.y = home.y + panY;
+    camera.position.z = 640 / zoom;
     group.updateMatrixWorld();
     const na = netAlpha();
     overlay.style.opacity = String(na);
@@ -476,8 +566,16 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
       }
       const focus = picked ?? hovered;
       ring.style.opacity = focus ? "1" : "0";
-      if (focus) ring.style.transform = `translate(${focus.sx.toFixed(1)}px, ${focus.sy.toFixed(1)}px) scale(${Math.max(0.7, (focus.pr * 2 + 14) / 34).toFixed(2)})`;
-    } else ring.style.opacity = "0";
+      uniforms.uHover.value = focus ? meta.indexOf(focus) : -1;
+      // the corners close in when a node is found, then sit just outside it
+      const fit = focus ? Math.max(0.6, (focus.pr * 2 + 18) / 40) : 1.6;
+      ringScale += ((focus ? fit : fit * 1.6) - ringScale) * 0.25;
+      if (focus) ring.style.transform = `translate(${focus.sx.toFixed(1)}px, ${focus.sy.toFixed(1)}px) scale(${ringScale.toFixed(3)})`;
+      else ringScale = 1.6 * fit;
+    } else {
+      ring.style.opacity = "0";
+      uniforms.uHover.value = -1;
+    }
     // the page closed the card (its × button): let go of the node too
     if (picked && o.popover.childElementCount === 0 && pickedAt < now - 0.3) picked = null;
     if (!picked && autoPick != null && meta.length && na > 0.95) {
@@ -488,7 +586,7 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     }
     if (picked) {
       // the card opens beside the node, on the side with more room
-      const left = picked.sx > W() * 0.6;
+      const left = picked.sx + 16 + 270 > W() - 16;
       o.popover.style.transform = `translate(${(picked.sx + (left ? -16 : 16)).toFixed(1)}px, ${(picked.sy - 20).toFixed(1)}px) translateX(${left ? "-100%" : "0"})`;
       if (na < 0.5) { picked = null; o.onPick(null); }
     }
@@ -504,6 +602,10 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     removeEventListener("pointermove", onMove);
     removeEventListener("pointerleave", onLeave);
     removeEventListener("pointermove", onHoverMove);
+    removeEventListener("pointerdown", onDown);
+    removeEventListener("pointermove", onDrag);
+    removeEventListener("pointerup", onUp);
+    removeEventListener("wheel", onWheel);
     removeEventListener("click", onClick);
     removeEventListener("keydown", onKey);
     document.documentElement.style.cursor = "";

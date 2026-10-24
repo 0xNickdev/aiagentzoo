@@ -117,6 +117,7 @@ function ParticleArt() {
         },
         onReady: () => setReady(true),
         devLabel: (w) => `${t("DEV")} ${w}`,
+        exploreHint: t("Drag to move · pinch or ⌘ scroll to zoom · click a dot"),
         popover: card,
         onPick: setPicked,
       });

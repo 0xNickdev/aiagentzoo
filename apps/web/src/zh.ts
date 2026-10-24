@@ -1378,4 +1378,5 @@ export const ZH: Record<string, string> = {
   "A regular buyer": "常客买家",
   "Bought this dev's launches": "买过这个开发者的币",
   "Sniped launches, 48h": "48 小时狙击次数",
+  "Drag to move · pinch or ⌘ scroll to zoom · click a dot": "拖动移动 · 双指或 ⌘ 滚轮缩放 · 点击圆点",
 };
