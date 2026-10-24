@@ -62,8 +62,8 @@ function useLive<T>(path: string): T | null {
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="bg-night-surface px-5 py-4">
-      <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-fg-4">{k}</p>
-      <p className="font-mono mt-2 text-[26px] leading-none text-fg">{v}</p>
+      <p className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4">{k}</p>
+      <p className="tabular-nums mt-2 text-[26px] leading-none text-fg">{v}</p>
       {sub && <p className="mt-2 text-[13px] text-fg-4">{sub}</p>}
     </div>
   );
@@ -77,14 +77,14 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        <span className="font-mono text-[12px] text-fg-4">{t(note)}</span>
+        <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>
       </div>
       <div className="flex h-44 items-end gap-3 border-b border-white/15 pb-0">
         {days.map((d) => {
           const v = pick(d);
           return (
             <div key={d.day} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.day}: ${num(v)}`}>
-              <span className="font-mono mb-1.5 text-[12.5px] text-fg-3">{num(v)}</span>
+              <span className="tabular-nums mb-1.5 text-[12.5px] text-fg-3">{num(v)}</span>
               <div className={`w-full max-w-[56px] rounded-t-[4px] transition ${d.day === today ? "bg-white/35" : "bg-white/75"} group-hover:bg-white`} style={{ height: `${Math.max(2, (v / max) * 100)}%` }} />
             </div>
           );
@@ -92,7 +92,7 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
       </div>
       <div className="mt-2 flex gap-3">
         {days.map((d) => (
-          <span key={d.day} className="font-mono flex-1 text-center text-[12px] text-fg-4">
+          <span key={d.day} className="tabular-nums flex-1 text-center text-[12px] text-fg-4">
             {d.day.slice(5)}
             {d.day === today ? ` · ${t("so far")}` : ""}
           </span>
@@ -107,9 +107,9 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        <span className="font-mono text-[12px] text-fg-4">{t(note)}</span>
+        <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>
       </div>
-      <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+      <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
         <span>{t("dev wallet")}</span>
         <span className="text-right">{t("launched")}</span>
         <span className="text-right">{t("dumped")}</span>
@@ -117,7 +117,7 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
       </div>
       {!rows && <p className="py-6 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
       {rows?.map((r) => (
-        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="font-mono grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
+        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
           <span className="truncate text-fg-2">{short(r.wallet)}</span>
           <span className="text-right text-fg-4">{num(r.launches48h)}</span>
           <span className={`text-right ${!good && r.dumped ? "text-[#ff8a7e]" : "text-fg-4"}`}>{num(r.dumped)}</span>
@@ -171,9 +171,9 @@ export default function Stats() {
         <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
             <h3 className="font-display text-xl text-fg">{t("How the verdicts held up")}</h3>
-            <span className="font-mono text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
+            <span className="tabular-nums text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
           </div>
-          <div className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
             <span>{t("at 5 minutes")}</span>
             <span className="text-right">{t("tokens")}</span>
             <span className="text-right">{t("dead")}</span>
@@ -184,7 +184,7 @@ export default function Stats() {
             [t("flagged avoid"), a],
             [t("not flagged"), n],
           ].map(([label, s]) => (
-            <div key={label as string} className="font-mono grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
+            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_2.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_5.5rem_5.5rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
               <span className="text-fg-2">{label as string}</span>
               <span className="text-right text-fg-3">{s ? num((s as Side).n) : "…"}</span>
               <span className="text-right text-fg-3">{s ? `${num((s as Side).dead)} · ${pctOf((s as Side).dead, (s as Side).n)}` : "…"}</span>
@@ -206,7 +206,7 @@ export default function Stats() {
           </Reveal>
         </div>
 
-        <p className="font-mono pt-2 text-center text-[12.5px] text-fg-4">
+        <p className="tabular-nums pt-2 text-center text-[12.5px] text-fg-4">
           {t("raw:")}{" "}
           {["/v1/usage", "/v1/chain", "/v1/check/record", "/v1/chain/ruggers", "/v1/chain/builders"].map((p, i) => (
             <span key={p}>

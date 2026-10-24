@@ -327,8 +327,8 @@ function Fireflies() {
 function Rule({ className = "" }: { className?: string }) {
   return (
     <div aria-hidden className={`relative h-px bg-white/[0.12] ${className}`}>
-      <span className="font-mono absolute -left-[3px] -top-[9px] text-[12.5px] text-fg-4">+</span>
-      <span className="font-mono absolute -right-[3px] -top-[9px] text-[12.5px] text-fg-4">+</span>
+      <span className="tabular-nums absolute -left-[3px] -top-[9px] text-[12.5px] text-fg-4">+</span>
+      <span className="tabular-nums absolute -right-[3px] -top-[9px] text-[12.5px] text-fg-4">+</span>
     </div>
   );
 }
@@ -336,7 +336,7 @@ function Rule({ className = "" }: { className?: string }) {
 function Mark({ status }: { status: Status }) {
   const s = STATUS[status];
   return (
-    <span className={`font-mono inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.16em] ${s.tone}`}>
+    <span className={`tabular-nums inline-flex items-center gap-1.5 text-[12px] [&::first-letter]:uppercase ${s.tone}`}>
       <span className={status === "building" ? "animate-pulse" : ""}>{s.mark}</span>
       {t(s.label)}
     </span>
@@ -357,7 +357,7 @@ function ProofLinks({ proof, className = "mt-4" }: { proof?: Link[]; className?:
             target={external ? "_blank" : undefined}
             rel={external ? "noopener noreferrer" : undefined}
             onClick={(e) => e.stopPropagation()}
-            className="font-mono inline-flex items-center gap-1 border-b border-white/15 pb-px text-[12.5px] text-fg-4 transition hover:border-white/60 hover:text-white"
+            className="tabular-nums inline-flex items-center gap-1 border-b border-white/15 pb-px text-[12.5px] text-fg-4 transition hover:border-white/60 hover:text-white"
           >
             {sha ? <GitCommit size={11} className="opacity-60" /> : null}
             {p.label}
@@ -394,17 +394,17 @@ function Row({ item, metric }: { item: Item; metric: string | null }) {
         <div className="flex items-center justify-between gap-3 sm:block">
           <Mark status={item.status} />
           {item.date ? (
-            <p className="font-mono text-[12.5px] text-fg-4 sm:mt-2">{fmtDate(item.date)}</p>
+            <p className="tabular-nums text-[12.5px] text-fg-4 sm:mt-2">{fmtDate(item.date)}</p>
           ) : (
-            item.when && <p className="font-mono text-[12.5px] text-fg-3 sm:mt-2">{tx(item, "when", item.when)}</p>
+            item.when && <p className="tabular-nums text-[12.5px] text-fg-3 sm:mt-2">{tx(item, "when", item.when)}</p>
           )}
         </div>
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             <h3 className="font-display text-[26px] leading-tight text-white sm:text-[32px]">{tx(item, "title", item.title)}</h3>
-            {metric && <span className="font-mono text-[13px] text-warn">{metric}</span>}
+            {metric && <span className="tabular-nums text-[13px] text-warn">{metric}</span>}
           </div>
-          <p className="mt-2 max-w-2xl text-[14.5px] font-light leading-relaxed text-fg-3">{tx(item, "text", item.text)}</p>
+          <p className="mt-2 max-w-2xl text-[14.5px] font-normal leading-relaxed text-fg-3">{tx(item, "text", item.text)}</p>
           <AnimatePresence initial={false}>
             {open && why && (
               <motion.p
@@ -412,14 +412,14 @@ function Row({ item, metric }: { item: Item; metric: string | null }) {
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.35 }}
-                className="max-w-2xl overflow-hidden text-[13.5px] font-light leading-relaxed text-fg-3"
+                className="max-w-2xl overflow-hidden text-[13.5px] font-normal leading-relaxed text-fg-3"
               >
                 <span className="mt-4 block border-l border-amber-100/30 pl-4">{why}</span>
               </motion.p>
             )}
           </AnimatePresence>
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-            {why && <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-fg-4 group-hover:text-fg-4">{open ? t("− less") : t("+ why")}</span>}
+            {why && <span className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4 group-hover:text-fg-4">{open ? t("− less") : t("+ why")}</span>}
             <ProofLinks proof={item.proof} className="" />
           </div>
         </div>
@@ -449,8 +449,8 @@ function ShippedMatrix({ items, metrics }: { items: Item[]; metrics: Record<stri
                 onClick={() => setSel(it.id)}
                 className={`relative border-b border-white/[0.08] px-3 py-3.5 text-left transition-colors ${on ? "bg-amber-100/[0.06]" : "hover:bg-white/[0.03]"}`}
               >
-                <span className="font-mono flex items-center gap-1.5 text-[11.5px] text-fg-4">
-                  <span className={on ? "text-amber-200" : "text-warn"}>●</span>
+                <span className="tabular-nums flex items-center gap-1.5 text-[11.5px] text-fg-4">
+                  <span className={on ? "text-warn" : "text-warn"}>●</span>
                   {it.date ? fmtDate(it.date) : ""}
                 </span>
                 <span className={`mt-1 block truncate text-[13.5px] ${on ? "text-white" : "text-fg-3"}`}>{tx(it, "title", it.title)}</span>
@@ -463,10 +463,10 @@ function ShippedMatrix({ items, metrics }: { items: Item[]; metrics: Record<stri
         <AnimatePresence mode="wait">
           <motion.div key={cur.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="lg:pt-6">
             <Mark status="shipped" />
-            <p className="font-mono mt-2 text-[12.5px] text-fg-4">{cur.date ? fmtDate(cur.date) : ""}</p>
+            <p className="tabular-nums mt-2 text-[12.5px] text-fg-4">{cur.date ? fmtDate(cur.date) : ""}</p>
             <h3 className="font-display mt-4 text-[34px] leading-tight text-white">{tx(cur, "title", cur.title)}</h3>
-            <p className="mt-3 text-[15px] font-light leading-relaxed text-fg-3">{tx(cur, "text", cur.text)}</p>
-            {m && <p className="font-mono mt-5 text-[13px] text-warn">{m}</p>}
+            <p className="mt-3 text-[15px] font-normal leading-relaxed text-fg-3">{tx(cur, "text", cur.text)}</p>
+            {m && <p className="tabular-nums mt-5 text-[13px] text-warn">{m}</p>}
             <ProofLinks proof={cur.proof} className="mt-6" />
           </motion.div>
         </AnimatePresence>
@@ -496,13 +496,13 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`font-mono relative shrink-0 px-3 py-1.5 text-[12px] uppercase tracking-[0.14em] transition ${filter === f ? "text-white" : "text-fg-3 hover:text-fg-2"}`}
+              className={`tabular-nums relative shrink-0 px-3 py-1.5 text-[12px] [&::first-letter]:uppercase transition ${filter === f ? "text-white" : "text-fg-3 hover:text-fg-2"}`}
             >
               {filter === f && <motion.span layoutId="roadmap-filter" className="absolute inset-x-2 -bottom-[13px] h-px bg-amber-200" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
               {t(f === "all" ? "everything" : STATUS[f].label)} <span className="opacity-50">{counts[f]}</span>
             </button>
           ))}
-          <a href="#buried" className="font-mono shrink-0 px-3 py-1.5 text-[12px] uppercase tracking-[0.14em] text-fg-4 transition hover:text-fg-2">
+          <a href="#buried" className="tabular-nums shrink-0 px-3 py-1.5 text-[12px] [&::first-letter]:uppercase text-fg-4 transition hover:text-fg-2">
             {t("buried")} <span className="opacity-50">{plan.buried.length}</span>
           </a>
         </div>
@@ -522,11 +522,11 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
           >
             <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-16">
               <div className="lg:sticky lg:top-40 lg:self-start">
-                <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-fg-4">
+                <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-4">
                   {String(n + 1).padStart(2, "0")} / {String(plan.chapters.length).padStart(2, "0")} · {tx(ch, "label", ch.label)}
                 </p>
                 <h2 className="font-display mt-3 text-5xl leading-none text-white sm:text-6xl">{tx(ch, "name", ch.name)}</h2>
-                {line && <p className="mt-5 max-w-xs text-[14px] font-light leading-relaxed text-fg-4">{line}</p>}
+                {line && <p className="mt-5 max-w-xs text-[14px] font-normal leading-relaxed text-fg-4">{line}</p>}
               </div>
               <div className="roadmap-chapter-body">
                 {wall ? (
@@ -561,11 +561,11 @@ function Vote({ plan }: { plan: Plan }) {
   return (
     <section id="vote" data-scene={2} className="relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("Holders' vote · end of November")}</p>
+        <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("Holders' vote · end of November")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("Two builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
-        <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-fg-4">
+        <p className="mt-5 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
           {t("December's two builds both ship by the end of the year. Holders of $ZOOAGENCY pick which comes first, and the trail above moves to match.")}
         </p>
         <div className="mt-14 grid gap-x-10 md:grid-cols-2">
@@ -573,11 +573,11 @@ function Vote({ plan }: { plan: Plan }) {
             <div key={o.id} className="pb-8">
               <Rule />
               <div className="flex items-baseline justify-between pt-6">
-                <span className="font-mono text-[12.5px] text-fg-4">{String.fromCharCode(65 + i)}</span>
-                <span className="font-mono text-[12.5px] text-fg-4">? / 2</span>
+                <span className="tabular-nums text-[12.5px] text-fg-4">{String.fromCharCode(65 + i)}</span>
+                <span className="tabular-nums text-[12.5px] text-fg-4">? / 2</span>
               </div>
               <h3 className="font-display mt-6 text-[28px] leading-tight text-white">{tx(o, "title", o.title)}</h3>
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-fg-4">{tx(o, "text", o.text)}</p>
+              <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-4">{tx(o, "text", o.text)}</p>
             </div>
           ))}
         </div>
@@ -585,9 +585,9 @@ function Vote({ plan }: { plan: Plan }) {
           {rules.map(([h, d], i) => (
             <div key={h} className="pb-6">
               <Rule />
-              <p className="font-mono pt-5 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</p>
+              <p className="tabular-nums pt-5 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</p>
               <h4 className="mt-3 text-[15px] text-white">{t(h)}</h4>
-              <p className="mt-1.5 text-[13px] font-light leading-relaxed text-fg-3">{t(d)}</p>
+              <p className="mt-1.5 text-[13px] font-normal leading-relaxed text-fg-3">{t(d)}</p>
             </div>
           ))}
         </div>
@@ -608,11 +608,11 @@ function Graveyard({ plan }: { plan: Plan }) {
   return (
     <section id="buried" data-scene={3} className="relative flex min-h-[100svh] items-end px-5 pb-24 pt-40 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="font-mono text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("The clearing")}</p>
+        <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("The clearing")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("What we buried,")} <span className="accent">{t("and why.")}</span>
         </h2>
-        <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-fg-4">
+        <p className="mt-5 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
           {t("A roadmap that only grows is a wish list. These were planned, some were built, and we dropped them on purpose.")}
         </p>
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -625,12 +625,12 @@ function Graveyard({ plan }: { plan: Plan }) {
               transition={{ duration: 0.9, delay: i * 0.12, ease: "easeOut" }}
               className="relative flex flex-col rounded-t-[999px] border border-b-0 border-white/[0.14] bg-[#030504]/55 px-6 pb-7 pt-16 text-center backdrop-blur-md"
             >
-              <p className="font-mono text-[12px] tracking-[0.4em] text-fg-4">R.I.P.</p>
+              <p className="tabular-nums text-[12px] tracking-[0.4em] text-fg-4">R.I.P.</p>
               <h3 className="font-display mt-4 text-[22px] leading-tight text-fg">{tx(b, "title", b.title)}</h3>
-              <p className="font-mono mt-3 text-[12px] text-fg-4">
+              <p className="tabular-nums mt-3 text-[12px] text-fg-4">
                 {b.born ? `${fmtDate(b.born)} - ${fmtDate(b.buried)} · ${t("lived")} ${days(b.born, b.buried)}${t("d")}` : `${t("never built")} · ${fmtDate(b.buried)}`}
               </p>
-              <p className="mt-4 text-[13px] font-light leading-relaxed text-fg-3">{tx(b, "text", b.text)}</p>
+              <p className="mt-4 text-[13px] font-normal leading-relaxed text-fg-3">{tx(b, "text", b.text)}</p>
               <div className="mx-auto my-5 h-px w-10 bg-white/20" />
               <p className="flex-1 text-[14px] leading-relaxed text-fg-2">“{tx(b, "reason", b.reason)}”</p>
               <div className="flex justify-center">
@@ -651,7 +651,7 @@ function Today({ commits }: { commits: { total: number | null; recent: Commit[] 
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-wrap items-baseline justify-between gap-3 pb-5">
           <h2 className="font-display text-2xl text-white sm:text-3xl">{t("The trail, today")}</h2>
-          <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="font-mono text-[12.5px] text-fg-3 hover:text-white">
+          <a href={HISTORY} target="_blank" rel="noopener noreferrer" className="tabular-nums text-[12.5px] text-fg-3 hover:text-white">
             {t("this page is a file · its history")} ↗
           </a>
         </div>
@@ -660,9 +660,9 @@ function Today({ commits }: { commits: { total: number | null; recent: Commit[] 
           {commits.recent.map((c) => (
             <li key={c.sha} className="border-b border-white/[0.08]">
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-3.5">
-                <span className="font-mono shrink-0 text-[12px] text-warn">{c.sha}</span>
-                <span className="min-w-0 flex-1 truncate text-[13.5px] font-light text-fg-4 group-hover:text-white">{c.message}</span>
-                <span className="font-mono shrink-0 text-[12.5px] text-fg-4">{ago(c.at)}</span>
+                <span className="tabular-nums shrink-0 text-[12px] text-warn">{c.sha}</span>
+                <span className="min-w-0 flex-1 truncate text-[13.5px] font-normal text-fg-4 group-hover:text-white">{c.message}</span>
+                <span className="tabular-nums shrink-0 text-[12.5px] text-fg-4">{ago(c.at)}</span>
               </a>
             </li>
           ))}
@@ -685,7 +685,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
   return (
     <section data-scene={0} className="relative flex min-h-[100svh] items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
       <div className="mx-auto w-full max-w-7xl">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="font-mono text-[12.5px] uppercase tracking-[0.22em] text-fg-4">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="tabular-nums text-[12.5px] uppercase tracking-[0.22em] text-fg-4">
           {t("Roadmap · Oct - Dec 2026")}
         </motion.p>
         <motion.h1
@@ -696,7 +696,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
         >
           {t("The trail.")} <span className="accent">{t("Walked, and ahead.")}</span>
         </motion.h1>
-        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.3 }} className="mt-7 max-w-lg text-[15.5px] font-light leading-relaxed text-fg-3">
+        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.3 }} className="mt-7 max-w-lg text-[15.5px] font-normal leading-relaxed text-fg-3">
           {t("Everything we shipped, with the commit that proves it. Everything next, and the part holders decide. Everything we buried, and why.")}
         </motion.p>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.55 }} className="mt-12 max-w-4xl">
@@ -704,13 +704,13 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
           <div className="grid grid-cols-2 sm:grid-cols-4">
             {stats.map(([v, k]) => (
               <div key={k} className="py-5 pr-4">
-                <p className="font-mono text-[28px] leading-none text-white sm:text-[34px]">{v == null ? "-" : num(Number(v))}</p>
-                <p className="font-mono mt-2 text-[12px] uppercase tracking-[0.14em] text-fg-4">{k}</p>
+                <p className="tabular-nums text-[28px] leading-none text-white sm:text-[34px]">{v == null ? "-" : num(Number(v))}</p>
+                <p className="tabular-nums mt-2 text-[12px] [&::first-letter]:uppercase text-fg-4">{k}</p>
               </div>
             ))}
           </div>
           <Rule />
-          <div className="font-mono flex flex-wrap items-center gap-x-8 gap-y-2 pt-4 text-[12px] text-fg-4">
+          <div className="tabular-nums flex flex-wrap items-center gap-x-8 gap-y-2 pt-4 text-[12px] text-fg-4">
             {last && (
               <span>
                 <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-200 align-middle" />
@@ -746,7 +746,7 @@ export default function RoadmapPage() {
           <Today commits={commits} />
         </>
       ) : (
-        <div className="font-mono mx-auto max-w-7xl px-5 py-24 text-[12px] text-fg-4 sm:px-8">{t("Loading the trail...")}</div>
+        <div className="tabular-nums mx-auto max-w-7xl px-5 py-24 text-[12px] text-fg-4 sm:px-8">{t("Loading the trail...")}</div>
       )}
     </>
   );

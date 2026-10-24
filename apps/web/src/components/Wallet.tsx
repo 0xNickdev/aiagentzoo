@@ -58,7 +58,7 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
 
   return (
     <div ref={box} className={`relative ${block ? "w-full" : ""}`}>
-      <button type="button" onClick={() => setOpen((o) => !o)} className={`${base} font-mono flex items-center justify-center gap-2 border border-white/20 bg-white/[0.06] text-white hover:bg-white/[0.1]`}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className={`${base} tabular-nums flex items-center justify-center gap-2 border border-white/20 bg-white/[0.06] text-white hover:bg-white/[0.1]`}>
         <span className={`h-2 w-2 rounded-full ${holder?.holder ? "bg-amber-200 shadow-[0_0_8px_rgba(253,230,138,0.8)]" : "bg-white/40"}`} />
         {shortAddress(session.publicKey)}
       </button>
@@ -71,10 +71,10 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
             transition={{ duration: 0.2 }}
             className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-4 text-left shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl"
           >
-            <p className="font-mono text-[12.5px] text-fg-4">{shortAddress(session.publicKey)}</p>
+            <p className="tabular-nums text-[12.5px] text-fg-4">{shortAddress(session.publicKey)}</p>
             {holder ? (
               holder.holder ? (
-                <p className="mt-2 text-[15px] text-amber-100">{t("Holder · alerts first, more checks, the vote")}</p>
+                <p className="mt-2 text-[15px] text-warn">{t("Holder · alerts first, more checks, the vote")}</p>
               ) : (
                 <p className="mt-2 text-[14px] leading-relaxed text-fg-3">
                   {t("Not a holder yet. Holding {n} $ZOOAGENCY opens alerts first, more checks and the vote.", { n: fmt(holder.min) })}
@@ -83,7 +83,7 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
             ) : (
               <p className="mt-2 text-[14px] text-fg-4">{t("Reading your balance...")}</p>
             )}
-            {holder?.balance != null && <p className="font-mono mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: fmt(holder.balance) })}</p>}
+            {holder?.balance != null && <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: fmt(holder.balance) })}</p>}
             <div className="mt-4 grid gap-1 border-t border-white/10 pt-3 text-[14px]">
               <a href="/ask" className="rounded-lg px-2 py-1.5 text-fg-2 hover:bg-white/[0.06] hover:text-white">
                 {t("Watch a token in Telegram")}

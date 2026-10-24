@@ -104,7 +104,7 @@ export const TONE: Record<Verdict, { label: string; color: string }> = {
 function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
-      <span className="text-[12.5px] font-light text-fg-4">{t(k)}</span>
+      <span className="text-[12.5px] font-normal text-fg-4">{t(k)}</span>
       <span className={`tabular-nums text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
     </div>
   );
@@ -264,7 +264,7 @@ function ShareBar({ r }: { r: XRayReport }) {
     <div className="bg-night-surface border border-white/[0.08] grid gap-5 rounded-2xl p-5 sm:p-6 lg:grid-cols-[1fr_minmax(0,22rem)] lg:items-center">
       <div>
         <h3 className="font-display text-xl text-fg">{t("Share it, or keep an eye on it")}</h3>
-        <p className="mt-1.5 text-[13px] font-light leading-relaxed text-fg-4">
+        <p className="mt-1.5 text-[13px] font-normal leading-relaxed text-fg-4">
           {t("Watch it in Telegram and the bot tells you the moment the dev sells, the pool is drained or it graduates.")}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -348,7 +348,7 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
           {t("close")}
         </button>
       </div>
-      <p className="mt-2 text-[12.5px] font-light leading-snug text-fg-4">{t(k.what)}</p>
+      <p className="mt-2 text-[12.5px] font-normal leading-snug text-fg-4">{t(k.what)}</p>
       <button type="button" onClick={() => openWallet(e.wallet)} className="tabular-nums mt-3 self-start rounded-full px-3 py-1.5 text-[12.5px] text-[#f2d39b] ring-1 ring-[#f2d39b]/30 transition hover:bg-[#f2d39b]/10">
         {t("open this wallet's page →")}
       </button>
@@ -368,10 +368,10 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
         ))}
       </div>
       {s === undefined && <div className="mt-4 h-24 animate-pulse rounded-xl bg-white/[0.03]" />}
-      {s === null && <p className="mt-4 text-[12.5px] font-light text-fg-3">{t("No other launches from this wallet on the stream in the last two days.")}</p>}
+      {s === null && <p className="mt-4 text-[12.5px] font-normal text-fg-3">{t("No other launches from this wallet on the stream in the last two days.")}</p>}
       {s && (
         <>
-          <p className="mt-4 text-[12.5px] font-light leading-snug text-fg-3">
+          <p className="mt-4 text-[12.5px] font-normal leading-snug text-fg-3">
             {t("Last two days: bought {n} launches in their first seconds, sold out of {o}, usually {x} after buying.", { n: s.snipes48h, o: s.soldOut, x: secs(s.medianExitSec) })}
             {sameDev ? ` ${t("{n} of them were this creator's.", { n: sameDev.launches })}` : ""}
           </p>
@@ -453,7 +453,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
         <button key={x.id} type="button" onClick={() => go(x.id)} className="group bg-night-surface px-4 py-3.5 text-left transition hover:bg-night-surface">
           <p className="text-[12.5px] text-fg-3">{t(x.k)}</p>
           <p className={`tabular-nums mt-1 text-[16px] ${x.bad ? "text-[#ff8a7e]" : "text-fg"}`}>{x.v}</p>
-          <p className="mt-0.5 truncate text-[13px] font-light text-fg-3 group-hover:text-fg-3">{x.sub || " "}</p>
+          <p className="mt-0.5 truncate text-[13px] font-normal text-fg-3 group-hover:text-fg-3">{x.sub || " "}</p>
         </button>
       ))}
     </div>
@@ -582,7 +582,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                     {c.reasons.length > 1 && (
                       <ul className="mt-5 divide-y divide-white/[0.06] border-y border-white/[0.08]">
                         {shown.map((x, i) => (
-                          <li key={x} className="flex gap-3 py-2.5 text-[14px] font-light leading-snug text-fg-3">
+                          <li key={x} className="flex gap-3 py-2.5 text-[14px] font-normal leading-snug text-fg-3">
                             <span className="tabular-nums w-6 shrink-0 text-[12.5px] leading-6" style={{ color: tone.color }}>
                               {String(i + 1).padStart(2, "0")}
                             </span>
@@ -596,7 +596,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                         {all ? t("show fewer") : t("+ {n} more reasons", { n: c.reasons.length - 3 })}
                       </button>
                     )}
-                    {c.notes.length > 0 && <p className="mt-4 text-[12px] font-light leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>}
+                    {c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>}
                     <KeyFacts r={r} go={go} />
                     <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
                   </div>
@@ -614,7 +614,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
               {r.socials?.map((s) => (
                 <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2">
-                  <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-light text-fg-3 hover:text-white">
+                  <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-normal text-fg-3 hover:text-white">
                     {s.social.label} ↗
                   </a>
                   <span className={`tabular-nums shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
@@ -638,16 +638,16 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   </div>
                   <div id="xr-funder">
                     <Panel title="Who paid for the creator" note="traced on Solana">
-              {!fund && <p className="text-[13px] font-light text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
-              {fund && !fund.funder && <p className="text-[13px] font-light text-fg-3">{t("No funding transfer in the creator's recent history.")}</p>}
+              {!fund && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+              {fund && !fund.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the creator's recent history.")}</p>}
               {fund?.funder && (
                 <>
                   <div className="flex items-baseline justify-between gap-3 py-2">
-                    <span className="text-[12.5px] font-light text-fg-4">{t("funded by")}</span>
+                    <span className="text-[12.5px] font-normal text-fg-4">{t("funded by")}</span>
                     <Addr a={fund.funder} className="text-[13px] text-fg-2" />
                   </div>
                   {fund.funderIsHot ? (
-                    <p className="mt-1 text-[12.5px] font-light text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                    <p className="mt-1 text-[12.5px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
                   ) : (
                     <>
                       <Stat k="other creators it funded" v={String(fund.siblings.length)} bad={fund.siblings.length >= 2} />
@@ -706,7 +706,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           <div id="xr-five" className="bg-night-surface border border-white/[0.08] flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-5">
             <div>
               <h3 className="font-display text-xl text-fg">{t("The first 5 seconds")}</h3>
-              <p className="mt-1 text-[13px] font-light text-fg-4">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
+              <p className="mt-1 text-[13px] font-normal text-fg-4">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
             </div>
             <p className="tabular-nums text-[12px] text-fg-4">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
             {!!f?.bundlers && (
@@ -740,15 +740,15 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       {!!f?.bundledSol && <Stat k="SOL through bundles" v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
                     </div>
                   {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
-                  <p className="mt-4 text-[12.5px] font-light leading-relaxed text-fg-3">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
+                  <p className="mt-4 text-[12.5px] font-normal leading-relaxed text-fg-3">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
                 </div>
               )}
 
               {tab === "holders" && (
                 <div id="xr-holders">
                   <Panel title="Holders now" note="read from Solana">
-              {!c.holders && <p className="text-[13px] font-light text-fg-3">{t("Holders could not be read right now.")}</p>}
-              {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-light text-fg-3">{t("Nobody holds it outside the curve: everyone sold back.")}{c.holders.programPct ? ` ${t("{p}% sits in the curve or pool", { p: c.holders.programPct })}.` : ""}</p>}
+              {!c.holders && <p className="text-[13px] font-normal text-fg-3">{t("Holders could not be read right now.")}</p>}
+              {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-normal text-fg-3">{t("Nobody holds it outside the curve: everyone sold back.")}{c.holders.programPct ? ` ${t("{p}% sits in the curve or pool", { p: c.holders.programPct })}.` : ""}</p>}
               {c.holders && c.holders.top10Pct > 0 && !!c.holders.programPct && <Stat k="in the curve or pool" v={`${c.holders.programPct}%`} />}
               {c.holders && c.holders.top10Pct > 0 && (
                 <>
@@ -886,7 +886,7 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
               <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
               <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{ago(m.at)}</span>
             </div>
-            <p className="mt-1.5 truncate text-[12.5px] font-light text-fg-4">{tChain(m.text)}</p>
+            <p className="mt-1.5 truncate text-[12.5px] font-normal text-fg-4">{tChain(m.text)}</p>
             <div className="mt-2.5 flex items-center justify-between gap-2">
               {verdicts[m.mint] ? (
                 <span className="tabular-nums rounded-full px-2 py-0.5 text-[11.5px] tracking-[0.06em] ring-1" style={{ color: TONE[verdicts[m.mint]!].color, boxShadow: "none", borderColor: "transparent", background: "rgba(255,255,255,0.03)" }}>
@@ -900,13 +900,13 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
           </button>
         ))}
       </div>
-      {moments && moments.length === 0 && <p className="text-[13px] font-light text-fg-3">{t("Nothing loud on the chain this minute. Paste any token above.")}</p>}
+      {moments && moments.length === 0 && <p className="text-[13px] font-normal text-fg-3">{t("Nothing loud on the chain this minute. Paste any token above.")}</p>}
 
       <div className="mt-10 grid gap-3 md:grid-cols-3">
         {SHOWS.map((x) => (
           <div key={x.title} className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
             <h3 className="font-display text-xl text-fg">{t(x.title)}</h3>
-            <p className="mt-2 text-[13.5px] font-light leading-relaxed text-fg-3">{t(x.text)}</p>
+            <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-3">{t(x.text)}</p>
           </div>
         ))}
       </div>
@@ -1002,7 +1002,7 @@ export default function XRay() {
             <br />
             <span className="accent">{t("buying from.")}</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-fg-4">
+          <p className="mx-auto mt-6 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
             {t("The wallets that got in during the first five seconds, and who they are across every launch of the last two days: the creator's own crew, sniper rings, serial snipers. Who paid for the creator. How much of the volume is churn.")}
           </p>
         </Reveal>
@@ -1068,7 +1068,7 @@ function HoldStrip({ c }: { c: XRayReport["check"] }) {
         {cells.map((x) => (
           <div key={x.k} className="min-w-0">
             <p className={`tabular-nums text-[15px] leading-none ${x.bad ? "text-[#ff8a7e]" : "text-fg"}`}>{x.v}%</p>
-            <p className="mt-1 truncate text-[11px] font-light text-fg-4">{x.k}</p>
+            <p className="mt-1 truncate text-[11px] font-normal text-fg-4">{x.k}</p>
           </div>
         ))}
       </div>

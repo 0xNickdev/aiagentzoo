@@ -232,7 +232,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
               <span className="text-fg-3">{t("snipes 48h")}</span>
               <span className="text-right text-fg-2">{tip.e.snipes48h}</span>
             </div>
-            {!onSelect && <p className="mt-2 text-[12px] font-light text-fg-4">{t(KIND[tip.k].what)}</p>}
+            {!onSelect && <p className="mt-2 text-[12px] font-normal text-fg-4">{t(KIND[tip.k].what)}</p>}
           </motion.div>
         )}
       </AnimatePresence>

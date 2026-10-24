@@ -28,7 +28,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 function Row({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
-      <span className="text-[12.5px] font-light text-fg-4">{k}</span>
+      <span className="text-[12.5px] font-normal text-fg-4">{k}</span>
       <span className={`tabular-nums text-right text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
     </div>
   );

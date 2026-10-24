@@ -200,7 +200,7 @@ function ReusedAccounts() {
       <div className="mb-4 max-w-3xl">
         <p className="tabular-nums mb-2 text-[12.5px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
         <h3 className="font-display text-3xl leading-tight">{t("The accounts behind repeat rugs.")}</h3>
-        <p className="mt-3 text-[13.5px] font-light leading-relaxed text-fg-4">
+        <p className="mt-3 text-[13.5px] font-normal leading-relaxed text-fg-4">
           {t("A rugger switches wallets for every launch. The X account or Telegram group on the token often stays the same. These are linked, in their own metadata, to several launches whose dev sold within 5 minutes.")}
         </p>
       </div>
@@ -232,7 +232,7 @@ function ReusedAccounts() {
           </div>
         ))}
       </Reveal>
-      <p className="mt-3 text-[13px] font-light text-fg-4">
+      <p className="mt-3 text-[13px] font-normal text-fg-4">
         {t("Facts from each token's metadata and the chain, not a judgement of any person. Think one is listed by mistake? Write to x.com/zooclawagency.")}
       </p>
     </div>

@@ -68,13 +68,13 @@ export default function GeneVote() {
         text={t("Every week the heron proposes three rules aimed at the nursery's latest mistakes. Holders vote with their balance; the winner becomes the mutation of the next creature born. The week's best human on this page names it.")}
       />
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <div className="liquid-glass rounded-3xl p-6">
-          <div className="font-mono flex justify-between text-[12px] text-fg-3">
+        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+          <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
             <span>{t("this week's candidates")}</span>
             <span>{gene ? t(gene.voters === 1 ? "{n} voter · closes in {left}" : "{n} voters · closes in {left}", { n: gene.voters, left: left(gene.closesAt) }) : ""}</span>
           </div>
           {!gene?.candidates.length ? (
-            <p className="mt-6 text-[13.5px] font-light text-fg-4">{t("The heron sets this week's three rules shortly. Come back in a little while.")}</p>
+            <p className="mt-6 text-[13.5px] font-normal text-fg-4">{t("The heron sets this week's three rules shortly. Come back in a little while.")}</p>
           ) : (
             <ol className="mt-3 flex flex-col gap-2">
               {gene.candidates.map((c) => {
@@ -90,10 +90,10 @@ export default function GeneVote() {
                     >
                       <span className="absolute inset-y-0 left-0 bg-white/[0.06]" style={{ width: `${Math.round(share * 100)}%` }} />
                       <span className="relative flex items-baseline justify-between gap-4">
-                        <span className="text-[14px] font-light leading-relaxed text-fg-2">{c.rule}</span>
-                        <span className="font-mono shrink-0 text-[12px] text-fg-3">{total ? `${Math.round(share * 100)}%` : "-"}</span>
+                        <span className="text-[14px] font-normal leading-relaxed text-fg-2">{c.rule}</span>
+                        <span className="tabular-nums shrink-0 text-[12px] text-fg-3">{total ? `${Math.round(share * 100)}%` : "-"}</span>
                       </span>
-                      {mine && <span className="font-mono relative mt-1 block text-[12px] text-warn">{t("your vote")}</span>}
+                      {mine && <span className="tabular-nums relative mt-1 block text-[12px] text-warn">{t("your vote")}</span>}
                     </button>
                   </li>
                 );
@@ -102,30 +102,30 @@ export default function GeneVote() {
           )}
           {msg && <p className="mt-3 text-[13px] text-fg-3">{msg}</p>}
           {!session && gene?.candidates.length ? (
-            <p className="mt-3 text-[12.5px] font-light text-fg-3">{t("Tap a rule to sign in and vote. Holders of 500,000+ $ZOOAGENCY only.")}</p>
+            <p className="mt-3 text-[12.5px] font-normal text-fg-3">{t("Tap a rule to sign in and vote. Holders of 500,000+ $ZOOAGENCY only.")}</p>
           ) : null}
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="liquid-glass rounded-3xl p-6">
-            <p className="font-mono text-[12px] text-warn">{t("waiting for the next birth")}</p>
+          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+            <p className="tabular-nums text-[12px] text-warn">{t("waiting for the next birth")}</p>
             {gene?.pending ? (
-              <p className="mt-2 text-[14px] font-light leading-relaxed text-fg-2">{gene.pending.rule}</p>
+              <p className="mt-2 text-[14px] font-normal leading-relaxed text-fg-2">{gene.pending.rule}</p>
             ) : (
-              <p className="mt-2 text-[13.5px] font-light text-fg-4">{t(gene?.lastWinner ? "Last week's gene is already in the nursery." : "The first holders' gene is chosen when this week's vote closes.")}</p>
+              <p className="mt-2 text-[13.5px] font-normal text-fg-4">{t(gene?.lastWinner ? "Last week's gene is already in the nursery." : "The first holders' gene is chosen when this week's vote closes.")}</p>
             )}
             {gene?.naming && (
-              <p className="font-mono mt-3 text-[12.5px] text-fg-3">
+              <p className="tabular-nums mt-3 text-[12.5px] text-fg-3">
                 {gene.naming.name ? t("its name: {n}", { n: gene.naming.name }) : t("its name: waiting for last week's best human")}
               </p>
             )}
           </div>
           {gene?.naming?.you && !gene.naming.name && (
-            <div className="liquid-glass rounded-3xl p-6">
-              <p className="font-mono text-[12px] text-warn">{t("you won the week")}</p>
-              <p className="mt-2 text-[13.5px] font-light text-fg-3">{t("Name the nursery's next newborn. One word, starting with a capital.")}</p>
+            <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+              <p className="tabular-nums text-[12px] text-warn">{t("you won the week")}</p>
+              <p className="mt-2 text-[13.5px] font-normal text-fg-3">{t("Name the nursery's next newborn. One word, starting with a capital.")}</p>
               <div className="mt-3 flex gap-2">
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ember" maxLength={14} className="font-mono min-w-0 flex-1 rounded-full bg-black/40 px-4 py-2.5 text-[13px] outline-none ring-1 ring-white/10 focus:ring-white/30" />
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ember" maxLength={14} className="tabular-nums min-w-0 flex-1 rounded-full bg-black/40 px-4 py-2.5 text-[13px] outline-none ring-1 ring-white/10 focus:ring-white/30" />
                 <button type="button" onClick={() => void post("/v1/gene/name", { name })} className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
                   {t("Name it")}
                 </button>

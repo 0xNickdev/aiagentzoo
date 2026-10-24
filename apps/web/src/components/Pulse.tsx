@@ -68,11 +68,11 @@ export function NetworkPulse() {
     [inMinutes(next), "next wake-up"],
   ];
   return (
-    <div className="mt-10 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/10 sm:grid-cols-4">
+    <div className="mt-10 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/10 sm:grid-cols-4">
       {stats.map(([value, label]) => (
         <div key={label} className="bg-black/45 px-4 py-5 backdrop-blur-md">
           <b className="font-display block text-3xl font-normal leading-none text-white">{value}</b>
-          <span className="mt-2 block text-[11.5px] font-light uppercase tracking-[0.2em] text-fg-4">{t(label)}</span>
+          <span className="mt-2 block text-[11.5px] font-normal uppercase tracking-[0.2em] text-fg-4">{t(label)}</span>
         </div>
       ))}
     </div>
@@ -108,10 +108,10 @@ export function ChainTicker() {
             <span>{l.node}</span>
             <span>#{l.seq}</span>
           </div>
-          <p className="mt-1 truncate text-[13px] font-light text-fg">
+          <p className="mt-1 truncate text-[13px] font-normal text-fg">
             {l.agent === "warden" ? "warden" : l.agent} · {l.type}
           </p>
-          <p className="mt-1 font-mono text-[11.5px] text-fg-4">{l.hash.slice(0, 16)}…</p>
+          <p className="mt-1 tabular-nums text-[11.5px] text-fg-4">{l.hash.slice(0, 16)}…</p>
         </div>
       ))}
     </div>

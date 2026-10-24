@@ -111,12 +111,12 @@ export function XRayShowcase() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1, ease: EASE }}
-          className="mt-12 overflow-hidden rounded-[28px] border border-white/[0.12] bg-[#0b0f0c]"
+          className="mt-12 overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0b0f0c]"
         >
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] px-6 py-5 sm:px-8">
             <div className="flex items-center gap-4">
               <span className="font-display text-[28px] text-white">${c.symbol || "?"}</span>
-              <span className="font-mono hidden text-[13px] text-fg-4 sm:inline">
+              <span className="tabular-nums hidden text-[13px] text-fg-4 sm:inline">
                 {c.mint.slice(0, 6)}…{c.mint.slice(-6)}
               </span>
             </div>
@@ -133,7 +133,7 @@ export function XRayShowcase() {
           <ol className="divide-y divide-white/[0.08]">
             {c.reasons.slice(0, 4).map((r, i) => (
               <li key={r} className="flex gap-5 px-6 py-5 sm:px-8">
-                <span className="font-mono mt-0.5 shrink-0 text-[14px] text-[#ff8a7e]">{String(i + 1).padStart(2, "0")}</span>
+                <span className="tabular-nums mt-0.5 shrink-0 text-[14px] text-[#ff8a7e]">{String(i + 1).padStart(2, "0")}</span>
                 <span className="text-[16px] leading-relaxed text-fg-2">{tChain(r).replace(/^./, (x) => x.toUpperCase())}</span>
               </li>
             ))}

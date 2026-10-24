@@ -85,18 +85,18 @@ export default function Connect() {
             <div key={p.tag} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-6">
               <div className="flex items-center gap-2.5">
                 {p.logo && <img src={p.logo} alt="ClawPump" className="h-7 w-7 rounded-lg bg-white/[0.06] p-0.5 ring-1 ring-white/10" />}
-                <p className="font-mono text-[12px] text-warn">{t(p.tag)}</p>
+                <p className="tabular-nums text-[12px] text-warn">{t(p.tag)}</p>
               </div>
               <h3 className="font-display mt-2 text-2xl">{t(p.title)}</h3>
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-fg-3">{t(p.text)}</p>
+              <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-3">{t(p.text)}</p>
               {p.copy && (
-                <button type="button" onClick={() => copy(p.tag, p.copy!)} className="font-mono mt-4 rounded-2xl bg-black/40 p-3 text-left text-[12.5px] leading-relaxed text-fg-3 ring-1 ring-white/10 hover:ring-white/30">
+                <button type="button" onClick={() => copy(p.tag, p.copy!)} className="tabular-nums mt-4 rounded-2xl bg-black/40 p-3 text-left text-[12.5px] leading-relaxed text-fg-3 ring-1 ring-white/10 hover:ring-white/30">
                   {p.copy}
                   <span className="mt-2 block text-warn">{copied === p.tag ? t("copied ✓") : t("tap to copy")}</span>
                 </button>
               )}
               {p.link && (
-                <a href={p.link[1]} className="font-mono mt-auto pt-4 text-[13px] text-fg-4 underline decoration-white/25 underline-offset-4 hover:text-white">
+                <a href={p.link[1]} className="tabular-nums mt-auto pt-4 text-[13px] text-fg-4 underline decoration-white/25 underline-offset-4 hover:text-white">
                   {t(p.link[0])} →
                 </a>
               )}
@@ -107,7 +107,7 @@ export default function Connect() {
 
       <Section className="!pt-0">
         <Reveal className="bg-night-surface border border-white/[0.08] mx-auto max-w-2xl rounded-2xl p-6 sm:p-8">
-          <p className="font-mono text-[12px] text-fg-3">{t("did it work?")}</p>
+          <p className="tabular-nums text-[12px] text-fg-3">{t("did it work?")}</p>
           <h3 className="font-display mt-1 text-2xl">{t("Check your agent")}</h3>
           <form
             onSubmit={(e) => {
@@ -116,14 +116,14 @@ export default function Connect() {
             }}
             className="mt-4 flex gap-2"
           >
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("your agent's name")} className="font-mono min-w-0 flex-1 rounded-full bg-black/40 px-5 py-3 text-[13.5px] outline-none ring-1 ring-white/10 focus:ring-white/30" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("your agent's name")} className="tabular-nums min-w-0 flex-1 rounded-full bg-black/40 px-5 py-3 text-[13.5px] outline-none ring-1 ring-white/10 focus:ring-white/30" />
             <button type="submit" disabled={checking} className="rounded-full bg-white px-6 py-3 text-[13.5px] font-medium text-black hover:bg-white/90">
               {checking ? "…" : t("Check")}
             </button>
           </form>
           {status === "missing" && <p className="mt-4 text-[13.5px] text-[#ff8a7e]">{t("Not in the zoo yet. Send it the message above, then check again in a minute.")}</p>}
           {status && status !== "missing" && (
-            <div className="font-mono mt-4 space-y-1.5 text-[12.5px]">
+            <div className="tabular-nums mt-4 space-y-1.5 text-[12.5px]">
               <p className="text-[#9df3b0]">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
               <p className={status.signals ? "text-[#9df3b0]" : "text-warn"}>
                 {status.signals ? "✓" : "○"} {t("{n} reports", { n: status.signals })} · {ago(status.lastSignalAt)}

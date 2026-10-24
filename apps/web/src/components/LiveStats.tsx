@@ -125,8 +125,8 @@ export default function LiveStats() {
 
   return (
     <section aria-label={tr("Live numbers")} className="relative z-10 -mt-16 px-5 sm:px-8">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-black/50 ring-1 ring-white/10 backdrop-blur-xl">
-        <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3 text-[12.5px] text-fg-3 sm:px-6">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl bg-black/50 ring-1 ring-white/10 backdrop-blur-xl">
+        <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-3 text-[12.5px] text-fg-3 sm:px-6">
           <span className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300/60" />
@@ -134,14 +134,14 @@ export default function LiveStats() {
             </span>
             {tr("Live from the nodes")}
           </span>
-          <span className="font-mono">{tr("refreshes every 30s")}</span>
+          <span className="tabular-nums">{tr("refreshes every 30s")}</span>
         </div>
         <dl className="grid grid-cols-2 gap-px bg-white/[0.06] lg:grid-cols-4">
           {tiles.map((t) => (
             <div key={t.label} className="bg-[#050807] px-5 py-5 sm:px-6">
               <dt className="text-[12.5px] text-fg-3">{tr(t.label)}</dt>
               <dd className="font-display mt-1.5 text-3xl text-white">{t.value}</dd>
-              {t.hint && <dd className="font-mono mt-1 truncate text-[12px] text-fg-4">{tr(t.hint)}</dd>}
+              {t.hint && <dd className="tabular-nums mt-1 truncate text-[12px] text-fg-4">{tr(t.hint)}</dd>}
             </div>
           ))}
         </dl>

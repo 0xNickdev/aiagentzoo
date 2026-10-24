@@ -175,14 +175,14 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
         role="dialog"
         aria-modal="true"
         aria-label="Night card"
-        className="w-full max-w-4xl rounded-3xl bg-[#070908] p-4 ring-1 ring-white/10 sm:p-6"
+        className="w-full max-w-4xl rounded-2xl bg-[#070908] p-4 ring-1 ring-white/10 sm:p-6"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="font-mono text-[12.5px] tracking-[0.14em] text-fg-3">THE NIGHT CARD · 1200 × 675</p>
+          <p className="tabular-nums text-[12.5px] tracking-[0.14em] text-fg-3">THE NIGHT CARD · 1200 × 675</p>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>
@@ -203,7 +203,7 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
             href={`https://x.com/intent/post?text=${tweet}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="liquid-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-fg hover:text-white"
+            className="bg-night-surface border border-white/[0.08] inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] text-fg hover:text-white"
             title={`Attach the downloaded card. Follow ${X_URL.replace("https://x.com/", "@")}`}
           >
             <XIcon size={13} /> Post on X

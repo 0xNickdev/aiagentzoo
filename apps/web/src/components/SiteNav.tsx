@@ -59,7 +59,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
         <a href="/" className="flex items-center gap-2.5 text-white" aria-label="ZOOAI AGENCY">
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
-          <span className="font-mono mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
+          <span className="tabular-nums mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
         </a>
         <div className="hidden items-center gap-9 lg:flex">
           {GROUPS.map((g) => {
@@ -126,7 +126,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             <WalletButton block />
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-6">
-                <p className="text-[12.5px] uppercase tracking-[0.14em] text-fg-4">{tr(g.label)}</p>
+                <p className="text-[12.5px] [&::first-letter]:uppercase text-fg-4">{tr(g.label)}</p>
                 <div className="mt-2 grid">
                   {g.items.map((i) => (
                     <a

@@ -58,7 +58,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
             role="dialog"
             aria-modal="true"
             aria-label={`${agent} passport`}
-            className="mobile-menu-glass relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl p-6 sm:rounded-3xl sm:p-10"
+            className="mobile-menu-glass relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl p-6 sm:rounded-2xl sm:p-10"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
@@ -72,11 +72,11 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
               <img src={`/agents/${agent}.webp`} alt="" className="h-28 w-28 shrink-0 rounded-full ring-1 ring-white/10" />
               <div>
-                <p className="text-[12.5px] font-light uppercase tracking-[0.3em] text-fg-3">
+                <p className="text-[12.5px] font-normal uppercase tracking-[0.3em] text-fg-3">
                   Passport · {data?.node ?? "…"}
                 </p>
                 <h3 className="font-display mt-2 text-5xl">{agent}</h3>
-                <p className="mt-2 text-sm font-light text-fg-4">
+                <p className="mt-2 text-sm font-normal text-fg-4">
                   <span style={{ color }}>{species?.name ?? "…"}</span>
                   {data && (
                     <>
@@ -106,7 +106,7 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                   ].map(([value, label]) => (
                     <div key={label}>
                       <b className="font-display block text-3xl font-normal leading-none">{value}</b>
-                      <span className="mt-1 block text-[11.5px] font-light uppercase tracking-[0.2em] text-fg-3">{t(String(label))}</span>
+                      <span className="mt-1 block text-[11.5px] font-normal uppercase tracking-[0.2em] text-fg-3">{t(String(label))}</span>
                     </div>
                   ))}
                 </div>
@@ -116,8 +116,8 @@ export default function Passport({ agent, onClose }: { agent: string | null; onC
                 </div>
 
                 <div className="mt-8">
-                  <p className="mb-3 text-[11.5px] font-light uppercase tracking-[0.25em] text-fg-3">Last steps · from the public log</p>
-                  <ul className="text-[12px] font-light leading-snug">
+                  <p className="mb-3 text-[11.5px] font-normal uppercase tracking-[0.25em] text-fg-3">Last steps · from the public log</p>
+                  <ul className="text-[12px] font-normal leading-snug">
                     {data.lastSteps.length === 0 && <li className="text-fg-4">No steps yet.</li>}
                     {data.lastSteps.map((s) => (
                       <li key={s.seq} className="flex gap-3 border-b border-dashed border-white/10 py-2 text-fg-3">

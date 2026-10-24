@@ -22,7 +22,7 @@ export function CAPill({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => void copy()}
       title={t("Copy the contract address")}
-      className={`liquid-glass font-mono inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[13px] text-fg-2 transition hover:text-white ${className}`}
+      className={`bg-night-surface border border-white/[0.08] tabular-nums inline-flex max-w-full items-center gap-2 rounded-full px-4 py-1.5 text-[13px] text-fg-2 transition hover:text-white ${className}`}
     >
       <span className="text-fg-3">CA</span>
       <span className="truncate sm:hidden">{TOKEN_MINT.slice(0, 6)}…{TOKEN_MINT.slice(-6)}</span>
@@ -53,14 +53,14 @@ export function TokenAddress() {
   ];
 
   return (
-    <div className="liquid-glass mx-auto mb-12 max-w-3xl rounded-3xl bg-black/45 p-6 text-center backdrop-blur-md">
-      <p className="text-[11.5px] font-light uppercase tracking-[0.3em] text-fg-3">
+    <div className="bg-night-surface border border-white/[0.08] mx-auto mb-12 max-w-3xl rounded-2xl bg-black/45 p-6 text-center backdrop-blur-md">
+      <p className="text-[11.5px] font-normal uppercase tracking-[0.3em] text-fg-3">
         {TOKEN_SYMBOL ? `$${TOKEN_SYMBOL} · ` : ""}{t("Solana · launched on ClawPump")}
       </p>
-      <button type="button" onClick={copy} className="mt-3 w-full break-all font-mono text-sm text-fg hover:text-white sm:text-base">
+      <button type="button" onClick={copy} className="mt-3 w-full break-all tabular-nums text-sm text-fg hover:text-white sm:text-base">
         {TOKEN_MINT}
       </button>
-      <p className="mt-1 text-[12.5px] font-light text-fg-3">{copied ? t("Copied") : t("Tap to copy the contract address")}</p>
+      <p className="mt-1 text-[12.5px] font-normal text-fg-3">{copied ? t("Copied") : t("Tap to copy the contract address")}</p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {links.map(([label, href]) => (
           <a
@@ -68,7 +68,7 @@ export function TokenAddress() {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full px-4 py-2 text-[12.5px] uppercase tracking-[0.18em] text-fg-2 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white"
+            className="rounded-full px-4 py-2 text-[12.5px] [&::first-letter]:uppercase text-fg-2 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white"
           >
             {label}
           </a>

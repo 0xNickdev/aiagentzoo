@@ -211,15 +211,15 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </Box>
             <div className="space-y-4">
               <Box title="Who paid for this dev" note="traced on Solana">
-                {!p.funding && <p className="text-[13px] font-light text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
-                {p.funding && !p.funding.funder && <p className="text-[13px] font-light text-fg-3">{t("No funding transfer in the dev's recent history.")}</p>}
+                {!p.funding && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+                {p.funding && !p.funding.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the dev's recent history.")}</p>}
                 {p.funding?.funder && (
                   <>
                     <div className="flex items-baseline justify-between gap-3 py-1">
-                      <span className="text-[12.5px] font-light text-fg-4">{t("funded by")}</span>
+                      <span className="text-[12.5px] font-normal text-fg-4">{t("funded by")}</span>
                       <WalletLink a={p.funding.funder} onWallet={onWallet} className="text-[13px] text-fg-2" />
                     </div>
-                    <p className="mt-1 text-[12.5px] font-light text-fg-4">
+                    <p className="mt-1 text-[12.5px] font-normal text-fg-4">
                       {p.funding.funderIsHot ? t("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? t("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : t("It paid for no other dev the zoo traced.")}
                     </p>
                   </>
@@ -227,10 +227,10 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               <Box title="Wallets that keep buying its launches" note="in their first 5 seconds">
                 {!d.regulars.length ? (
-                  <p className="text-[13px] font-light text-fg-3">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
+                  <p className="text-[13px] font-normal text-fg-3">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
                 ) : (
                   <>
-                    <p className="mb-2 text-[12px] font-light text-fg-3">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
+                    <p className="mb-2 text-[12px] font-normal text-fg-3">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
                     {d.regulars.map((r) => (
                       <div key={r.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[12px] first:border-t-0">
                         <WalletLink a={r.wallet} onWallet={onWallet} className="text-fg-2" />
@@ -242,7 +242,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               {p.accounts.length > 0 && (
                 <Box title="Accounts its tokens link to" note="from the tokens' metadata">
-                  <p className="mb-2 text-[12px] font-light text-fg-3">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
+                  <p className="mb-2 text-[12px] font-normal text-fg-3">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
                   {p.accounts.map((a) => (
                     <div key={a.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[12px] first:border-t-0">
                       <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-fg-2 hover:text-white">
@@ -285,7 +285,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           {(p.funded.creators.length > 0 || p.funded.hot) && (
             <Box title="Devs it paid for" note="traced on Solana">
               {p.funded.hot ? (
-                <p className="text-[13px] font-light text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                <p className="text-[13px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
               ) : (
                 p.funded.creators.map((c) => (
                   <div key={c.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[12px] first:border-t-0">

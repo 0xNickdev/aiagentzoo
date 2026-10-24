@@ -10,12 +10,12 @@ export function Cycle() {
   return (
     <Section id="cycle" backdrop={{ src: "/backdrops/cycle.webp", tint: "140,165,120" }}>
       <SectionHead eyebrow={tr("The cycle")} title={[tr("Wake,"), tr("take a step,"), tr("leave a trace")]} />
-      <div className="grid gap-px overflow-hidden rounded-3xl bg-white/[0.06] md:grid-cols-3">
+      <div className="grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] md:grid-cols-3">
         {CYCLE.map((c, i) => (
           <Reveal key={c.title} delay={i * 0.12} className="bg-[#030504]/85 p-8 backdrop-blur-sm sm:p-10">
             <span className="font-display text-6xl text-fg-4">0{i + 1}</span>
             <h3 className="font-display mt-6 text-3xl">{tr(c.title)}</h3>
-            <p className="mt-4 text-sm font-light leading-relaxed text-fg-4">{tr(c.text)}</p>
+            <p className="mt-4 text-sm font-normal leading-relaxed text-fg-4">{tr(c.text)}</p>
           </Reveal>
         ))}
       </div>
@@ -65,7 +65,7 @@ export function Footer() {
           </div>
           {FOOTER.map((col) => (
             <nav key={col.title}>
-              <p className="text-[13px] uppercase tracking-[0.14em] text-fg-4">{col.title.startsWith("$") ? col.title : tr(col.title)}</p>
+              <p className="text-[13px] [&::first-letter]:uppercase text-fg-4">{col.title.startsWith("$") ? col.title : tr(col.title)}</p>
               <ul className="mt-4 grid gap-2.5">
                 {col.links.map(([label, href]) => (
                   <li key={label}>

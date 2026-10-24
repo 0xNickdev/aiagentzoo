@@ -133,10 +133,10 @@ export default function Doors() {
         className="flex flex-wrap items-end justify-between gap-6"
       >
         <div>
-          <p className="font-mono text-[12.5px] tracking-[0.18em] text-fg-3">{t("THREE WAYS IN")}</p>
+          <p className="tabular-nums text-[12.5px] tracking-[0.18em] text-fg-3">{t("THREE WAYS IN")}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("See it work")}</h2>
         </div>
-        <p className="max-w-sm text-[14px] font-light leading-relaxed text-fg-4">
+        <p className="max-w-sm text-[14px] font-normal leading-relaxed text-fg-4">
           {t("Everything below is live: read from the nodes and the chain as you look at it.")}
         </p>
       </motion.div>
@@ -150,7 +150,7 @@ export default function Doors() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.9, delay: 0.08 * i, ease: [0.22, 1, 0.36, 1] }}
-            className="group relative flex flex-col overflow-hidden rounded-3xl bg-[#050706] ring-1 ring-white/10 transition hover:ring-white/25"
+            className="group relative flex flex-col overflow-hidden rounded-2xl bg-[#050706] ring-1 ring-white/10 transition hover:ring-white/25"
           >
             <div className="relative h-[300px] overflow-hidden sm:h-[360px]">
               <img
@@ -161,7 +161,7 @@ export default function Doors() {
                 className="absolute inset-0 h-full w-full object-cover opacity-85 transition duration-[1.2s] ease-out group-hover:scale-[1.05] group-hover:opacity-100"
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.55)_0%,rgba(3,5,4,0)_28%,rgba(3,5,4,0)_70%,#050706_100%)]" />
-              <p className="font-mono absolute left-7 top-6 flex items-center gap-2 text-[12px] tracking-[0.18em] text-fg-3">
+              <p className="tabular-nums absolute left-7 top-6 flex items-center gap-2 text-[12px] tracking-[0.18em] text-fg-3">
                 {d.live !== undefined && (
                   <span className={`h-1.5 w-1.5 rounded-full ${d.live ? "animate-pulse bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" : "bg-white/30"}`} />
                 )}
@@ -170,8 +170,8 @@ export default function Doors() {
             </div>
             <div className="relative flex flex-1 flex-col px-7 pb-7 pt-2">
               <h3 className="font-display text-4xl">{t(d.title)}</h3>
-              <p className="mt-3 max-w-xs text-[14px] font-light leading-relaxed text-fg-4">{t(d.line)}</p>
-              <dl className="font-mono mt-auto grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
+              <p className="mt-3 max-w-xs text-[14px] font-normal leading-relaxed text-fg-4">{t(d.line)}</p>
+              <dl className="tabular-nums mt-auto grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
                 {d.stats.map(([k, v]) => (
                   <div key={k}>
                     <dd className="text-xl text-white">{v}</dd>

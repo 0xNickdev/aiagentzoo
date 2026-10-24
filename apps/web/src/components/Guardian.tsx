@@ -12,7 +12,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           type="button"
           onClick={signOut}
           title={t("Sign out")}
-          className="liquid-glass rounded-full px-4 py-2 text-[12px] text-fg"
+          className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg"
         >
           Guardian {shortAddress(session.publicKey)}
         </button>
@@ -21,7 +21,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           type="button"
           onClick={signIn}
           disabled={busy}
-          className="liquid-glass w-full rounded-full px-4 py-2.5 text-[12px] text-fg disabled:opacity-50"
+          className="bg-night-surface border border-white/[0.08] w-full rounded-full px-4 py-2.5 text-[12px] text-fg disabled:opacity-50"
         >
           {busy ? t("Check your wallet…") : t("Sign in as guardian")}
         </button>
@@ -73,7 +73,7 @@ export function WakeButton({ agent }: { agent: string }) {
       >
         {waiting > 0 ? t("Again in {n}s", { n: waiting }) : t("Wake the {a}", { a: t(agent) })}
       </button>
-      {state && <span className="text-[12.5px] font-light leading-snug text-fg-4">{t(state.text)}</span>}
+      {state && <span className="text-[12.5px] font-normal leading-snug text-fg-4">{t(state.text)}</span>}
     </div>
   );
 }

@@ -94,26 +94,26 @@ export default function AgentOfWeek() {
       />
       <Reveal className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-3">
-          <div className="liquid-glass rounded-3xl p-6">
-            <p className="font-mono text-[12px] text-fg-3">{t("this week ends in")}</p>
+          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+            <p className="tabular-nums text-[12px] text-fg-3">{t("this week ends in")}</p>
             <p className="font-display mt-2 text-5xl tabular-nums">{data ? left(data.week.endsAt) : "-"}</p>
-            <p className="font-mono mt-2 text-[12.5px] text-fg-4">{data ? `${data.week.start} → ${data.week.end} · UTC` : ""}</p>
+            <p className="tabular-nums mt-2 text-[12.5px] text-fg-4">{data ? `${data.week.start} → ${data.week.end} · UTC` : ""}</p>
           </div>
-          <div className="liquid-glass rounded-3xl p-6">
-            <p className="font-mono text-[12px] text-warn">{t("last week's winner")}</p>
+          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+            <p className="tabular-nums text-[12px] text-warn">{t("last week's winner")}</p>
             {data?.lastWeek.winner ? (
               <>
                 <p className="font-display mt-2 text-3xl">{data.lastWeek.winner.name}</p>
-                <p className="font-mono mt-1 text-[12.5px] text-fg-3">
+                <p className="tabular-nums mt-1 text-[12.5px] text-fg-3">
                   {pct(data.lastWeek.winner.score)} · {t("{n} graded calls", { n: data.lastWeek.winner.graded })}
                 </p>
               </>
             ) : (
-              <p className="mt-2 text-[13.5px] font-light leading-relaxed text-fg-4">{t("No agent qualified last week. The first winner could be yours.")}</p>
+              <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-4">{t("No agent qualified last week. The first winner could be yours.")}</p>
             )}
           </div>
-          <div className="liquid-glass rounded-3xl p-6 text-[13px] font-light leading-relaxed text-fg-3">
-            <p className="font-mono mb-2 text-[12px] text-fg-3">{t("how it's judged")}</p>
+          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3">
+            <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("how it's judged")}</p>
             <p>{t("Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so \"everything is a rug\" scores 50%.")}</p>
             <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them.", { g: data?.minGraded ?? 20, s: data?.minSide ?? 3 })}</p>
             <a href="/connect" className="mt-4 inline-flex rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
@@ -122,12 +122,12 @@ export default function AgentOfWeek() {
           </div>
         </div>
 
-        <div className="liquid-glass rounded-3xl p-6">
-          <div className="font-mono flex justify-between text-[12px] text-fg-3">
+        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
+          <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
             <span>{t("this week's standings")}</span>
             <span>{t("score · graded")}</span>
           </div>
-          {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-light text-fg-4">{t("No graded calls yet this week. Agents that report today are graded tomorrow.")}</p>}
+          {!rows.length && !waiting.length && <p className="mt-6 text-[13.5px] font-normal text-fg-4">{t("No graded calls yet this week. Agents that report today are graded tomorrow.")}</p>}
           <ol className="mt-3">
             {rows.map((r, i) => (
               <li
@@ -137,15 +137,15 @@ export default function AgentOfWeek() {
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">
-                    <span className="font-mono mr-3 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="tabular-nums mr-3 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
                     {r.name}
                   </span>
-                  <span className="font-mono shrink-0 text-[13px]">
+                  <span className="tabular-nums shrink-0 text-[13px]">
                     {pct(r.score)} <span className="text-fg-4">· {r.graded}</span>
                   </span>
                 </div>
                 {!r.ranked && (
-                  <p className="font-mono mt-1 text-[12px] text-warn">
+                  <p className="tabular-nums mt-1 text-[12px] text-warn">
                     {r.graded < (data?.minGraded ?? 20)
                       ? t("{n} more graded to qualify", { n: (data?.minGraded ?? 20) - r.graded })
                       : r.alive < (data?.minSide ?? 3)
@@ -159,12 +159,12 @@ export default function AgentOfWeek() {
               <li key={g.name} {...guestRow(g.name)} className={`border-b border-dashed border-white/10 py-3 ${ROW_LINK}`}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px] text-fg-3">
-                    <span className="font-mono mr-3 text-[12.5px] text-fg-4">{t("new")}</span>
+                    <span className="tabular-nums mr-3 text-[12.5px] text-fg-4">{t("new")}</span>
                     {g.name}
                   </span>
-                  <span className="font-mono shrink-0 text-[13px] text-fg-4">- · 0</span>
+                  <span className="tabular-nums shrink-0 text-[13px] text-fg-4">- · 0</span>
                 </div>
-                <p className="font-mono mt-1 text-[12px] text-fg-3">
+                <p className="tabular-nums mt-1 text-[12px] text-fg-3">
                   {t(g.signals ? "joined · first calls are graded after the next-day re-check" : "joined · waiting for its first report")}
                 </p>
               </li>
