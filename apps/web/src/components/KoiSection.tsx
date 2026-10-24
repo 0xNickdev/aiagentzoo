@@ -19,13 +19,32 @@ interface KoiView {
   lastLook?: { at: number; candidates: number } | null;
 }
 
-/** About 1 in 270 pump.fun tokens is alive a day later: the bar the koi's picks are measured against. */
-const MARKET_RATE = 0.0037;
+/** Last night's market from the Morning Brief: how many fresh launches made it off the curve, read from the node, never typed in. */
+interface Market {
+  launches: number;
+  graduated: number;
+}
 
 /** 锦鲤, the koi: the zoo's hunter of survivors, its picks and how they turned out. */
 export default function KoiSection() {
   const [data, setData] = useState<KoiView | null>(null);
   const [failed, setFailed] = useState(false);
+  const [market, setMarket] = useState<Market | null>(null);
+  useEffect(() => {
+    void nodeOf("tortoise").then(async (n) => {
+      if (!n) return;
+      try {
+        const list = (await (await fetch(`${n.url}/v1/briefs`)).json()) as Array<{ id: string }>;
+        if (!list[0]) return;
+        const entry = await (await fetch(`${n.url}/v1/briefs/${list[0].id}`)).json();
+        const sec = entry?.event?.payload?.content?.sections;
+        const graduated = sec?.counts?.graduated ?? sec?.graduated?.length;
+        if (sec?.launches && typeof graduated === "number") setMarket({ launches: sec.launches, graduated });
+      } catch {
+        // No brief: the copy reads without the number.
+      }
+    });
+  }, []);
   useEffect(() => {
     void nodeOf("koi").then((n) =>
       n
@@ -49,8 +68,8 @@ export default function KoiSection() {
         eyebrow={pick("锦鲤 · the koi · hunter of survivors", "锦鲤 · 幸存者猎手")}
         title={[pick("The beaver finds what dies.", "海狸找出会死的币。"), pick("The koi looks for what lives.", "锦鲤寻找能活下来的。")]}
         text={pick(
-          "About 1 in 270 pump.fun tokens is still alive a day later. A few times a night the koi picks, from launches that already passed the chain checks, the ones it thinks will be among them. The next night every pick is graded, in public.",
-          "在 pump.fun 上，大约 270 个币里只有 1 个能活过一天。锦鲤每晚从已经通过链上检查的新币里挑出几个它认为能活下来的。第二晚，每一次挑选都公开打分。",
+          `${market ? `Last night ${market.graduated.toLocaleString("en-US")} of ${market.launches.toLocaleString("en-US")} fresh launches made it off the curve. ` : "Few fresh launches make it. "}A few times a night the koi picks, from launches that already passed the chain checks, the ones it thinks will last. The next night every pick is graded, in public.`,
+          `${market ? `昨晚 ${market.launches} 个新币里只有 ${market.graduated} 个走出了联合曲线。` : "能活下来的新币很少。"}锦鲤每晚从已经通过链上检查的新币里挑出几个它认为能活下来的。第二晚，每一次挑选都公开打分。`,
         )}
       />
       <Reveal className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
@@ -64,7 +83,7 @@ export default function KoiSection() {
           </div>
           <p className="mt-3 text-[13px] font-normal text-fg-4">
             {t && t.graded
-              ? pick(`${t.alive} of ${t.graded} graded picks, against a market where ${(MARKET_RATE * 100).toFixed(2)}% survive.`, `${t.graded} 次已打分的挑选中 ${t.alive} 个活着；整个市场的存活率是 ${(MARKET_RATE * 100).toFixed(2)}%。`)
+              ? pick(`${t.alive} of ${t.graded} graded picks were alive a day later.`, `${t.graded} 次已打分的挑选中，一天后 ${t.alive} 个还活着。`)
               : pick("No graded picks yet: the first ones are checked the night after the koi makes them.", "还没有打分的挑选：第一批会在挑出后的第二晚复查。")}
           </p>
           <p className="tabular-nums mt-8 text-[12px] text-fg-3">{pick(`tonight · ${data?.tonight.length ?? 0} of ${data?.perNight ?? 8}`, `今晚 · ${data?.tonight.length ?? 0}/${data?.perNight ?? 8}`)}</p>
