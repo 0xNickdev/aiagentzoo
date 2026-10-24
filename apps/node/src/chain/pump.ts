@@ -1279,6 +1279,11 @@ export class PumpTape {
     return out;
   }
 
+  /** One launch's metadata address, when its create event carried one. */
+  metadataOf(mint: string): string | undefined {
+    return this.tokens.get(mint)?.uri;
+  }
+
   /** What the socials registry needs about one token: who made it, and whether they sold within five minutes. */
   outline(mint: string) {
     const t = this.tokens.get(mint);

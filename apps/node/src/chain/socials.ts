@@ -74,6 +74,8 @@ export class SocialsRegistry {
   private readonly byKey = new Map<string, Set<string>>();
   /** Mint -> the picture its metadata points to, as a URL a browser can load. */
   private readonly images = new Map<string, string>();
+  /** Launches already put at the front once, so a page polling the feed does not re-queue them forever. */
+  private readonly wanted = new Set<string>();
   private queue: Array<{ mint: string; uri: string }> = [];
   private pausedUntil = 0;
   private timer: NodeJS.Timeout | null = null;
@@ -115,6 +117,15 @@ export class SocialsRegistry {
     }
     this.byMint.set(mint, []);
     return !refused;
+  }
+
+  /** Puts a launch someone is looking at at the front of the reader, when its picture is still unknown. */
+  want(mint: string): void {
+    if (this.images.has(mint) || this.wanted.has(mint)) return;
+    const uri = this.tape.metadataOf(mint);
+    if (!uri) return;
+    this.wanted.add(mint);
+    this.queue = [{ mint, uri }, ...this.queue.filter((q) => q.mint !== mint)].slice(0, 2_000);
   }
 
   /** The token's picture, once its metadata was read. */
@@ -192,7 +203,10 @@ export class SocialsRegistry {
         const fresh = this.tape.withMetadata(300).filter((x) => !this.byMint.has(x.mint) && !this.queue.some((q) => q.mint === x.mint));
         this.queue = [...fresh, ...this.queue].slice(0, 2_000);
       }
-      if (tick % 3600 === 0) this.prune();
+      if (tick % 3600 === 0) {
+        this.prune();
+        this.wanted.clear();
+      }
       if (Date.now() < this.pausedUntil) return;
       for (let i = 0; i < perSecond; i++) {
         const next = this.queue.shift();

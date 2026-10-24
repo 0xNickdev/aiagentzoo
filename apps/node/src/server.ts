@@ -459,6 +459,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
         const image = socials.image(mint);
+        if (!image) socials.want(mint);
         if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
         if (past) {
           const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
@@ -623,6 +624,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           keptHours: 48,
           moments: tape.momentsMatching({ symbol: pick("symbol"), mint: pick("mint"), kind: pick("kind"), limit: clampInt(q.get("limit"), 100, 1, 500) }).map((m) => {
             const image = socials.image(m.mint);
+            if (!image) socials.want(m.mint);
             return image ? { ...m, image } : m;
           }),
         });
