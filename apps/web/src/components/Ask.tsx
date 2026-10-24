@@ -6,6 +6,7 @@ import { nodeOf, useGuardian } from "../zoo";
 import { Reveal, Section } from "./ui";
 import { lang, pick, t, t as tr } from "../i18n";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
+import { base, eyes, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
 
 type Verdict = "promising" | "watch" | "suspicious";
 type Outcome = "dead" | "alive" | "unknown";
@@ -140,54 +141,31 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  await Promise.all([document.fonts.load('500 64px "Geist"'), document.fonts.load('300 24px "Geist"'), document.fonts.load('400 16px "Geist Mono"')]);
-  ctx.fillStyle = "#030504";
-  ctx.fillRect(0, 0, W, H);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = "/agents/beaver.webp";
-    });
-    const size = 520;
-    ctx.globalAlpha = 0.55;
-    ctx.drawImage(img, W - size + 40, (H - size) / 2 + 30, size, size);
-    ctx.globalAlpha = 1;
-  } catch {
-    // No portrait: plain night.
-  }
-  const shade = ctx.createLinearGradient(0, 0, W, 0);
-  shade.addColorStop(0, "rgba(3,5,4,0.98)");
-  shade.addColorStop(0.6, "rgba(3,5,4,0.85)");
-  shade.addColorStop(1, "rgba(3,5,4,0.2)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(0, 0, W, H);
+  await loadFonts();
+  base(ctx, W, H);
+  eyes(ctx, 975, 330, 70);
 
   const L = 72;
   const tone = TONE[a.verdict];
-  const mono = (s: number) => `400 ${s}px "Geist Mono", ui-monospace, monospace`;
-  ctx.font = mono(15);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(t("ZOOAI AGENCY · ASK THE BEAVER"), L, 86);
+  await header(ctx, L, 86, t("Ask"));
 
-  ctx.font = '500 64px "Geist", sans-serif';
+  ctx.font = '600 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
   ctx.fillText(`$${a.symbol}`.slice(0, 18), L - 3, 166);
-  ctx.font = mono(14);
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
   ctx.fillText(`${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`, L, 196);
 
-  ctx.font = '500 92px "Geist", sans-serif';
+  ctx.font = '600 92px "Geist", sans-serif';
   ctx.fillStyle = tone.color;
   ctx.fillText(t(tone.label), L - 4, 310);
-  ctx.font = mono(15);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
   ctx.fillText(t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion }), L, 344);
 
   // The reason, wrapped to two lines.
-  ctx.font = '300 27px "Geist", sans-serif';
-  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.font = '400 27px "Geist", sans-serif';
+  ctx.fillStyle = FG2;
   const words = lang() === "zh" && a.whyZh ? Array.from(a.whyZh) : a.why.split(/\s+/);
   const lines: string[] = [];
   let line = "";
@@ -205,24 +183,24 @@ async function drawCard(canvas: HTMLCanvasElement, a: Ask): Promise<void> {
   // Three facts across the bottom, between hairlines.
   const ev = evidence(a).filter(([, , bad]) => bad).concat(evidence(a).filter(([, , bad]) => !bad)).slice(0, 3);
   const top = 528;
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.strokeStyle = HAIR;
   ctx.beginPath();
   ctx.moveTo(L, top + 0.5);
   ctx.lineTo(L + 660, top + 0.5);
   ctx.stroke();
   ev.forEach(([k, v, bad], i) => {
     const x = L + i * 220;
-    ctx.font = mono(24);
+    ctx.font = '600 28px "Geist", sans-serif';
     ctx.fillStyle = bad ? "#ff8a7e" : "#fff";
-    ctx.fillText(v, x, top + 40);
-    ctx.font = mono(11);
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText(t(k).toUpperCase(), x, top + 62);
+    ctx.fillText(v, x, top + 42);
+    ctx.font = small(14);
+    ctx.fillStyle = FG4;
+    ctx.fillText(t(k).replace(/^./, (x) => x.toUpperCase()), x, top + 68);
   });
 
-  ctx.font = mono(14);
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.fillText(t("graded against reality on {when} · zooaiagency.com/ask", { when: when(gradeDue(a)) }), L, H - 40);
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
+  ctx.fillText(t("graded against reality on {when} · zooaiagency.com/ask", { when: when(gradeDue(a)) }).replace(/^./, (x) => x.toUpperCase()), L, H - 40);
 }
 
 /* ---------- the page ---------- */

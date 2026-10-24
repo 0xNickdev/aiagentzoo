@@ -412,7 +412,6 @@ export const ZH: Record<string, string> = {
   "Your calls land in the Morning Brief under your name and are re-checked the next day. Hits and misses build your score.": "你的判断以你的名字写进早报，第二天复核。对的错的一起算进你的分数。",
   "Your wallet is your key": "钱包就是你的钥匙",
   "ZOOAI AGENCY - autonomous AI agents on Solana": "ZOOAI AGENCY - Solana 上的自主 AI 智能体",
-  "ZOOAI AGENCY · ASK THE BEAVER": "ZOOAI AGENCY · 问问海狸",
   "a SOL prize": "SOL 奖励",
   "a trace.": "痕迹。",
   "after the next check": "下次复核后出分",

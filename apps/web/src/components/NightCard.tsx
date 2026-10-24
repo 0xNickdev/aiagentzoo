@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { X_URL, XIcon } from "../links";
+import { base, eyes, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
 
 export interface NightCardData {
   night: string;
@@ -21,15 +22,6 @@ export interface NightCardData {
 
 const W = 1200;
 const H = 675;
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 /** Breaks text into lines that fit `width`, at most `max` lines, the last one ellipsised. */
 function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, max: number): string[] {
@@ -58,40 +50,17 @@ export async function drawNightCard(canvas: HTMLCanvasElement, d: NightCardData)
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  await Promise.all([document.fonts.load('500 64px "Geist"'), document.fonts.load('300 24px "Geist"'), document.fonts.load('400 16px "Geist Mono"')]);
-
-  ctx.fillStyle = "#030504";
-  ctx.fillRect(0, 0, W, H);
-  try {
-    const bg = await loadImage("/doors/brief.webp");
-    // The tortoise and its scroll sit on the right; the copy takes the dark left.
-    const scale = Math.max(W / bg.width, H / bg.height) * 1.02;
-    const iw = bg.width * scale;
-    const ih = bg.height * scale;
-    ctx.globalAlpha = 0.9;
-    // Right-aligned and wider than the card, so there is never an edge or a seam inside it.
-    ctx.drawImage(bg, W - iw, (H - ih) * 0.62, iw, ih);
-    ctx.globalAlpha = 1;
-  } catch {
-    // No image: the card stays plain night.
-  }
-  const shade = ctx.createLinearGradient(0, 0, W, 0);
-  shade.addColorStop(0, "rgba(3,5,4,0.97)");
-  shade.addColorStop(0.55, "rgba(3,5,4,0.82)");
-  shade.addColorStop(1, "rgba(3,5,4,0.15)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(0, 0, W, H);
+  await loadFonts();
+  base(ctx, W, H);
+  eyes(ctx, 975, 330, 70);
 
   const L = 72;
-  const mono = (size: number) => `400 ${size}px "Geist Mono", ui-monospace, monospace`;
   ctx.textBaseline = "alphabetic";
 
-  ctx.font = mono(15);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText("ZOOAI AGENCY · MORNING BRIEF", L, 86);
+  await header(ctx, L, 86, "Morning Brief");
 
   const date = new Date(`${d.night}T00:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
-  ctx.font = '500 68px "Geist", sans-serif';
+  ctx.font = '600 68px "Geist", sans-serif';
   ctx.fillStyle = "#ffffff";
   ctx.fillText(`Night of ${date}`, L - 3, 168);
 
@@ -104,7 +73,7 @@ export async function drawNightCard(canvas: HTMLCanvasElement, d: NightCardData)
   ];
   const top = 214;
   const fw = 158;
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.strokeStyle = HAIR;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(L, top + 0.5);
@@ -112,39 +81,36 @@ export async function drawNightCard(canvas: HTMLCanvasElement, d: NightCardData)
   ctx.moveTo(L, top + 92.5);
   ctx.lineTo(L + fw * 4, top + 92.5);
   ctx.stroke();
-  ctx.font = mono(13);
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
-  for (const [x, y] of [[L - 4, top + 5], [L + fw * 4 - 4, top + 5], [L - 4, top + 97], [L + fw * 4 - 4, top + 97]] as const) ctx.fillText("+", x, y);
   figures.forEach(([v, k], i) => {
     const x = L + i * fw + (i ? 18 : 0);
-    ctx.font = mono(30);
+    ctx.font = '600 32px "Geist", sans-serif';
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(v, x, top + 48);
-    ctx.font = mono(12);
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText(k.toUpperCase(), x, top + 74);
+    ctx.fillText(v, x, top + 50);
+    ctx.font = small(14);
+    ctx.fillStyle = FG4;
+    ctx.fillText(k.replace(/^./, (c) => c.toUpperCase()), x, top + 76);
   });
 
   let y = top + 150;
   const block = (label: string, text: string, accent: string) => {
-    ctx.font = mono(13);
+    ctx.font = small(15);
     ctx.fillStyle = accent;
     ctx.fillText(label, L, y);
     y += 34;
-    ctx.font = '300 26px "Geist", sans-serif';
-    ctx.fillStyle = "rgba(255,255,255,0.86)";
+    ctx.font = '400 26px "Geist", sans-serif';
+    ctx.fillStyle = FG2;
     for (const line of wrap(ctx, text, 620, 2)) {
       ctx.fillText(line, L, y);
       y += 36;
     }
     y += 22;
   };
-  if (d.highlight) block("THE NIGHT'S TELL", d.highlight, "rgba(253,164,175,0.85)");
-  if (d.nursery) block("IN THE NURSERY", d.nursery, "rgba(253,230,138,0.9)");
+  if (d.highlight) block("The night's tell", d.highlight, "#ff8a7e");
+  if (d.nursery) block("In the nursery", d.nursery, "#ffc27a");
 
-  ctx.font = mono(14);
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  const foot = `${d.skill === null ? "" : `balanced accuracy ${accuracyLabel(d.skill, d.scored)} · `}signed on the public log · zooaiagency.com`;
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
+  const foot = `${d.skill === null ? "" : `Balanced accuracy ${accuracyLabel(d.skill, d.scored)} · `}${d.skill === null ? "Signed" : "signed"} on the public log · zooaiagency.com`;
   ctx.fillText(foot, L, H - 54);
 }
 
@@ -182,7 +148,7 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="tabular-nums text-[12.5px] tracking-[0.14em] text-fg-3">THE NIGHT CARD · 1200 × 675</p>
+          <p className="tabular-nums text-[12.5px] text-fg-3">The night card · 1200 × 675</p>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>

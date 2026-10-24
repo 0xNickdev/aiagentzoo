@@ -9,6 +9,7 @@ import WalletProfile, { WalletLink } from "./WalletProfile";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 import DevHabits, { type Habits } from "./DevHabits";
 import NetworkMap from "./NetworkMap";
+import { base, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -133,13 +134,11 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  await Promise.all([document.fonts.load('500 64px "Geist"'), document.fonts.load('300 24px "Geist"'), document.fonts.load('400 16px "Geist Mono"')]);
-  ctx.fillStyle = "#030504";
-  ctx.fillRect(0, 0, W, H);
+  await loadFonts();
+  base(ctx, W, H);
   const c = r.check;
   const f = c.facts;
   const tone = TONE[c.verdict];
-  const mono = (n: number) => `400 ${n}px "Geist Mono", ui-monospace, monospace`;
   const L = 72;
 
   // The first five seconds on the right: the dev in the middle, the early wallets around it.
@@ -152,7 +151,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
     const a = -Math.PI / 2 + (i / Math.max(1, early.length)) * Math.PI * 2;
     const x = cx + Math.cos(a) * ring * 1.15;
     const y = cy + Math.sin(a) * ring;
-    const color = crew ? "#ff8a7e" : e.ring ? "#f2b56b" : e.serial ? "#c9b48a" : "#e6e9e7";
+    const color = crew ? "#ff8a7e" : e.ring ? "#ffc27a" : e.serial ? "#c9b48a" : "#a6e3b4";
     if (crew) {
       ctx.strokeStyle = "rgba(255,138,126,0.45)";
       ctx.beginPath();
@@ -162,7 +161,8 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
     }
     const rad = 8 + Math.sqrt(Math.max(0, e.bought)) * 110;
     const held = e.bought > 0 ? e.held / e.bought : 0;
-    ctx.globalAlpha = 0.1 + held * 0.5;
+    // Flagged wallets fill by what they still hold; the rest stay open rings.
+    ctx.globalAlpha = crew || e.ring || e.serial ? 0.12 + held * 0.5 : 0.06;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(x, y, rad, 0, Math.PI * 2);
@@ -178,7 +178,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   ctx.arc(cx, cy, 22, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  ctx.font = mono(14);
+  ctx.font = small(14);
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.fillText("dev", cx, cy + 5);
@@ -190,23 +190,21 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.font = mono(15);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(`ZOOAI AGENCY · X-RAY · ${VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}`.toUpperCase(), L, 86);
-  ctx.font = '500 64px "Geist", sans-serif';
+  await header(ctx, L, 86, `X-Ray · ${VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}`);
+  ctx.font = '600 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
   ctx.fillText(`$${r.symbol}`.slice(0, 16), L - 3, 166);
-  ctx.font = mono(14);
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
   ctx.fillText(`${r.mint.slice(0, 6)}…${r.mint.slice(-6)}`, L, 196);
-  ctx.font = '500 84px "Geist", sans-serif';
+  ctx.font = '600 84px "Geist", sans-serif';
   ctx.fillStyle = tone.color;
   ctx.fillText(t(tone.label), L - 4, 300);
 
   // The first reason, wrapped.
-  ctx.font = '300 26px "Geist", sans-serif';
-  ctx.fillStyle = "rgba(255,255,255,0.88)";
-  const reason = c.reasons[0] ? tChain(c.reasons[0]) : t("No red flags on chain so far. Not a call that it goes up.");
+  ctx.font = '400 26px "Geist", sans-serif';
+  ctx.fillStyle = FG2;
+  const reason = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : t("No red flags on chain so far. Not a call that it goes up.");
   const zh = /[\u4e00-\u9fff]/.test(reason);
   const words = zh ? Array.from(reason) : reason.split(/\s+/);
   const lines: string[] = [];
@@ -228,23 +226,23 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
     f && (f.creatorCrew ?? 0) > 0 ? [t("the creator's own crew"), String(f.creatorCrew), true] : [t("serial snipers"), String(f?.serialSnipers ?? 0), (f?.serialSnipers ?? 0) >= 3],
   ];
   const top = 520;
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.strokeStyle = HAIR;
   ctx.beginPath();
   ctx.moveTo(L, top + 0.5);
   ctx.lineTo(L + 620, top + 0.5);
   ctx.stroke();
   facts.forEach(([k, v, bad], i) => {
     const x = L + i * 210;
-    ctx.font = mono(26);
+    ctx.font = '600 30px "Geist", sans-serif';
     ctx.fillStyle = bad ? "#ff8a7e" : "#fff";
     ctx.fillText(v, x, top + 50);
-    ctx.font = mono(12);
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText(k.toUpperCase(), x, top + 76);
+    ctx.font = small(14);
+    ctx.fillStyle = FG4;
+    ctx.fillText(k.replace(/^./, (x) => x.toUpperCase()), x, top + 76);
   });
-  ctx.font = mono(14);
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.fillText(t("read straight from Solana · zooaiagency.com/xray"), L, H - 40);
+  ctx.font = small(15);
+  ctx.fillStyle = FG4;
+  ctx.fillText(t("read straight from Solana · zooaiagency.com/xray").replace(/^./, (x) => x.toUpperCase()), L, H - 40);
 }
 
 /** Post it, keep watching it, or ask the beaver for its call. */
