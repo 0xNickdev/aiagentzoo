@@ -237,7 +237,7 @@ export const ZH: Record<string, string> = {
   "Nursery": "育种园",
   "Open protocol · ClawPump wing": "开放协议 · CLAWPUMP 馆区",
   "Observations from public data, not financial advice.": "基于公开数据的观察，不构成投资建议。",
-  "On a schedule, or on a signed signal from a neighbour. Signals into another enclosure cost a fee, so the pack never wakes itself up for free.": "按计划醒来，或者被邻居的签名信号叫醒。往别的园区发信号要付费，所以整群动物不会白白把自己叫醒。",
+  "On a schedule, or on a signed signal from a neighbour.": "按计划醒来，或者被邻居的签名信号叫醒。",
   "On the way": "正在接近",
   "On-chain program": "链上程序",
   "One command": "一条命令",

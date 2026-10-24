@@ -87,7 +87,7 @@ export const SPECIES: {
 export const CYCLE = [
   {
     title: "Wake",
-    text: "On a schedule, or on a signed signal from a neighbour. Signals into another enclosure cost a fee, so the pack never wakes itself up for free.",
+    text: "On a schedule, or on a signed signal from a neighbour.",
   },
   {
     title: "Step",
