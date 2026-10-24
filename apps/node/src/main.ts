@@ -104,7 +104,7 @@ if (config.role === "north") {
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   // One creator traced every 30 s by default: about 3 RPC calls each, a few hundred thousand a month.
-  lineage.start(Number(process.env.ZOO_TRACE_EVERY_SEC ?? 30) * 1000);
+  lineage.start(Number(process.env.ZOO_TRACE_GAP_MS ?? 250));
   if (existsSync(socialsFile)) console.log(`[${config.id}] socials restored: ${socials.load(readFileSync(socialsFile, "utf8"))} launches`);
   // Each new launch's metadata, for the X accounts and Telegram groups it links to.
   socials.start(Number(process.env.ZOO_SOCIALS_PER_SEC ?? 1));

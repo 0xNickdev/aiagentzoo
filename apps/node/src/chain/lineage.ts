@@ -151,23 +151,30 @@ export class Lineage {
   refill(now = Date.now()): void {
     this.refilledAt = now;
     const seen = new Set<string>();
-    for (const e of this.tape.momentsMatching({ kind: "dump", limit: 400 })) {
-      const c = e.creator;
-      if (!c || seen.has(c) || this.creators.has(c)) continue;
+    // the devs people see first: whoever just dumped or launched again, then every other recent launch's dev
+    const take = (c: string | undefined) => {
+      if (!c || seen.has(c) || this.creators.has(c)) return;
       seen.add(c);
-      const r = this.tape.creator(c, now);
-      if (r && r.launches48h <= 5) this.enqueue(c);
-    }
+      this.enqueue(c);
+    };
+    for (const kind of ["dump", "serial", "drained"]) for (const e of this.tape.momentsMatching({ kind, limit: 300 })) take(e.creator);
+    for (const c of this.tape.recentCreators(400)) take(c);
   }
 
-  /** Traces one creator every `everyMs`: whoever is asked about first, then fresh dumpers. Off without an RPC. */
-  start(everyMs: number): void {
+  /**
+   * Traces creators one after another, `gapMs` apart: whoever is asked about first, then the devs in the feed, then
+   * every recent launch's dev. One trace at a time keeps the RPC load bounded by its own answers. Off without an RPC.
+   */
+  start(gapMs: number): void {
     if (!fundersEnabled() || this.timer) return;
-    this.timer = setInterval(() => {
-      if (!this.queue.length && Date.now() - this.refilledAt > 10 * 60_000) this.refill();
+    const tick = async () => {
+      if (this.queue.length < 50 && Date.now() - this.refilledAt > 30_000) this.refill();
       const next = this.queue.shift();
-      if (next) void this.trace(next).catch(() => null);
-    }, everyMs);
+      if (next) await this.trace(next).catch(() => null);
+      this.timer = setTimeout(() => void tick(), next ? gapMs : 2_000);
+      this.timer.unref();
+    };
+    this.timer = setTimeout(() => void tick(), gapMs);
     this.timer.unref();
   }
 

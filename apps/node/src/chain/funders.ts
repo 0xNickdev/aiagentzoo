@@ -42,8 +42,18 @@ interface ParsedTx {
 
 /** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
 export async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<string | null> {
-  const sigs = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 15 }], fetchFn);
-  if (!sigs?.length) return null;
+  // The funding is the wallet's first transfer in, so read back to the very start of its history:
+  // a serial launcher's latest pages are all launches, its funding sits under them.
+  let sigs: Array<{ signature: string }> = [];
+  let before: string | undefined;
+  for (let page = 0; page < 8; page++) {
+    const got = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
+    if (!got?.length) break;
+    sigs = got;
+    before = got[got.length - 1]!.signature;
+    if (got.length < 1000) break;
+  }
+  if (!sigs.length) return null;
   // Oldest first: the funding usually comes just before the first buy.
   for (const { signature } of [...sigs].reverse().slice(0, 6)) {
     const tx = await rpc<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn);

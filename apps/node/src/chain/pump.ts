@@ -1285,6 +1285,21 @@ export class PumpTape {
     return t ? (t.venue ?? "pump.fun") : undefined;
   }
 
+  /** The devs of the newest launches, newest first, each once. */
+  recentCreators(limit: number): string[] {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const mint of this.recent) {
+      const c = this.tokens.get(mint)?.creator;
+      if (c && !seen.has(c)) {
+        seen.add(c);
+        out.push(c);
+        if (out.length >= limit) break;
+      }
+    }
+    return out;
+  }
+
   /** One launch's metadata address, when its create event carried one. */
   metadataOf(mint: string): string | undefined {
     return this.tokens.get(mint)?.uri;
