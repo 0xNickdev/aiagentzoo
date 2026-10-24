@@ -1,5 +1,6 @@
 import { LangRoot } from "../i18n";
 import { StrictMode } from "react";
+import { MotionConfig } from "framer-motion";
 import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import MiniApp from "./MiniApp";
@@ -11,7 +12,9 @@ boot();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <LangRoot>{(l) => <MiniApp key={l} />}</LangRoot>
+    <MotionConfig reducedMotion="user">
+      <LangRoot>{(l) => <MiniApp key={l} />}</LangRoot>
+    </MotionConfig>
     <Analytics />
   </StrictMode>,
 );

@@ -167,3 +167,19 @@ body {
   .roadmap-fog, .roadmap-firefly { animation: none; }
 }
 
+
+/* One keyboard focus ring everywhere: moss, only when the keyboard is used. */
+:focus-visible {
+  outline: 2px solid #a6e3b4;
+  outline-offset: 2px;
+}
+
+/* Reduced motion: CSS animations and transitions stop; framer-motion follows the same setting through MotionConfig. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

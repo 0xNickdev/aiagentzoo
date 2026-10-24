@@ -72,11 +72,11 @@ export default function MiniApp() {
       <header className="zapp-top">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
-          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill tabular-nums shrink-0 whitespace-nowrap px-2.5 py-1 text-[10.5px] text-fg-3" aria-label="Language">
+          <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill tabular-nums shrink-0 whitespace-nowrap px-2.5 py-1 text-[11.5px] text-fg-3" aria-label="Language">
             {lang() === "zh" ? "EN" : "中文"}
           </button>
         </div>
-        <div className="glass-pill tabular-nums flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-[10.5px] text-fg-3">
+        <div className="glass-pill tabular-nums flex min-w-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-[11.5px] text-fg-3">
           <i className="zapp-dot shrink-0" />
           {pulse ? (
             <span className="truncate">
@@ -105,7 +105,7 @@ export default function MiniApp() {
           <button key={t.id} type="button" onClick={() => go(t.id)} className={`zapp-tab ${tab === t.id ? "is-on" : ""}`} aria-current={tab === t.id}>
             {tab === t.id && <motion.span layoutId="tab-glow" className="zapp-tab-glow" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="relative">{t.icon}</span>
-            <span className="relative mt-0.5 text-[10px]">{tt(t.label)}</span>
+            <span className="relative mt-0.5 text-[11px]">{tt(t.label)}</span>
           </button>
         ))}
       </nav>
@@ -179,7 +179,7 @@ function AskTab({ seed }: { seed: Seed | null }) {
     <section>
       {!answer && !dev && !busy && (
         <div className="zapp-intro px-1 pb-5">
-          <p className="tabular-nums text-[10.5px] [&::first-letter]:uppercase text-warn">{tt("ask the beaver")}</p>
+          <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-warn">{tt("ask the beaver")}</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
             {tt("Is it a rug?")}
             <br />
@@ -247,7 +247,7 @@ function AskTab({ seed }: { seed: Seed | null }) {
               >
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${sym(a.symbol)}</span>
-                  <span className="tabular-nums block text-[10px] text-fg-4">
+                  <span className="tabular-nums block text-[11px] text-fg-4">
                     {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: ago(a.at) })}
                   </span>
                 </span>
@@ -304,10 +304,10 @@ function Verdict({ a }: { a: Ask }) {
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="tabular-nums truncate text-[10px] text-fg-4">{a.name || `${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`}</p>
+              <p className="tabular-nums truncate text-[11px] text-fg-4">{a.name || `${a.mint.slice(0, 6)}…${a.mint.slice(-6)}`}</p>
               <p className="font-display truncate text-[22px]">${sym(a.symbol)}</p>
             </div>
-            <span className="tabular-nums shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-fg-4">{Math.round(a.confidence * 100)}% sure</span>
+            <span className="tabular-nums shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-fg-4">{Math.round(a.confidence * 100)}% sure</span>
           </div>
 
           <motion.p
@@ -324,13 +324,13 @@ function Verdict({ a }: { a: Ask }) {
           <div className="mt-5 grid grid-cols-2 gap-2">
             {facts.slice(0, 6).map(([k, v, bad], i) => (
               <motion.div key={k} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }} className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-fg-4">{tt(k)}</p>
+                <p className="text-[11.5px] text-fg-4">{tt(k)}</p>
                 <p className={`tabular-nums mt-0.5 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-fg"}`}>{v}</p>
               </motion.div>
             ))}
           </div>
 
-          <p className="tabular-nums mt-4 text-[10.5px] text-warn">
+          <p className="tabular-nums mt-4 text-[11.5px] text-warn">
             {a.graded
               ? a.graded.hit === null
                 ? tt("Graded · not scored")
@@ -372,7 +372,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
       <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
         <div className="zapp-verdict-glow" style={{ background: `radial-gradient(60% 55% at 15% 20%, rgba(${serial ? "255,110,95" : "239,232,218"},0.24), transparent 70%)` }} />
         <div className="relative">
-          <p className="tabular-nums text-[10px] text-fg-4">dev wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h</p>
+          <p className="tabular-nums text-[11px] text-fg-4">dev wallet · {r.wallet.slice(0, 6)}…{r.wallet.slice(-6)} · last 48h</p>
           <p className="font-display mt-3 text-[40px] leading-none" style={{ color: serial ? TONE.suspicious.color : "#fff" }}>
             {tt(serial ? "Serial rugger" : "No pattern yet")}
           </p>
@@ -383,7 +383,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
               ["Median", r.medianDumpMin === null ? "-" : `${r.medianDumpMin} min`],
             ].map(([k, v]) => (
               <div key={k} className="rounded-2xl bg-black/30 px-3 py-2.5 ring-1 ring-white/[0.06]">
-                <p className="text-[10.5px] text-fg-4">{tt(k)}</p>
+                <p className="text-[11.5px] text-fg-4">{tt(k)}</p>
                 <p className="tabular-nums mt-0.5 text-[16px]">{v}</p>
               </div>
             ))}
@@ -479,7 +479,7 @@ function XRayTab({ seed, onAsk }: { seed: Seed | null; onAsk: (mint: string) => 
     <section>
       {!report && !busy && (
         <div className="zapp-intro px-1 pb-5">
-          <p className="tabular-nums text-[10.5px] [&::first-letter]:uppercase text-warn">x-ray</p>
+          <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-warn">x-ray</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
             {tt("See who you are")}
             <br />
@@ -570,7 +570,7 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
                 <span className="font-display block truncate text-[15px]">${sym(m.symbol)}</span>
                 <span className={`block truncate text-[12px] font-normal ${m.kind === "graduated" ? "text-fg-4" : "text-[#ff8a7e]"}`}>{tChain(m.text)}</span>
               </span>
-              <span className="tabular-nums shrink-0 text-[10.5px] text-fg-4">{tt("x-ray it →")}</span>
+              <span className="tabular-nums shrink-0 text-[11.5px] text-fg-4">{tt("x-ray it →")}</span>
             </button>
           ))}
         </div>
@@ -582,7 +582,7 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
 function XStat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-      <p className="text-[10.5px] leading-tight text-fg-4">{tt(k)}</p>
+      <p className="text-[11.5px] leading-tight text-fg-4">{tt(k)}</p>
       <p className={`tabular-nums mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-fg"}`}>{v}</p>
     </div>
   );
@@ -612,12 +612,12 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="tabular-nums truncate text-[10px] text-fg-4">
+            <p className="tabular-nums truncate text-[11px] text-fg-4">
               {r.name || short(r.mint)} · {tt("{m} min old", { m: f?.ageMin ?? 0 })} · {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}
             </p>
             <p className="font-display truncate text-[22px]">${sym(r.symbol)}</p>
           </div>
-          <button type="button" onClick={() => openWalletMini(r.creator)} className="tabular-nums shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] text-fg-4">
+          <button type="button" onClick={() => openWalletMini(r.creator)} className="tabular-nums shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-fg-4">
             {tt("dev")} {short(r.creator)} →
           </button>
         </div>
@@ -654,7 +654,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         <p className="mt-2 text-center text-[11.5px] font-normal text-fg-4">{watching ?? tt("The bot tells you the moment the dev sells, the pool is drained or it graduates.")}</p>
 
-        <p className="tabular-nums mb-2 mt-6 text-[10.5px] [&::first-letter]:uppercase text-fg-4">
+        <p className="tabular-nums mb-2 mt-6 text-[11.5px] [&::first-letter]:uppercase text-fg-4">
           {tt("The first 5 seconds")}
         </p>
         {r.early.length > 0 ? (
@@ -673,7 +673,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           <XStat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
         </div>
 
-        <p className="tabular-nums mb-2 mt-6 text-[10.5px] [&::first-letter]:uppercase text-fg-4">{tt("The creator")} · <span className="normal-case tracking-normal">{tt("last 48 hours")}</span></p>
+        <p className="tabular-nums mb-2 mt-6 text-[11.5px] [&::first-letter]:uppercase text-fg-4">{tt("The creator")} · <span className="normal-case tracking-normal">{tt("last 48 hours")}</span></p>
         <div className="grid grid-cols-3 gap-2">
           <XStat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
           <XStat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
@@ -681,7 +681,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
           <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
-            <p className="text-[10.5px] text-fg-4">{tt("their other launches · tap to x-ray")}</p>
+            <p className="text-[11.5px] text-fg-4">{tt("their other launches · tap to x-ray")}</p>
             {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 5).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onPick(x.mint); }} className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left text-[13px] active:opacity-70">
                 <span className="truncate text-fg-2">${sym(x.symbol)}</span>
@@ -693,7 +693,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           </div>
         )}
         <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
-          <p className="text-[10.5px] text-fg-4">{tt("Who paid for the creator")}</p>
+          <p className="text-[11.5px] text-fg-4">{tt("Who paid for the creator")}</p>
           {!fund && <p className="mt-1 text-[13px] font-normal text-fg-4">{tt("Not traced yet. It is queued: open this again in a minute.")}</p>}
           {fund && !fund.funder && <p className="mt-1 text-[13px] font-normal text-fg-4">{tt("No funding transfer in the creator's recent history.")}</p>}
           {fund?.funder && (
@@ -740,7 +740,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             {tt("Full map")}
           </button>
         </div>
-        <p className="tabular-nums mt-4 text-center text-[10px] text-fg-4">{tt("Not financial advice. Read from public chain data.")}</p>
+        <p className="tabular-nums mt-4 text-center text-[11px] text-fg-4">{tt("Not financial advice. Read from public chain data.")}</p>
       </div>
     </div>
   );
@@ -783,7 +783,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
 
   return (
     <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
-      <p className="tabular-nums text-[10px] text-fg-4">{tt("wallet")}</p>
+      <p className="tabular-nums text-[11px] text-fg-4">{tt("wallet")}</p>
       <button type="button" onClick={() => openLink(`https://solscan.io/account/${wallet}`)} className="tabular-nums mt-1 block break-all text-left text-[13px] text-fg-2">
         {wallet} ↗
       </button>
@@ -797,7 +797,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
             <XStat k="graduated" v={String(d.graduated)} />
             <XStat k="still alive" v={String(d.builder?.grew ?? 0)} />
           </div>
-          <p className="tabular-nums mb-2 mt-5 text-[10.5px] [&::first-letter]:uppercase text-fg-4">{tt("Its launches")}</p>
+          <p className="tabular-nums mb-2 mt-5 text-[11.5px] [&::first-letter]:uppercase text-fg-4">{tt("Its launches")}</p>
           <div className="glass-card divide-y divide-white/[0.06] rounded-[18px]">
             {d.launches.slice(0, 8).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onToken(x.mint); }} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2.5 text-left active:bg-white/[0.04]">
@@ -812,7 +812,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
       )}
 
       <div className="mt-3 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
-        <p className="text-[10.5px] text-fg-4">{tt("Who paid for this dev")}</p>
+        <p className="text-[11.5px] text-fg-4">{tt("Who paid for this dev")}</p>
         {!p.funding || !p.funding.funder ? (
           <p className="mt-1 text-[13px] font-normal text-fg-4">{tt("No funding transfer in the dev's recent history.")}</p>
         ) : (
@@ -827,7 +827,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
 
       {p.sniper && (
         <>
-          <p className="tabular-nums mb-2 mt-4 text-[10.5px] [&::first-letter]:uppercase text-fg-4">{tt("As a first-second buyer")}</p>
+          <p className="tabular-nums mb-2 mt-4 text-[11.5px] [&::first-letter]:uppercase text-fg-4">{tt("As a first-second buyer")}</p>
           <div className="grid grid-cols-3 gap-2">
             <XStat k="launches sniped" v={String(p.sniper.snipes48h)} bad={p.sniper.snipes48h >= 10} />
             <XStat k="sold out of" v={String(p.sniper.soldOut)} />
@@ -843,7 +843,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
 
       {(p.funded.creators.length > 0 || p.funded.hot) && (
         <>
-          <p className="tabular-nums mb-2 mt-4 text-[10.5px] [&::first-letter]:uppercase text-fg-4">{tt("Devs it paid for")}</p>
+          <p className="tabular-nums mb-2 mt-4 text-[11.5px] [&::first-letter]:uppercase text-fg-4">{tt("Devs it paid for")}</p>
           {p.funded.hot ? (
             <p className="text-[12.5px] font-normal text-fg-4">{tt("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
           ) : (
@@ -898,7 +898,7 @@ function RugsTab() {
                   <span className="font-display block truncate text-[15px]">${sym(e.symbol)}</span>
                   <span className="block text-[12px] font-normal text-[#ff8a7e]">{tChain(e.text)}</span>
                 </span>
-                <span className="tabular-nums shrink-0 text-[10.5px] text-fg-4">{ago(e.at)}</span>
+                <span className="tabular-nums shrink-0 text-[11.5px] text-fg-4">{ago(e.at)}</span>
               </motion.button>
             ))}
           </AnimatePresence>
@@ -952,7 +952,7 @@ function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="font-display truncate text-[17px]">${sym(w.symbol)}</span>
-                    <span className="tabular-nums text-[10.5px] text-fg-4">{w.graduated ? tt("graduated") : tt("{n} buyers", { n: w.buyers })}</span>
+                    <span className="tabular-nums text-[11.5px] text-fg-4">{w.graduated ? tt("graduated") : tt("{n} buyers", { n: w.buyers })}</span>
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-[12px]" style={{ color }}>
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
@@ -974,7 +974,7 @@ function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
 function TabHead({ kicker, title, text }: { kicker: string; title: string; text: string }) {
   return (
     <div className="px-1 pb-4 pt-3">
-      <p className="tabular-nums text-[10.5px] [&::first-letter]:uppercase text-warn">{kicker}</p>
+      <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-warn">{kicker}</p>
       <h2 className="font-display mt-2 text-[28px] leading-[1.05] tracking-tight">{title}</h2>
       <p className="mt-2 text-[13px] font-normal leading-relaxed text-fg-4">{text}</p>
     </div>
@@ -982,7 +982,7 @@ function TabHead({ kicker, title, text }: { kicker: string; title: string; text:
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <p className="tabular-nums mb-2 px-1 text-[10.5px] [&::first-letter]:uppercase text-fg-4">{children}</p>;
+  return <p className="tabular-nums mb-2 px-1 text-[11.5px] [&::first-letter]:uppercase text-fg-4">{children}</p>;
 }
 
 function Empty({ children, image }: { children: ReactNode; image?: string }) {
@@ -1055,7 +1055,7 @@ function Ticker() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
-          className="glass-pill tabular-nums flex max-w-full items-center gap-2 px-3 py-1.5 text-[10.5px]"
+          className="glass-pill tabular-nums flex max-w-full items-center gap-2 px-3 py-1.5 text-[11.5px]"
         >
           <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6e5f] shadow-[0_0_8px_rgba(255,110,95,0.9)]" />
           <span className="truncate text-fg-2">
@@ -1071,7 +1071,7 @@ function Ticker() {
 function VerdictChip({ v }: { v: Ask["verdict"] }) {
   const t = TONE[v];
   return (
-    <span className="tabular-nums shrink-0 rounded-full px-2.5 py-1 text-[10px]" style={{ color: t.color, background: `rgba(${t.glow},0.1)` }}>
+    <span className="tabular-nums shrink-0 rounded-full px-2.5 py-1 text-[11px]" style={{ color: t.color, background: `rgba(${t.glow},0.1)` }}>
       {tt(t.label)}
     </span>
   );

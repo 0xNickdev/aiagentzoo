@@ -115,9 +115,9 @@ export default function LiveStats() {
             hint: s.record?.graded ? tr("all time · {n} calls re-checked", { n: s.record.graded }) : "first score after the next re-check",
           },
           {
-            label: "Warned before they died",
+            label: "Flagged, then went to zero",
             value: s.record?.warnedDead !== undefined ? fmt(s.record.warnedDead) : "-",
-            hint: "called suspicious, then went to zero",
+            hint: "called suspicious first, re-checked the next day",
           },
         ]
       : []),
