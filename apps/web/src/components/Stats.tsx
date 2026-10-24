@@ -182,9 +182,9 @@ export default function Stats() {
             <h3 className="font-display text-xl text-fg">{t("How the verdicts held up")}</h3>
             <span className="tabular-nums text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
           </div>
-          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
             <span>{t("at 5 minutes")}</span>
-            <span className="text-right">{t("tokens")}</span>
+            <span className="hidden text-right sm:block">{t("tokens")}</span>
             <span className="text-right">{t("dead")}</span>
             <span className="text-right">{t("still trading")}</span>
           </div>
@@ -192,13 +192,13 @@ export default function Stats() {
             [t("flagged avoid"), a],
             [t("not flagged"), n],
           ].map(([label, s]) => (
-            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_7.5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
+            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
               <span className="text-fg-2">{label as string}</span>
               {(() => {
                 const v = s ? tally(s as Side) : null;
                 return (
                   <>
-                    <span className="text-right text-fg-3">{v ? num(v.n) : "…"}</span>
+                    <span className="hidden text-right text-fg-3 sm:block">{v ? num(v.n) : "…"}</span>
                     <span className="text-right text-fg-3">{v ? `${num(v.dead)} · ${pctOf(v.dead, v.n)}` : "…"}</span>
                     <span className="text-right text-fg-3">{v ? `${num(v.trading)} · ${pctOf(v.trading, v.n)}` : "…"}</span>
                   </>
