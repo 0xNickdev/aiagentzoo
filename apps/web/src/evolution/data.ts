@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { lang } from "../i18n";
 import { nodeOf } from "../zoo";
 
 export interface Tally {
@@ -125,6 +126,6 @@ export const portrait = (house: string) => `/evolution/${house.toLowerCase()}.we
 export const pct = (n: number | null) => (n === null ? "-" : `${Math.round(n * 100)}%`);
 export const pad = (n: number) => String(n).padStart(2, "0");
 
-/** A night id plus some days, as a short date: "Oct 13". */
+/** A night id plus some days, as a short date: "Oct 13" (or "10月13日" in Chinese). */
 export const dayOf = (night: string, plus = 0) =>
-  new Date(Date.parse(`${night}T00:00:00Z`) + plus * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  new Date(Date.parse(`${night}T00:00:00Z`) + plus * 86_400_000).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", timeZone: "UTC" });

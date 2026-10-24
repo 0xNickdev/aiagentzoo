@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { t } from "../i18n";
 import { type Creature, portrait } from "./data";
 
 const ROW = 64;
@@ -75,7 +76,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
 
   return (
     <div ref={box} className="tree-scroll overflow-x-auto pb-4">
-      <svg width={Math.max(width, Math.min(avail, 640))} height={svgHeight} className="block" role="img" aria-label="Family tree of the nursery">
+      <svg width={Math.max(width, Math.min(avail, 640))} height={svgHeight} className="block" role="img" aria-label={t("Family tree of the nursery")}>
         <defs>
           <clipPath id="node-clip">
             <circle cx={NODE / 2} cy={NODE / 2} r={NODE / 2} />
@@ -89,8 +90,8 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
         {Array.from({ length: Math.max(...nodes.map((n) => n.c.generation)) + 1 }, (_, g) => (
           <g key={g}>
             <line x1={PAD_X + g * COL} x2={PAD_X + g * COL} y1={14} y2={svgHeight - 8} className="stroke-white/[0.05]" strokeDasharray="2 6" />
-            <text x={PAD_X + g * COL} y={12} textAnchor="middle" className="fill-white/30 font-mono text-[11px] tracking-[0.12em]">
-              {g === 0 ? "FOUNDERS" : `GEN ${g}`}
+            <text x={PAD_X + g * COL} y={12} textAnchor="middle" className="fill-fg-4 text-[11px]">
+              {g === 0 ? t("Founders") : t("Gen {g}", { g })}
             </text>
           </g>
         ))}
@@ -111,14 +112,16 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
               );
             })}
             <circle cx={ghost.x} cy={ghost.y} r={NODE / 2 + 3} className="ghost-node fill-[#030504] stroke-white/30" strokeDasharray="3 4" />
-            <text x={ghost.x} y={ghost.y + 5} textAnchor="middle" className="fill-white/50 font-mono text-[14px]">
+            <text x={ghost.x} y={ghost.y + 5} textAnchor="middle" className="fill-fg-3 text-[14px]">
               ?
             </text>
-            <text x={ghost.x} y={ghost.y + NODE / 2 + 17} textAnchor="middle" className="fill-white/75 font-mono text-[11.5px] tracking-[0.1em]">
-              {next!.on.toUpperCase()} · NEXT BIRTH
+            <text x={ghost.x} y={ghost.y + NODE / 2 + 17} textAnchor="middle" className="fill-fg-3 text-[11.5px]">
+              {t("{d} · next birth", { d: next!.on })}
             </text>
-            <text x={ghost.x} y={ghost.y + NODE / 2 + 31} textAnchor="middle" className="fill-white/40 font-mono text-[11px]">
-              {ghost.from.length === 2 ? `if it were today: ${ghost.from[0]!.c.name} × ${ghost.from[1]!.c.name}` : "parents: the two best after tonight's grades"}
+            <text x={ghost.x} y={ghost.y + NODE / 2 + 31} textAnchor="middle" className="fill-fg-4 text-[11px]">
+              {ghost.from.length === 2
+                ? t("if it were today: {a} × {b}", { a: ghost.from[0]!.c.name, b: ghost.from[1]!.c.name })
+                : t("parents: the two best after tonight's grades")}
             </text>
           </g>
         )}
@@ -152,7 +155,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
               onClick={() => onOpen(c.id)}
               role="button"
               tabIndex={0}
-              aria-label={`${c.name}${dead ? ", fallen" : ""}`}
+              aria-label={dead ? t("{name}, fallen", { name: c.name }) : c.name}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(c.id)}
             >
               <circle cx={NODE / 2} cy={NODE / 2} r={NODE / 2 + 3} className={dead ? "fill-[#030504] stroke-white/10" : "fill-[#030504] stroke-white/25"} />
@@ -165,7 +168,7 @@ export default function Tree({ creatures, onOpen, next }: { creatures: Creature[
                 opacity={dead ? 0.35 : 1}
               />
               {dead && <line x1={8} y1={NODE - 8} x2={NODE - 8} y2={8} className="stroke-white/40" strokeWidth={1} />}
-              <text x={NODE / 2} y={NODE + 15} textAnchor="middle" className={`font-mono text-[11px] ${dead ? "fill-white/25" : "fill-white/70"}`}>
+              <text x={NODE / 2} y={NODE + 15} textAnchor="middle" className={`text-[11px] ${dead ? "fill-[#5c635f]" : "fill-fg-3"}`}>
                 {c.name}
               </text>
             </g>
