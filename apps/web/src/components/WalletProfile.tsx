@@ -101,6 +101,7 @@ function lead(p: Profile): { tag: string; title: string; sub?: string; tone: Ton
     return { tag: t("Sniper"), title: t("{n} launches sniped in two days.", { n: p.sniper.snipes48h }), sub: t("Sold out of {o}, usually {x} after buying.", { o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), tone: "bad" };
   if (d && d.graduated >= 1 && d.dumped === 0) return { tag: t("Dev"), title: t("{g} launches graduated.", { g: d.graduated }), sub: t("No dump from this dev in two days."), tone: "plain" };
   if (d) return { tag: t("Dev"), title: t("{n} launches in two days. {d} dumped.", { n: d.launches48h, d: d.dumped }), tone: d.dumped >= 2 ? "bad" : "plain" };
+  if (p.funded.hot && !p.sniper?.snipes48h) return { tag: t("Exchange or router"), title: t("Sends money to everyone."), sub: t("Being paid from here ties no one together."), tone: "plain" };
   return { tag: t("First-second buyer"), title: t("In the first seconds of {n} launches.", { n: p.sniper?.snipes48h ?? 0 }), sub: t("Over the last two days."), tone: "plain" };
 }
 
@@ -108,28 +109,53 @@ function lead(p: Profile): { tag: string; title: string; sub?: string; tone: Ton
 export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: string; onToken: (mint: string) => void; onWallet: (w: string) => void }) {
   const [p, setP] = useState<Profile | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by "Try again" to read the wallet once more after a dropped request.
+  const [attempt, setAttempt] = useState(0);
+  const [dropped, setDropped] = useState(false);
   useEffect(() => {
     setP(undefined);
     setError(null);
+    setDropped(false);
     let live = true;
     fetch(`${NORTH}/v1/wallet/${wallet}`)
       .then(async (r) => {
-        const b = (await r.json()) as Profile & { error?: string };
+        const b = (await r.json().catch(() => null)) as (Profile & { error?: string }) | null;
         if (!live) return;
-        if (r.ok) setP(b);
+        if (r.ok && !b?.funded) throw new Error("bad body");
+        if (r.ok && b) setP(b);
         else {
           setP(null);
-          setError(r.status === 429 ? t("Too many lookups this minute. Try again in a minute.") : t("This wallet did not launch, snipe or fund a launch the stream saw in the last two days."));
+          setDropped(r.status === 429 || r.status >= 500);
+          setError(r.status === 429 ? t("Too many lookups this minute. Try again in a minute.") : r.status >= 500 ? t("The chain reader did not answer. Try again in a minute.") : t("This wallet did not launch, snipe or fund a launch the stream saw in the last two days."));
         }
       })
-      .catch(() => live && (setP(null), setError(t("The chain reader did not answer. Try again in a minute."))));
+      .catch(() => live && (setP(null), setDropped(true), setError(t("The chain reader did not answer. Try again in a minute."))));
     return () => {
       live = false;
     };
-  }, [wallet]);
+  }, [wallet, attempt]);
 
   if (p === undefined) return <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8"><div className="bg-night-surface border border-white/[0.08] h-64 animate-pulse rounded-2xl" /></div>;
-  if (!p) return <p className="mx-auto max-w-7xl px-5 pb-10 text-center text-[13px] text-[#ff8a7e] sm:px-8">{error}</p>;
+  if (!p)
+    return (
+      <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8">
+        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-8 text-center sm:p-10">
+          <p className="tabular-nums text-[12.5px] text-fg-3">{t("wallet")}</p>
+          <p className="tabular-nums mt-2 break-all text-[15px] text-fg-2">{wallet}</p>
+          <p className="mx-auto mt-6 max-w-xl text-[15px] text-[#ff8a7e]">{error}</p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[13px]">
+            {dropped && (
+              <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-full bg-white px-6 py-2.5 font-medium text-black transition hover:bg-white/90">
+                {t("Try again")}
+              </button>
+            )}
+            <a href={`https://solscan.io/account/${wallet}`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-6 py-2.5 text-fg-2 transition hover:text-white">
+              Solscan ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    );
 
   const l = lead(p);
   const roles = [p.dev && t("dev"), p.sniper && t("first-second buyer"), p.funded.creators.length > 0 && !p.funded.hot && t("pays for devs"), p.funded.hot && t("exchange or router")].filter(Boolean) as string[];

@@ -925,6 +925,8 @@ export default function XRay() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The last mint that failed on a dropped request, so the error line can offer to try it again.
+  const [retry, setRetry] = useState<string | null>(null);
   const [report, setReport] = useState<XRayReport | null>(null);
   const [wallet, setWallet] = useState<string | null>(null);
 
@@ -945,11 +947,29 @@ export default function XRay() {
   const run = async (mint: string) => {
     setBusy(true);
     setError(null);
+    setRetry(null);
     setWallet(null);
     try {
-      const r = await fetch(`${NORTH}/v1/xray/${mint}`);
-      const body = (await r.json()) as XRayReport & { error?: string };
-      if (r.status === 429) throw new Error(t("Ten x-rays a minute on the free tier. Try again in a minute."));
+      const r = await fetch(`${NORTH}/v1/xray/${mint}`).catch(() => null);
+      if (!r) {
+        // The node did not answer: keep a report already on screen, say so plainly and offer to try again.
+        setRetry(mint);
+        setError(t("The chain reader did not answer. Try again in a minute."));
+        return;
+      }
+      const body = (await r.json().catch(() => ({}))) as XRayReport & { error?: string };
+      if (r.ok && !body.check) {
+        // A 200 that is not a report (a proxy page, a cut-off answer): the same as no answer.
+        setRetry(mint);
+        setError(t("The chain reader did not answer. Try again in a minute."));
+        return;
+      }
+      if (r.status === 429 || r.status >= 500) {
+        // Rate limit or a node hiccup: the report on screen stays, the line above it says why.
+        setRetry(mint);
+        setError(r.status === 429 ? t("Ten x-rays a minute on the free tier. Try again in a minute.") : t("The chain reader did not answer. Try again in a minute."));
+        return;
+      }
       // Not a token the stream saw: perhaps a wallet, a dev, a sniper or a funder.
       if (r.status === 404) {
         const w = await fetch(`${NORTH}/v1/wallet/${mint}`).then((x) => x.status).catch(() => 0);
@@ -1027,7 +1047,16 @@ export default function XRay() {
               {busy ? t("Reading the chain…") : t("X-ray it")}
             </button>
           </form>
-          {error && <p className="mt-4 text-center text-[13px] text-[#ff8a7e]">{error}</p>}
+          {error && (
+            <p className="mt-4 text-center text-[13px] text-[#ff8a7e]">
+              {error}
+              {retry && (
+                <button type="button" onClick={() => void run(retry)} disabled={busy} className="ml-3 font-medium text-white underline decoration-white/30 underline-offset-4 hover:decoration-white disabled:opacity-60">
+                  {t("Try again")}
+                </button>
+              )}
+            </p>
+          )}
         </Reveal>
       </Section>
       <AnimatePresence mode="wait">{report && <Report key={report.mint} r={report} onPick={(m) => { setInput(m); window.scrollTo({ top: 0, behavior: "smooth" }); void run(m); }} />}
