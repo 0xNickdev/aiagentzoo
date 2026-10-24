@@ -309,7 +309,7 @@ export interface XRayReply {
     facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
   early: Array<{ bought: number }>;
-  funding: { funder: string | null; funderIsHot: boolean; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
+  funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
 /** The x-ray as a Telegram message: the verdict with every reason, then the first seconds, the money, the churn. */
@@ -341,6 +341,7 @@ export function xrayMessage(x: XRayReply): string {
   const fu = x.funding;
   if (!fu) lines.push(T("<b>Who paid for the creator:</b> not traced yet, queued"));
   else if (!fu.funder) lines.push(T("<b>Who paid for the creator:</b> no funding transfer found"));
+  else if (fu.funderLabel) lines.push(T("<b>Who paid for the creator:</b> a withdrawal from {x}", { x: fu.funderLabel }));
   else if (fu.funderIsHot) lines.push(T("<b>Who paid for the creator:</b> an exchange, ties no one together"));
   else lines.push(T("<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h", { w: `${fu.funder.slice(0, 4)}…${fu.funder.slice(-4)}`, n: fu.siblings.length, d: fu.siblingDumped48h }));
   if (c.notes.length) lines.push("", `<i>${esc(c.notes.map(TC).join(" · "))}</i>`);

@@ -1,4 +1,5 @@
 import { funderOf, fundersEnabled, rpc } from "./funders.ts";
+import { exchangeOf } from "./exchanges.ts";
 import { type PumpTape, tape } from "./pump.ts";
 
 /**
@@ -14,6 +15,8 @@ export interface LineageView {
   funder: string | null;
   /** The funder moves a thousand transactions a day or more: an exchange or a router, so no ring is read from it. */
   funderIsHot: boolean;
+  /** The exchange the funder is a known hot wallet of ("Binance"), or null. */
+  funderLabel: string | null;
   /** Other creators the same funder paid for, as far as the zoo has traced. */
   siblings: Array<{ wallet: string; launches48h: number; dumped: number }>;
   /** Their launches and dumps over the last two days, from the tape. */
@@ -65,7 +68,7 @@ export class Lineage {
     if (running) return running;
     const job = (async () => {
       const funder = await funderOf(creator, this.fetchFn).catch(() => null);
-      if (funder) await this.isHot(funder, now);
+      if (funder && !exchangeOf(funder)) await this.isHot(funder, now);
       this.remember(creator, funder, now);
       return funder;
     })().finally(() => this.busy.delete(creator));
@@ -97,7 +100,8 @@ export class Lineage {
   view(creator: string, now = Date.now()): LineageView | null {
     const known = this.creators.get(creator);
     if (!known) return null;
-    const funderIsHot = known.funder ? (this.hot.get(known.funder)?.hot ?? false) : false;
+    const funderLabel = exchangeOf(known.funder);
+    const funderIsHot = known.funder ? funderLabel != null || (this.hot.get(known.funder)?.hot ?? false) : false;
     const siblings = known.funder && !funderIsHot
       ? [...(this.byFunder.get(known.funder) ?? [])]
           .filter((w) => w !== creator)
@@ -111,6 +115,7 @@ export class Lineage {
       creator,
       funder: known.funder,
       funderIsHot,
+      funderLabel,
       siblings: siblings.slice(0, 20),
       siblingLaunches48h: siblings.reduce((n, s) => n + s.launches48h, 0),
       siblingDumped48h: siblings.reduce((n, s) => n + s.dumped, 0),

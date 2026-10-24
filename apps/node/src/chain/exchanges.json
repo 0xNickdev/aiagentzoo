@@ -1,0 +1,1590 @@
+{
+ "generatedAt": "2026-10-24T07:57:55+00:00",
+ "addresses": [
+  {
+   "address": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+   "exchange": "Binance",
+   "label": "Binance 2",
+   "sources": [
+    "https://solscan.io/account/5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/menantonio83-hue/tnt-house/blob/main/lib/known-cex-funders.ts",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/nullxnothing/daemon/blob/main/electron/services/forensics/address.ts",
+    "https://github.com/christianfm10/axiomfilter/blob/main/config.py"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+   "exchange": "Binance",
+   "label": "Binance 3",
+   "sources": [
+    "https://solscan.io/account/9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2ojv9BAiHUrvsm9gxDe7fJSzbNZSJcxZvf8dqmWGHG8S",
+   "exchange": "Binance",
+   "label": "Binance 1",
+   "sources": [
+    "https://solscan.io/account/2ojv9BAiHUrvsm9gxDe7fJSzbNZSJcxZvf8dqmWGHG8S",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
+   "exchange": "Binance",
+   "label": "Binance 12",
+   "sources": [
+    "https://solscan.io/account/HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3gd3dqgtJ4jWfBfLYTX67DALFetjc5iS72sCgRhCkW2u",
+   "exchange": "Binance",
+   "label": "Binance 10",
+   "sources": [
+    "https://solscan.io/account/3gd3dqgtJ4jWfBfLYTX67DALFetjc5iS72sCgRhCkW2u",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6QJzieMYfp7yr3EdrePaQoG3Ghxs2wM98xSLRu8Xh56U",
+   "exchange": "Binance",
+   "label": "Binance 11",
+   "sources": [
+    "https://solscan.io/account/6QJzieMYfp7yr3EdrePaQoG3Ghxs2wM98xSLRu8Xh56U",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3yFwqXBfZY4jBVUafQ1YEXw189y2dN3V5KQq9uzBDy1E",
+   "exchange": "Binance",
+   "label": "Binance 8",
+   "sources": [
+    "https://solscan.io/account/3yFwqXBfZY4jBVUafQ1YEXw189y2dN3V5KQq9uzBDy1E",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "53unSgGWqEWANcPYRF35B2Bgf8BkszUtcccKiXwGGLyr",
+   "exchange": "Binance.US",
+   "label": "Binance.us Hot Wallet",
+   "sources": [
+    "https://solscan.io/account/53unSgGWqEWANcPYRF35B2Bgf8BkszUtcccKiXwGGLyr",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7mhcgF1DVsj5iv4CxZDgp51H6MBBwqamsH1KnqXhSRc5",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (7mhcg)",
+   "sources": [
+    "https://solscan.io/account/7mhcgF1DVsj5iv4CxZDgp51H6MBBwqamsH1KnqXhSRc5",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6LY1JzAFVZsP2a2xKrtU6znQMQ5h4i7tocWdgrkZzkzF",
+   "exchange": "Kraken",
+   "label": "Kraken Hot Wallet (6LY1J)",
+   "sources": [
+    "https://solscan.io/account/6LY1JzAFVZsP2a2xKrtU6znQMQ5h4i7tocWdgrkZzkzF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "u6PJ8DtQuPFnfmwHbGFULQ4u4EgjDiyYKjVEsynXq2w",
+   "exchange": "Gate.io",
+   "label": "Gate Hot Wallet (u6PJ8)",
+   "sources": [
+    "https://solscan.io/account/u6PJ8DtQuPFnfmwHbGFULQ4u4EgjDiyYKjVEsynXq2w",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "HiRpdAZifEsZGdzQ5Xo5wcnaH3D2Jj9SoNsUzcYNK78J",
+   "exchange": "Gate.io",
+   "label": "Gate 2",
+   "sources": [
+    "https://solscan.io/account/HiRpdAZifEsZGdzQ5Xo5wcnaH3D2Jj9SoNsUzcYNK78J",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "4GC3a1RkRXx5shwGP8pTY6cxXgSWkbfc66vM53a6qSKj",
+   "exchange": "CoinSpot",
+   "label": "CoinSpot Hot Wallet (4GC3a)",
+   "sources": [
+    "https://solscan.io/account/4GC3a1RkRXx5shwGP8pTY6cxXgSWkbfc66vM53a6qSKj",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CSEncqtqbmNRjve42sNnbs5cCSmrjUNsAEwc17XY2RCs",
+   "exchange": "CoinSpot",
+   "label": "CoinSpot Hot Wallet (CSEnc)",
+   "sources": [
+    "https://solscan.io/account/CSEncqtqbmNRjve42sNnbs5cCSmrjUNsAEwc17XY2RCs",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "C68a6RCGLiPskbPYtAcsCjhG8tfTWYcoB4JjCrXFdqyo",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (C68a6)",
+   "sources": [
+    "https://solscan.io/account/C68a6RCGLiPskbPYtAcsCjhG8tfTWYcoB4JjCrXFdqyo",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "4xLpwxgYuPwPvtQjE94RLS4WZ4aD8NJYYKr2AJk99Qdg",
+   "exchange": "Robinhood",
+   "label": "Robinhood Hot Wallet (4xLpw)",
+   "sources": [
+    "https://solscan.io/account/4xLpwxgYuPwPvtQjE94RLS4WZ4aD8NJYYKr2AJk99Qdg",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8Mm46CsqxiyAputDUp2cXHg41HE3BfynTeMBDwzrMZQH",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/8Mm46CsqxiyAputDUp2cXHg41HE3BfynTeMBDwzrMZQH",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "22Wnk8PwyWZV7BfkZGJEKT9jGGdtvu7xY6EXeRh7zkBa",
+   "exchange": "Crypto.com",
+   "label": "Crypto.com Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/22Wnk8PwyWZV7BfkZGJEKT9jGGdtvu7xY6EXeRh7zkBa",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2",
+   "exchange": "Bybit",
+   "label": "Bybit Hot Wallet (AC5RD)",
+   "sources": [
+    "https://solscan.io/account/AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/nullxnothing/daemon/blob/main/electron/services/forensics/address.ts"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6FEVkH17P9y8Q9aCkDdPcMDjvj7SVxrTETaYEm8f51Jy",
+   "exchange": "Crypto.com",
+   "label": "Crypto.com Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/6FEVkH17P9y8Q9aCkDdPcMDjvj7SVxrTETaYEm8f51Jy",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8wM44Ryv9DFCSfkgUnPEPgnsc53arT4cnmXL6LnnC4UW",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (8wM44)",
+   "sources": [
+    "https://solscan.io/account/8wM44Ryv9DFCSfkgUnPEPgnsc53arT4cnmXL6LnnC4UW",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "DMe3ddj7awSR3LFC64rjmCPexsrSv33QAxFoJux4vGH3",
+   "exchange": "SwissBorg",
+   "label": "SwissBorg Hot Wallet (DMe3d)",
+   "sources": [
+    "https://solscan.io/account/DMe3ddj7awSR3LFC64rjmCPexsrSv33QAxFoJux4vGH3",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5PAhQiYdLBd6SVdjzBQDxUAEFyDdF5ExNPQfcscnPRj5",
+   "exchange": "MEXC",
+   "label": "MEXC 2",
+   "sources": [
+    "https://solscan.io/account/5PAhQiYdLBd6SVdjzBQDxUAEFyDdF5ExNPQfcscnPRj5",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2qo8jvuc49pFmTjmUHLiARSV6ppPTaE7gw27ZJ6DnNZy",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 12",
+   "sources": [
+    "https://solscan.io/account/2qo8jvuc49pFmTjmUHLiARSV6ppPTaE7gw27ZJ6DnNZy",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8N2ssXZGJbvVLszanERuCJpLZd2nuADgpZwLkDDxwNnS",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (8N2ss)",
+   "sources": [
+    "https://solscan.io/account/8N2ssXZGJbvVLszanERuCJpLZd2nuADgpZwLkDDxwNnS",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5rhms6jZQaXnQc6wbicnrxDTkKqKi4iwfWW3612r5rHb",
+   "exchange": "Uphold",
+   "label": "Uphold Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/5rhms6jZQaXnQc6wbicnrxDTkKqKi4iwfWW3612r5rHb",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8QCVZ7KL65pBhUxbvfwbyyg4ronxNAEXbDrGLYLrRNn5",
+   "exchange": "Uphold",
+   "label": "Uphold Hot Wallet 5",
+   "sources": [
+    "https://solscan.io/account/8QCVZ7KL65pBhUxbvfwbyyg4ronxNAEXbDrGLYLrRNn5",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Bc5bth4Mn2n8DX1etZwvnq3uDEGg479s2D24TCEsnXHf",
+   "exchange": "Bullish",
+   "label": "Bullish.com Hot Wallet (Bc5bt)",
+   "sources": [
+    "https://solscan.io/account/Bc5bth4Mn2n8DX1etZwvnq3uDEGg479s2D24TCEsnXHf",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "81w96XvKAZZFmmuzaohSQUyxtGnAPJmkjwoBFBmtytUj",
+   "exchange": "Bullish",
+   "label": "Bullish.com Hot Wallet (81w96)",
+   "sources": [
+    "https://solscan.io/account/81w96XvKAZZFmmuzaohSQUyxtGnAPJmkjwoBFBmtytUj",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Gem2VAypSg7Ai7vjDKPTtqFahpoQWkfgVkyzx3rPoTka",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 14",
+   "sources": [
+    "https://solscan.io/account/Gem2VAypSg7Ai7vjDKPTtqFahpoQWkfgVkyzx3rPoTka",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7ReR6syi6gr7qUrKCL1FB9VFzGhVgHwLJ8wtfNtH9Mv4",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 9",
+   "sources": [
+    "https://solscan.io/account/7ReR6syi6gr7qUrKCL1FB9VFzGhVgHwLJ8wtfNtH9Mv4",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CK8i4zFXkDE2KWfyg7g9S748r6mwxajbcKcyGhQMR3qQ",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 13",
+   "sources": [
+    "https://solscan.io/account/CK8i4zFXkDE2KWfyg7g9S748r6mwxajbcKcyGhQMR3qQ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 10",
+   "sources": [
+    "https://solscan.io/account/iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/christianfm10/axiomfilter/blob/main/config.py"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FxteHmLwG9nk1eL4pjNve3Eub2goGkkz6g6TbvdmW46a",
+   "exchange": "Bitfinex",
+   "label": "Bitfinex Hot Wallet (FxteH)",
+   "sources": [
+    "https://solscan.io/account/FxteHmLwG9nk1eL4pjNve3Eub2goGkkz6g6TbvdmW46a",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "ASTyfSima4LLAdDgoFGkgqoKowG1LZFDr9fAQrg7iaJZ",
+   "exchange": "MEXC",
+   "label": "MEXC",
+   "sources": [
+    "https://solscan.io/account/ASTyfSima4LLAdDgoFGkgqoKowG1LZFDr9fAQrg7iaJZ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/christianfm10/axiomfilter/blob/main/config.py"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5LZkATrLwHYCQj2YuVbjjgsDZzBk6YfL4pFQRJmtboT2",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 15",
+   "sources": [
+    "https://solscan.io/account/5LZkATrLwHYCQj2YuVbjjgsDZzBk6YfL4pFQRJmtboT2",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8m5Aj17QvyLXuS747LEWMhoQ7gWrSNXia2ZfpBK4C5za",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (8m5Aj)",
+   "sources": [
+    "https://solscan.io/account/8m5Aj17QvyLXuS747LEWMhoQ7gWrSNXia2ZfpBK4C5za",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GD3tr9DR8ZnSy2pQ22RwzSR4vKY48SxHLdgCymXQ6W5i",
+   "exchange": "OKX",
+   "label": "OKX",
+   "sources": [
+    "https://solscan.io/account/GD3tr9DR8ZnSy2pQ22RwzSR4vKY48SxHLdgCymXQ6W5i",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "ADqZYsW9SVZ6bCSGDqfBiPkfaZuQKGg79MA357otX8Ud",
+   "exchange": "Crypto.com",
+   "label": "Crypto.com Hot Wallet 5",
+   "sources": [
+    "https://solscan.io/account/ADqZYsW9SVZ6bCSGDqfBiPkfaZuQKGg79MA357otX8Ud",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "A77HErqtfN1hLLpvZ9pCtu66FEtM8BveoaKbbMoZ4RiR",
+   "exchange": "Bitget",
+   "label": "Bitget Exchange",
+   "sources": [
+    "https://solscan.io/account/A77HErqtfN1hLLpvZ9pCtu66FEtM8BveoaKbbMoZ4RiR",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5PLU3MB93miiNvd1dcY6VkWSzjeGBQpssqbbBJDALrkm",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (5PLU3)",
+   "sources": [
+    "https://solscan.io/account/5PLU3MB93miiNvd1dcY6VkWSzjeGBQpssqbbBJDALrkm",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "DwdrYTtTWHfnfJBiN2RH6EgPbquDQLjZTfTwpykPEq1g",
+   "exchange": "Robinhood",
+   "label": "Robinhood Hot Wallet (DwdrY)",
+   "sources": [
+    "https://solscan.io/account/DwdrYTtTWHfnfJBiN2RH6EgPbquDQLjZTfTwpykPEq1g",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "AobVSwdW9BbpMdJvTqeCN4hPAmh4rHm7vwLnQ5ATSyrS",
+   "exchange": "Crypto.com",
+   "label": "Crypto.com Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/AobVSwdW9BbpMdJvTqeCN4hPAmh4rHm7vwLnQ5ATSyrS",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BmFdpraQhkiDQE6SnfG5omcA1VwzqfXrwtNYBwWTymy6",
+   "exchange": "KuCoin",
+   "label": "KuCoin Hot Wallet (BmFdp)",
+   "sources": [
+    "https://solscan.io/account/BmFdpraQhkiDQE6SnfG5omcA1VwzqfXrwtNYBwWTymy6",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/christianfm10/axiomfilter/blob/main/config.py"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9D8xSHWqF9NJWqCtn3rNxYEox63aCbWxYzTMfMur7Cc9",
+   "exchange": "Bitstamp",
+   "label": "Bitstamp Hot Wallet (9D8xS)",
+   "sources": [
+    "https://solscan.io/account/9D8xSHWqF9NJWqCtn3rNxYEox63aCbWxYzTMfMur7Cc9",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "is6MTRHEgyFLNTfYcuV4QBWLjrZBfmhVNYR6ccgr8KV",
+   "exchange": "OKX",
+   "label": "OKX: Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/is6MTRHEgyFLNTfYcuV4QBWLjrZBfmhVNYR6ccgr8KV",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm",
+   "exchange": "Coinbase",
+   "label": "Coinbase 2",
+   "sources": [
+    "https://solscan.io/account/2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "51PZFsSVorGDsWLopZvsqZ4zT1cHNzhfsL9KaJtBqZk1",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (51PZF)",
+   "sources": [
+    "https://solscan.io/account/51PZFsSVorGDsWLopZvsqZ4zT1cHNzhfsL9KaJtBqZk1",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "4raqd4tCEnm2yGeUocVqPgN2MPB1W6A3EZfC8LoMChvf",
+   "exchange": "Bybit",
+   "label": "Bybit Hot Wallet (4raqd)",
+   "sources": [
+    "https://solscan.io/account/4raqd4tCEnm2yGeUocVqPgN2MPB1W6A3EZfC8LoMChvf",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "27b4PRN7K37rpTywq65t29rjuNfQkYpxZUjkbtHc5VvZ",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (27b4P)",
+   "sources": [
+    "https://solscan.io/account/27b4PRN7K37rpTywq65t29rjuNfQkYpxZUjkbtHc5VvZ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3pjwKq9yuzpVYfD4h5jMZLLfV8oSd8YiwpoAaB5oZS3H",
+   "exchange": "Ourbit",
+   "label": "Ourbit: Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/3pjwKq9yuzpVYfD4h5jMZLLfV8oSd8YiwpoAaB5oZS3H",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7UhjbynicBP8rqcobwsAJDfRMjwgHSgdxcYNJmLwxfms",
+   "exchange": "Ourbit",
+   "label": "Ourbit: Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/7UhjbynicBP8rqcobwsAJDfRMjwgHSgdxcYNJmLwxfms",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "EMXJqHznGSnSzeMyigBGQNEFw4EeaNDbj1UwaFTpp3sg",
+   "exchange": "Robinhood",
+   "label": "Robinhood Hot Wallet (EMXJq)",
+   "sources": [
+    "https://solscan.io/account/EMXJqHznGSnSzeMyigBGQNEFw4EeaNDbj1UwaFTpp3sg",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7cAui6ADtxLnpRr2wYvwJWTkzwgmVF2LYKnjKTLx4xR8",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 1",
+   "sources": [
+    "https://solscan.io/account/7cAui6ADtxLnpRr2wYvwJWTkzwgmVF2LYKnjKTLx4xR8",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "555oNTKdRECgyLn8fBvySoN6hXMCszFq1Y4oea9p3ZFB",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (555oN)",
+   "sources": [
+    "https://solscan.io/account/555oNTKdRECgyLn8fBvySoN6hXMCszFq1Y4oea9p3ZFB",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2UL8hbNaoErAYNePqgQYPP9yDCDRZGWbzKW4krLqkhNL",
+   "exchange": "Bitvavo",
+   "label": "Bitvavo Hot Wallet (2UL8h)",
+   "sources": [
+    "https://solscan.io/account/2UL8hbNaoErAYNePqgQYPP9yDCDRZGWbzKW4krLqkhNL",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "32WMXy2CjmgweedFaUuNVHj6yM3DyVWH6eLQ4g2PHzkw",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (32WMX)",
+   "sources": [
+    "https://solscan.io/account/32WMXy2CjmgweedFaUuNVHj6yM3DyVWH6eLQ4g2PHzkw",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Cyog5cFHAqy7xtQTLM92L8zmdSf5iJv6J1e1Dc2VVquu",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (Cyog5)",
+   "sources": [
+    "https://solscan.io/account/Cyog5cFHAqy7xtQTLM92L8zmdSf5iJv6J1e1Dc2VVquu",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "i9XvhQqBCTQapqaFKPDuCbtPYMCwELmX8VTCsDhRG7d",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 8",
+   "sources": [
+    "https://solscan.io/account/i9XvhQqBCTQapqaFKPDuCbtPYMCwELmX8VTCsDhRG7d",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "43DbAvKxhXh1oSxkJSqGosNw3HpBnmsWiak6tB5wpecN",
+   "exchange": "Backpack",
+   "label": "Backpack Exchange",
+   "sources": [
+    "https://solscan.io/account/43DbAvKxhXh1oSxkJSqGosNw3HpBnmsWiak6tB5wpecN",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5z7gxL5u4jCW9D6acu28LEw4RKTiBSG1EmXbtCX7efg2",
+   "exchange": "Revolut",
+   "label": "Revolut Hot Wallet (5z7gx)",
+   "sources": [
+    "https://solscan.io/account/5z7gxL5u4jCW9D6acu28LEw4RKTiBSG1EmXbtCX7efg2",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Biw4eeaiYYYq6xSqEd7GzdwsrrndxA8mqdxfAtG3PTUU",
+   "exchange": "Revolut",
+   "label": "Revolut Hot Wallet (Biw4e)",
+   "sources": [
+    "https://solscan.io/account/Biw4eeaiYYYq6xSqEd7GzdwsrrndxA8mqdxfAtG3PTUU",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8TWNcXvh9BXKdgNdRKGAfKzGUYsoVDMKUuAdbMYxCJEA",
+   "exchange": "Coinone",
+   "label": "Coinone Hot Wallet (8TWNc)",
+   "sources": [
+    "https://solscan.io/account/8TWNcXvh9BXKdgNdRKGAfKzGUYsoVDMKUuAdbMYxCJEA",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3vxheE5C46XzK4XftziRhwAf8QAfipD7HXXWj25mgkom",
+   "exchange": "Coinbase",
+   "label": "Coinbase Prime: Hot Wallet (3vxhe)",
+   "sources": [
+    "https://solscan.io/account/3vxheE5C46XzK4XftziRhwAf8QAfipD7HXXWj25mgkom",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GCRJD52pGwcCSs4oswYxTBCPatxY1P6WpxCC9R9zty6r",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet (GCRJD)",
+   "sources": [
+    "https://solscan.io/account/GCRJD52pGwcCSs4oswYxTBCPatxY1P6WpxCC9R9zty6r",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Cmcot2ren9ZrZuMQCUUhZAzmWXyZLVuwm8JeZQuxfmrF",
+   "exchange": "Korbit",
+   "label": "Korbit Hot Wallet (Cmcot)",
+   "sources": [
+    "https://solscan.io/account/Cmcot2ren9ZrZuMQCUUhZAzmWXyZLVuwm8JeZQuxfmrF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "67gLX2qjrWAedGGy9D8EwMKvTGZEeMrynJjeneQaDe3c",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (67gLX)",
+   "sources": [
+    "https://solscan.io/account/67gLX2qjrWAedGGy9D8EwMKvTGZEeMrynJjeneQaDe3c",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6pVyMqt1j4Dvq9sB781Sp6uBBFzshGTgRA8K4zDPhskp",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (6pVyM)",
+   "sources": [
+    "https://solscan.io/account/6pVyMqt1j4Dvq9sB781Sp6uBBFzshGTgRA8K4zDPhskp",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "4UP7t9p3HEd9gfF9gFKkGa1ZvLXFS2naHgnxB4fwpLfS",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (4UP7t)",
+   "sources": [
+    "https://solscan.io/account/4UP7t9p3HEd9gfF9gFKkGa1ZvLXFS2naHgnxB4fwpLfS",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5njZuDSS2WTFkvWWsgv8Q4TfQBuCASKJAztc5yF2qLWZ",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (5njZu)",
+   "sources": [
+    "https://solscan.io/account/5njZuDSS2WTFkvWWsgv8Q4TfQBuCASKJAztc5yF2qLWZ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "5g7yNHyGLJ7fiQ9SN9mf47opDnMjc585kqXWt6d7aBWs",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet (5g7yN)",
+   "sources": [
+    "https://solscan.io/account/5g7yNHyGLJ7fiQ9SN9mf47opDnMjc585kqXWt6d7aBWs",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FpwQQhQQoEaVu3WU2qZMfF1hx48YyfwsLoRgXG83E99Q",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/FpwQQhQQoEaVu3WU2qZMfF1hx48YyfwsLoRgXG83E99Q",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "AEZoku1fLfUz5JYJ3kJ5YVdf3QT1T4RwdggGbuR8Eakd",
+   "exchange": "OKX",
+   "label": "OKX: Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/AEZoku1fLfUz5JYJ3kJ5YVdf3QT1T4RwdggGbuR8Eakd",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "D89hHJT5Aqyx1trP6EnGY9jJUB3whgnq3aUvvCqedvzf",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/D89hHJT5Aqyx1trP6EnGY9jJUB3whgnq3aUvvCqedvzf",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "4NyK1AdJBNbgaJ9EsKz3J4rfeHsuYdjkTPg3JaNdLeFw",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet 4 (4NyK1)",
+   "sources": [
+    "https://solscan.io/account/4NyK1AdJBNbgaJ9EsKz3J4rfeHsuYdjkTPg3JaNdLeFw",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9obNtb5GyUegcs3a1CbBkLuc5hEWynWfJC6gjz5uWQkE",
+   "exchange": "Coinbase",
+   "label": "Coinbase 4",
+   "sources": [
+    "https://solscan.io/account/9obNtb5GyUegcs3a1CbBkLuc5hEWynWfJC6gjz5uWQkE",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS",
+   "exchange": "Coinbase",
+   "label": "Coinbase 1",
+   "sources": [
+    "https://solscan.io/account/H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/nullxnothing/daemon/blob/main/electron/services/forensics/address.ts"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GJRs4FwHtemZ5ZE9x3FNvJ8TMwitKTh21yxdRPqn7npE",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/GJRs4FwHtemZ5ZE9x3FNvJ8TMwitKTh21yxdRPqn7npE",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "59L2oxymiQQ9Hvhh92nt8Y7nDYjsauFkdb3SybdnsG6h",
+   "exchange": "Coinbase",
+   "label": "Coinbase 5",
+   "sources": [
+    "https://solscan.io/account/59L2oxymiQQ9Hvhh92nt8Y7nDYjsauFkdb3SybdnsG6h",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "2YxQCXt9spMwoQZiwFLwdjHtscVvXi4nmxCkQCD6Rvgg",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (2YxQC)",
+   "sources": [
+    "https://solscan.io/account/2YxQCXt9spMwoQZiwFLwdjHtscVvXi4nmxCkQCD6Rvgg",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FYchVwTvXSDf1mEndg8p1DvBUagYV7444VYHWq9GTxq6",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (FYchV)",
+   "sources": [
+    "https://solscan.io/account/FYchVwTvXSDf1mEndg8p1DvBUagYV7444VYHWq9GTxq6",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7yEJAtVPDop5P5Xgn8qkjMb3RqitpfmJwQHTbT1TBdwJ",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (7yEJA)",
+   "sources": [
+    "https://solscan.io/account/7yEJAtVPDop5P5Xgn8qkjMb3RqitpfmJwQHTbT1TBdwJ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "EkeyuVghbRfGWPyEtm3vnjKZPbUXXrPqxdar8fsEMuXd",
+   "exchange": "OKX",
+   "label": "OKX: Hot Wallet 5",
+   "sources": [
+    "https://solscan.io/account/EkeyuVghbRfGWPyEtm3vnjKZPbUXXrPqxdar8fsEMuXd",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8JUEoHNMbWM4eegcMvx6ZQJt3V3fbo8JNjpWiCtJgxfF",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet (8JUEo)",
+   "sources": [
+    "https://solscan.io/account/8JUEoHNMbWM4eegcMvx6ZQJt3V3fbo8JNjpWiCtJgxfF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "DPqsobysNf5iA9w7zrQM8HLzCKZEDMkZsWbiidsAt1xo",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet 4 (DPqso)",
+   "sources": [
+    "https://solscan.io/account/DPqsobysNf5iA9w7zrQM8HLzCKZEDMkZsWbiidsAt1xo",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "AafGzY9eiC5Ud3YFZQwkaKApp48cVBAT2kksGvEjhUvH",
+   "exchange": "Coinbase",
+   "label": "Coinbase Hot Wallet (AafGz)",
+   "sources": [
+    "https://solscan.io/account/AafGzY9eiC5Ud3YFZQwkaKApp48cVBAT2kksGvEjhUvH",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3V11R3pEGSt5XeRaoLDcCdkAB8zVSaKRCm8y3uKBgnsr",
+   "exchange": "BloFin",
+   "label": "BloFin: Hot Wallet (3V11R)",
+   "sources": [
+    "https://solscan.io/account/3V11R3pEGSt5XeRaoLDcCdkAB8zVSaKRCm8y3uKBgnsr",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9jA4MUtsPAXy3ZhsiQUhkSXMop2ogrCWYv7rE9xovsWp",
+   "exchange": "Bitunix",
+   "label": "Bitunix Hot Wallet (9jA4M)",
+   "sources": [
+    "https://solscan.io/account/9jA4MUtsPAXy3ZhsiQUhkSXMop2ogrCWYv7rE9xovsWp",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "HFWv1riXSRJ3nVnnLZ9xi1K4r3zppRvcfVuiAGqAA8Y6",
+   "exchange": "Gemini",
+   "label": "Gemini Hot Wallet (HFWv1)",
+   "sources": [
+    "https://solscan.io/account/HFWv1riXSRJ3nVnnLZ9xi1K4r3zppRvcfVuiAGqAA8Y6",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9ZifroknFoYu4r6DUk6nYoJiUQnEyyoUyeAwjXbPoL2x",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 11",
+   "sources": [
+    "https://solscan.io/account/9ZifroknFoYu4r6DUk6nYoJiUQnEyyoUyeAwjXbPoL2x",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6UsYfLKTdVGJdaWFBLjBYqqxFSUjh6nwpBqdh6R8n3sv",
+   "exchange": "BitKan",
+   "label": "BitKan Hot Wallet (6UsYf)",
+   "sources": [
+    "https://solscan.io/account/6UsYfLKTdVGJdaWFBLjBYqqxFSUjh6nwpBqdh6R8n3sv",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "64CuV85HHCydAwxQMoXwZ9HXoyw5qE65NkiJxCtuFErF",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (64CuV)",
+   "sources": [
+    "https://solscan.io/account/64CuV85HHCydAwxQMoXwZ9HXoyw5qE65NkiJxCtuFErF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9isrZBGb9CWU79466DCUxN25iH7krrLRei5niqvH5WxU",
+   "exchange": "OKX",
+   "label": "OKX: Hot Wallet 6",
+   "sources": [
+    "https://solscan.io/account/9isrZBGb9CWU79466DCUxN25iH7krrLRei5niqvH5WxU",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BfP2dBiHbiqYvsmESsgHEL8wQtZt25sbDNKnwmNRB34G",
+   "exchange": "HitBTC",
+   "label": "HitBTC Hot Wallet (BfP2d)",
+   "sources": [
+    "https://solscan.io/account/BfP2dBiHbiqYvsmESsgHEL8wQtZt25sbDNKnwmNRB34G",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "EhDyxGpEz9hryw6MwiBB7898WEzcoGTCAjVQMHbo6Q1M",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (EhDyx)",
+   "sources": [
+    "https://solscan.io/account/EhDyxGpEz9hryw6MwiBB7898WEzcoGTCAjVQMHbo6Q1M",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7RmkMNQerKaVioRnmqZsHM5Gm8F3gngQG8umLNoK97q4",
+   "exchange": "Bitrue",
+   "label": "Bitrue Hot Wallet (7RmkM)",
+   "sources": [
+    "https://solscan.io/account/7RmkMNQerKaVioRnmqZsHM5Gm8F3gngQG8umLNoK97q4",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Hn7qzjdWKpFfJNAf1CvxgfRNWST2xB42g21KpUaD7QbP",
+   "exchange": "BTSE",
+   "label": "BTSE Hot Wallet (Hn7qz)",
+   "sources": [
+    "https://solscan.io/account/Hn7qzjdWKpFfJNAf1CvxgfRNWST2xB42g21KpUaD7QbP",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8s9j5qUtuE9PGA5s7QeAXEh5oc2UGr71pmJXgyiZMHkt",
+   "exchange": "LBank",
+   "label": "LBank Hot Wallet (8s9j5)",
+   "sources": [
+    "https://solscan.io/account/8s9j5qUtuE9PGA5s7QeAXEh5oc2UGr71pmJXgyiZMHkt",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FbitRJ1Q3bikGPJcJBjLRsQN2DSU3XfrJAYGCBhNDmQ2",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (FbitR)",
+   "sources": [
+    "https://solscan.io/account/FbitRJ1Q3bikGPJcJBjLRsQN2DSU3XfrJAYGCBhNDmQ2",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BQUPHCk9Vk8dxU1GHfoAYbv8s16T1dKUBeyZ5oqpQXZ9",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (BQUPH)",
+   "sources": [
+    "https://solscan.io/account/BQUPHCk9Vk8dxU1GHfoAYbv8s16T1dKUBeyZ5oqpQXZ9",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "i57ExrKB2i4mSgjSuq2xz617mQXmu33WG2WEYypmdvX",
+   "exchange": "Bitstamp",
+   "label": "Bitstamp",
+   "sources": [
+    "https://solscan.io/account/i57ExrKB2i4mSgjSuq2xz617mQXmu33WG2WEYypmdvX",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "ETZY5TjMKdV2KdHVmUNTN56pWhMc8TyjrXtQ7YexDCmG",
+   "exchange": "Bitstamp",
+   "label": "Bitstamp 2",
+   "sources": [
+    "https://solscan.io/account/ETZY5TjMKdV2KdHVmUNTN56pWhMc8TyjrXtQ7YexDCmG",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "HBxZShcE86UMmF93KUM8eWJKqeEXi5cqWCLYLMMhqMYm",
+   "exchange": "Bitstamp",
+   "label": "Bitstamp Hot Wallet",
+   "sources": [
+    "https://solscan.io/account/HBxZShcE86UMmF93KUM8eWJKqeEXi5cqWCLYLMMhqMYm",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CgANddXc7FKSsdLSdFv67X8faZqQaRTeLMXkAVANkZD4",
+   "exchange": "BitMart",
+   "label": "Bitmart Hot Wallet",
+   "sources": [
+    "https://solscan.io/account/CgANddXc7FKSsdLSdFv67X8faZqQaRTeLMXkAVANkZD4",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9nwRoFXAMQynz88xKQtn2Vb2ugyjbJA3NeUcYYzs2kd4",
+   "exchange": "Bitkub",
+   "label": "BitKub Hot Wallet (9nwRo)",
+   "sources": [
+    "https://solscan.io/account/9nwRoFXAMQynz88xKQtn2Vb2ugyjbJA3NeUcYYzs2kd4",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GVWeq5RBprqBDt9Enfjjv6tZWemeyyzch4GmXAuQqLwa",
+   "exchange": "Bitkub",
+   "label": "BitKub Hot Wallet (GVWeq)",
+   "sources": [
+    "https://solscan.io/account/GVWeq5RBprqBDt9Enfjjv6tZWemeyyzch4GmXAuQqLwa",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5",
+   "exchange": "Kraken",
+   "label": "Kraken Hot Wallet (FWznb)",
+   "sources": [
+    "https://solscan.io/account/FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs",
+    "https://github.com/DaviRain-Su/tokens-analysis/blob/main/src/labels.rs",
+    "https://github.com/nullxnothing/daemon/blob/main/electron/services/forensics/address.ts"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CDhUgGEiUxx1aTbnoiSAKcmBhnGUFRQ6AMzuLQRD5VFZ",
+   "exchange": "Kraken",
+   "label": "Kraken Hot Wallet (CDhUg)",
+   "sources": [
+    "https://solscan.io/account/CDhUgGEiUxx1aTbnoiSAKcmBhnGUFRQ6AMzuLQRD5VFZ",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "C1Fr2dLHvNMWKFuiM5nK5StfgWjbM6QcZcC5nkcYghkJ",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (C1Fr2)",
+   "sources": [
+    "https://solscan.io/account/C1Fr2dLHvNMWKFuiM5nK5StfgWjbM6QcZcC5nkcYghkJ",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FeNayVKekV9FJzhD7ycTd6sbKEyzt9CRCiqxw5nr41yR",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 3",
+   "sources": [
+    "https://solscan.io/account/FeNayVKekV9FJzhD7ycTd6sbKEyzt9CRCiqxw5nr41yR",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "9Z7S8vCj6nDbK9t4m4AU3vZpKm4UufHAwpmRYyKgZf7r",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 5",
+   "sources": [
+    "https://solscan.io/account/9Z7S8vCj6nDbK9t4m4AU3vZpKm4UufHAwpmRYyKgZf7r",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "CqQ6AX1fiFfHKKY3saGzT5pgbkLwfLVrrAKpFhUG38oe",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 2",
+   "sources": [
+    "https://solscan.io/account/CqQ6AX1fiFfHKKY3saGzT5pgbkLwfLVrrAKpFhUG38oe",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "32cT9eAwkEvAk631rUcUAbXVFPg21DaAXzGiz9AqHTVE",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 4",
+   "sources": [
+    "https://solscan.io/account/32cT9eAwkEvAk631rUcUAbXVFPg21DaAXzGiz9AqHTVE",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "medium"
+  },
+  {
+   "address": "57vSaRTqN9iXaemgh4AoDsZ63mcaoshfMK8NP3Z5QNbs",
+   "exchange": "KuCoin",
+   "label": "KuCoin Hot Wallet (57vSa)",
+   "sources": [
+    "https://solscan.io/account/57vSaRTqN9iXaemgh4AoDsZ63mcaoshfMK8NP3Z5QNbs",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "88xTWZMeKfiTgbfEmPLdsUCQcZinwUfk25EBQZ21XMAZ",
+   "exchange": "HTX",
+   "label": "Huobi",
+   "sources": [
+    "https://solscan.io/account/88xTWZMeKfiTgbfEmPLdsUCQcZinwUfk25EBQZ21XMAZ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/ashpoolin/gelato.sh/blob/main/src/data/exchanges.js"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BY4StcU9Y2BpgH8quZzorg31EGE4L1rjomN8FNsCBEcx",
+   "exchange": "HTX",
+   "label": "HTX Hot Wallet (BY4St)",
+   "sources": [
+    "https://solscan.io/account/BY4StcU9Y2BpgH8quZzorg31EGE4L1rjomN8FNsCBEcx",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)",
+    "https://github.com/FLOCK4H/Mamba/blob/main/src/transfers/cex.rs"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9VWD3xbXWtC2aGN1mQcVFwZMRPSjJfknNYq4DqGQ7B8B",
+   "exchange": "Crypto.com",
+   "label": "Crypto.com Hot Wallet",
+   "sources": [
+    "https://solscan.io/account/9VWD3xbXWtC2aGN1mQcVFwZMRPSjJfknNYq4DqGQ7B8B",
+    "Solscan label search (api-v2.solscan.io/v2/search)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "J1BDJEdvTmmcjeTMVTHLPaaNvuQ3mdxeuWEM1YyMksLy",
+   "exchange": "BingX",
+   "label": "BingX Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/J1BDJEdvTmmcjeTMVTHLPaaNvuQ3mdxeuWEM1YyMksLy",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GsCY6n5RY7v3qcDAzGYcDShNzthngVs4So4b5nmVuqSN",
+   "exchange": "BingX",
+   "label": "BingX Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/GsCY6n5RY7v3qcDAzGYcDShNzthngVs4So4b5nmVuqSN",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "AbbnxVgv4pJmBtBXKHH33ZLghJF4h8Bp7SyLPoxJSLXk",
+   "exchange": "BingX",
+   "label": "BingX Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/AbbnxVgv4pJmBtBXKHH33ZLghJF4h8Bp7SyLPoxJSLXk",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GBmvrqu7awarRom3zYN6q2oEueqv7vFreJABEVyoEa4A",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (GBmvr)",
+   "sources": [
+    "https://solscan.io/account/GBmvrqu7awarRom3zYN6q2oEueqv7vFreJABEVyoEa4A",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GFFG1B4PMYLQQGfiJMjtdxzdiQBqw9WcUVMvoLp3TQZe",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (GFFG1)",
+   "sources": [
+    "https://solscan.io/account/GFFG1B4PMYLQQGfiJMjtdxzdiQBqw9WcUVMvoLp3TQZe",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8aSfERDM5J6Qz6qYLuUQPg6hpjYzM2UwPqQ9vNTCG9YX",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (8aSfE)",
+   "sources": [
+    "https://solscan.io/account/8aSfERDM5J6Qz6qYLuUQPg6hpjYzM2UwPqQ9vNTCG9YX",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2nE99H3e9gfbxKaGodnTwixMgZwgTtKg45aoCFwdEfJS",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (2nE99)",
+   "sources": [
+    "https://solscan.io/account/2nE99H3e9gfbxKaGodnTwixMgZwgTtKg45aoCFwdEfJS",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "A5QtrjyeJLZ62HqSZAmiqAboiBJZX3eQbCe4QSLBGXXN",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 5",
+   "sources": [
+    "https://solscan.io/account/A5QtrjyeJLZ62HqSZAmiqAboiBJZX3eQbCe4QSLBGXXN",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BJGyq6BDtn4KXrGr1yfBuCXyxToP6CWfA4sYRyDPSEq4",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 12",
+   "sources": [
+    "https://solscan.io/account/BJGyq6BDtn4KXrGr1yfBuCXyxToP6CWfA4sYRyDPSEq4",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "836euAuAeEWdjHFZ87vKhR6n4Vu1V22yMvj1MyzCdVU3",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 9",
+   "sources": [
+    "https://solscan.io/account/836euAuAeEWdjHFZ87vKhR6n4Vu1V22yMvj1MyzCdVU3",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "ExB8m6GpZ7hg8NjSDDoEsg6U4XSvWUVD3wLfTLd51xXY",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 16",
+   "sources": [
+    "https://solscan.io/account/ExB8m6GpZ7hg8NjSDDoEsg6U4XSvWUVD3wLfTLd51xXY",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2kmT6TAgwy2aPt4wtiSmmosyTZ8kVRSXwXxtbgJ8QfLM",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/2kmT6TAgwy2aPt4wtiSmmosyTZ8kVRSXwXxtbgJ8QfLM",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "WR87TKyUfMDzGojFvRxq2f1xf7Jcgkvoc7Z2tDVLHdY",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/WR87TKyUfMDzGojFvRxq2f1xf7Jcgkvoc7Z2tDVLHdY",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8jjpnSUhm5UYghznhcdkwwEUFyke6z5TchHEtUUgW8hX",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 4",
+   "sources": [
+    "https://solscan.io/account/8jjpnSUhm5UYghznhcdkwwEUFyke6z5TchHEtUUgW8hX",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "2YERiDP8JqbmKDDUhPQtEfWozafQm1cdwi6KrmYo2app",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 6",
+   "sources": [
+    "https://solscan.io/account/2YERiDP8JqbmKDDUhPQtEfWozafQm1cdwi6KrmYo2app",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6VGNcrNuhwCwWZDQoA9QoyJxKtb4FEGLnieScUnLbeKJ",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet (6VGNc)",
+   "sources": [
+    "https://solscan.io/account/6VGNcrNuhwCwWZDQoA9QoyJxKtb4FEGLnieScUnLbeKJ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6mearRPb9Bma9Ad9wCKnGtVbTeqDyZQ6PPxDRpBUNdJU",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 8",
+   "sources": [
+    "https://solscan.io/account/6mearRPb9Bma9Ad9wCKnGtVbTeqDyZQ6PPxDRpBUNdJU",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3jn81xbBK95zf5A1K4jRMzTicWxKM6X8BzYWzhPtFjuF",
+   "exchange": "Upbit",
+   "label": "Upbit Hot Wallet 10",
+   "sources": [
+    "https://solscan.io/account/3jn81xbBK95zf5A1K4jRMzTicWxKM6X8BzYWzhPtFjuF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "8fP3kEoSS2VpWHK6YKAkZx4qKMDthFGqcBJFNtgy3ARc",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (8fP3k)",
+   "sources": [
+    "https://solscan.io/account/8fP3kEoSS2VpWHK6YKAkZx4qKMDthFGqcBJFNtgy3ARc",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CRoTEKu9bvTGFQH28nLvGsLNooKSzsBx8SuHxQmTCaxK",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (CRoTE)",
+   "sources": [
+    "https://solscan.io/account/CRoTEKu9bvTGFQH28nLvGsLNooKSzsBx8SuHxQmTCaxK",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Dj3ZPRpfTK9mpa5pCw2SpDzJfgQfADDbJvBHGyTjkidc",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (Dj3ZP)",
+   "sources": [
+    "https://solscan.io/account/Dj3ZPRpfTK9mpa5pCw2SpDzJfgQfADDbJvBHGyTjkidc",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "FJxqxWAm6ebfaQ7ewns1SWVaM3Xm5FTkQz1T9aBRGuTn",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 2",
+   "sources": [
+    "https://solscan.io/account/FJxqxWAm6ebfaQ7ewns1SWVaM3Xm5FTkQz1T9aBRGuTn",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GkCyx6dfBqopSqEdQ6mMQH7xJtpdE1yAZEdoGpDPwN7s",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 3",
+   "sources": [
+    "https://solscan.io/account/GkCyx6dfBqopSqEdQ6mMQH7xJtpdE1yAZEdoGpDPwN7s",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7EUv2zT1gufS4R6Xz9MsSdM9zzyuPMcpoe9UwQxZgjUh",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 4",
+   "sources": [
+    "https://solscan.io/account/7EUv2zT1gufS4R6Xz9MsSdM9zzyuPMcpoe9UwQxZgjUh",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "N6Rktaxp2dgizmRfWS3mXbS9uTuKARe6WEA85oSkKYv",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 5",
+   "sources": [
+    "https://solscan.io/account/N6Rktaxp2dgizmRfWS3mXbS9uTuKARe6WEA85oSkKYv",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "H13inzihSqSgfhHrGXNcrhMPzZmp73Mjs1tu8PrnFN7K",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 6",
+   "sources": [
+    "https://solscan.io/account/H13inzihSqSgfhHrGXNcrhMPzZmp73Mjs1tu8PrnFN7K",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "334hn47E98rWi2dav9csaPbmiZwJLTcF8irrpzLqVjQ9",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (334hn)",
+   "sources": [
+    "https://solscan.io/account/334hn47E98rWi2dav9csaPbmiZwJLTcF8irrpzLqVjQ9",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "D5LmzoS7PXmT8oMVpSY1iSk1bZD2XLsc9nE5rSmwvyuQ",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (D5Lmz)",
+   "sources": [
+    "https://solscan.io/account/D5LmzoS7PXmT8oMVpSY1iSk1bZD2XLsc9nE5rSmwvyuQ",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "EqfdXQTL9r8yzjgeTx3nceJBxH3gAMBjiQrUzsf6oRhx",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (EqfdX)",
+   "sources": [
+    "https://solscan.io/account/EqfdXQTL9r8yzjgeTx3nceJBxH3gAMBjiQrUzsf6oRhx",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7XeWAPVUadWkswmmyumnQ5FntBFMTfDK8452ASGUeM7b",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (7XeWA)",
+   "sources": [
+    "https://solscan.io/account/7XeWAPVUadWkswmmyumnQ5FntBFMTfDK8452ASGUeM7b",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "7B2dggoiypcZJAt9xTxUmQey2k7pJggi734FSgACWLkF",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet (7B2dg)",
+   "sources": [
+    "https://solscan.io/account/7B2dggoiypcZJAt9xTxUmQey2k7pJggi734FSgACWLkF",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "GCtXCKbCKWudrAsbrHtd2ngMgrSmGZGjoaYRtzPEF3Lv",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 10",
+   "sources": [
+    "https://solscan.io/account/GCtXCKbCKWudrAsbrHtd2ngMgrSmGZGjoaYRtzPEF3Lv",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "ANUBao2a6xATKoNdFrnDADkjVYpcmLVcPp978RwhkJxf",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 11",
+   "sources": [
+    "https://solscan.io/account/ANUBao2a6xATKoNdFrnDADkjVYpcmLVcPp978RwhkJxf",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BKenVF6yfi2SLpz78JXWm5tv45GFt2VkvnGtQsQoGwwR",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 12",
+   "sources": [
+    "https://solscan.io/account/BKenVF6yfi2SLpz78JXWm5tv45GFt2VkvnGtQsQoGwwR",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "6yhYE7xUjy9hPeYDFqyVBYjnKHPXZZsg9LG48t3vMSSU",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 13",
+   "sources": [
+    "https://solscan.io/account/6yhYE7xUjy9hPeYDFqyVBYjnKHPXZZsg9LG48t3vMSSU",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3RgFXirEPVEqpuoCpz4wbwc2hv2efTvQHLVddthG5n79",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 14",
+   "sources": [
+    "https://solscan.io/account/3RgFXirEPVEqpuoCpz4wbwc2hv2efTvQHLVddthG5n79",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "D8nrjrTYdU9HjkyvZdheA9sJ5qTK6mf726AGjfKc4bSb",
+   "exchange": "Bithumb",
+   "label": "Bithumb Hot Wallet 15",
+   "sources": [
+    "https://solscan.io/account/D8nrjrTYdU9HjkyvZdheA9sJ5qTK6mf726AGjfKc4bSb",
+    "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
+   ],
+   "confidence": "high"
+  }
+ ]
+}

@@ -14,6 +14,7 @@ import { nightOf } from "./agents/nightWatch.ts";
 import { fundersEnabled, traceFunders } from "./chain/funders.ts";
 import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
+import { exchangeOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { checkToken, RateGate } from "./chain/check.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
@@ -453,7 +454,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
         }
-        if (past) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: false, siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
+        if (past) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null, funderLabel: exchangeOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
         const linked = found || past ? socials.forMint(mint) : [];
         const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");

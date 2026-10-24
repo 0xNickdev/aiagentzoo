@@ -1392,4 +1392,7 @@ export const ZH: Record<string, string> = {
   "Open the wallet": "打开钱包",
   "{d} of {n} launches dumped in 48h": "48 小时内 {n} 个币砸了 {d} 个",
   "The #{k} loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches": "此刻活跃度第 {k} 的开发者：{dev} · 48 小时发了 {n} 个币，砸盘 {d} 个 · {r} 个钱包专买他的币",
+  "withdrawn from {x}": "从 {x} 提的币",
+  "A withdrawal from {x}: the dev's SOL came out of an exchange account. It names the exchange, not the person, and ties no one together.": "从 {x} 提币：开发者的 SOL 来自交易所账户。只说明是哪家交易所，不说明是谁，也不能把谁连起来。",
+  "exchange withdrawal": "交易所提币",
 };

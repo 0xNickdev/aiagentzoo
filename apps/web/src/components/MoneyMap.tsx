@@ -163,8 +163,10 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
   const midY = H / 2 + 24;
   const thick = (share: number) => Math.max(3, Math.min(40, share * 100));
 
-  const funderTitle = fund?.funder ? (fund.funderIsHot ? t("An exchange") : short(fund.funder)) : t("No transfer found");
-  const funderSub = fund?.funder && !fund.funderIsHot && fund.siblings.length ? t("also funded {n} other devs", { n: fund.siblings.length }) : fund?.funderIsHot ? t("hot wallet, many users") : t("who paid the dev");
+  const funderTitle = fund?.funder ? (fund.funderLabel ? fund.funderLabel : fund.funderIsHot ? t("An exchange") : short(fund.funder)) : t("No transfer found");
+  const funderSub = fund?.funder && !fund.funderIsHot && fund.siblings.length ? t("also funded {n} other devs", { n: fund.siblings.length }) : fund?.funderLabel ? t("exchange withdrawal") : fund?.funderIsHot ? t("hot wallet, many users") : t("who paid the dev");
+  // where the money came from sets the first band's colour: an exchange in amber, a private wallet in moss, one that funds other devs in red
+  const funderColor = !fund?.funder ? WHITE : fund.funderIsHot ? AMBER : fund.siblings.length ? RED : MOSS;
   const devSold = f?.creatorSoldPct != null ? t("sold {p}% of their bag", { p: f.creatorSoldPct }) : "";
   const devRecord = rec ? t("{d} of {n} dumped, 48h", { d: rec.dumped, n: rec.launches48h }) : "";
   const devSub = [devSold, devRecord].filter(Boolean).join(" · ");
@@ -185,7 +187,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
       ) : (
         <>
           <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Money map")}>
-            <Ribbon id="fund" x1={COL[0] + 2} y1={midY} x2={COL[1] - 2} y2={midY} w={6} color={fund?.funder && !fund.funderIsHot ? MOSS : WHITE} speed={0.12} />
+            <Ribbon id="fund" x1={COL[0] + 2} y1={midY} x2={COL[1] - 2} y2={midY} w={6} color={funderColor} speed={0.12} />
             {gs.map((g, i) => (
               <Ribbon key={`d${g.key}`} id={`d${g.key}`} x1={COL[1] + 2} y1={midY} x2={COL[2] - 2} y2={gy(i) + BH / 2} w={thick(g.took)} color={g.color} speed={0.1} />
             ))}
@@ -199,7 +201,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
               );
             })}
             <g data-dust style={{ mixBlendMode: "screen" }} />
-            <Node x={COL[0]} y={midY - BH / 2} h={BH} title={funderTitle} sub={funderSub} left color={fund?.funder && !fund.funderIsHot ? MOSS : WHITE} href={fund?.funder ? `https://solscan.io/account/${fund.funder}` : undefined} />
+            <Node x={COL[0]} y={midY - BH / 2} h={BH} title={funderTitle} sub={funderSub} left color={funderColor} href={fund?.funder ? `https://solscan.io/account/${fund.funder}` : undefined} />
             <Node x={COL[1]} y={midY - (BH + 18) / 2} h={BH + 18} title={t("The dev {w}", { w: short(r.creator) })} sub={devSold || devRecord} sub2={devSold ? devRecord : undefined} color={(f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE} href={`https://solscan.io/account/${r.creator}`} />
             {gs.map((g, i) => (
               <Node key={g.key} x={COL[2]} y={gy(i)} h={BH} title={t(g.label)} sub={t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} color={g.color} />
@@ -210,7 +212,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
 
           {/* On a phone the same story reads top to bottom. */}
           <ol className="grid gap-3 md:hidden">
-            <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: fund?.funder && !fund.funderIsHot ? MOSS : WHITE }}>
+            <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: funderColor }}>
               <p className="text-[15px] text-white">{funderTitle}</p>
               <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{funderSub}</p>
             </li>

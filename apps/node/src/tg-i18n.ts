@@ -284,6 +284,7 @@ export const BOT_ZH: Record<string, string> = {
   "<b>Who paid for the creator:</b> not traced yet, queued": "<b>谁给开发者打的钱：</b>还没追踪到，已排队",
   "<b>Who paid for the creator:</b> no funding transfer found": "<b>谁给开发者打的钱：</b>没找到入金转账",
   "<b>Who paid for the creator:</b> an exchange, ties no one together": "<b>谁给开发者打的钱：</b>交易所，不能把谁连起来",
+  "<b>Who paid for the creator:</b> a withdrawal from {x}": "<b>谁给开发者打的钱：</b>从 {x} 提的币",
   "<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h": "<b>谁给开发者打的钱：</b><code>{w}</code> · 还资助了 {n} 个开发者，48 小时砸盘 {d} 次",
   "The chain reader is not reachable right now. Try again in a minute.": "链上读取节点暂时连不上，一分钟后再试。",
   "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora）。",

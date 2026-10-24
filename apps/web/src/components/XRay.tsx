@@ -67,6 +67,8 @@ interface Check {
 interface Funding {
   funder: string | null;
   funderIsHot: boolean;
+  /** The exchange the funder is a known hot wallet of, e.g. "Binance". */
+  funderLabel?: string | null;
   siblings: Array<{ wallet: string; launches48h: number; dumped: number }>;
   siblingLaunches48h: number;
   siblingDumped48h: number;
@@ -435,7 +437,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
     {
       id: "xr-funder",
       k: "Who paid for the creator",
-      v: !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
+      v: !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderLabel ? t("withdrawn from {x}", { x: fund.funderLabel }) : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
       sub: fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? t("{d} dumps in 48h", { d: fund.siblingDumped48h }) : t("funded {w}", { w: short(fund.funder) })) : fund?.funderIsHot ? t("funds everyone, ties no one") : "",
       bad: !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
     },
@@ -647,7 +649,11 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                     <Addr a={fund.funder} className="text-[13px] text-fg-2" />
                   </div>
                   {fund.funderIsHot ? (
-                    <p className="mt-1 text-[12.5px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                    <p className="mt-1 text-[12.5px] font-normal text-fg-3">
+                      {fund.funderLabel
+                        ? t("A withdrawal from {x}: the dev's SOL came out of an exchange account. It names the exchange, not the person, and ties no one together.", { x: fund.funderLabel })
+                        : t("An exchange or a router: it funds everyone, so it ties no one together.")}
+                    </p>
                   ) : (
                     <>
                       <Stat k="other creators it funded" v={String(fund.siblings.length)} bad={fund.siblings.length >= 2} />
