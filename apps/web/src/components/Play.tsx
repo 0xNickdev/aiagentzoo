@@ -38,9 +38,9 @@ const PRIZE = (import.meta.env.VITE_HUMANS_PRIZE as string | undefined) ?? "SOL"
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? "-" : `${Math.round(x * 100)}%`);
 const usd = (n: number | null | undefined) => (n === null || n === undefined ? "-" : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${Math.round(n)}`);
 const CHOICES: Array<[Verdict, string, string]> = [
-  ["suspicious", "Rug", "bg-[#ff7a6e]/15 text-[#ff8a7e] ring-[#ff7a6e]/40"],
+  ["suspicious", "Rug", "bg-[#ff8a7e]/15 text-[#ff8a7e] ring-[#ff8a7e]/40"],
   ["watch", "Watch", "bg-white/10 text-white ring-white/30"],
-  ["promising", "Alive", "bg-[#8ff0a4]/15 text-[#9df3b0] ring-[#8ff0a4]/40"],
+  ["promising", "Alive", "bg-[#a6e3b4]/15 text-[#a6e3b4] ring-[#a6e3b4]/40"],
 ];
 
 /** Humans vs the beaver: holders sit the nursery's nightly exam and are graded by the same re-check. */
@@ -156,7 +156,7 @@ export default function Play() {
                 <div key={x.mint} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-5">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="font-display truncate text-xl">${x.symbol}</span>
-                    {x.graduated && <span className="tabular-nums text-[11.5px] text-[#9df3b0]">{t("graduated")}</span>}
+                    {x.graduated && <span className="tabular-nums text-[11.5px] text-[#a6e3b4]">{t("graduated")}</span>}
                   </div>
                   <dl className="tabular-nums mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12.5px]">
                     <Fact k={t("liquidity")} v={x.market?.liq === null || x.market?.liq === undefined ? (x.graduated ? "-" : t("on curve")) : usd(x.market.liq)} />
@@ -166,7 +166,7 @@ export default function Play() {
                     {x.chain && <Fact k={t("dev sold")} v={pct(x.chain.creatorSold)} />}
                     {x.chain && <Fact k={t("top 5 buyers")} v={pct(x.chain.top5Share)} />}
                   </dl>
-                  {!!x.flags?.length && <p className="mt-2 text-[13px] font-normal text-[#ffb3ab]">{x.flags.slice(0, 2).map(tChain).join(" · ")}</p>}
+                  {!!x.flags?.length && <p className="mt-2 text-[13px] font-normal text-[#ff8a7e]">{x.flags.slice(0, 2).map(tChain).join(" · ")}</p>}
                   <div className="mt-auto grid grid-cols-3 gap-1.5 pt-4">
                     {CHOICES.map(([v, label, on]) => (
                       <button

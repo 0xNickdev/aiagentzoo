@@ -98,9 +98,9 @@ const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] 
 
 export const TONE: Record<Verdict, { label: string; color: string }> = {
   avoid: { label: "AVOID", color: "#ff8a7e" },
-  caution: { label: "CAUTION", color: "#f2d39b" },
-  pass: { label: "NO RED FLAGS", color: "#9df3b0" },
-  unknown: { label: "NOT ON THE STREAM", color: "#e9e4d8" },
+  caution: { label: "CAUTION", color: "#ffc27a" },
+  pass: { label: "NO RED FLAGS", color: "#a6e3b4" },
+  unknown: { label: "NOT ON THE STREAM", color: "#e6e9e7" },
 };
 
 function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
@@ -152,7 +152,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
     const a = -Math.PI / 2 + (i / Math.max(1, early.length)) * Math.PI * 2;
     const x = cx + Math.cos(a) * ring * 1.15;
     const y = cy + Math.sin(a) * ring;
-    const color = crew ? "#ff8a7e" : e.ring ? "#f2b56b" : e.serial ? "#c9b48a" : "#e9e4d8";
+    const color = crew ? "#ff8a7e" : e.ring ? "#f2b56b" : e.serial ? "#c9b48a" : "#e6e9e7";
     if (crew) {
       ctx.strokeStyle = "rgba(255,138,126,0.45)";
       ctx.beginPath();
@@ -351,7 +351,7 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
         </button>
       </div>
       <p className="mt-2 text-[12.5px] font-normal leading-snug text-fg-4">{t(k.what)}</p>
-      <button type="button" onClick={() => openWallet(e.wallet)} className="tabular-nums mt-3 self-start rounded-full px-3 py-1.5 text-[12.5px] text-[#f2d39b] ring-1 ring-[#f2d39b]/30 transition hover:bg-[#f2d39b]/10">
+      <button type="button" onClick={() => openWallet(e.wallet)} className="tabular-nums mt-3 self-start rounded-full px-3 py-1.5 text-[12.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 transition hover:bg-[#ffc27a]/10">
         {t("open this wallet's page →")}
       </button>
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -702,7 +702,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
                       <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
                     </div>
-                    <p className="tabular-nums mt-5 text-[12.5px] text-[#f2d39b]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
+                    <p className="tabular-nums mt-5 text-[12.5px] text-[#ffc27a]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
                                       </motion.div>
                 )}
               </AnimatePresence>
@@ -801,7 +801,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className={`text-right ${e.held >= 0.05 ? "text-[#ff8a7e]" : "text-fg-3"}`}>{pct(e.held)}</span>
                   <span className="hidden text-right text-fg-4 sm:block">{e.afterSec}s</span>
                   <span className="text-right text-fg-4">{secs(e.exitSec)}</span>
-                  <span className={`hidden text-right sm:block ${e.snipes48h >= 10 ? "text-[#f2d39b]" : "text-fg-4"}`}>{e.snipes48h}</span>
+                  <span className={`hidden text-right sm:block ${e.snipes48h >= 10 ? "text-[#ffc27a]" : "text-fg-4"}`}>{e.snipes48h}</span>
                 </button>
                 {on && from === "list" && (
                   <div className="border-t border-white/[0.08] bg-black/25 px-5 py-5 sm:px-7">

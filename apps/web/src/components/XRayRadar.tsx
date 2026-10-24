@@ -20,10 +20,10 @@ export type Kind = "crew" | "ring" | "serial" | "bundle" | "early";
 export const kindOf = (e: EarlyWallet): Kind => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
 export const KIND: Record<Kind, { color: string; label: string; what: string }> = {
   crew: { color: "#ff8a7e", label: "creator's crew", what: "snipes this creator's other launches too: the creator's own wallet" },
-  ring: { color: "#f2b56b", label: "sniper ring", what: "has sniped launches together with other wallets here before: one operator" },
+  ring: { color: "#ffc27a", label: "sniper ring", what: "has sniped launches together with other wallets here before: one operator" },
   serial: { color: "#c9b48a", label: "serial sniper", what: "buys launches in the first seconds to sell to whoever comes next" },
-  bundle: { color: "#9fc3ff", label: "launch block", what: "bought in the same block the token was created" },
-  early: { color: "#e9e4d8", label: "first 5 s", what: "bought before the token showed up anywhere" },
+  bundle: { color: "#a3aaa6", label: "launch block", what: "bought in the same block the token was created" },
+  early: { color: "#e6e9e7", label: "first 5 s", what: "bought before the token showed up anywhere" },
 };
 const ORDER: Kind[] = ["crew", "ring", "serial", "bundle", "early"];
 /** A wallet can be several things at once (crew and in a ring); the legend counts and filters by each. */
@@ -140,7 +140,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         ))}
         <line x1={CX - rOf(5) - 10} y1={CY} x2={CX + rOf(5) + 10} y2={CY} stroke="white" strokeOpacity="0.04" />
         <line x1={CX} y1={CY - rOf(5) - 10} x2={CX} y2={CY + rOf(5) + 10} stroke="white" strokeOpacity="0.04" />
-        {playing && <circle cx={CX} cy={CY} r={rOf(clock)} fill="none" stroke="#f2d39b" strokeOpacity="0.55" strokeWidth="1.2" />}
+        {playing && <circle cx={CX} cy={CY} r={rOf(clock)} fill="none" stroke="#ffc27a" strokeOpacity="0.55" strokeWidth="1.2" />}
 
         {/* ring members tied around their circle, crew tied to the dev */}
         {ties
@@ -183,8 +183,8 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
               {hover === n.e.wallet && !isSel && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1" />}
               {isSel && (
                 <>
-                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#f2d39b" strokeWidth="1.6" />
-                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#f2d39b" strokeOpacity="0.5" strokeWidth="1">
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#ffc27a" strokeWidth="1.6" />
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#ffc27a" strokeOpacity="0.5" strokeWidth="1">
                     <animate attributeName="r" from={n.size + 7} to={n.size + 20} dur="1.4s" repeatCount="indefinite" />
                     <animate attributeName="stroke-opacity" from="0.5" to="0" dur="1.4s" repeatCount="indefinite" />
                   </circle>
@@ -199,7 +199,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         <text x={CX} y={CY + 4} textAnchor="middle" className="tabular-nums" fontSize="11" fill="white" fillOpacity="0.9">
           dev
         </text>
-        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill="#f2d39b" fillOpacity={playing ? 0.95 : 0.5}>
+        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill="#ffc27a" fillOpacity={playing ? 0.95 : 0.5}>
           {`t+${clock.toFixed(1)}s`}
         </text>
       </svg>
@@ -249,7 +249,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             {t(KIND[k].label)} {nodes.filter((n) => has(n.e, k)).length}
           </button>
         ))}
-        <button type="button" onClick={replay} className="ml-auto rounded-full px-2.5 py-1 text-[#f2d39b]/80 ring-1 ring-[#f2d39b]/20 hover:text-[#f2d39b]">
+        <button type="button" onClick={replay} className="ml-auto rounded-full px-2.5 py-1 text-[#ffc27a]/80 ring-1 ring-[#ffc27a]/20 hover:text-[#ffc27a]">
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>

@@ -179,7 +179,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           </div>
           <p className="tabular-nums mt-2 break-all text-[15px] text-fg-2">{wallet}</p>
           <div className="mt-6">
-            <p className="flex items-center gap-2 text-[13px] font-medium [&::first-letter]:uppercase" style={{ color: l.tone === "bad" ? "#ff8a7e" : l.tone === "good" ? "#9df3b0" : "rgba(255,255,255,0.6)" }}>
+            <p className="flex items-center gap-2 text-[13px] font-medium [&::first-letter]:uppercase" style={{ color: l.tone === "bad" ? "#ff8a7e" : l.tone === "good" ? "#a6e3b4" : "rgba(255,255,255,0.6)" }}>
               <span className="h-2 w-2 rounded-full" style={{ background: "currentColor" }} />
               {l.tag}
             </p>

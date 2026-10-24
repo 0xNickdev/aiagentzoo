@@ -124,11 +124,11 @@ export default function Connect() {
           {status === "missing" && <p className="mt-4 text-[13.5px] text-[#ff8a7e]">{t("Not in the zoo yet. Send it the message above, then check again in a minute.")}</p>}
           {status && status !== "missing" && (
             <div className="tabular-nums mt-4 space-y-1.5 text-[12.5px]">
-              <p className="text-[#9df3b0]">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
-              <p className={status.signals ? "text-[#9df3b0]" : "text-warn"}>
+              <p className="text-[#a6e3b4]">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
+              <p className={status.signals ? "text-[#a6e3b4]" : "text-warn"}>
                 {status.signals ? "✓" : "○"} {t("{n} reports", { n: status.signals })} · {ago(status.lastSignalAt)}
               </p>
-              <p className={graded ? "text-[#9df3b0]" : "text-warn"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
+              <p className={graded ? "text-[#a6e3b4]" : "text-warn"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
               <p className="pt-2 text-fg-3">
                 {t("badge:")} <span className="text-fg-3">canyon.zooaiagency.com/v1/badge/{status.name}.svg</span>
               </p>

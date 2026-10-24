@@ -497,24 +497,27 @@
     },
     {
       "id": "own-ground",
-      "chapter": "2026-11",
-      "status": "building",
+      "chapter": "2026-10",
+      "status": "shipped",
       "title": "Our own servers",
-      "text": "Every node moves onto machines we run, next to the relay that already reads Solana for us. No shared cloud, keys only we hold.",
-      "why": "Our cloud host had a security incident in October. The nodes kept running, but a tool that tells people who to trust should not depend on someone else's keys.",
+      "text": "Every node moved onto machines we run, next to the relay that reads Solana for us. No shared cloud, keys only we hold.",
+      "why": "Our cloud host had a security incident in October. The nodes kept running, but a tool that tells people who to trust should not depend on someone else's keys. Since October 22 they run on our own server.",
       "proof": [
         {
           "label": "relay 08ae972",
           "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972"
+        },
+        {
+          "label": "running a node",
+          "href": "/docs/running-a-node"
         }
       ],
       "zh": {
         "title": "自己的服务器",
-        "text": "所有节点迁到我们自己的机器上，和已经在为我们读取 Solana 的中继放在一起。不用共享云，密钥只在我们手里。",
-        "why": "我们的云服务商十月出了安全事件。节点一直在运行，但一个告诉别人该信谁的工具，不应该依赖别人的密钥。",
-        "when": "进行中"
+        "text": "所有节点已迁到我们自己的机器上，和为我们读取 Solana 的中继放在一起。不用共享云，密钥只在我们手里。",
+        "why": "我们的云服务商十月出了安全事件。节点一直在运行，但一个告诉别人该信谁的工具，不应该依赖别人的密钥。从 10 月 22 日起，节点跑在我们自己的服务器上。"
       },
-      "when": "Now"
+      "date": "2026-10-22"
     },
     {
       "id": "roadmap",
@@ -544,11 +547,11 @@
       "status": "building",
       "title": "Holder radar",
       "text": "Fresh coins with no red flags so far, for holders. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and you are pinged first.",
-      "why": "The page is live: holders watch it now, and pings in the tab work. The Telegram ping when a coin turns comes once the nodes run on our own servers.",
+      "why": "The page is live: holders watch it now, and pings in the tab work. The Telegram ping when a coin turns is next, now that the nodes run on our own servers.",
       "zh": {
         "title": "持有者雷达",
         "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。",
-        "why": "页面已上线：持有者现在就能看，标签页提醒也已可用。代币变化时的 Telegram 提醒，会在节点迁到我们自己的服务器后上线。",
+        "why": "页面已上线：持有者现在就能看，标签页提醒也已可用。代币变化时的 Telegram 提醒，是下一步：节点已经跑在我们自己的服务器上。",
         "when": "进行中"
       },
       "when": "Now",
@@ -564,8 +567,8 @@
       "chapter": "2026-11",
       "status": "building",
       "title": "Money map",
-      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Where the SOL went after the dump follows once the nodes run on our own servers.",
-      "why": "The first version is live as a tab in every X-Ray: who paid the dev, the dev, their own wallets and snipers, and what they already sold. Where the SOL went after the dump, and the alert when an operator comes back, follow on our own servers.",
+      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Where the SOL went after the dump comes next, now that the nodes run on our own servers.",
+      "why": "The first version is live as a tab in every X-Ray: who paid the dev, the dev, their own wallets and snipers, and what they already sold. Where the SOL went after the dump, and the alert when an operator comes back, come next, now that the nodes run on our own servers.",
       "zh": {
         "title": "资金流向图",
         "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及谁已经卖出。砸盘后 SOL 流向哪里，会在节点迁到我们自己的服务器后加上。",

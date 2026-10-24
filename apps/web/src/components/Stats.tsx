@@ -121,7 +121,7 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
           <span className="truncate text-fg-2">{short(r.wallet)}</span>
           <span className="text-right text-fg-4">{num(r.launches48h)}</span>
           <span className={`text-right ${!good && r.dumped ? "text-[#ff8a7e]" : "text-fg-4"}`}>{num(r.dumped)}</span>
-          <span className={`text-right ${good && r.graduated ? "text-[#9df3b0]" : "text-fg-4"}`}>{num(r.graduated)}</span>
+          <span className={`text-right ${good && r.graduated ? "text-[#a6e3b4]" : "text-fg-4"}`}>{num(r.graduated)}</span>
         </a>
       ))}
     </div>

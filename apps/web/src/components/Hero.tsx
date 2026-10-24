@@ -68,7 +68,7 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
         {pic && <img src={pic} alt="" referrerPolicy="no-referrer" className="h-9 w-9 shrink-0 rounded-full bg-[#141a17] object-cover" onError={(e) => e.currentTarget.remove()} />}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-white">{title}</p>
-          <p className="font-mono text-[12px] text-[#a3aaa6]">{sub}</p>
+          <p className="text-[12px] text-[#a3aaa6]">{sub}</p>
         </div>
         <button type="button" onClick={onClose} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-[#a3aaa6] hover:text-white">
           ×
@@ -77,7 +77,7 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
       <div className="mt-3 border-t border-white/[0.07]">
         {rows.map(([k, v, red]) => (
           <div key={k} className="flex items-baseline justify-between gap-3 border-b border-white/[0.07] py-2 text-[13px]">
-            <span className="text-[#c9cecb]">{k}</span>
+            <span className="text-[#d9dddb]">{k}</span>
             <b className={`font-semibold tabular-nums ${red ? "text-[#ff8a7e]" : "text-white"}`}>{v}</b>
           </div>
         ))}
@@ -138,7 +138,7 @@ function ParticleArt() {
       <div ref={host} aria-hidden className={`absolute inset-0 transition-opacity duration-[1600ms] [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full ${ready ? "opacity-50 lg:opacity-100" : "opacity-0"}`} />
       <p
         aria-live="polite"
-        className={`absolute bottom-[132px] left-5 right-5 z-10 hidden text-[13.5px] sm:block leading-relaxed text-[#c9cecb] transition-all duration-300 sm:left-auto sm:right-8 sm:max-w-[420px] sm:text-right ${cap.on ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
+        className={`absolute bottom-[132px] left-5 right-5 z-10 hidden text-[13.5px] sm:block leading-relaxed text-[#d9dddb] transition-all duration-300 sm:left-auto sm:right-8 sm:max-w-[420px] sm:text-right ${cap.on ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"}`}
       >
         {cap.text}
       </p>

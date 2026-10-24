@@ -522,7 +522,7 @@ function Trail({ plan, metrics }: { plan: Plan; metrics: Record<string, string |
           >
             <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-16">
               <div className="lg:sticky lg:top-40 lg:self-start">
-                <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-4">
+                <p className="tabular-nums text-[12.5px] text-fg-4">
                   {String(n + 1).padStart(2, "0")} / {String(plan.chapters.length).padStart(2, "0")} · {tx(ch, "label", ch.label)}
                 </p>
                 <h2 className="font-display mt-3 text-5xl leading-none text-white sm:text-6xl">{tx(ch, "name", ch.name)}</h2>
@@ -561,7 +561,7 @@ function Vote({ plan }: { plan: Plan }) {
   return (
     <section id="vote" data-scene={2} className="relative flex min-h-[100svh] items-center px-5 py-24 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("Holders' vote · end of November")}</p>
+        <p className="tabular-nums text-[12.5px] text-fg-3">{t("Holders' vote · end of November")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("Two builds.")} <span className="accent">{t("You set the order.")}</span>
         </h2>
@@ -608,7 +608,7 @@ function Graveyard({ plan }: { plan: Plan }) {
   return (
     <section id="buried" data-scene={3} className="relative flex min-h-[100svh] items-end px-5 pb-24 pt-40 sm:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <p className="tabular-nums text-[12.5px] uppercase tracking-[0.2em] text-fg-3">{t("The clearing")}</p>
+        <p className="tabular-nums text-[12.5px] text-fg-3">{t("The clearing")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-5xl leading-[1.02] text-white sm:text-7xl">
           {t("What we buried,")} <span className="accent">{t("and why.")}</span>
         </h2>
@@ -625,7 +625,7 @@ function Graveyard({ plan }: { plan: Plan }) {
               transition={{ duration: 0.9, delay: i * 0.12, ease: "easeOut" }}
               className="relative flex flex-col rounded-t-[999px] border border-b-0 border-white/[0.14] bg-[#030504]/55 px-6 pb-7 pt-16 text-center backdrop-blur-md"
             >
-              <p className="tabular-nums text-[12px] tracking-[0.4em] text-fg-4">R.I.P.</p>
+              <p className="tabular-nums text-[12px] text-fg-4">R.I.P.</p>
               <h3 className="font-display mt-4 text-[22px] leading-tight text-fg">{tx(b, "title", b.title)}</h3>
               <p className="tabular-nums mt-3 text-[12px] text-fg-4">
                 {b.born ? `${fmtDate(b.born)} - ${fmtDate(b.buried)} · ${t("lived")} ${days(b.born, b.buried)}${t("d")}` : `${t("never built")} · ${fmtDate(b.buried)}`}
@@ -685,7 +685,7 @@ function Hero({ plan, commits }: { plan: Plan | null; commits: { total: number |
   return (
     <section data-scene={0} className="relative flex min-h-[100svh] items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
       <div className="mx-auto w-full max-w-7xl">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="tabular-nums text-[12.5px] uppercase tracking-[0.22em] text-fg-4">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="tabular-nums text-[12.5px] text-fg-4">
           {t("Roadmap · Oct - Dec 2026")}
         </motion.p>
         <motion.h1

@@ -163,7 +163,7 @@ function Builders() {
               {short(r.wallet)}
             </button>
             <span className="text-right text-fg-3">{r.launches48h}</span>
-            <span className="text-right text-[#9df3b0]">{r.grew}</span>
+            <span className="text-right text-[#a6e3b4]">{r.grew}</span>
             <span className="hidden text-right text-fg-3 sm:block">{r.dumped}</span>
             <span className="hidden gap-1.5 overflow-hidden sm:flex">
               {r.recent.slice(0, 5).map((x) => (

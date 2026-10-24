@@ -32,7 +32,7 @@ body { min-height: 100svh; }
 }
 
 .zapp-top { position: relative; z-index: 3; max-width: 560px; margin: 0 auto 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.zapp-dot { width: 6px; height: 6px; border-radius: 50%; background: #8ff0a4; box-shadow: 0 0 8px rgba(143, 240, 164, 0.8); animation: zapp-pulse 1.8s ease-in-out infinite; }
+.zapp-dot { width: 6px; height: 6px; border-radius: 50%; background: #a6e3b4; box-shadow: 0 0 8px rgba(166, 227, 180, 0.8); animation: zapp-pulse 1.8s ease-in-out infinite; }
 @keyframes zapp-pulse { 50% { opacity: 0.35; } }
 
 /* Liquid glass: blur, a whisper of white, and a gradient rim that catches light top and bottom. */

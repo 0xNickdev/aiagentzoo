@@ -78,9 +78,9 @@ interface Recent {
 }
 
 const TONE: Record<Verdict, { label: string; color: string; text: string }> = {
-  suspicious: { label: "SUSPICIOUS", color: "#ff7a6e", text: "text-[#ff8a7e]" },
-  watch: { label: "WATCH", color: "#e9e4d8", text: "text-fg-2" },
-  promising: { label: "PROMISING", color: "#8ff0a4", text: "text-[#9df3b0]" },
+  suspicious: { label: "Suspicious", color: "#ff8a7e", text: "text-[#ff8a7e]" },
+  watch: { label: "Watch", color: "#e6e9e7", text: "text-fg-2" },
+  promising: { label: "Promising", color: "#a6e3b4", text: "text-[#a6e3b4]" },
 };
 
 const usd = (n: number | null | undefined) =>
@@ -558,7 +558,7 @@ function Answer({ a }: { a: Ask }) {
             <p className="mt-3 text-[12px] font-normal text-fg-4">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
           )}
 
-          <p className={`tabular-nums mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#9df3b0]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-warn"}`}>
+          <p className={`tabular-nums mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#a6e3b4]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-warn"}`}>
             {a.graded ? "● " : "○ "}
             {graded(a)}
           </p>
@@ -617,7 +617,7 @@ function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boolean }) {
           {r.recent.map((x) => (
             <li key={x.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
               <span className="truncate text-fg-2">${x.symbol}</span>
-              <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#9df3b0]" : "text-fg-3"}>
+              <span className={x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#a6e3b4]" : "text-fg-3"}>
                 {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
               </span>
             </li>

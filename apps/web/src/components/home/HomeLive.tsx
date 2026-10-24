@@ -101,10 +101,10 @@ function RugCase() {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[20px] font-semibold tracking-[-0.02em] text-white">{ticker(c.symbol, c.mint)}</p>
           <p className="text-[12.5px] text-[#a3aaa6]">
-            <span className="font-mono">{short(c.mint)}</span> · {t("went to zero {a} ago", { a: ago(c.at, now) })}
+            <span className="tabular-nums">{short(c.mint)}</span> · {t("went to zero {a} ago", { a: ago(c.at, now) })}
           </p>
         </div>
-        <span className="rounded-full border border-[#ff8a7e]/35 bg-[#ff8a7e]/10 px-3 py-1 text-[12px] font-medium tracking-[0.08em] text-[#ff8a7e]">{t("AVOID")}</span>
+        <span className="rounded-full border border-[#ff8a7e]/35 bg-[#ff8a7e]/10 px-3 py-1 text-[12px] font-medium text-[#ff8a7e]">{t("AVOID")}</span>
       </div>
       {left != null && (
         <>
@@ -227,7 +227,7 @@ export function WhyAvoid() {
           <a href={SITE_WALLET(top.wallet)} className="group mt-5 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-white/[0.07] bg-[#0a0e0c] p-6 transition-colors hover:border-white/20">
             <div>
               <p className="text-[15px] text-[#a3aaa6]">
-                {t("Loudest dev of the last 48 hours")} · <span className="font-mono">{short(top.wallet)}</span>
+                {t("Loudest dev of the last 48 hours")} · <span className="tabular-nums">{short(top.wallet)}</span>
               </p>
               <p className="mt-2.5 text-[22px] tracking-[-0.02em] text-white sm:text-[24px]">
                 {t("{n} launches, {d} dumped. Usually sells {m}.", {

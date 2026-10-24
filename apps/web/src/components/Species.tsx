@@ -47,12 +47,12 @@ export default function Species() {
               <div className="mt-8 flex-1 rounded-2xl border-t border-white/15 bg-[#030504]/45 px-4 pb-5 pt-6 backdrop-blur-[3px] [text-shadow:0_1px_10px_rgba(0,0,0,0.85)]">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <h3 className="font-display text-3xl text-white">{t(s.name)}</h3>
-                  <span className="whitespace-nowrap text-[12.5px] font-normal uppercase tracking-[0.3em] text-fg-3">{t(s.animal)}</span>
+                  <span className="whitespace-nowrap text-[12.5px] font-normal text-fg-3">{t(s.animal)}</span>
                 </div>
                 <p className="mt-3 text-sm font-normal leading-relaxed text-fg-2">{t(s.role)}</p>
 
                 <div className="mt-5">
-                  <p className="mb-2 text-[11.5px] font-normal uppercase tracking-[0.25em] text-fg-4">{t("Living in the zoo")}</p>
+                  <p className="mb-2 text-[11.5px] font-normal text-fg-4">{t("Living in the zoo")}</p>
                   <div className="flex flex-wrap gap-2">
                     {s.agents.map((a) => (
                       <button

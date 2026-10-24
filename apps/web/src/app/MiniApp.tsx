@@ -21,9 +21,9 @@ const TABS: Array<{ id: Tab; label: string; icon: ReactNode }> = [
 ];
 
 const TONE = {
-  suspicious: { label: "Suspicious", color: "#ff7a6e", glow: "255,110,95" },
+  suspicious: { label: "Suspicious", color: "#ff8a7e", glow: "255,110,95" },
   watch: { label: "Watch", color: "#efe8da", glow: "239,232,218" },
-  promising: { label: "Promising", color: "#8ff0a4", glow: "143,240,164" },
+  promising: { label: "Promising", color: "#a6e3b4", glow: "143,240,164" },
 } as const;
 
 const SITE = "https://zooaiagency.com";
@@ -325,7 +325,7 @@ function Verdict({ a }: { a: Ask }) {
             {facts.slice(0, 6).map(([k, v, bad], i) => (
               <motion.div key={k} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }} className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
                 <p className="text-[10.5px] text-fg-4">{tt(k)}</p>
-                <p className={`tabular-nums mt-0.5 text-[15px] ${bad ? "text-[#ff8f84]" : "text-fg"}`}>{v}</p>
+                <p className={`tabular-nums mt-0.5 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-fg"}`}>{v}</p>
               </motion.div>
             ))}
           </div>
@@ -392,7 +392,7 @@ function DevCard({ r }: { r: CreatorRecord }) {
             {r.recent.slice(0, 8).map((t) => (
               <div key={t.mint} className="flex items-center justify-between py-2 text-[13px]">
                 <span className="truncate">${sym(t.symbol)}</span>
-                <span className={`tabular-nums text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8f84]" : t.graduated ? "text-[#9df3b0]" : "text-fg-4"}`}>
+                <span className={`tabular-nums text-[11px] ${t.dumpedAfterMin !== null ? "text-[#ff8a7e]" : t.graduated ? "text-[#a6e3b4]" : "text-fg-4"}`}>
                   {[launchOutcome(t).head, launchOutcome(t).tail].filter(Boolean).join(" · ")}
                 </span>
               </div>
@@ -568,7 +568,7 @@ function XRayStart({ onPick }: { onPick: (mint: string) => void }) {
             <button key={m.mint} type="button" onClick={() => onPick(m.mint)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-white/[0.04]">
               <span className="min-w-0">
                 <span className="font-display block truncate text-[15px]">${sym(m.symbol)}</span>
-                <span className={`block truncate text-[12px] font-normal ${m.kind === "graduated" ? "text-fg-4" : "text-[#ffb3ab]"}`}>{tChain(m.text)}</span>
+                <span className={`block truncate text-[12px] font-normal ${m.kind === "graduated" ? "text-fg-4" : "text-[#ff8a7e]"}`}>{tChain(m.text)}</span>
               </span>
               <span className="tabular-nums shrink-0 text-[10.5px] text-fg-4">{tt("x-ray it →")}</span>
             </button>
@@ -583,7 +583,7 @@ function XStat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="rounded-2xl bg-black/30 px-3.5 py-2.5 ring-1 ring-white/[0.06]">
       <p className="text-[10.5px] leading-tight text-fg-4">{tt(k)}</p>
-      <p className={`tabular-nums mt-1 text-[15px] ${bad ? "text-[#ff8f84]" : "text-fg"}`}>{v}</p>
+      <p className={`tabular-nums mt-1 text-[15px] ${bad ? "text-[#ff8a7e]" : "text-fg"}`}>{v}</p>
     </div>
   );
 }
@@ -685,7 +685,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
             {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 5).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onPick(x.mint); }} className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left text-[13px] active:opacity-70">
                 <span className="truncate text-fg-2">${sym(x.symbol)}</span>
-                <span className={`tabular-nums shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : "text-fg-4"}`}>
+                <span className={`tabular-nums shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : "text-fg-4"}`}>
                   {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
@@ -701,7 +701,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
               <button type="button" onClick={() => openWalletMini(fund.funder!)} className="tabular-nums mt-1 text-[14px] text-fg">
                 {short(fund.funder)} →
               </button>
-              <p className={`mt-1 text-[12.5px] font-normal ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8f84]" : "text-fg-4"}`}>
+              <p className={`mt-1 text-[12.5px] font-normal ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8a7e]" : "text-fg-4"}`}>
                 {fund.funderIsHot
                   ? tt("An exchange or a router: it funds everyone, so it ties no one together.")
                   : fund.siblings.length
@@ -714,7 +714,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         {r.socials?.map((s) => (
           <button key={s.social.url} type="button" onClick={() => openLink(s.social.url)} className="mt-2 flex w-full items-baseline justify-between gap-3 rounded-2xl bg-black/30 px-3.5 py-2.5 text-left ring-1 ring-white/[0.06]">
             <span className="truncate text-[12.5px] font-normal text-fg-3">{s.social.label} ↗</span>
-            <span className={`tabular-nums shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8f84]" : "text-fg-4"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
+            <span className={`tabular-nums shrink-0 text-[11px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{tt("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
           </button>
         ))}
         {c.holders && c.holders.top10Pct === 0 && <p className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-normal text-fg-4 ring-1 ring-white/[0.06]">{tt("Nobody holds it outside the curve: everyone sold back.")}</p>}
@@ -770,15 +770,15 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
   const d = p.dev;
   const serial = d && d.launches48h >= 3 && d.dumped >= Math.ceil(d.launches48h * 0.6);
   const lead = d?.builder?.isBuilder
-    ? { text: tt("A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.", { g: d.builder.grew, n: d.builder.launches }), cls: "text-[#9df3b0]" }
+    ? { text: tt("A track record: {g} of its {n} launches grew and still hold liquidity, and it has not dumped them.", { g: d.builder.grew, n: d.builder.launches }), cls: "text-[#a6e3b4]" }
     : serial
-      ? { text: tt("A serial dumper: launched {n} tokens in two days and dumped {d} of them, usually {m} min after launch.", { n: d!.launches48h, d: d!.dumped, m: d!.medianDumpMin ?? 0 }), cls: "text-[#ff8f84]" }
+      ? { text: tt("A serial dumper: launched {n} tokens in two days and dumped {d} of them, usually {m} min after launch.", { n: d!.launches48h, d: d!.dumped, m: d!.medianDumpMin ?? 0 }), cls: "text-[#ff8a7e]" }
       : p.sniper && p.sniper.snipes48h >= 10
-        ? { text: tt("A sniper: bought {n} launches in their first seconds in two days and sold out of {o}, usually {x} after buying.", { n: p.sniper.snipes48h, o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), cls: "text-[#ff8f84]" }
+        ? { text: tt("A sniper: bought {n} launches in their first seconds in two days and sold out of {o}, usually {x} after buying.", { n: p.sniper.snipes48h, o: p.sniper.soldOut, x: secs(p.sniper.medianExitSec) }), cls: "text-[#ff8a7e]" }
         : p.funded.creators.length >= 2 && !p.funded.hot
           ? { text: tt("Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.", { n: p.funded.creators.length, d: p.funded.creators.reduce((n, c) => n + c.dumped, 0) }), cls: "text-fg" }
           : d
-            ? { text: tt("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), cls: d.dumped >= 2 ? "text-[#ff8f84]" : "text-fg" }
+            ? { text: tt("Launched {n} tokens in two days, dumped {d}.", { n: d.launches48h, d: d.dumped }), cls: d.dumped >= 2 ? "text-[#ff8a7e]" : "text-fg" }
             : { text: tt("Seen in the first seconds of {n} launches in two days.", { n: p.sniper?.snipes48h ?? 0 }), cls: "text-fg" };
 
   return (
@@ -802,7 +802,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
             {d.launches.slice(0, 8).map((x) => (
               <button key={x.mint} type="button" onClick={() => { haptic.tap(); onToken(x.mint); }} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2.5 text-left active:bg-white/[0.04]">
                 <span className="truncate text-[13px] text-fg-2">${sym(x.symbol)}</span>
-                <span className={`tabular-nums shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8f84]" : x.graduated ? "text-[#9df3b0]" : "text-fg-4"}`}>
+                <span className={`tabular-nums shrink-0 text-[11px] ${x.dumpedAfterMin !== null ? "text-[#ff8a7e]" : x.graduated ? "text-[#a6e3b4]" : "text-fg-4"}`}>
                   {[launchOutcome(x).head, launchOutcome(x).tail].filter(Boolean).join(" · ")}
                 </span>
               </button>
@@ -851,7 +851,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
               {p.funded.creators.slice(0, 8).map((c) => (
                 <button key={c.wallet} type="button" onClick={() => onWallet(c.wallet)} className="flex w-full items-baseline justify-between gap-3 px-3.5 py-2 text-left active:bg-white/[0.04]">
                   <span className="tabular-nums text-[12px] text-fg-2">{short(c.wallet)} →</span>
-                  <span className={`tabular-nums text-[11px] ${c.dumped >= 1 ? "text-[#ff8f84]" : "text-fg-4"}`}>{tt("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
+                  <span className={`tabular-nums text-[11px] ${c.dumped >= 1 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{tt("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
                 </button>
               ))}
             </div>
@@ -896,7 +896,7 @@ function RugsTab() {
               >
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${sym(e.symbol)}</span>
-                  <span className="block text-[12px] font-normal text-[#ffb3ab]">{tChain(e.text)}</span>
+                  <span className="block text-[12px] font-normal text-[#ff8a7e]">{tChain(e.text)}</span>
                 </span>
                 <span className="tabular-nums shrink-0 text-[10.5px] text-fg-4">{ago(e.at)}</span>
               </motion.button>
@@ -930,11 +930,11 @@ function RadarTab({ onXRay }: { onXRay: (mint: string) => void }) {
         <Skeleton rows={5} />
       ) : (
         <>
-          {turned > 0 && <p className="tabular-nums mb-2 text-[11px] text-[#ff8f84]">{tt("{n} turned while you watched", { n: turned })}</p>}
+          {turned > 0 && <p className="tabular-nums mb-2 text-[11px] text-[#ff8a7e]">{tt("{n} turned while you watched", { n: turned })}</p>}
           <div className="grid gap-2">
             {list.map((w, i) => {
               const red = !!w.turnedAt;
-              const color = red ? (w.verdict === "avoid" ? "#ff8f84" : "#f2d39b") : w.verdict === "pass" ? "#9df3b0" : "rgba(255,255,255,0.45)";
+              const color = red ? (w.verdict === "avoid" ? "#ff8a7e" : "#ffc27a") : w.verdict === "pass" ? "#a6e3b4" : "rgba(255,255,255,0.45)";
               const status = red ? (w.verdict === "avoid" ? tt("turned · avoid") : tt("turned · caution")) : w.verdict === "pass" ? tt("no red flags so far") : tt("checking");
               return (
                 <motion.button

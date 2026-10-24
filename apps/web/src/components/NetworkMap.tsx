@@ -311,7 +311,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
           ctx.fillText(label, lx + 8, ly + 0.5);
         } else if (n.kind === "coin" && n.label && (tr.k > 0.95 || n === focus)) {
           ctx.font = "500 11px Geist, system-ui, sans-serif";
-          ctx.fillStyle = n === focus ? "#ffffff" : "#c9cecb";
+          ctx.fillStyle = n === focus ? "#ffffff" : "#d9dddb";
           ctx.textAlign = "left";
           ctx.fillText(n.label, x + rad + 6, y);
         } else if ((n.kind === "crew" || n.kind === "ring") && n.launches && rad > 9) {
@@ -330,7 +330,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
         ctx.fillStyle = g.color;
         ctx.fillText(g.title, x, y - 28);
         ctx.font = `400 ${mobile ? 11 : 12}px Geist, system-ui, sans-serif`;
-        ctx.fillStyle = "#c9cecb";
+        ctx.fillStyle = "#d9dddb";
         ctx.fillText(g.sub, x, y - 12);
       }
       // the scanner's reticle on the focused node

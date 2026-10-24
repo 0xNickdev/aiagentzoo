@@ -34,12 +34,9 @@ export default function RoadmapTeaser() {
   };
 
   return (
-    <section id="roadmap" className="relative flex min-h-[100svh] items-end overflow-hidden px-5 pb-20 pt-32 sm:px-8">
-      <img src="/backdrops/roadmap-trail.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "58% 50%" }} />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#030504]/90 via-[#030504]/55 to-[#030504]/25" />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#030504] via-transparent to-[#030504]" />
+    <section id="roadmap" className="relative px-5 py-20 sm:px-8 sm:py-24 md:py-28">
       <div className="relative mx-auto w-full max-w-7xl">
-        <p className="tabular-nums text-[12.5px] uppercase tracking-[0.22em] text-fg-4">{t("Roadmap · Oct - Dec 2026")}</p>
+        <p className="tabular-nums text-[12.5px] text-fg-4">{t("Roadmap · Oct - Dec 2026")}</p>
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}

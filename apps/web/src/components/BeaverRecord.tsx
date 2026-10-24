@@ -71,7 +71,7 @@ export default function BeaverRecord() {
           <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
             <span>{t("latest graded calls")}</span>
             <span>
-              <span className="text-[#9df3b0]">{t("{n} right", { n: right })}</span> · <span className="text-[#ff8a7e]">{t("{n} wrong", { n: wrong })}</span>
+              <span className="text-[#a6e3b4]">{t("{n} right", { n: right })}</span> · <span className="text-[#ff8a7e]">{t("{n} wrong", { n: wrong })}</span>
             </span>
           </div>
           <ul className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
@@ -79,7 +79,7 @@ export default function BeaverRecord() {
               <li key={c.night + c.mint} className="border-b border-dashed border-white/10 py-2.5 text-[12.5px]">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[15px]">${c.symbol}</span>
-                  <span className={`tabular-nums shrink-0 text-[12.5px] ${c.hit ? "text-[#9df3b0]" : "text-[#ff8a7e]"}`}>
+                  <span className={`tabular-nums shrink-0 text-[12.5px] ${c.hit ? "text-[#a6e3b4]" : "text-[#ff8a7e]"}`}>
                     {t(c.hit ? "right" : "wrong")} · {t("said {v}", { v: t(c.verdict) })}, {t(c.outcome === "dead" ? "it died" : "it lived")}
                   </span>
                 </div>

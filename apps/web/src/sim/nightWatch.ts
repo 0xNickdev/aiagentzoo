@@ -110,7 +110,7 @@ export const PULSE_COLOR: Record<PulseEvent["kind"], string> = {
   launch: "#f1dfb8",
   serial: "#ffaa55",
   dump: "#ff5b4f",
-  graduated: "#8ff0a4",
+  graduated: "#a6e3b4",
   whale: "#ffd86b",
   drained: "#ff5b4f",
 };

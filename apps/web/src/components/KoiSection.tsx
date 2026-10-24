@@ -94,7 +94,7 @@ export default function KoiSection() {
               <li key={p.night + p.mint} className="border-b border-dashed border-white/10 py-2.5 text-[12.5px]">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[15px]">${p.symbol}</span>
-                  <span className={`tabular-nums shrink-0 text-[12.5px] ${p.outcome === "alive" ? "text-[#9df3b0]" : p.outcome === "dead" ? "text-[#ff8a7e]" : "text-fg-4"}`}>
+                  <span className={`tabular-nums shrink-0 text-[12.5px] ${p.outcome === "alive" ? "text-[#a6e3b4]" : p.outcome === "dead" ? "text-[#ff8a7e]" : "text-fg-4"}`}>
                     {p.night.slice(5)} · {p.outcome === "alive" ? pick("alive", "活着") : p.outcome === "dead" ? pick("dead", "死了") : pick("not graded", "未打分")}
                   </span>
                 </div>

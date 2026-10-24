@@ -127,11 +127,11 @@ export function Backdrop({ src, reveal, glowAt = "50% 40%", opacity = 0.55, posi
  * Cinematic band between sections. It overlaps the neighbouring sections'
  * fades so the page reads as one continuous night, and carries live content.
  */
-export function Strip({ src, tint = "120,150,130", children }: { src: string; tint?: string; children?: ReactNode }) {
+export function Strip({ src, children }: { src: string; tint?: string; children?: ReactNode }) {
+  // Like Backdrop: no photos under live data, only the quiet moss glow.
+  void src;
+  const tint = "70,110,85";
   const ref = useRef<HTMLDivElement>(null);
-  const ok = useImage(src);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
 
   return (
     <div ref={ref} className="relative -my-[8vh] min-h-[360px] w-full sm:h-[58vh]">
@@ -144,9 +144,6 @@ export function Strip({ src, tint = "120,150,130", children }: { src: string; ti
           className="absolute inset-0"
           style={{ background: `radial-gradient(80% 60% at 50% 55%, rgba(${tint},0.22), transparent 75%)` }}
         />
-        {ok && (
-          <motion.img src={src} alt="" style={{ y }} className="absolute inset-[-10%_0] h-[120%] w-full object-cover" />
-        )}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(1,1,1,0.45),transparent_70%)]" />
       </div>
       {children && (

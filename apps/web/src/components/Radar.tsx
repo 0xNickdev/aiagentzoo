@@ -10,7 +10,7 @@ const EASE = [0.215, 0.61, 0.355, 1] as const;
 
 function Row({ w, locked }: { w: Watched; locked: boolean }) {
   const turned = !!w.turnedAt;
-  const color = turned ? (w.verdict === "avoid" ? "#ff8a7e" : "#f2d39b") : w.verdict === "pass" ? "#9df3b0" : "rgba(255,255,255,0.45)";
+  const color = turned ? (w.verdict === "avoid" ? "#ff8a7e" : "#ffc27a") : w.verdict === "pass" ? "#a6e3b4" : "rgba(255,255,255,0.45)";
   const status = turned ? (w.verdict === "avoid" ? t("turned · avoid") : t("turned · caution")) : w.verdict === "pass" ? t("no red flags so far") : t("checking");
   return (
     <motion.a

@@ -54,7 +54,7 @@ export function TokenAddress() {
 
   return (
     <div className="bg-night-surface border border-white/[0.08] mx-auto mb-12 max-w-3xl rounded-2xl bg-black/45 p-6 text-center backdrop-blur-md">
-      <p className="text-[11.5px] font-normal uppercase tracking-[0.3em] text-fg-3">
+      <p className="text-[11.5px] font-normal text-fg-3">
         {TOKEN_SYMBOL ? `$${TOKEN_SYMBOL} · ` : ""}{t("Solana · launched on ClawPump")}
       </p>
       <button type="button" onClick={copy} className="mt-3 w-full break-all tabular-nums text-sm text-fg hover:text-white sm:text-base">

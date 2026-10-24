@@ -83,7 +83,7 @@ export default function Doors() {
   const doors: Door[] = [
     {
       href: "/live",
-      eyebrow: "LIVE",
+      eyebrow: "Live",
       title: "The Night Watch",
       line: "Three nodes, eight agents and the chain itself, as it happens.",
       image: "/doors/live.webp",
@@ -97,7 +97,7 @@ export default function Doors() {
     },
     {
       href: "/brief",
-      eyebrow: "MORNING BRIEF",
+      eyebrow: "Morning Brief",
       title: "What they found",
       line: "Every morning at 07:00 UTC: launches, rugs, graduations and the pack's calls, signed.",
       image: "/doors/brief.webp",
@@ -110,7 +110,7 @@ export default function Doors() {
     },
     {
       href: "/evolution",
-      eyebrow: "THE NURSERY",
+      eyebrow: "The Nursery",
       title: "Who survives",
       line: "Eight judges that never learn. Every three nights the weakest dies and the best breed.",
       image: "/doors/nursery.webp",
@@ -133,7 +133,7 @@ export default function Doors() {
         className="flex flex-wrap items-end justify-between gap-6"
       >
         <div>
-          <p className="tabular-nums text-[12.5px] tracking-[0.18em] text-fg-3">{t("THREE WAYS IN")}</p>
+          <p className="tabular-nums text-[12.5px] text-fg-3">{t("Three ways in")}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("See it work")}</h2>
         </div>
         <p className="max-w-sm text-[14px] font-normal leading-relaxed text-fg-4">
@@ -161,7 +161,7 @@ export default function Doors() {
                 className="absolute inset-0 h-full w-full object-cover opacity-85 transition duration-[1.2s] ease-out group-hover:scale-[1.05] group-hover:opacity-100"
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,5,4,0.55)_0%,rgba(3,5,4,0)_28%,rgba(3,5,4,0)_70%,#050706_100%)]" />
-              <p className="tabular-nums absolute left-7 top-6 flex items-center gap-2 text-[12px] tracking-[0.18em] text-fg-3">
+              <p className="tabular-nums absolute left-7 top-6 flex items-center gap-2 text-[12px] text-fg-3">
                 {d.live !== undefined && (
                   <span className={`h-1.5 w-1.5 rounded-full ${d.live ? "animate-pulse bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" : "bg-white/30"}`} />
                 )}
@@ -175,7 +175,7 @@ export default function Doors() {
                 {d.stats.map(([k, v]) => (
                   <div key={k}>
                     <dd className="text-xl text-white">{v}</dd>
-                    <dt className="mt-1 text-[11.5px] tracking-[0.06em] text-fg-3">{t(k)}</dt>
+                    <dt className="mt-1 text-[11.5px] text-fg-3">{t(k)}</dt>
                   </div>
                 ))}
               </dl>
