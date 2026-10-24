@@ -71,7 +71,7 @@ export default function MiniApp() {
       <Backdrop hero={tab === "xray" || tab === "ask"} />
       <header className="zapp-top">
         <div className="flex items-center gap-2">
-          <img src="/logo-wordmark.png" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
+          <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]" />
           <button type="button" onClick={() => setLang(lang() === "zh" ? "en" : "zh")} className="glass-pill font-mono shrink-0 whitespace-nowrap px-2.5 py-1 text-[10.5px] text-white/75" aria-label="Language">
             {lang() === "zh" ? "EN" : "中文"}
           </button>
