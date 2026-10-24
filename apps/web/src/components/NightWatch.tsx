@@ -271,7 +271,7 @@ export default function NightWatch() {
           </div>
 
           {/* The log scrolls inside its card instead of stretching the page. */}
-          <div className="bg-night-surface border border-white/[0.08] flex min-h-[220px] flex-1 flex-col rounded-2xl p-5 lg:min-h-0">
+          <div className="bg-night-surface border border-white/[0.08] flex min-h-[220px] flex-1 flex-col rounded-2xl p-5">
             <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
               <span>public log</span>
               <span className="animate-pulse text-fg-2">● live</span>

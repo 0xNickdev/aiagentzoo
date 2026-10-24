@@ -56,7 +56,7 @@ export default function ApiAccess() {
       />
       <Reveal className="grid gap-3 lg:grid-cols-2">
         {tiers.map((tier, i) => (
-          <div key={tier.name} className={`bg-night-surface border border-white/[0.08] rounded-2xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
+          <div key={tier.name} className={`bg-night-surface border border-white/[0.08] min-w-0 rounded-2xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
             <p className="font-display text-3xl">{tier.name}</p>
             <p className="tabular-nums mt-1 text-[12.5px] text-fg-3">{tier.who}</p>
             <ul className="mt-5 space-y-2 text-[13.5px] font-normal text-fg-3">

@@ -134,7 +134,7 @@ export function Strip({ src, children }: { src: string; tint?: string; children?
   const ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={ref} className="relative -my-[8vh] min-h-[360px] w-full sm:h-[58vh]">
+    <div ref={ref} className="relative w-full">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 overflow-hidden"
@@ -147,7 +147,7 @@ export function Strip({ src, children }: { src: string; tint?: string; children?
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(1,1,1,0.45),transparent_70%)]" />
       </div>
       {children && (
-        <div className="relative z-10 flex h-full min-h-[360px] flex-col items-center justify-center px-5 py-16 text-center">{children}</div>
+        <div className="relative z-10 flex flex-col items-center justify-center px-5 py-20 text-center sm:py-24">{children}</div>
       )}
     </div>
   );
