@@ -87,7 +87,7 @@ export default function Radar() {
               <Bell size={15} /> {notify ? t("Pings on in this tab") : t("Ping me in this tab when one turns")}
             </button>
           )}
-          <span className="text-[14px] text-fg-4">{t("Telegram pings arrive with our own servers in November.")}</span>
+          <span className="text-[14px] text-fg-4">{t("Telegram pings are next.")}</span>
         </div>
 
         <AnimatePresence>
@@ -106,13 +106,18 @@ export default function Radar() {
         <div className="mt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-display text-[26px] text-white">{t("Watching now")}</h2>
-            <p className="tabular-nums text-[13px] text-fg-4">{t("{n} coins · re-checked about every minute", { n: live.length })}</p>
+            <p className="tabular-nums text-[13px] text-fg-4">{live.length === 1 ? t("1 coin · re-checked about every minute") : t("{n} coins · re-checked about every minute", { n: live.length })}</p>
           </div>
           <div className="relative mt-3 border-t border-white/[0.12]">
             {live.length === 0 && <p className="py-10 text-[15px] text-fg-4">{t("Reading the chain...")}</p>}
             {live.map((w, i) => (
               <Row key={w.mint} w={w} locked={i >= lockAfter} />
             ))}
+            {live.length > 0 && live.length < 4 && (
+              <p className="border-t border-white/[0.08] py-8 text-[15px] leading-relaxed text-fg-4">
+                {t("Only fresh coins with no red flags so far make this list. On a rough day that leaves a few. New ones show up here the moment they pass.")}
+              </p>
+            )}
             {!isHolder && live.length > lockAfter && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-48 items-end justify-center bg-gradient-to-t from-[#030504] to-transparent pb-6">
                 <span className="pointer-events-auto">

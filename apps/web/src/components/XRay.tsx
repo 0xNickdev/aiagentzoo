@@ -606,7 +606,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
 
               {tab === "dev" && (
                 <div className="grid gap-4 xl:grid-cols-2">
-                  <div id="xr-creator">
+                  <div id="xr-creator" className="[&>*]:h-full">
                     <Panel title="The creator" note="last 48 hours">
               <Stat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
               <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
@@ -636,7 +636,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               )}
             </Panel>
                   </div>
-                  <div id="xr-funder">
+                  <div id="xr-funder" className="[&>*]:h-full">
                     <Panel title="Who paid for the creator" note="traced on Solana">
               {!fund && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
               {fund && !fund.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the creator's recent history.")}</p>}
