@@ -108,8 +108,10 @@ function ParticleArt() {
       stop = startScene(el, {
         north: NORTH,
         captions: [t("Every launch on Solana, read as it happens."), t("We keep watching the dev, coin after coin.")],
-        netCaption: (dev, launches, dumped, regs) =>
-          t("The loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches", { dev, n: launches, d: dumped, r: regs }),
+        netCaption: (dev, launches, dumped, regs, rank) =>
+          rank === 1
+            ? t("The loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches", { dev, n: launches, d: dumped, r: regs })
+            : t("The #{k} loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches", { k: rank, dev, n: launches, d: dumped, r: regs }),
         onCaption: (text) => {
           setCap((c) => ({ ...c, on: false }));
           clearTimeout(timer);

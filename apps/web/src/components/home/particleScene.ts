@@ -65,9 +65,14 @@ export type NetInfo =
   | { kind: "wallet"; wallet: string; launches: number; snipes48h?: number };
 
 // The network: nodes become dense clumps, links become streams of particles.
-async function netTargets(NORTH: string, caption: (dev: string, launches: number, dumped: number, regs: number) => string) {
-  const { ruggers } = await fetch(`${NORTH}/v1/chain/ruggers?limit=1`).then((r) => r.json());
-  const dev = ruggers[0];
+// The ruggers list is read once a few minutes; each network beat takes the next dev on it.
+let ruggerList: { at: number; list: Array<{ wallet: string; launches48h: number; dumped: number; medianDumpMin?: number; graduated?: number; recent?: unknown[] }> } | null = null;
+async function netTargets(NORTH: string, caption: (dev: string, launches: number, dumped: number, regs: number, rank: number) => string, which = 0, shape = 0) {
+  if (!ruggerList || Date.now() - ruggerList.at > 5 * 60_000) {
+    const { ruggers } = await fetch(`${NORTH}/v1/chain/ruggers?limit=6`).then((r) => r.json());
+    ruggerList = { at: Date.now(), list: ruggers };
+  }
+  const dev = ruggerList.list[which % ruggerList.list.length]!;
   const w = await fetch(`${NORTH}/v1/wallet/${dev.wallet}`).then((r) => r.json());
   const coins: Launch[] = (w.dev?.launches ?? dev.recent ?? []).slice(0, 34);
   const regs: Array<{ wallet: string; launches: number; snipes48h?: number }> = (w.dev?.regulars ?? []).slice(0, 12);
@@ -77,14 +82,33 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
   type Launch = { mint: string; symbol?: string; venue?: string; buyers?: number; dumpedAfterSec?: number | null; dumpedAfterMin?: number | null; devTookSol?: number | null; leftHolding?: number | null; peakCapUsd?: number | null; alive?: boolean };
   const nodes: Node[] = [{ kind: "dev", x: 0, y: 0, z: 0, r: 13, info: { kind: "dev", wallet: dev.wallet, launches48h: dev.launches48h, dumped: dev.dumped, medianDumpMin: dev.medianDumpMin ?? null, graduated: dev.graduated ?? 0 } }];
   const L = 0.82; // the layout's scale, so the network stays clear of the headline
+  // three shapes, one per beat: a ring; a golden-angle spiral; split, the dumped coins left and the living right
+  const dumpedOf = (c: Launch) => c.dumpedAfterSec != null || c.dumpedAfterMin != null;
+  const nDumped = coins.filter(dumpedOf).length;
+  let dIdx = 0, lIdx = 0;
+  const place = (c: Launch, i: number): [number, number] => {
+    if (shape === 1) {
+      const a = i * 2.39996 + 0.4;
+      const d = 70 + 26 * Math.sqrt(i + 1);
+      return [a, d];
+    }
+    if (shape === 2) {
+      const dumped = dumpedOf(c);
+      const k = dumped ? dIdx++ : lIdx++;
+      const n = Math.max(1, dumped ? nDumped : coins.length - nDumped);
+      const a = (dumped ? Math.PI * 0.62 : -Math.PI * 0.38) + (n === 1 ? Math.PI * 0.38 : (k / (n - 1)) * Math.PI * 0.76);
+      return [a, 135 + ((k * 37) % 5) * 14];
+    }
+    return [(i / coins.length) * Math.PI * 2 + Math.random() * 0.12, 120 + Math.random() * 70];
+  };
   coins.forEach((c: Launch, i: number) => {
-    const a = (i / coins.length) * Math.PI * 2 + Math.random() * 0.12;
-    const d = 120 + Math.random() * 70;
+    const [a, d] = place(c, i);
     nodes.push({ kind: "coin", dumped: c.dumpedAfterSec != null || c.dumpedAfterMin != null, x: Math.cos(a) * d * 1.35 * L, y: Math.sin(a) * d * L, z: (Math.random() - 0.5) * 90, r: 4.2 + Math.min(4, (c.buyers ?? 0) / 25), info: { kind: "coin", mint: c.mint, symbol: c.symbol ?? "", venue: c.venue, buyers: c.buyers, dumpedAfterSec: c.dumpedAfterSec, dumpedAfterMin: c.dumpedAfterMin, devTookSol: c.devTookSol, leftHolding: c.leftHolding, peakCapUsd: c.peakCapUsd, alive: c.alive } });
   });
   regs.forEach((g, i: number) => {
-    const a = (i / regs.length) * Math.PI * 2 + 0.3;
-    const d = 255 + Math.random() * 40;
+    // in the split shape the buyers sit in two arcs above and below, between the dead and the living
+    const a = shape === 2 ? (i % 2 ? Math.PI * 1.5 : Math.PI * 0.5) + ((Math.floor(i / 2) / Math.max(1, Math.ceil(regs.length / 2) - 1)) - 0.5) * 0.9 : (i / regs.length) * Math.PI * 2 + 0.3;
+    const d = shape === 1 ? 300 + Math.random() * 30 : 255 + Math.random() * 40;
     nodes.push({ kind: "wallet", x: Math.cos(a) * d * 1.3 * L, y: Math.sin(a) * d * 0.95 * L, z: (Math.random() - 0.5) * 120, r: 3.2, info: { kind: "wallet", wallet: g.wallet, launches: g.launches, snipes48h: g.snipes48h } });
   });
   const links: Array<{ a: number; b: number; kind: "launch" | "buy" }> = [];
@@ -152,7 +176,7 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
   }));
   return {
     pos, edgeA, edgeB, isEdge, col, meta, nodeOf,
-    caption: caption(short(dev.wallet), dev.launches48h, dev.dumped, regs.length),
+    caption: caption(short(dev.wallet), dev.launches48h, dev.dumped, regs.length, (which % ruggerList.list.length) + 1),
   };
 }
 
@@ -240,7 +264,7 @@ const frag = /* glsl */ `
 export interface SceneOptions {
   north: string;
   captions: [string, string];
-  netCaption: (dev: string, launches: number, dumped: number, regs: number) => string;
+  netCaption: (dev: string, launches: number, dumped: number, regs: number, rank: number) => string;
   onCaption: (text: string) => void;
   onReady: () => void;
   /** The label on the dev's node, e.g. "DEV 8WZw…9iLV". */
@@ -451,9 +475,14 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   const say = (t: string) => o.onCaption(t);
 
   let haveNet = false;
-  netTargets(o.north, o.netCaption)
-    .then((n) => {
-      if (!alive) return;
+  type Net = Awaited<ReturnType<typeof netTargets>>;
+  let pending: Net | null = null;
+  // ?net=<n> starts from the n-th dev and shape, for review
+  let netIndex = Number(new URLSearchParams(location.search).get("net")) || 0;
+  const applyNet = (n: Net) => {
+      for (const m of meta) m.el?.remove();
+      hovered = null;
+      picked = null;
       geo.getAttribute("aNet").array.set(n.pos);
       geo.getAttribute("aNet").needsUpdate = true;
       geo.getAttribute("aEdgeA").array.set(n.edgeA);
@@ -484,8 +513,18 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
         m.el = el;
       }
       haveNet = true;
-    })
-    .catch(() => {});
+  };
+  // the next dev and shape are read while the dust and the eyes are on screen
+  const prepare = () =>
+    netTargets(o.north, o.netCaption, netIndex, netIndex % 3)
+      .then((n) => {
+        if (!alive) return;
+        netIndex += 1;
+        if (!haveNet) applyNet(n);
+        else pending = n;
+      })
+      .catch(() => {});
+  void prepare();
 
   // the loop: hold, morph, hold, morph... dust -> eyes -> net -> dust
   const HOLD: Record<number, number> = { 0: 3.2, 1: 4.6, 2: 7.5 };
@@ -518,6 +557,12 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     const el = now - t0;
     if (phase === "hold" && el > HOLD[state] && !reduce && pin == null) {
       next = state === 0 ? 1 : state === 1 ? (haveNet ? 2 : 0) : 0;
+      // into the network: swap in the one read in the meantime; out of it: start reading the next
+      if (next === 2 && pending) {
+        applyNet(pending);
+        pending = null;
+      }
+      if (state === 2) void prepare();
       phase = "morph";
       t0 = now;
       uniforms.uFrom.value = state;

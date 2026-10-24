@@ -1391,4 +1391,5 @@ export const ZH: Record<string, string> = {
   "His launch": "他发的币",
   "Open the wallet": "打开钱包",
   "{d} of {n} launches dumped in 48h": "48 小时内 {n} 个币砸了 {d} 个",
+  "The #{k} loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches": "此刻活跃度第 {k} 的开发者：{dev} · 48 小时发了 {n} 个币，砸盘 {d} 个 · {r} 个钱包专买他的币",
 };
