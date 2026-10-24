@@ -458,7 +458,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
-        if (checkOf) return json(res, 200, { ...check, ...memory, access: tier });
+        const image = socials.image(mint);
+        if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
         if (past) {
           const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
           return json(res, 200, {
@@ -620,7 +621,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const pick = (k: string) => (q.get(k) ?? "").trim().slice(0, 64) || undefined;
         return json(res, 200, {
           keptHours: 48,
-          moments: tape.momentsMatching({ symbol: pick("symbol"), mint: pick("mint"), kind: pick("kind"), limit: clampInt(q.get("limit"), 100, 1, 500) }),
+          moments: tape.momentsMatching({ symbol: pick("symbol"), mint: pick("mint"), kind: pick("kind"), limit: clampInt(q.get("limit"), 100, 1, 500) }).map((m) => {
+            const image = socials.image(m.mint);
+            return image ? { ...m, image } : m;
+          }),
         });
       }
       if (req.method === "GET" && path === "/v1/chain/pulse") {

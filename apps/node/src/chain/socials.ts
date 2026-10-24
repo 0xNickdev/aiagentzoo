@@ -43,6 +43,14 @@ function metadataUrls(uri: string): string[] {
   return /^https:\/\//.test(uri) ? [uri] : [];
 }
 
+/** A metadata image as a URL a browser loads: IPFS through a public gateway, plain https as it is, anything else dropped. */
+export function imageUrl(v: unknown): string | null {
+  if (typeof v !== "string" || v.length > 300) return null;
+  const cid = /(?:\/ipfs\/|^ipfs:\/\/)([A-Za-z0-9]{40,80})/.exec(v)?.[1];
+  if (cid) return `https://ipfs.io/ipfs/${cid}`;
+  return /^https:\/\/[^\s"'<>]+$/.test(v) ? v : null;
+}
+
 export interface AccountRecord {
   social: Social;
   launches: number;
@@ -64,6 +72,8 @@ export class SocialsRegistry {
   /** Mint -> the accounts it links to (an empty list once read and found none). */
   private readonly byMint = new Map<string, Social[]>();
   private readonly byKey = new Map<string, Set<string>>();
+  /** Mint -> the picture its metadata points to, as a URL a browser can load. */
+  private readonly images = new Map<string, string>();
   private queue: Array<{ mint: string; uri: string }> = [];
   private pausedUntil = 0;
   private timer: NodeJS.Timeout | null = null;
@@ -94,8 +104,10 @@ export class SocialsRegistry {
           continue;
         }
         if (!r.ok) break;
-        const meta = (await r.json()) as { twitter?: unknown; telegram?: unknown };
+        const meta = (await r.json()) as { twitter?: unknown; telegram?: unknown; image?: unknown };
         this.add(mint, socialsOf(meta));
+        const img = imageUrl(meta.image);
+        if (img) this.images.set(mint, img);
         return true;
       } catch {
         // Next gateway.
@@ -103,6 +115,11 @@ export class SocialsRegistry {
     }
     this.byMint.set(mint, []);
     return !refused;
+  }
+
+  /** The token's picture, once its metadata was read. */
+  image(mint: string): string | undefined {
+    return this.images.get(mint);
   }
 
   /** What a token links to, and every other launch of the last two days that links to the same. */
@@ -154,7 +171,10 @@ export class SocialsRegistry {
   prune(now = Date.now()): void {
     for (const mint of this.byMint.keys()) {
       const o = this.tape.outline(mint);
-      if (!o || now - o.createdAt > KEEP_MS) this.byMint.delete(mint);
+      if (!o || now - o.createdAt > KEEP_MS) {
+        this.byMint.delete(mint);
+        this.images.delete(mint);
+      }
     }
     for (const [key, mints] of this.byKey) {
       for (const m of mints) if (!this.byMint.has(m)) mints.delete(m);
@@ -186,14 +206,15 @@ export class SocialsRegistry {
   }
 
   snapshot(): string {
-    return JSON.stringify({ v: 1, byMint: [...this.byMint] });
+    return JSON.stringify({ v: 1, byMint: [...this.byMint], images: [...this.images] });
   }
 
   load(json: string): number {
     try {
-      const saved = JSON.parse(json) as { v?: number; byMint?: Array<[string, Social[]]> };
+      const saved = JSON.parse(json) as { v?: number; byMint?: Array<[string, Social[]]>; images?: Array<[string, string]> };
       if (saved.v !== 1) return 0;
       for (const [mint, socials] of saved.byMint ?? []) if (this.tape.outline(mint)) this.add(mint, socials);
+      for (const [mint, img] of saved.images ?? []) if (this.tape.outline(mint)) this.images.set(mint, img);
       return this.byMint.size;
     } catch {
       return 0;
