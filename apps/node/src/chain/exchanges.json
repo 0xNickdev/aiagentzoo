@@ -1585,6 +1585,134 @@
     "Solscan account leaderboard metadata, tags exchange_wallet (solscan.io/leaderboard/account)"
    ],
    "confidence": "high"
+  },
+  {
+   "address": "5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (5VCwK)",
+   "sources": [
+    "https://solscan.io/account/5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD",
+    "Solscan label search 'OKX Hot Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "9un5wqE3q4oCjyrDkwsdD48KteCJitQX5978Vh7KKxHo",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (9un5w)",
+   "sources": [
+    "https://solscan.io/account/9un5wqE3q4oCjyrDkwsdD48KteCJitQX5978Vh7KKxHo",
+    "Solscan label search 'OKX Hot Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "HSxS16RkBuLEj6dAX41dXL1tmxDYobvLhrusK1pYk67g",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (HSxS1)",
+   "sources": [
+    "https://solscan.io/account/HSxS16RkBuLEj6dAX41dXL1tmxDYobvLhrusK1pYk67g",
+    "Solscan label search 'OKX Hot Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "3bwCjRXv4LASkv7DbLRJi7fDXgRRfEZhEstDVoZsjEHR",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (3bwCj)",
+   "sources": [
+    "https://solscan.io/account/3bwCjRXv4LASkv7DbLRJi7fDXgRRfEZhEstDVoZsjEHR",
+    "Solscan label search 'OKX Hot Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "CQxgsEW64gkzeEJ9FYfsyfc46u7rueXus51R7DNLnp8R",
+   "exchange": "OKX",
+   "label": "OKX Hot Wallet (CQxgs)",
+   "sources": [
+    "https://solscan.io/account/CQxgsEW64gkzeEJ9FYfsyfc46u7rueXus51R7DNLnp8R",
+    "Solscan label search 'OKX Hot Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "BunaYnktTigcU1ovzVt9dG7NMv2gW5VX7MBfSS8J38s2",
+   "exchange": "Bybit",
+   "label": "Bybit Wallet 6",
+   "sources": [
+    "https://solscan.io/account/BunaYnktTigcU1ovzVt9dG7NMv2gW5VX7MBfSS8J38s2",
+    "Solscan label search 'Bybit Wallet'"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "XkCriyrNwS3G4rzAXtG5B1nnvb5Ka1JtCku93VqeKAr",
+   "exchange": "Coinbase",
+   "label": "Coinbase",
+   "sources": [
+    "https://solscan.io/account/XkCriyrNwS3G4rzAXtG5B1nnvb5Ka1JtCku93VqeKAr"
+   ],
+   "confidence": "medium",
+   "note": "Solscan label is just 'Coinbase', not 'Hot Wallet'; role not stated"
+  },
+  {
+   "address": "8mowmVCEewZ9W2cEaQyQeQEeSxhGr1hvRviLwozwNtBt",
+   "exchange": "WhiteBIT",
+   "label": "WhiteBIT Hot Wallet",
+   "sources": [
+    "https://orbmarkets.io/address/8mowmVCEewZ9W2cEaQyQeQEeSxhGr1hvRviLwozwNtBt"
+   ],
+   "confidence": "medium",
+   "note": "Orb (Helius) label; Solscan has no label"
+  },
+  {
+   "address": "B48kNVXs4YK4amkBCH2XokQiv1SeiVQGHDR17xDeKAAn",
+   "exchange": "ChangeNOW",
+   "label": "ChangeNow: Hot Wallet 1",
+   "sources": [
+    "https://solscan.io/account/B48kNVXs4YK4amkBCH2XokQiv1SeiVQGHDR17xDeKAAn"
+   ],
+   "confidence": "high",
+   "note": "instant swap service, no-KYC"
+  },
+  {
+   "address": "5ndLnEYqSFiA5yUFHo6LVZ1eWc6Rhh11K5CfJNkoHEPs",
+   "exchange": "FixedFloat",
+   "label": "FixedFloat Exchange",
+   "sources": [
+    "https://solscan.io/account/5ndLnEYqSFiA5yUFHo6LVZ1eWc6Rhh11K5CfJNkoHEPs"
+   ],
+   "confidence": "high",
+   "note": "instant swap service, no-KYC"
+  },
+  {
+   "address": "ABNL41SwMLVRaCq6okEWsWyvLwm56nazUNwMrTHgmuyf",
+   "exchange": "SideShift",
+   "label": "SideShift: Hot Wallet",
+   "sources": [
+    "https://solscan.io/account/ABNL41SwMLVRaCq6okEWsWyvLwm56nazUNwMrTHgmuyf"
+   ],
+   "confidence": "high",
+   "note": "instant swap service, no-KYC"
+  },
+  {
+   "address": "5F1seMKUqSNhv45f6FhB2cFmgJbk8U1avJw7M6TexUq1",
+   "exchange": "MoonPay",
+   "label": "MoonPay Hot Wallet (5F1se)",
+   "sources": [
+    "https://solscan.io/account/5F1seMKUqSNhv45f6FhB2cFmgJbk8U1avJw7M6TexUq1"
+   ],
+   "confidence": "high"
+  },
+  {
+   "address": "Cc3bpPzUvgAzdW9Nv7dUQ8cpap8Xa7ujJgLdpqGrTCu6",
+   "exchange": "MoonPay",
+   "label": "MoonPay Hot Wallet (Cc3bp)",
+   "sources": [
+    "https://solscan.io/account/Cc3bpPzUvgAzdW9Nv7dUQ8cpap8Xa7ujJgLdpqGrTCu6"
+   ],
+   "confidence": "high"
   }
  ]
 }
