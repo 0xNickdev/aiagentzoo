@@ -45,11 +45,16 @@ export async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<s
   // The funding is the wallet's first transfer in, so read back to the very start of its history:
   // a serial launcher's latest pages are all launches, its funding sits under them.
   let sigs: Array<{ signature: string }> = [];
+  // Helius answers oldest-first in one call; any other RPC falls back to paging back through the history.
+  const first = await rpc<{ data?: Array<{ signature: string }> }>("getTransactionsForAddress", [wallet, { sortOrder: "asc", limit: 8, transactionDetails: "signatures" }], fetchFn);
+  if (first?.data?.length) {
+    sigs = [...first.data].reverse();
+  }
   let before: string | undefined;
-  for (let page = 0; page < 8; page++) {
+  for (let page = 0; page < 8 && !sigs.length; page++) {
     const got = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
     if (!got?.length) break;
-    sigs = got;
+    if (got.length < 1000 || page === 7) sigs = got;
     before = got[got.length - 1]!.signature;
     if (got.length < 1000) break;
   }

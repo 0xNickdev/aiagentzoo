@@ -189,7 +189,8 @@ export class Lineage {
       const saved = JSON.parse(json) as Saved;
       if (saved.v !== 1) return 0;
       for (const [w, v] of saved.hot ?? []) if (now - v.at < KEEP_MS) this.hot.set(w, v);
-      for (const [c, v] of saved.creators ?? []) if (now - v.at < KEEP_MS) this.remember(c, v.funder, v.at);
+      // a creator whose funding was not found is traced again: the reader now goes back to the start of a wallet
+      for (const [c, v] of saved.creators ?? []) if (now - v.at < KEEP_MS && v.funder) this.remember(c, v.funder, v.at);
       return this.creators.size;
     } catch {
       return 0;
