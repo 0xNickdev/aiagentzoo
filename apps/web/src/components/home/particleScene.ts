@@ -58,27 +58,34 @@ function eyesTargets() {
   return p;
 }
 
+/** What a node in the network beat is, for its label and the card that opens on click. */
+export type NetInfo =
+  | { kind: "dev"; wallet: string; launches48h: number; dumped: number; medianDumpMin: number | null; graduated: number }
+  | { kind: "coin"; mint: string; symbol: string; venue?: string; buyers?: number; dumpedAfterSec?: number | null; dumpedAfterMin?: number | null; devTookSol?: number | null; leftHolding?: number | null; peakCapUsd?: number | null; alive?: boolean }
+  | { kind: "wallet"; wallet: string; launches: number; snipes48h?: number };
+
 // The network: nodes become dense clumps, links become streams of particles.
 async function netTargets(NORTH: string, caption: (dev: string, launches: number, dumped: number, regs: number) => string) {
   const { ruggers } = await fetch(`${NORTH}/v1/chain/ruggers?limit=1`).then((r) => r.json());
   const dev = ruggers[0];
   const w = await fetch(`${NORTH}/v1/wallet/${dev.wallet}`).then((r) => r.json());
   const coins: Launch[] = (w.dev?.launches ?? dev.recent ?? []).slice(0, 34);
-  const regs: Array<{ wallet: string }> = (w.dev?.regulars ?? []).slice(0, 12);
+  const regs: Array<{ wallet: string; launches: number; snipes48h?: number }> = (w.dev?.regulars ?? []).slice(0, 12);
 
   // layout: dev in the centre, coins on a loose ring, regulars outside, a short relaxation
-  type Node = { kind: "dev" | "coin" | "wallet"; x: number; y: number; z: number; r: number; dumped?: boolean };
-  type Launch = { mint: string; buyers?: number; dumpedAfterSec?: number | null; dumpedAfterMin?: number | null };
-  const nodes: Node[] = [{ kind: "dev", x: 0, y: 0, z: 0, r: 13 }];
+  type Node = { kind: "dev" | "coin" | "wallet"; x: number; y: number; z: number; r: number; dumped?: boolean; info: NetInfo };
+  type Launch = { mint: string; symbol?: string; venue?: string; buyers?: number; dumpedAfterSec?: number | null; dumpedAfterMin?: number | null; devTookSol?: number | null; leftHolding?: number | null; peakCapUsd?: number | null; alive?: boolean };
+  const nodes: Node[] = [{ kind: "dev", x: 0, y: 0, z: 0, r: 13, info: { kind: "dev", wallet: dev.wallet, launches48h: dev.launches48h, dumped: dev.dumped, medianDumpMin: dev.medianDumpMin ?? null, graduated: dev.graduated ?? 0 } }];
+  const L = 0.82; // the layout's scale, so the network stays clear of the headline
   coins.forEach((c: Launch, i: number) => {
     const a = (i / coins.length) * Math.PI * 2 + Math.random() * 0.12;
     const d = 120 + Math.random() * 70;
-    nodes.push({ kind: "coin", dumped: c.dumpedAfterSec != null || c.dumpedAfterMin != null, x: Math.cos(a) * d * 1.35, y: Math.sin(a) * d, z: (Math.random() - 0.5) * 90, r: 4.2 + Math.min(4, (c.buyers ?? 0) / 25) });
+    nodes.push({ kind: "coin", dumped: c.dumpedAfterSec != null || c.dumpedAfterMin != null, x: Math.cos(a) * d * 1.35 * L, y: Math.sin(a) * d * L, z: (Math.random() - 0.5) * 90, r: 4.2 + Math.min(4, (c.buyers ?? 0) / 25), info: { kind: "coin", mint: c.mint, symbol: c.symbol ?? "", venue: c.venue, buyers: c.buyers, dumpedAfterSec: c.dumpedAfterSec, dumpedAfterMin: c.dumpedAfterMin, devTookSol: c.devTookSol, leftHolding: c.leftHolding, peakCapUsd: c.peakCapUsd, alive: c.alive } });
   });
-  regs.forEach((_g, i: number) => {
+  regs.forEach((g, i: number) => {
     const a = (i / regs.length) * Math.PI * 2 + 0.3;
     const d = 255 + Math.random() * 40;
-    nodes.push({ kind: "wallet", x: Math.cos(a) * d * 1.3, y: Math.sin(a) * d * 0.95, z: (Math.random() - 0.5) * 120, r: 3.2 });
+    nodes.push({ kind: "wallet", x: Math.cos(a) * d * 1.3 * L, y: Math.sin(a) * d * 0.95 * L, z: (Math.random() - 0.5) * 120, r: 3.2, info: { kind: "wallet", wallet: g.wallet, launches: g.launches, snipes48h: g.snipes48h } });
   });
   const links: Array<{ a: number; b: number; kind: "launch" | "buy" }> = [];
   const coinIdx = nodes.map((n, i) => (n.kind === "coin" ? i : -1)).filter((i) => i >= 0);
@@ -135,8 +142,14 @@ async function netTargets(NORTH: string, caption: (dev: string, launches: number
     col.set(l.kind === "launch" ? C.launch : C.buy, i * 3);
     i++;
   }
+  // labels: the dev, and the coins most people bought
+  const labelled = new Set(nodes.filter((n) => n.kind === "coin").sort((a, b) => ((b.info as { buyers?: number }).buyers ?? 0) - ((a.info as { buyers?: number }).buyers ?? 0)).slice(0, 7));
+  const meta = nodes.map((n) => ({
+    x: n.x, y: n.y, z: n.z, r: n.r, info: n.info,
+    label: n.kind === "dev" ? "dev" : labelled.has(n) ? "coin" : null,
+  }));
   return {
-    pos, edgeA, edgeB, isEdge, col,
+    pos, edgeA, edgeB, isEdge, col, meta,
     caption: caption(short(dev.wallet), dev.launches48h, dev.dumped, regs.length),
   };
 }
@@ -220,6 +233,12 @@ export interface SceneOptions {
   netCaption: (dev: string, launches: number, dumped: number, regs: number) => string;
   onCaption: (text: string) => void;
   onReady: () => void;
+  /** The label on the dev's node, e.g. "DEV 8WZw…9iLV". */
+  devLabel: (short: string) => string;
+  /** A card the page renders; the scene keeps it pinned to the node it is about. */
+  popover: HTMLElement;
+  /** A node was clicked (or the card dismissed, with null). */
+  onPick: (info: NetInfo | null) => void;
 }
 
 /** Starts the scene inside `host`; returns a function that stops it and frees the GPU. */
@@ -298,6 +317,55 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
   addEventListener("pointermove", onMove);
   addEventListener("pointerleave", onLeave);
 
+  // labels over the network, positioned from the 3D nodes every frame
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease";
+  host.appendChild(overlay);
+  const ring = document.createElement("div");
+  ring.style.cssText = "position:absolute;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:1px solid rgba(255,255,255,.7);box-shadow:0 0 18px rgba(255,255,255,.25);opacity:0;transition:opacity .2s";
+  overlay.appendChild(ring);
+  type Meta = { x: number; y: number; z: number; r: number; info: NetInfo; label: string | null; el?: HTMLElement; sx: number; sy: number; pr: number };
+  let meta: Meta[] = [];
+  let hovered: Meta | null = null;
+  let picked: Meta | null = null;
+  let pickedAt = 0;
+  // ?pick=<n> opens node n's card once the network shows, for review
+  let autoPick: string | null = new URLSearchParams(location.search).get("pick");
+  const tmp = new THREE.Vector3();
+  const interactive = (t: EventTarget | null) => t instanceof Element && !!t.closest("a,button,input,textarea,select,label,form,nav,[role=dialog],[data-no-art]");
+  const netAlpha = () => (phase === "hold" ? (state === 2 ? 1 : 0) : next === 2 ? uniforms.uT.value : state === 2 ? 1 - uniforms.uT.value : 0);
+  const findNode = (cx: number, cy: number) => {
+    const r = host.getBoundingClientRect();
+    const x = cx - r.left, y = cy - r.top;
+    let best: Meta | null = null, bd = Infinity;
+    for (const m of meta) {
+      const d = Math.hypot(m.sx - x, m.sy - y);
+      if (d < Math.max(14, m.pr + 8) && d < bd) { best = m; bd = d; }
+    }
+    return best;
+  };
+  const onHoverMove = (e: PointerEvent) => {
+    const can = netAlpha() > 0.7 && !interactive(e.target);
+    const h = can ? findNode(e.clientX, e.clientY) : null;
+    if (h !== hovered) {
+      hovered = h;
+      document.documentElement.style.cursor = h ? "pointer" : "";
+    }
+  };
+  const onClick = (e: MouseEvent) => {
+    if (interactive(e.target) || (e.target instanceof Element && o.popover.contains(e.target))) return;
+    const h = netAlpha() > 0.7 ? findNode(e.clientX, e.clientY) : null;
+    picked = h;
+    pickedAt = performance.now() / 1000;
+    o.onPick(h ? h.info : null);
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape" && picked) { picked = null; o.onPick(null); }
+  };
+  addEventListener("pointermove", onHoverMove);
+  addEventListener("click", onClick);
+  addEventListener("keydown", onKey);
+
   const caps: Record<number, string> = { 0: o.captions[0], 1: o.captions[1], 2: "" };
   const say = (t: string) => o.onCaption(t);
 
@@ -316,6 +384,22 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
       geo.getAttribute("aColNet").array.set(n.col);
       geo.getAttribute("aColNet").needsUpdate = true;
       caps[2] = n.caption;
+      meta = n.meta.map((m) => ({ ...m, sx: -999, sy: -999, pr: 8 }));
+      for (const m of meta) {
+        if (!m.label) continue;
+        const el = document.createElement("span");
+        const isDev = m.info.kind === "dev";
+        el.textContent = isDev ? o.devLabel(short((m.info as { wallet: string }).wallet)) : (() => {
+          const sy = String((m.info as { symbol: string }).symbol || "").replace(/^\$+/, "").replace(/[\s\u3164\u115f\u1160\u200b-\u200d\ufeff]+/g, " ").trim();
+          return sy ? "$" + sy.slice(0, 12) : "";
+        })();
+        if (!el.textContent) continue;
+        el.style.cssText = isDev
+          ? "position:absolute;left:0;top:0;white-space:nowrap;font:600 11px Geist,system-ui,sans-serif;letter-spacing:.08em;color:#ffb3aa;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,138,126,.5);background:rgba(20,8,7,.75);"
+          : "position:absolute;left:0;top:0;white-space:nowrap;font:500 11.5px Geist,system-ui,sans-serif;color:rgba(235,240,237,.82);text-shadow:0 1px 6px #000;";
+        overlay.appendChild(el);
+        m.el = el;
+      }
       haveNet = true;
     })
     .catch(() => {});
@@ -340,6 +424,8 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     const now = performance.now() / 1000;
     const dt = Math.min(0.05, clock.getDelta());
     uniforms.uTime.value += reduce ? 0 : dt;
+    // someone is looking at a node: the network stays
+    if ((hovered || picked) && phase === "hold" && state === 2) t0 += dt;
     const el = now - t0;
     if (phase === "hold" && el > HOLD[state] && !reduce && pin == null) {
       next = state === 0 ? 1 : state === 1 ? (haveNet ? 2 : 0) : 0;
@@ -369,6 +455,43 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     rot += (turn - rot) * 0.02;
     group.rotation.y = Math.sin(uniforms.uTime.value * 0.11) * rot * 2.2;
     group.rotation.x = Math.cos(uniforms.uTime.value * 0.09) * 0.05;
+    group.updateMatrixWorld();
+    const na = netAlpha();
+    overlay.style.opacity = String(na);
+    if (na > 0.01 && meta.length) {
+      const w = W(), h = H();
+      for (const m of meta) {
+        tmp.set(m.x, m.y, m.z);
+        group.localToWorld(tmp);
+        const depth = camera.position.z - tmp.z;
+        tmp.project(camera);
+        m.sx = (tmp.x * 0.5 + 0.5) * w;
+        m.sy = (-tmp.y * 0.5 + 0.5) * h;
+        m.pr = (m.r * group.scale.x * h) / (2 * Math.tan((camera.fov * Math.PI) / 360) * depth);
+        if (m.el) {
+          const dx = m.info.kind === "dev" ? m.pr + 10 : m.pr + 6;
+          m.el.style.transform = `translate(${(m.sx + dx).toFixed(1)}px, ${(m.sy - 9).toFixed(1)}px)`;
+          m.el.style.opacity = hovered === m || picked === m ? "1" : m.info.kind === "dev" ? "0.95" : "0.7";
+        }
+      }
+      const focus = picked ?? hovered;
+      ring.style.opacity = focus ? "1" : "0";
+      if (focus) ring.style.transform = `translate(${focus.sx.toFixed(1)}px, ${focus.sy.toFixed(1)}px) scale(${Math.max(0.7, (focus.pr * 2 + 14) / 34).toFixed(2)})`;
+    } else ring.style.opacity = "0";
+    // the page closed the card (its × button): let go of the node too
+    if (picked && o.popover.childElementCount === 0 && pickedAt < now - 0.3) picked = null;
+    if (!picked && autoPick != null && meta.length && na > 0.95) {
+      picked = meta[Number(autoPick)] ?? null;
+      pickedAt = now;
+      if (picked) o.onPick(picked.info);
+      autoPick = null;
+    }
+    if (picked) {
+      // the card opens beside the node, on the side with more room
+      const left = picked.sx > W() * 0.6;
+      o.popover.style.transform = `translate(${(picked.sx + (left ? -16 : 16)).toFixed(1)}px, ${(picked.sy - 20).toFixed(1)}px) translateX(${left ? "-100%" : "0"})`;
+      if (na < 0.5) { picked = null; o.onPick(null); }
+    }
     composer.render();
     if (alive) raf = requestAnimationFrame(frame);
   }
@@ -380,6 +503,11 @@ export function startScene(host: HTMLElement, o: SceneOptions): () => void {
     removeEventListener("resize", place);
     removeEventListener("pointermove", onMove);
     removeEventListener("pointerleave", onLeave);
+    removeEventListener("pointermove", onHoverMove);
+    removeEventListener("click", onClick);
+    removeEventListener("keydown", onKey);
+    document.documentElement.style.cursor = "";
+    overlay.remove();
     geo.dispose();
     mat.dispose();
     composer.dispose();

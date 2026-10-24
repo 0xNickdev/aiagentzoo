@@ -4,7 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { navigate } from "../router";
 import SiteNav from "./SiteNav";
 import { pick, t } from "../i18n";
-import { compact, full, NORTH, useNorth, useTicker } from "./home/live";
+import { compact, full, NORTH, picOf, short, SITE_WALLET, SITE_XRAY, ticker, useNorth, useTicker } from "./home/live";
+import type { NetInfo } from "./home/particleScene";
 import { EXTENSION_URL } from "./HomeSections";
 
 const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
@@ -22,14 +23,83 @@ interface Chain {
   perMinute: { launches: number; trades: number };
 }
 
+const usd = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`);
+
+/** The card a node of the network opens: who it is and what the chain says they did. */
+function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
+  const rows: Array<[string, string, boolean?]> = [];
+  let title: string;
+  let sub: string;
+  let href: string;
+  let cta: string;
+  let pic: string | undefined;
+  if (info.kind === "dev") {
+    title = t("The dev");
+    sub = short(info.wallet);
+    rows.push([t("Launches in 48 hours"), full(info.launches48h)], [t("Dumped"), full(info.dumped), true]);
+    if (info.medianDumpMin != null) rows.push([t("Usually sells"), info.medianDumpMin < 1 ? t("in under a minute") : t("after {m} min", { m: info.medianDumpMin }), true]);
+    rows.push([t("Graduated"), full(info.graduated)]);
+    href = SITE_WALLET(info.wallet);
+    cta = t("See the wallet");
+  } else if (info.kind === "coin") {
+    title = ticker(info.symbol, info.mint);
+    sub = short(info.mint);
+    pic = picOf(info.mint, undefined, info.venue);
+    if (info.buyers != null) rows.push([t("People bought it"), full(info.buyers)]);
+    const sec = info.dumpedAfterSec ?? (info.dumpedAfterMin != null ? info.dumpedAfterMin * 60 : null);
+    rows.push([t("Dev sold after"), sec == null ? t("has not sold") : sec < 120 ? `${sec}s` : sec < 7200 ? `${Math.round(sec / 60)} min` : `${Math.round(sec / 3600)} h`, sec != null]);
+    if (info.devTookSol != null && info.devTookSol > 0) rows.push([t("Dev took"), `+${info.devTookSol.toFixed(2)} SOL`, true]);
+    if (info.leftHolding != null) rows.push([t("Left holding"), full(info.leftHolding)]);
+    if (info.peakCapUsd) rows.push([t("Peak"), usd(info.peakCapUsd)]);
+    if (info.alive != null) rows.push([t("Now"), info.alive ? t("still trading") : t("dead"), !info.alive]);
+    href = SITE_XRAY(info.mint);
+    cta = t("Open X-Ray");
+  } else {
+    title = t("A regular buyer");
+    sub = short(info.wallet);
+    rows.push([t("Bought this dev's launches"), full(info.launches)]);
+    if (info.snipes48h != null) rows.push([t("Sniped launches, 48h"), full(info.snipes48h), true]);
+    href = SITE_WALLET(info.wallet);
+    cta = t("See the wallet");
+  }
+  return (
+    <div role="dialog" aria-label={title} className="w-[260px] rounded-xl border border-white/[0.14] bg-[#0a0e0c]/95 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+      <div className="flex items-start gap-3">
+        {pic && <img src={pic} alt="" referrerPolicy="no-referrer" className="h-9 w-9 shrink-0 rounded-full bg-[#141a17] object-cover" onError={(e) => e.currentTarget.remove()} />}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold text-white">{title}</p>
+          <p className="font-mono text-[12px] text-[#a3aaa6]">{sub}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-[#a3aaa6] hover:text-white">
+          ×
+        </button>
+      </div>
+      <div className="mt-3 border-t border-white/[0.07]">
+        {rows.map(([k, v, red]) => (
+          <div key={k} className="flex items-baseline justify-between gap-3 border-b border-white/[0.07] py-2 text-[13px]">
+            <span className="text-[#c9cecb]">{k}</span>
+            <b className={`font-semibold tabular-nums ${red ? "text-[#ff8a7e]" : "text-white"}`}>{v}</b>
+          </div>
+        ))}
+      </div>
+      <a href={href} className="mt-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-white">
+        {cta} <ArrowRight size={14} />
+      </a>
+    </div>
+  );
+}
+
 /** The particle scene behind the headline: dust, the eyes, the real network. Loaded after first paint, WebGL only. */
 function ParticleArt() {
   const host = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  const [picked, setPicked] = useState<NetInfo | null>(null);
   const [ready, setReady] = useState(false);
   const [cap, setCap] = useState({ text: "", on: false });
   useEffect(() => {
     const el = host.current;
-    if (!el || !NORTH) return;
+    const card = pop.current;
+    if (!el || !card || !NORTH) return;
     let stop: (() => void) | null = null;
     let cancelled = false;
     let timer = 0;
@@ -46,6 +116,9 @@ function ParticleArt() {
           timer = window.setTimeout(() => setCap({ text, on: true }), 380);
         },
         onReady: () => setReady(true),
+        devLabel: (w) => `${t("DEV")} ${w}`,
+        popover: card,
+        onPick: setPicked,
       });
     });
     return () => {
@@ -56,6 +129,9 @@ function ParticleArt() {
   }, []);
   return (
     <>
+      <div ref={pop} data-no-art className={`absolute left-0 top-0 z-30 will-change-transform ${picked ? "" : "pointer-events-none invisible"}`}>
+        {picked && <NetCard info={picked} onClose={() => setPicked(null)} />}
+      </div>
       <div ref={host} aria-hidden className={`absolute inset-0 transition-opacity duration-[1600ms] [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full ${ready ? "opacity-50 lg:opacity-100" : "opacity-0"}`} />
       <p
         aria-live="polite"
