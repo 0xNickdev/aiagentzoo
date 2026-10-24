@@ -188,6 +188,8 @@ const vert = /* glsl */ `
       vec3 c = vec3(0.95, 0.98, 0.96);
       // the scan line brightens what it passes; a few particles flash red, as if a dump was caught
       c += vec3(0.6, 0.9, 0.7) * smoothstep(5.0, 0.0, abs(p.y - uScan)) * 1.4;
+      float m2 = length(p.xy - uMouse.xy);
+      c += vec3(0.5, 0.75, 0.6) * exp(-(m2 * m2) / 1800.0) * 0.9;
       float red = step(0.955, aSeed) * uFlash;
       return mix(c, vec3(1.6, 0.45, 0.38), red);
     }
@@ -208,9 +210,9 @@ const vert = /* glsl */ `
     // the cursor pushes particles aside, as if something is looking through them
     vec2 m = p.xy - uMouse.xy;
     float md = length(m);
-    // (in the network the cursor reads nodes instead of pushing them)
-    float push = 1.0 - (uFrom == 2 ? 1.0 - e : 0.0) - (uTo == 2 ? e : 0.0);
-    p.xy += normalize(m + 1e-4) * max(0.0, 70.0 - md) * 0.55 * clamp(push, 0.0, 1.0);
+    // only the dust gives way to the cursor, softly, with no hard edge; the logo and the network keep their shape
+    float push = (uFrom == 0 ? 1.0 - e : 0.0) + (uTo == 0 ? e : 0.0);
+    p.xy += normalize(m + 1e-4) * 34.0 * exp(-(md * md) / 3200.0) * push;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
