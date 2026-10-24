@@ -625,7 +625,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           moments: tape.momentsMatching({ symbol: pick("symbol"), mint: pick("mint"), kind: pick("kind"), limit: clampInt(q.get("limit"), 100, 1, 500) }).map((m) => {
             const image = socials.image(m.mint);
             if (!image) socials.want(m.mint);
-            return image ? { ...m, image } : m;
+            const venue = tape.venueOf(m.mint);
+            return { ...m, ...(venue ? { venue } : {}), ...(image ? { image } : {}) };
           }),
         });
       }

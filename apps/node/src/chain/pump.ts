@@ -1279,6 +1279,12 @@ export class PumpTape {
     return out;
   }
 
+  /** Which launchpad a launch the tape keeps came from; pump.fun when the event named none. */
+  venueOf(mint: string): Venue | "pump.fun" | undefined {
+    const t = this.tokens.get(mint);
+    return t ? (t.venue ?? "pump.fun") : undefined;
+  }
+
   /** One launch's metadata address, when its create event carried one. */
   metadataOf(mint: string): string | undefined {
     return this.tokens.get(mint)?.uri;
