@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Hero from "./components/Hero";
-import { Holders, NumbersBand, Products, TrustStrip, XRayShowcase } from "./components/HomeSections";
+import { Holders, Products, TrustStrip } from "./components/HomeSections";
+import { LiveNow, WhyAvoid } from "./components/home/HomeLive";
 import LiveStats from "./components/LiveStats";
 import NightWatch from "./components/NightWatch";
 import Leaderboard from "./components/Leaderboard";
@@ -10,13 +11,11 @@ import AskPage from "./components/Ask";
 import WallOfRugs from "./components/WallOfRugs";
 import Stats from "./components/Stats";
 import XRay from "./components/XRay";
-import LiveProof from "./components/LiveProof";
 import Play from "./components/Play";
 import Connect from "./components/Connect";
 import BeaverRecord from "./components/BeaverRecord";
 import KoiSection from "./components/KoiSection";
 import AgentOfWeek from "./components/AgentOfWeek";
-import Species from "./components/Species";
 import { Strip } from "./components/backdrop";
 import { ChainTicker, NetworkPulse } from "./components/Pulse";
 import Brief from "./components/Brief";
@@ -86,11 +85,9 @@ function Home() {
     <>
       <Hero />
       <TrustStrip />
-      <NumbersBand />
-      <XRayShowcase />
+      <LiveNow />
+      <WhyAvoid />
       <Products />
-      <LiveProof />
-      <Species />
       <Holders />
       <RoadmapTeaser />
     </>

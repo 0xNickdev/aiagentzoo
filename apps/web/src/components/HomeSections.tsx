@@ -150,20 +150,44 @@ export function XRayShowcase() {
   );
 }
 
-/** Three animals, three ways in: each one shows up once, big, with its job. */
+const ICONS = {
+  xray: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[21px] w-[21px]">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+      <circle cx="12" cy="12" r="1.2" fill="#fff" />
+      <path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0" />
+    </svg>
+  ),
+  telegram: (
+    <svg viewBox="0 0 24 24" fill="#fff" className="h-[21px] w-[21px]">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  ),
+  chrome: (
+    <svg viewBox="0 0 24 24" fill="#fff" className="h-[21px] w-[21px]">
+      <path d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.09l.002.001h-.002l-5.344 9.257c.206.01.413.016.621.016 6.627 0 12-5.373 12-12 0-1.54-.29-3.011-.818-4.364zM12 16.364a4.364 4.364 0 1 1 0-8.728 4.364 4.364 0 0 1 0 8.728Z" />
+    </svg>
+  ),
+};
+
+/** Three ways in, same answer: the site, the bot, the extension. */
 export function Products() {
   const items = [
-    { img: "/animals/builder.webp", who: t("The beaver"), name: t("X-Ray"), text: t("Paste any token on the site and read the dev, the first five seconds and the bundles in one page."), href: "/xray", cta: t("Open the X-Ray"), ext: false },
-    { img: "/animals/sentinel.webp", who: t("The owl"), name: t("Telegram bot"), text: t("Paste a CA in any chat, or watch a token and get pinged when the dev dumps or the pool drains."), href: BOT_URL, cta: t("Open the bot"), ext: true },
-    { img: "/animals/raven.webp", who: t("The raven"), name: t("Chrome extension"), text: t("The verdict right on gmgn, Axiom, pump.fun and DexScreener, and a tag next to every CA on X."), href: EXTENSION_URL, cta: t("Add to Chrome"), ext: true },
+    { icon: ICONS.xray, name: t("X-Ray on the site"), text: t("The full record: the dev's launches and dumps, early wallets, bundles, who funded them, the network map."), href: "/xray", cta: t("Open the X-Ray"), ext: false },
+    { icon: ICONS.telegram, name: t("Telegram bot"), text: t("Send a contract, get the verdict and the reasons. Works in groups with /xray and /dev, and pings you when a coin you watch turns."), href: BOT_URL, cta: t("Open the bot"), ext: true },
+    { icon: ICONS.chrome, name: t("Chrome extension"), text: t("The verdict right on gmgn, Axiom, pump.fun and DexScreener, and a tag next to every CA on X."), href: EXTENSION_URL, cta: t("Add to Chrome"), ext: true },
   ];
   return (
     <section className="relative px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-7xl">
-        <h2 className="font-display max-w-3xl text-[40px] font-semibold leading-[1.02] text-white sm:text-[64px]">
-          {t("Three ways in.")} <span className="accent">{t("Same answer.")}</span>
+        <p className="text-[15px] text-[#a3aaa6]">{t("Same check, wherever you trade")}</p>
+        <h2 className="font-display mt-3 max-w-3xl text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[60px]">
+          {t("One X-Ray. Three places to run it.")}
         </h2>
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
           {items.map((p, i) => (
             <motion.a
               key={p.name}
@@ -174,15 +198,16 @@ export function Products() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.9, delay: i * 0.1, ease: EASE }}
-              className="group relative flex flex-col overflow-hidden rounded-[28px] border border-white/[0.1] bg-[#0b0f0c] p-7 transition-colors hover:border-white/25"
+              className="group flex flex-col rounded-2xl border border-white/[0.08] bg-[#0a0e0c] p-6 transition-colors hover:border-white/25"
             >
-              <div className="relative -mx-7 -mt-7 mb-6 flex h-56 items-end justify-center bg-[radial-gradient(60%_70%_at_50%_80%,rgba(120,160,130,0.16),transparent)]">
-                <img src={p.img} alt={p.who} loading="lazy" className="max-h-[92%] w-auto max-w-[82%] object-contain transition-transform duration-700 group-hover:scale-[1.04]" />
+              <div className="flex items-center gap-3.5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[0.12] bg-[linear-gradient(180deg,#1b211e,#0c100e)] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_20px_rgba(0,0,0,0.4)]">
+                  {p.icon}
+                </span>
+                <h3 className="text-[19px] font-semibold tracking-[-0.02em] text-white">{p.name}</h3>
               </div>
-              <p className="text-[14px] text-white/60">{p.who}</p>
-              <h3 className="font-display mt-1 text-[30px] font-medium text-white">{p.name}</h3>
-              <p className="mt-2 flex-1 text-[16px] leading-relaxed text-white/75">{p.text}</p>
-              <span className="mt-6 inline-flex items-center gap-2 text-[15px] text-white">
+              <p className="mt-4 flex-1 text-[15.5px] leading-relaxed text-[#d9dddb]">{p.text}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-[14.5px] font-medium text-white">
                 {p.cta} <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
               </span>
             </motion.a>
