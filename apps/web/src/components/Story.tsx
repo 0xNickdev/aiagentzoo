@@ -48,7 +48,7 @@ export function Footer() {
     // Above the last section's backdrop, which bleeds downward to soften the seam and would otherwise cover it.
     <footer className="relative z-20 border-t border-white/[0.08] bg-[#050706] px-5 pt-16 sm:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,minmax(0,1fr))]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,minmax(0,1fr))]">
           <div>
             <p className="font-display text-[22px] leading-snug text-white">{tr("See who you're buying from.")}</p>
             <div className="mt-5 grid gap-3">

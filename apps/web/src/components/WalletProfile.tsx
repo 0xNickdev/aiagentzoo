@@ -204,7 +204,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
         )}
 
         {d && (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <Box title="Its launches" note="last 48 hours · tap to x-ray">
               <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
                 <span>{t("token")}</span>
@@ -283,7 +283,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           {p.sniper && (
             <Box title="As a first-second buyer" note="last 48 hours">
               <div className="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06]">

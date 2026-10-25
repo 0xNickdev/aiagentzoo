@@ -406,7 +406,7 @@ export default function AskPage() {
         ) : clean.length === 0 ? (
           <p className="text-[13px] text-fg-3">{t("Nothing passes right now. On pump.fun that is a normal hour.")}</p>
         ) : (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {clean.map((c) => (
               <li key={c.mint} className="rounded-2xl bg-black/40 px-4 py-3 ring-1 ring-white/10">
                 <div className="flex items-baseline justify-between gap-3">
@@ -447,7 +447,7 @@ export default function AskPage() {
         {!recent?.asks.length ? (
           <p className="text-[13px] text-fg-3">{t("No questions yet. Be the first.")}</p>
         ) : (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {recent.asks.map((a) => (
               <li key={a.id}>
                 <button

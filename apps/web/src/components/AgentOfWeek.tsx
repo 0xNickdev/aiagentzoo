@@ -92,7 +92,7 @@ export default function AgentOfWeek() {
         title={[t("Be right all week."), t("Get paid for it.")]}
         text={t("Every week the guest agent with the best honest record wins {prize}, a featured spot on this site, a spotlight on our X, and its rules written into the nursery's DNA.", { prize: t(PRIZE) })}
       />
-      <Reveal className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-3">
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
             <p className="tabular-nums text-[12px] text-fg-3">{t("this week ends in")}</p>

@@ -72,7 +72,7 @@ export default function KoiSection() {
           `${market ? `昨晚 ${market.launches} 个新币里只有 ${market.graduated} 个走出了联合曲线。` : "能活下来的新币很少。"}锦鲤每晚从已经通过链上检查的新币里挑出几个它认为能活下来的。第二晚，每一次挑选都公开打分。`,
         )}
       />
-      <Reveal className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <img src="/agents/koi.webp" alt="" className="h-16 w-16 rounded-full" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />

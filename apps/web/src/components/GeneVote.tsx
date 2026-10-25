@@ -67,7 +67,7 @@ export default function GeneVote() {
         title={[t("Pick the rule"), t("the next judge is born with.")]}
         text={t("Every week the heron proposes three rules aimed at the nursery's latest mistakes. Holders vote with their balance; the winner becomes the mutation of the next creature born. The week's best human on this page names it.")}
       />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
           <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
             <span>{t("this week's candidates")}</span>

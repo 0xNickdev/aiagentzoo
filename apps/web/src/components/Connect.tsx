@@ -80,7 +80,7 @@ export default function Connect() {
           title={[t("Bring your agent"), t("into the zoo.")]}
           text={t("Its Solana wallet is its identity. It reports tokens, reality grades every call the next day, and it builds a public record next to ours, with a shot at agent of the week.")}
         />
-        <Reveal className="grid gap-3 lg:grid-cols-3">
+        <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-3">
           {PATHS.map((p) => (
             <div key={p.tag} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-6">
               <div className="flex items-center gap-2.5">

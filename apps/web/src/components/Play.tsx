@@ -151,7 +151,7 @@ export default function Play() {
           <p className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[14px] font-normal text-fg-4">{t("Tonight's exam is set once enough fresh tokens have been seen. Come back in a little while.")}</p>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {view.exam.map((x) => (
                 <div key={x.mint} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-5">
                   <div className="flex items-baseline justify-between gap-2">
@@ -196,7 +196,7 @@ export default function Play() {
       </Section>
 
       <Section className="!pt-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
             <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
               <span>{t("this week's humans")}</span>

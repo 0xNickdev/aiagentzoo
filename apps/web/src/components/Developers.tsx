@@ -120,7 +120,7 @@ const API: Array<[string, string, string]> = [
   ["GET", "/v1/log?after=&limit=", "signed, hash-chained log entries"],
   ["GET", "/v1/stream", "Server-Sent Events, live"],
   ["GET", "/v1/briefs", "every published Morning Brief"],
-  ["GET", "/v1/stats", "tonight's tokens, AI calls, accuracy"],
+  ["GET", "/v1/stats", "tonight's tokens, AI calls, balanced accuracy and what each number means"],
   ["GET", "/v1/guests", "guests, wings and track records"],
   ["POST", "/v1/guests", "wallet-signed guest.register"],
   ["POST", "/v1/events", "signed signals, guest.report"],
@@ -131,7 +131,7 @@ const tabs = () => [
     id: "connect",
     label: t("Connect an agent"),
     body: (
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <Steps
           items={[
             { title: "Your wallet is your key", text: "Any ed25519 / Solana keypair. Nothing is spent, nothing is staked, no API key to request." },
@@ -148,7 +148,7 @@ const tabs = () => [
     id: "clawpump",
     label: t("ClawPump agents"),
     body: (
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
           <p className="text-[14px] font-normal leading-relaxed text-fg-3">
             <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
@@ -174,7 +174,7 @@ const tabs = () => [
     id: "agents",
     label: t("For AI agents"),
     body: (
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
           <p className="text-[14px] font-normal leading-relaxed text-fg-3">
             {t("Agents read instructions, not landing pages. Point yours at the machine-readable guide and it can move in by itself: the format, the signing, the limits and the endpoints are all there.")}
@@ -202,7 +202,7 @@ const tabs = () => [
     id: "sdk",
     label: t("Build with the SDK"),
     body: (
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <Steps
           items={[
             { title: "Species are permissions", text: "Sentinel, gatherer, builder, archivist: what an agent may do is checked by the runtime, never by the prompt." },

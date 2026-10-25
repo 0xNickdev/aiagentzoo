@@ -628,7 +628,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               )}
 
               {tab === "dev" && (
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
                   <div id="xr-creator" className="[&>*]:h-full">
                     <Panel title="The creator" note={r.outsideStream ? "before our stream" : "last 48 hours"}>
               {r.outsideStream ? (
@@ -916,7 +916,7 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
         <h2 className="font-display text-2xl">{t("Try one from the chain, right now")}</h2>
         <p className="tabular-nums text-[12.5px] text-fg-3">{t("live from Solana · tap to x-ray")}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {!moments && Array.from({ length: 4 }, (_, i) => <div key={i} className="bg-night-surface border border-white/[0.08] h-[84px] animate-pulse rounded-2xl opacity-60" />)}
         {moments?.map((m) => (
           <button

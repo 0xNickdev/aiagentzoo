@@ -54,7 +54,7 @@ export default function ApiAccess() {
           "你的智能体买入 pump.fun 新币之前，调用一次就告诉你：避开、谨慎还是通过，并给出理由：开发者是否已经砸盘，开盘区块是否被几个钱包捆绑，这个钱包是否专门发币砸盘。数据直接来自 Solana 链上。",
         )}
       />
-      <Reveal className="grid gap-3 lg:grid-cols-2">
+      <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
         {tiers.map((tier, i) => (
           <div key={tier.name} className={`bg-night-surface border border-white/[0.08] min-w-0 rounded-2xl p-6 ${i === 1 ? "ring-1 ring-amber-100/20" : ""}`}>
             <p className="font-display text-3xl">{tier.name}</p>

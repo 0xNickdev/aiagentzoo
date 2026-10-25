@@ -165,7 +165,7 @@ export default function Stats() {
           <Tile k={t("trades now")} v={chain ? `${num(chain.perMinute.trades)}/min` : "…"} sub={chain ? t("{n} tokens on the tape", { n: num(chain.tracked) }) : ""} />
         </Reveal>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <Reveal>
             <Bars title="Full X-Rays by day" note="someone opened a whole report" days={days} pick={(d) => d.xrays} />
           </Reveal>
@@ -211,7 +211,7 @@ export default function Stats() {
           </p>
         </Reveal>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <Reveal>
             <DevTable title="Serial dumpers" note="last 48 hours · tap a wallet" rows={ruggers?.ruggers ?? null} />
           </Reveal>

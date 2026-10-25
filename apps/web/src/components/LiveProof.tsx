@@ -97,7 +97,7 @@ export default function LiveProof() {
           {t("x-ray any token →")}
         </a>
       </div>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-3">
         {!dumps && Array.from({ length: 3 }, (_, i) => <div key={i} className="bg-night-surface border border-white/[0.08] h-[92px] animate-pulse rounded-2xl opacity-60" />)}
         {dumps?.map((m) => (
           <a key={m.mint} href={`/xray?mint=${m.mint}`} className="bg-night-surface border border-white/[0.08] group rounded-2xl p-4 transition hover:bg-white/[0.06]">
