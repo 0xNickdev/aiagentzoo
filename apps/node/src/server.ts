@@ -742,7 +742,21 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!history) return json(res, 404, { error: "no long memory on this node" });
         const q = url.searchParams;
         const hours = Math.min(48, Math.max(1, Number(q.get("hours")) || 6));
-        const result = await replayMint(replay[1]!, history, { hours, funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[replay] ${m}`) });
+        const maxTxs = Math.min(40_000, Math.max(100, Number(q.get("max")) || 8_000));
+        const log = (m: string) => console.log(`[replay] ${m}`);
+        const run = replayMint(replay[1]!, history, { hours, maxTxs, funderOf: (c) => lineage.funderOf(c), log }).then(
+          (r) => {
+            log(`${replay[1]}: done ${JSON.stringify(r)}`);
+            return r;
+          },
+          (error: unknown) => {
+            log(`${replay[1]}: failed: ${error instanceof Error ? error.message : String(error)}`);
+            return { error: "replay failed" };
+          },
+        );
+        // A long replay outlives the caller's patience: ?wait=0 answers at once and the work goes on, logged.
+        if (q.get("wait") === "0") return json(res, 202, { started: true, mint: replay[1], hours, maxTxs });
+        const result = await run;
         return json(res, "error" in result ? 422 : 200, result);
       }
       const evict = /^\/v1\/guests\/([a-z0-9-]+)\/evict$/.exec(path);

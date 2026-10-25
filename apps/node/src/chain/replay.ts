@@ -88,6 +88,7 @@ export interface ReplayOptions {
 export async function replayMint(mint: string, history: HistoryStore, opts: ReplayOptions = {}, f: typeof fetch = fetch): Promise<ReplayResult | { error: string }> {
   if (!fundersEnabled() || !RPC) return { error: "no Helius RPC on this node" };
   const { hours = 6, maxTxs = 8_000, maxPages = 60, concurrency = 8, funderOf, log = () => {} } = opts;
+  log(`replay ${mint}: reading signatures`);
 
   const sigs = await signaturesOf(mint, f, maxPages);
   if (!sigs.length) return { error: "no transactions for this mint" };
@@ -105,7 +106,12 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
       txs[i] = await call<Tx>("getTransaction", [window[i]!.signature, { encoding: "json", maxSupportedTransactionVersion: 0 }], f);
     }
   };
-  await Promise.all(Array.from({ length: concurrency }, worker));
+  const progress = setInterval(() => log(`replay ${mint}: ${next} of ${window.length} transactions read`), 60_000);
+  try {
+    await Promise.all(Array.from({ length: concurrency }, worker));
+  } finally {
+    clearInterval(progress);
+  }
 
   const tape = new PumpTape();
   let replayed = 0, skipped = 0;
@@ -123,8 +129,16 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
   }
   const last = window[window.length - 1]!.blockTime! * 1000;
   const rec = tape.historyOf(mint, last + 1_000);
-  if (!rec) return { error: "the first transactions carry no launch the parser knows (not a pump.fun token?)" };
-  history.write([{ ...rec, funder: funderOf?.(rec.creator) ?? null }]);
+  if (!rec) {
+    log(`replay ${mint}: no launch the parser knows in the first transactions`);
+    return { error: "the first transactions carry no launch the parser knows (not a pump.fun token?)" };
+  }
+  try {
+    history.write([{ ...rec, funder: funderOf?.(rec.creator) ?? null }]);
+  } catch (error) {
+    log(`replay ${mint}: write failed: ${error instanceof Error ? error.message : String(error)}`);
+    return { error: "the long memory refused the record" };
+  }
   log(`replay ${mint}: written, ${replayed} transactions with events, ${skipped} skipped, graduated ${rec.graduated}`);
   return {
     mint,
