@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-22",
+  "updated": "2026-10-25",
   "repo": "https://github.com/0xNickdev/aiagentzoo",
   "chapters": [
     {
@@ -481,10 +481,14 @@
       "id": "terminal",
       "chapter": "2026-10",
       "status": "shipped",
-      "date": "2026-10-21",
+      "date": "2026-10-25",
       "title": "X-Ray as a terminal",
-      "text": "The verdict on the left with what decides it, one reason at a time on the right.",
+      "text": "One frame: the ticker, the verdict and the stream light on top, the read tabs down the left, four tiles and the reasons in the middle, the trade on the right, the chain's receipt at the bottom. The frame's light takes the verdict's colour.",
       "proof": [
+        {
+          "label": "578ee5b",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/578ee5b"
+        },
         {
           "label": "cc7a99e",
           "href": "https://github.com/0xNickdev/aiagentzoo/commit/cc7a99e"
@@ -492,7 +496,7 @@
       ],
       "zh": {
         "title": "终端式透视",
-        "text": "左边是判断和决定它的因素，右边一次看一个理由。"
+        "text": "一个框：顶部是代币、判断和数据流状态，左边是查看标签，中间是四块数据和理由，右边是交易，底部是链上凭据。框的光带随判断变色。"
       }
     },
     {
@@ -585,17 +589,70 @@
     },
     {
       "id": "swap",
-      "chapter": "2026-11",
-      "status": "next",
-      "when": "Mid Nov",
+      "chapter": "2026-10",
+      "status": "shipped",
       "title": "Swap inside the X-Ray",
-      "text": "Buy whatever coin you just checked without leaving the page, routed through Jupiter, signed in your own wallet. A small fee: 10% of it buys back and burns $ZOOAGENCY, the rest keeps the zoo running. If the verdict is avoid, you see why before you sign.",
+      "text": "Buy or sell the coin you just checked without leaving the page, routed through Jupiter, signed in your own wallet, nothing held by us. A 1% fee in SOL: a tenth of it buys $ZOOAGENCY back, the rest keeps the zoo running. The verdict sits right above the buy button.",
       "why": "We will never tell you what to buy. But you were going to buy it anyway, so now the check and the buy are two clicks apart, and the warning sits right on the button.",
       "zh": {
         "title": "透视页面内直接兑换",
-        "text": "刚查完的币不用离开页面就能买，通过 Jupiter 路由，用你自己的钱包签名。收取少量手续费：其中 10% 用于回购并销毁 $ZOOAGENCY，其余用于维持项目运转。如果结论是避开，签名前你会先看到原因。",
-        "why": "我们永远不会告诉你该买什么。但你本来就要买，所以现在检查和买入只隔两下点击，警告就在按钮上。",
-        "when": "11 月中旬"
+        "text": "买卖刚查过的币不用离开页面：Jupiter 路由，你自己的钱包签名，我们不托管任何资产。1% 的 SOL 手续费：十分之一回购 $ZOOAGENCY，其余维持动物园运转。判断就在买入按钮正上方。",
+        "why": "我们永远不会告诉你该买什么。但你本来就要买，所以现在检查和买入只隔两下点击，警告就在按钮上。"
+      },
+      "date": "2026-10-25",
+      "proof": [
+        {
+          "label": "a34f00f",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/a34f00f"
+        },
+        {
+          "label": "/xray",
+          "href": "/xray"
+        }
+      ]
+    },
+    {
+      "id": "dock",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-25",
+      "title": "One tap to where you trade",
+      "text": "Axiom, GMGN, BullX, Padre, pump.fun and FOMO open on this coin from under the verdict, in the X-Ray and in the Telegram bot. Copy CA sits next to the ticker.",
+      "proof": [
+        {
+          "label": "eea119b",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/eea119b"
+        },
+        {
+          "label": "0323b2e",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/0323b2e"
+        }
+      ],
+      "zh": {
+        "title": "一键去你交易的地方",
+        "text": "Axiom、GMGN、BullX、Padre、pump.fun 和 FOMO 在判断下方直接打开这个币，透视页和 Telegram 机器人里都有。复制合约地址就在代币旁边。"
+      }
+    },
+    {
+      "id": "memory",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-25",
+      "title": "Launches read after the fact",
+      "text": "A coin older than the 48-hour tape can be read from the chain into the 90-day memory, and the X-Ray then reads it like any other. Launchpads are named: ClawPump's launcher and Launch's deployer wallet are the platform's, not a ring and not launch spam.",
+      "proof": [
+        {
+          "label": "8695659",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/8695659"
+        },
+        {
+          "label": "139bf82",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/139bf82"
+        }
+      ],
+      "zh": {
+        "title": "事后补读的发射",
+        "text": "比 48 小时实时带更老的币可以从链上补读进 90 天记忆，透视页随后像读其他币一样读它。发射平台被点名：ClawPump 的发射钱包和 Launch 的部署钱包属于平台，不是团伙，也不是刷币。"
       }
     },
     {
