@@ -19,6 +19,7 @@ import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
+import { replayMint } from "./chain/replay.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
@@ -733,6 +734,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!guests) return json(res, 404, { error: "no guest enclosures on this node" });
         const body = (await readJson(req)) as { text?: unknown };
         return json(res, 200, { notice: await guests.setNotice(typeof body.text === "string" ? body.text : "") });
+      }
+      // Warden only: read a token the stream never saw from the chain into the long memory, so the X-Ray can read it.
+      const replay = /^\/v1\/admin\/replay\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "POST" && replay) {
+        if (!authorized(req, adminToken)) return json(res, 401, { error: "warden token required" });
+        if (!history) return json(res, 404, { error: "no long memory on this node" });
+        const q = url.searchParams;
+        const hours = Math.min(48, Math.max(1, Number(q.get("hours")) || 6));
+        const result = await replayMint(replay[1]!, history, { hours, funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[replay] ${m}`) });
+        return json(res, "error" in result ? 422 : 200, result);
       }
       const evict = /^\/v1\/guests\/([a-z0-9-]+)\/evict$/.exec(path);
       if (req.method === "POST" && evict) {
