@@ -1993,3 +1993,26 @@ test("a token older than the stream gets no pass: holders and the dev's kept rec
   assert.equal(unread.verdict, "unknown");
   assert.ok(unread.notes.includes("holders could not be read from Solana right now"));
 });
+
+test("funderStats counts where traced creators got their first SOL, from the index alone, no RPC", async () => {
+  const { Lineage } = await import("../src/chain/lineage.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { exchangeOf } = await import("../src/chain/exchanges.ts");
+  // A labelled Binance hot wallet that ships in exchanges.json.
+  const exWallet = "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9";
+  assert.ok(exchangeOf(exWallet), "the exchange wallet should resolve to a name");
+  const w = (n: string) => `${n}${"1".repeat(44 - n.length)}`;
+  const line = new Lineage(new PumpTape(), (async () => ({ json: async () => ({ result: null }) })) as unknown as typeof fetch);
+  // Seed the index: two devs from one exchange wallet, one from a private wallet, one with no funder found.
+  (line as unknown as { remember(c: string, f: string | null, at: number): void }).remember(w("devA"), exWallet, Date.now());
+  (line as unknown as { remember(c: string, f: string | null, at: number): void }).remember(w("devB"), exWallet, Date.now());
+  (line as unknown as { remember(c: string, f: string | null, at: number): void }).remember(w("devC"), w("privateFunder"), Date.now());
+  (line as unknown as { remember(c: string, f: string | null, at: number): void }).remember(w("devD"), null, Date.now());
+  const st = line.funderStats();
+  assert.equal(st.traced, 4);
+  assert.equal(st.withFunder, 3);
+  assert.equal(st.fromExchange, 2);
+  assert.equal(st.fromPrivate, 1);
+  assert.equal(st.exchanges[0]?.name, "Binance");
+  assert.equal(st.exchanges[0]?.devs, 2);
+});

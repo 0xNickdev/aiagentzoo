@@ -123,6 +123,38 @@ export class Lineage {
     };
   }
 
+  /**
+   * Over every creator traced so far, where their first SOL came from: a plain count of what is already known,
+   * no RPC. "From an exchange" means the funder is a labelled exchange hot wallet; the rest is a private wallet.
+   */
+  funderStats(): {
+    traced: number;
+    withFunder: number;
+    fromExchange: number;
+    fromPrivate: number;
+    exchanges: Array<{ name: string; devs: number }>;
+  } {
+    let withFunder = 0;
+    let fromExchange = 0;
+    const byExchange = new Map<string, number>();
+    for (const { funder } of this.creators.values()) {
+      if (!funder) continue;
+      withFunder += 1;
+      const label = exchangeOf(funder);
+      if (label) {
+        fromExchange += 1;
+        byExchange.set(label, (byExchange.get(label) ?? 0) + 1);
+      }
+    }
+    return {
+      traced: this.creators.size,
+      withFunder,
+      fromExchange,
+      fromPrivate: withFunder - fromExchange,
+      exchanges: [...byExchange.entries()].map(([name, devs]) => ({ name, devs })).sort((a, b) => b.devs - a.devs),
+    };
+  }
+
   /** The creators a wallet paid for, as far as the zoo has traced, the worst first; empty when it funded none or is an exchange. */
   funded(funder: string, now = Date.now()): { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> } {
     const hot = this.hot.get(funder)?.hot ?? false;
