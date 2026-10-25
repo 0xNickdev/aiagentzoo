@@ -12,7 +12,9 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.99.0",
     "@vercel/analytics": "^2.0.1",
+    "buffer": "^6.0.3",
     "d3-force": "^3.0.0",
     "d3-polygon": "^3.0.1",
     "d3-selection": "^3.0.0",

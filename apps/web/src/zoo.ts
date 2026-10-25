@@ -48,6 +48,8 @@ interface SolanaProvider {
   connect(): Promise<{ publicKey: { toString(): string } }>;
   disconnect?(): Promise<void>;
   signMessage(message: Uint8Array, encoding?: string): Promise<{ signature: Uint8Array } | Uint8Array>;
+  /** Signs and sends a (versioned) transaction; Phantom, Solflare and Backpack all have it. */
+  signAndSendTransaction?(transaction: unknown, options?: unknown): Promise<{ signature: string } | string>;
 }
 
 declare global {
@@ -62,6 +64,8 @@ declare global {
 function provider(): SolanaProvider | undefined {
   return window.phantom?.solana ?? window.solflare ?? window.backpack?.solana ?? window.solana;
 }
+/** The injected wallet, for the swap: connect, sign and send, no session needed. */
+export const walletProvider = provider;
 
 export interface GuardianSession {
   publicKey: string;

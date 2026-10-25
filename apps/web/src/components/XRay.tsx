@@ -4,6 +4,7 @@ import { NODE_URLS } from "../sim/live";
 import MoneyMap from "./MoneyMap";
 import { Reveal, Section } from "./ui";
 import { lang, t, tChain } from "../i18n";
+import Swap from "./Swap";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
 import WalletProfile, { WalletLink } from "./WalletProfile";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
@@ -575,6 +576,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </p>
             <HoldStrip c={c} />
+            <Swap mint={r.mint} symbol={r.symbol} />
             <Terminals mint={r.mint} />
             <nav className="-mx-5 mt-4 flex gap-1 overflow-x-auto border-t border-white/[0.08] px-5 pt-3 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
               {MENU.map((m) => (
