@@ -30,6 +30,14 @@ const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 type Button = { text: string; callback_data?: string; url?: string; web_app?: { url: string } };
 type Keyboard = Button[][];
 
+/** One row of the trade terminals people use, each opening this mint straight away. */
+const terminals = (mint: string): Button[] => [
+  { text: "Axiom", url: `https://axiom.trade/t/${mint}` },
+  { text: "GMGN", url: `https://gmgn.ai/sol/token/${mint}` },
+  { text: "Photon", url: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
+  { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
+];
+
 interface Message {
   message_id: number;
   chat: { id: number; type: string };
@@ -484,6 +492,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       return void send(chat, xrayMessage(x), [
         // Mini app buttons only work in a private chat; a group gets the site.
         [chat > 0 ? { text: T("Open the map"), web_app: { url: `${APP_URL}?mint=${mint}` } } : { text: T("Open the map"), url: `${SITE}/xray?mint=${mint}` }],
+        terminals(mint),
         [
           { text: T("Watch it"), callback_data: `watch:${mint}` },
           { text: T("Ask the beaver"), callback_data: `ask:${mint}` },
@@ -637,7 +646,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
     spokeAt.set(chat, now);
     if (askedAt.size > 5_000) for (const [k, at] of askedAt) if (now - at > GROUP_USER_GAP_MS) askedAt.delete(k);
     const reply = { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } };
-    const full = (start: string) => [[{ text: T("Full report"), url: `https://t.me/${botName}?start=${start}` }, { text: "X-Ray ↗", url: `${SITE}/xray?${cmd === "/dev" ? "wallet" : "mint"}=${address}` }]];
+    const full = (start: string): Keyboard => [
+      [{ text: T("Full report"), url: `https://t.me/${botName}?start=${start}` }, { text: "X-Ray ↗", url: `${SITE}/xray?${cmd === "/dev" ? "wallet" : "mint"}=${address}` }],
+      ...(cmd === "/dev" ? [] : [terminals(address)]),
+    ];
     if (cmd === "/dev") {
       const r = await north<CreatorRecord>(`/v1/chain/creator/${address}`);
       if (!r) return void send(chat, T("No launches from this wallet in the last two days."), undefined, reply);

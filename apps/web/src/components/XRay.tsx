@@ -570,6 +570,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </p>
             <HoldStrip c={c} />
+            <Terminals mint={r.mint} />
             <nav className="-mx-5 mt-4 flex gap-1 overflow-x-auto border-t border-white/[0.08] px-5 pt-3 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
               {MENU.map((m) => (
                 <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left transition lg:w-full ${tab === m.id ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"}`}>
@@ -1125,6 +1126,43 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
  * bundlers, the first-five-seconds wallets and the dev's crew, and what sits in the curve or pool. Red past the line
  * where that share alone can decide the price.
  */
+/** The trade terminals people actually use, each opening this mint straight away, plus the CA on the clipboard. */
+const TERMINALS = (mint: string) => [
+  { k: "Axiom", href: `https://axiom.trade/t/${mint}` },
+  { k: "GMGN", href: `https://gmgn.ai/sol/token/${mint}` },
+  { k: "Photon", href: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
+  { k: "BullX", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
+];
+
+function Terminals({ mint }: { mint: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(mint);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* no clipboard: the address is on the page anyway */
+    }
+  };
+  const pill = "rounded-lg border border-white/[0.1] px-2.5 py-1 text-[12.5px] text-fg-2 transition hover:border-white/30 hover:text-white";
+  return (
+    <div className="mt-4 border-t border-white/[0.08] pt-3">
+      <p className="text-[11.5px] text-fg-4">{t("open in your terminal")}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {TERMINALS(mint).map((x) => (
+          <a key={x.k} href={x.href} target="_blank" rel="noopener noreferrer" className={pill}>
+            {x.k}
+          </a>
+        ))}
+        <button type="button" onClick={copy} className={pill}>
+          {copied ? t("copied") : t("copy CA")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function HoldStrip({ c }: { c: XRayReport["check"] }) {
   const f = c.facts;
   const h = c.holders;
