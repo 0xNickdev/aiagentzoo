@@ -93,16 +93,17 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
     </button>
   );
   return (
-    <div className="mt-4 border-t border-white/[0.08] pt-3">
+    <div className="mt-4 min-w-0 max-w-full border-t border-white/[0.08] pt-3">
       <p className="text-[11.5px] text-fg-4">{t("trade it here")}</p>
       <div className="mt-2 flex gap-1 rounded-xl border border-white/[0.08] p-1">{[tab("buy", t("Buy")), tab("sell", t("Sell"))]}</div>
       <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-2">
         <input
           inputMode="decimal"
+          size={1}
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
           aria-label={side === "buy" ? t("SOL to spend") : t("{s} to sell", { s: sym })}
-          className="tabular-nums min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none"
+          className="tabular-nums w-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none"
         />
         <span className="text-[12.5px] text-fg-3">{side === "buy" ? "SOL" : sym}</span>
       </div>
