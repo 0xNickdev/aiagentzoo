@@ -136,7 +136,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
               {t("you get about {n} {s}", { n: fmt(q.outAmount, side === "buy" ? dec : 9), s: side === "buy" ? sym : "SOL" })}
             </span>
             {" · "}
-            {t("fee {p}% ({n} SOL) to the zoo, a tenth of it buys $ZOOAGENCY back", { p: (FEE_BPS / 100).toString(), n: fee.toLocaleString("en-US", { maximumFractionDigits: 5 }) })}
+            {t("fee {p}% ({n} SOL)", { p: (FEE_BPS / 100).toString(), n: fee.toLocaleString("en-US", { maximumFractionDigits: 5 }) })}
             {Number(q.priceImpactPct) >= 0.02 && <span className="text-[#ff8a7e]">{" · "}{t("price impact {p}%", { p: (Number(q.priceImpactPct) * 100).toFixed(1) })}</span>}
           </>
         )}
@@ -158,7 +158,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
           </a>
         </p>
       )}
-      <p className="mt-2 text-[11px] leading-relaxed text-fg-4">{t("Routed by Jupiter, signed by your wallet, nothing held by us. Not financial advice.")}</p>
+      <p className="mt-2 text-[11px] leading-relaxed text-fg-4">{t("Routed by Jupiter, signed by your wallet, nothing held by us. {p}% fee: a tenth buys $ZOOAGENCY back, the rest runs the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
     </div>
   );
 }
