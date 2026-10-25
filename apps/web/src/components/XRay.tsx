@@ -554,8 +554,9 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[290px_minmax(0,1fr)]">
         <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5">
-            <p className="tabular-nums text-[12.5px] text-fg-3">
-              ${r.symbol.replace(/^\$/, "")} · {ageOf(r)}
+            <p className="tabular-nums flex flex-wrap items-center gap-2 text-[12.5px] text-fg-3">
+              <span>${r.symbol.replace(/^\$/, "")} · {ageOf(r)}</span>
+              <CopyCa mint={r.mint} />
             </p>
             <p className="mt-0.5 truncate text-[13px] text-fg-4">{r.name}</p>
             <p className="font-display mt-3 text-4xl leading-none" style={{ color: tone.color }}>
@@ -1130,15 +1131,31 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
  * bundlers, the first-five-seconds wallets and the dev's crew, and what sits in the curve or pool. Red past the line
  * where that share alone can decide the price.
  */
-/** The trade terminals people actually use, each opening this mint straight away, plus the CA on the clipboard. */
+/** The trade terminals people actually use, each opening this mint straight away. Icons: their own favicons. */
 const TERMINALS = (mint: string) => [
-  { k: "Axiom", href: `https://axiom.trade/t/${mint}` },
-  { k: "GMGN", href: `https://gmgn.ai/sol/token/${mint}` },
-  { k: "Photon", href: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
-  { k: "BullX", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
+  { k: "Axiom", icon: "/terminals/axiom.png", href: `https://axiom.trade/t/${mint}` },
+  { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/sol/token/${mint}` },
+  { k: "Photon", icon: "/terminals/photon.png", href: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
+  { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
 ];
 
 function Terminals({ mint }: { mint: string }) {
+  return (
+    <div className="mt-4 border-t border-white/[0.08] pt-3">
+      <p className="text-[11.5px] text-fg-4">{t("open in your terminal")}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {TERMINALS(mint).map((x) => (
+          <a key={x.k} href={x.href} target="_blank" rel="noopener noreferrer" title={x.k} aria-label={x.k} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] transition hover:border-white/30 hover:bg-white/[0.07]">
+            <img src={x.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-md" loading="lazy" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The contract address onto the clipboard, next to the ticker: one tap, then a quiet "copied". */
+function CopyCa({ mint }: { mint: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -1149,21 +1166,14 @@ function Terminals({ mint }: { mint: string }) {
       /* no clipboard: the address is on the page anyway */
     }
   };
-  const pill = "rounded-lg border border-white/[0.1] px-2.5 py-1 text-[12.5px] text-fg-2 transition hover:border-white/30 hover:text-white";
   return (
-    <div className="mt-4 border-t border-white/[0.08] pt-3">
-      <p className="text-[11.5px] text-fg-4">{t("open in your terminal")}</p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {TERMINALS(mint).map((x) => (
-          <a key={x.k} href={x.href} target="_blank" rel="noopener noreferrer" className={pill}>
-            {x.k}
-          </a>
-        ))}
-        <button type="button" onClick={copy} className={pill}>
-          {copied ? t("copied") : t("copy CA")}
-        </button>
-      </div>
-    </div>
+    <button type="button" onClick={copy} title={t("copy CA")} aria-label={t("copy CA")} className="inline-flex items-center gap-1 rounded-md border border-white/[0.1] px-1.5 py-0.5 align-middle text-[11px] text-fg-3 transition hover:border-white/30 hover:text-white">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="9" y="9" width="13" height="13" rx="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+      {copied ? t("copied") : "CA"}
+    </button>
   );
 }
 
