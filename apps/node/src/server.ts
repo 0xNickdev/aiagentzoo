@@ -767,6 +767,24 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return gone ? json(res, 200, { evicted: evict[1] }) : json(res, 404, { error: "no such guest" });
       }
 
+      // The site's swap needs a few plain RPC reads (lookup tables, balances, a signature's status); the public RPC
+      // answers browsers with 403, so the node forwards these, and only these, to its own RPC. No key leaves the node.
+      if (req.method === "POST" && path === "/v1/rpc") {
+        const RPC_URL = process.env.SOLANA_RPC_URL ?? "";
+        if (!RPC_URL) return json(res, 404, { error: "no RPC on this node" });
+        const body = (await readJson(req)) as { method?: unknown; params?: unknown; id?: unknown };
+        const allowed = new Set(["getAddressLookupTable", "getTokenSupply", "getBalance", "getParsedTokenAccountsByOwner", "getTokenAccountsByOwner", "getSignatureStatuses", "getLatestBlockhash", "getAccountInfo", "getMultipleAccounts"]);
+        if (typeof body?.method !== "string" || !allowed.has(body.method)) return json(res, 400, { error: "method not forwarded" });
+        try {
+          const r = await fetch(RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: body.id ?? 1, method: body.method, params: body.params ?? [] }), signal: AbortSignal.timeout(10_000) });
+          const text = await r.text();
+          res.writeHead(r.status, { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": corsOrigin });
+          return res.end(text);
+        } catch {
+          return json(res, 502, { error: "the RPC did not answer" });
+        }
+      }
+
       if (req.method === "POST" && path === "/v1/events") {
         const event = (await readJson(req)) as ZooEvent;
         if (typeof event?.from?.node === "string" && isGuestNode(event.from.node)) {
