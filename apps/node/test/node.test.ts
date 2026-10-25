@@ -411,7 +411,9 @@ test("the beaver makes calls, checks them the next day and rewrites its playbook
   const draft = (await enclosure.store.get<any>("artifact:brief:2026-10-08")) as any;
   const md = renderBrief(draft, "Quiet.");
   assert.match(md, /## What the pack learned/);
-  assert.match(md, /1 right, 0 wrong \(100% accuracy\)/);
+  assert.match(md, /1 right, 0 wrong\./);
+  // The raw hit rate never leads: on a market where nearly everything dies it says nothing about skill.
+  assert.doesNotMatch(md, /% accuracy\)/);
   assert.match(md, /playbook v1/);
 });
 

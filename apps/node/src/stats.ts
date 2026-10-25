@@ -23,10 +23,17 @@ export function canyonStats(enclosure: Enclosure, briefAt: string, guests?: Gues
       tokensTonight: Object.keys(obs).length,
       callsTonight: calls.length,
       modelCallsTonight: calls.filter((c) => c.by === "model").length,
-      accuracy: score?.accuracy ?? null,
-      // Balanced accuracy: calling everything suspicious cannot inflate it. Null on scorecards from before it existed.
+      // Balanced accuracy on last night's graded calls: calling everything suspicious cannot inflate it. Null on scorecards from before it existed.
       skill: score?.skill ?? null,
       scored: score ? score.hits + score.misses : 0,
+      // The plain share of last night's calls that were right. Almost every launch dies, so it runs high whatever the judge does; skill is the number to read.
+      hitRate: score?.accuracy ?? null,
+      explain: {
+        record: "the beaver's whole record across nights: score and skill on the balanced scale, graded = calls re-checked the next day, warnedDead = called suspicious, then went to zero",
+        skill: "balanced accuracy, 0 to 1: half for the dead tokens it caught, half for the living ones it called alive; calling everything a rug scores 0.5",
+        hitRate: "share of last night's graded calls that were right; inflated when nearly every token dies, so it is not a measure of skill",
+        verify: "every graded call, with its mint, is at /v1/beaver/record; look each up on DexScreener",
+      },
       playbookVersion: playbook?.version ?? 0,
       guests: all.length,
       clawpumpGuests: all.filter((g) => g.platform === "clawpump").length,

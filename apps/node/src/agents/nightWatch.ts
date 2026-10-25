@@ -439,7 +439,9 @@ function learnedText(learned: Sections["learned"] | undefined): string {
   const lines: string[] = [];
   if (score && score.hits + score.misses > 0) {
     lines.push(
-      `Yesterday's calls, re-checked on DexScreener: ${score.hits} right, ${score.misses} wrong (${Math.round((score.accuracy ?? 0) * 100)}% accuracy).`,
+      score.skill !== null && score.skill !== undefined
+        ? `Yesterday's calls, re-checked on DexScreener: ${score.hits} right, ${score.misses} wrong. Balanced accuracy ${Math.round(score.skill * 100)}%: half for the dead it caught, half for the living it called alive, so calling everything a rug scores 50%.`
+        : `Yesterday's calls, re-checked on DexScreener: ${score.hits} right, ${score.misses} wrong.`,
     );
   } else {
     lines.push("No scored calls from yesterday yet.");
