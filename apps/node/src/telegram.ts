@@ -37,6 +37,7 @@ const terminals = (mint: string): Button[] => [
   { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
   { text: "Padre", url: `https://trade.padre.gg/trade/solana/${mint}` },
   { text: "pump.fun", url: `https://pump.fun/coin/${mint}` },
+  { text: "FOMO", url: "https://fomo.family/" },
 ];
 
 interface Message {

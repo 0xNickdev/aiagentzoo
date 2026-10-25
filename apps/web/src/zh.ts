@@ -817,6 +817,7 @@ export const ZH: Record<string, string> = {
   "Mayhem Mode": "Mayhem 模式",
   "open in your terminal": "在你的交易终端打开",
   "copy CA": "复制合约地址",
+  "{x}: copies the CA, paste it in the app": "{x}：已复制合约地址，在应用里粘贴",
   "NO RED FLAGS": "暂无危险信号",
   "NOT ON THE STREAM": "不在链上数据流里",
   "No funding transfer in the creator's recent history.": "开发者钱包最近的记录里没有找到入金转账。",

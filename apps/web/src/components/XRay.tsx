@@ -1132,12 +1132,14 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
  * where that share alone can decide the price.
  */
 /** The trade terminals people actually use, each opening this mint straight away. Icons: their own favicons. */
-const TERMINALS = (mint: string) => [
+const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string; copies?: boolean }> => [
   { k: "Axiom", icon: "/terminals/axiom.png", href: `https://axiom.trade/t/${mint}` },
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/sol/token/${mint}` },
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
   { k: "Padre", icon: "/terminals/padre.png", href: `https://trade.padre.gg/trade/solana/${mint}` },
   { k: "pump.fun", icon: "/terminals/pump.png", href: `https://pump.fun/coin/${mint}` },
+  // FOMO has no page per token on the web: the CA goes onto the clipboard and the app opens, paste it in the search.
+  { k: "FOMO", icon: "/terminals/fomo.png", href: "https://fomo.family/", copies: true },
 ];
 
 function Terminals({ mint }: { mint: string }) {
@@ -1146,7 +1148,16 @@ function Terminals({ mint }: { mint: string }) {
       <p className="text-[11.5px] text-fg-4">{t("open in your terminal")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {TERMINALS(mint).map((x) => (
-          <a key={x.k} href={x.href} target="_blank" rel="noopener noreferrer" title={x.k} aria-label={x.k} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] transition hover:border-white/30 hover:bg-white/[0.07]">
+          <a
+            key={x.k}
+            href={x.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={x.copies ? t("{x}: copies the CA, paste it in the app", { x: x.k }) : x.k}
+            aria-label={x.k}
+            onClick={x.copies ? () => void navigator.clipboard?.writeText(mint).catch(() => null) : undefined}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] transition hover:border-white/30 hover:bg-white/[0.07]"
+          >
             <img src={x.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-md" loading="lazy" />
           </a>
         ))}
