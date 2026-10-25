@@ -59,16 +59,31 @@ async function call<T>(method: string, params: unknown[], f: typeof fetch, timeo
   return null;
 }
 
-/** Every signature of the address, newest first as the RPC gives them, up to `maxPages` thousand. */
-async function signaturesOf(mint: string, f: typeof fetch, maxPages: number): Promise<Sig[]> {
+/**
+ * The signatures of the address from its first transaction on, through Helius's oldest-first paging, stopping once
+ * the window after the launch is covered. A token with a million transactions costs the same as a small one.
+ */
+async function signaturesFromLaunch(mint: string, f: typeof fetch, hours: number, maxTxs: number): Promise<Sig[]> {
   const all: Sig[] = [];
-  let before: string | undefined;
-  for (let page = 0; page < maxPages; page++) {
-    const batch = await call<Sig[]>("getSignaturesForAddress", [mint, { limit: 1_000, ...(before ? { before } : {}) }], f);
-    if (!batch?.length) break;
-    all.push(...batch);
-    before = batch[batch.length - 1]!.signature;
-    if (batch.length < 1_000) break;
+  let token: string | undefined;
+  let first: number | null = null;
+  for (let page = 0; page < 200; page++) {
+    const r = await call<{ data?: Sig[]; paginationToken?: string }>(
+      "getTransactionsForAddress",
+      [mint, { sortOrder: "asc", limit: 1_000, transactionDetails: "signatures", ...(token ? { paginationToken: token } : {}) }],
+      f,
+    );
+    const batch = r?.data ?? [];
+    if (!batch.length) break;
+    for (const s of batch) {
+      if (s.err || !s.blockTime) continue;
+      if (first === null) first = s.blockTime;
+      if (s.blockTime - first > hours * 3_600) return all;
+      all.push(s);
+      if (all.length >= maxTxs) return all;
+    }
+    token = r?.paginationToken;
+    if (!token) break;
   }
   return all;
 }
@@ -78,8 +93,6 @@ export interface ReplayOptions {
   hours?: number;
   /** Ceiling on transactions read. */
   maxTxs?: number;
-  /** Pages of a thousand signatures to walk at most. */
-  maxPages?: number;
   concurrency?: number;
   funderOf?: (creator: string) => string | null | undefined;
   log?: (m: string) => void;
@@ -87,15 +100,13 @@ export interface ReplayOptions {
 
 export async function replayMint(mint: string, history: HistoryStore, opts: ReplayOptions = {}, f: typeof fetch = fetch): Promise<ReplayResult | { error: string }> {
   if (!fundersEnabled() || !RPC) return { error: "no Helius RPC on this node" };
-  const { hours = 6, maxTxs = 8_000, maxPages = 60, concurrency = 8, funderOf, log = () => {} } = opts;
+  const { hours = 6, maxTxs = 8_000, concurrency = 8, funderOf, log = () => {} } = opts;
   log(`replay ${mint}: reading signatures`);
 
-  const sigs = await signaturesOf(mint, f, maxPages);
-  if (!sigs.length) return { error: "no transactions for this mint" };
-  const ok = sigs.filter((s) => !s.err && s.blockTime).reverse();
-  const first = ok[0]!.blockTime!;
-  const window = ok.filter((s) => s.blockTime! - first <= hours * 3_600).slice(0, maxTxs);
-  log(`replay ${mint}: ${sigs.length} signatures, ${window.length} in the first ${hours} h`);
+  const window = await signaturesFromLaunch(mint, f, hours, maxTxs);
+  if (!window.length) return { error: "no transactions for this mint" };
+  const first = window[0]!.blockTime!;
+  log(`replay ${mint}: ${window.length} transactions in the first ${hours} h, from ${new Date(first * 1000).toISOString()}`);
 
   // Transactions in order, read a few at a time.
   const txs: Array<Tx | null> = new Array(window.length).fill(null);
@@ -142,7 +153,7 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
   log(`replay ${mint}: written, ${replayed} transactions with events, ${skipped} skipped, graduated ${rec.graduated}`);
   return {
     mint,
-    signatures: sigs.length,
+    signatures: window.length,
     replayed,
     skipped,
     from: first * 1000,
