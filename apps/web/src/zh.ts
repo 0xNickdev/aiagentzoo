@@ -1400,6 +1400,8 @@ export const ZH: Record<string, string> = {
   "We grade our own calls, so don't take our word for it: each one opens on DexScreener, where you can see what the token did.": "这些判断是我们自己打分的，所以别只信我们：每一条都能在 DexScreener 打开，看看这个币后来怎么样了。",
   "flagged, then went to zero": "先被标记，后来归零",
   "tokens the beaver called suspicious first, re-checked the next day at zero": "海狸先判为可疑、第二天复查已归零的币",
+  "Launched {day}, before our stream's window. What happened at launch is not on record, so there is no pass here: only who holds it now and the dev's kept record.": "{day} 上线，早于我们的实时窗口。开盘时发生了什么没有记录，所以这里不会给出 pass：只有现在谁持有它，以及这个开发者在我们记录里的历史。",
+  "How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.": "我们怎么知道：现在谁持有它是在查询时从 Solana 读取的；开发者的记录是实时流里保存的他早先的发币。这个币上线时发生了什么，早于我们两天的窗口。",
   "still trading": "还在交易",
   "A regular buyer": "常客买家",
   "Bought this dev's launches": "买过这个开发者的币",

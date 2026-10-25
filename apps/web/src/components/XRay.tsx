@@ -3,7 +3,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import MoneyMap from "./MoneyMap";
 import { Reveal, Section } from "./ui";
-import { t, tChain } from "../i18n";
+import { lang, t, tChain } from "../i18n";
 import XRayRadar, { KIND, kindOf, secs } from "./XRayRadar";
 import WalletProfile, { WalletLink } from "./WalletProfile";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
@@ -619,9 +619,13 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                         {all ? t("show fewer") : t("+ {n} more reasons", { n: c.reasons.length - 3 })}
                       </button>
                     )}
-                    {c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>}
+                    {r.outsideStream ? (
+                      <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{t("Launched {day}, before our stream's window. What happened at launch is not on record, so there is no pass here: only who holds it now and the dev's kept record.", { day: new Date(r.createdAt).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) })}</p>
+                    ) : (
+                      c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>
+                    )}
                     <KeyFacts r={r} go={go} />
-                    <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
+                    <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
                   </div>
                   <ShareBar r={r} />
                 </>
