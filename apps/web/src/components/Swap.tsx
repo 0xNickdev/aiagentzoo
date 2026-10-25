@@ -14,6 +14,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
   const [dec, setDec] = useState(6);
   const [wallet, setWallet] = useState<string | null>(walletProvider()?.publicKey?.toString() ?? null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [solBalance, setSolBalance] = useState<number | null>(null);
   const [busy, setBusy] = useState<"quote" | "sign" | "wait" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ sig: string; state: "confirmed" | "failed" | "unknown" | "sent" } | null>(null);
@@ -26,8 +27,9 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
     void decimalsOf(mint).then(setDec).catch(() => null);
   }, [mint]);
   useEffect(() => {
-    if (!wallet) return void setBalance(null);
+    if (!wallet) return void (setBalance(null), setSolBalance(null));
     void balanceOf(wallet, inMint).then(setBalance).catch(() => setBalance(null));
+    void balanceOf(wallet, SOL_MINT).then(setSolBalance).catch(() => setSolBalance(null));
   }, [wallet, inMint, done]);
 
   // A fresh quote whenever the side or the amount changes, a moment after typing stops.
@@ -87,6 +89,10 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
 
   if (!swapEnabled()) return null;
   const fee = q ? Number(feeLamports(q)) / 1e9 : 0;
+  // What the wallet must hold: the SOL spent (buys) plus about 0.004 SOL for network fees and the token account.
+  const need = side === "buy" ? Number(amount) + 0.004 : 0.004;
+  const short = wallet !== null && balance !== null && (side === "buy" ? balance < need : balance < Number(amount));
+  const solShort = side === "sell" && wallet !== null && solBalance !== null && solBalance < 0.004;
   const tab = (k: "buy" | "sell", label: string) => (
     <button key={k} type="button" onClick={() => setSide(k)} className={`flex-1 rounded-lg px-3 py-1.5 text-[12.5px] transition ${side === k ? "bg-white/[0.1] text-white" : "text-fg-3 hover:text-white"}`}>
       {label}
@@ -144,12 +150,15 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
       <button
         type="button"
         onClick={() => void go()}
-        disabled={!q || busy === "sign" || busy === "wait"}
+        disabled={!q || busy === "sign" || busy === "wait" || short || solShort}
         className="mt-1 w-full rounded-xl bg-white px-4 py-2.5 text-[13.5px] font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {!wallet ? t("Connect wallet to trade") : busy === "sign" ? t("Sign in your wallet…") : busy === "wait" ? t("Landing…") : side === "buy" ? t("Buy {s}", { s: sym }) : t("Sell {s}", { s: sym })}
       </button>
-      {error && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{error}</p>}
+      {short && side === "buy" && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("Not enough SOL: this needs about {n} SOL with fees, the wallet has {b}.", { n: need.toFixed(3), b: (balance ?? 0).toFixed(4) })}</p>}
+      {short && side === "sell" && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("The wallet holds less {s} than that.", { s: sym })}</p>}
+      {solShort && !short && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("Keep about 0.004 SOL for the network fee.")}</p>}
+      {error && !short && !solShort && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{error}</p>}
       {done && (
         <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
           {done.state === "confirmed" ? t("Landed.") : done.state === "failed" ? t("The transaction failed on chain.") : done.state === "sent" ? t("Sent, waiting for the chain…") : t("Sent; the chain has not confirmed it yet.")}{" "}
