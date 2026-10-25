@@ -711,7 +711,9 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
                 {short(fund.funder)} →
               </button>
               <p className={`mt-1 text-[12.5px] font-normal ${!fund.funderIsHot && fund.siblingDumped48h >= 3 ? "text-[#ff8a7e]" : "text-fg-4"}`}>
-                {fund.funderIsHot
+                {fund.funderService
+                  ? tt("{x}'s launcher: it pays for every creator launched through {x}, so it ties no one together.", { x: fund.funderService })
+                  : fund.funderIsHot
                   ? tt("An exchange or a router: it funds everyone, so it ties no one together.")
                   : fund.siblings.length
                     ? tt("funded {n} other creators · {l} launches, {d} dumps in 48h", { n: fund.siblings.length, l: fund.siblingLaunches48h, d: fund.siblingDumped48h })

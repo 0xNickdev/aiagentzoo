@@ -31,3 +31,16 @@ export function exchangeOf(wallet: string | null | undefined): string | null {
 }
 
 export const exchangeCount = () => load().size;
+
+/**
+ * Launchpads that pay for every creator wallet they launch through, so, like an exchange, the funder ties no one
+ * together. ClawPump's launcher: the wallet behind the creators of $ZOOAGENCY, ORACLE, VERA and the rest of its launches.
+ */
+const LAUNCHERS: Record<string, string> = {
+  "49CfXAr58cCTGJnYsbm16fEsE5JRpdR8QQP8E1ZinGCq": "ClawPump",
+};
+
+/** The launchpad a wallet is the launcher of, when it is a known one. */
+export function launcherOf(wallet: string | null | undefined): string | null {
+  return wallet ? (LAUNCHERS[wallet] ?? null) : null;
+}

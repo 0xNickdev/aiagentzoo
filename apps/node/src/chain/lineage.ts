@@ -1,5 +1,5 @@
 import { funderOf, fundersEnabled, rpc } from "./funders.ts";
-import { exchangeOf } from "./exchanges.ts";
+import { exchangeOf, launcherOf } from "./exchanges.ts";
 import { type PumpTape, tape } from "./pump.ts";
 
 /**
@@ -17,6 +17,8 @@ export interface LineageView {
   funderIsHot: boolean;
   /** The exchange the funder is a known hot wallet of ("Binance"), or null. */
   funderLabel: string | null;
+  /** The launchpad the funder is the launcher of ("ClawPump"): it pays for every creator it launches, so it ties no one. */
+  funderService: string | null;
   /** Other creators the same funder paid for, as far as the zoo has traced. */
   siblings: Array<{ wallet: string; launches48h: number; dumped: number }>;
   /** Their launches and dumps over the last two days, from the tape. */
@@ -101,7 +103,8 @@ export class Lineage {
     const known = this.creators.get(creator);
     if (!known) return null;
     const funderLabel = exchangeOf(known.funder);
-    const funderIsHot = known.funder ? funderLabel != null || (this.hot.get(known.funder)?.hot ?? false) : false;
+    const funderService = launcherOf(known.funder);
+    const funderIsHot = known.funder ? funderLabel != null || funderService != null || (this.hot.get(known.funder)?.hot ?? false) : false;
     const siblings = known.funder && !funderIsHot
       ? [...(this.byFunder.get(known.funder) ?? [])]
           .filter((w) => w !== creator)
@@ -116,6 +119,7 @@ export class Lineage {
       funder: known.funder,
       funderIsHot,
       funderLabel,
+      funderService,
       siblings: siblings.slice(0, 20),
       siblingLaunches48h: siblings.reduce((n, s) => n + s.launches48h, 0),
       siblingDumped48h: siblings.reduce((n, s) => n + s.dumped, 0),
@@ -168,7 +172,7 @@ export class Lineage {
     const rows: Array<{ funder: string; devs: number; launches48h: number; dumped48h: number }> = [];
     for (const [funder, set] of this.byFunder) {
       if (set.size < minDevs) continue;
-      if (exchangeOf(funder) || (this.hot.get(funder)?.hot ?? false)) continue;
+      if (exchangeOf(funder) || launcherOf(funder) || (this.hot.get(funder)?.hot ?? false)) continue;
       let launches = 0, dumped = 0;
       for (const w of set) { const r = this.tape.creator(w, now); launches += r?.launches48h ?? 0; dumped += r?.dumped ?? 0; }
       rows.push({ funder, devs: set.size, launches48h: launches, dumped48h: dumped });

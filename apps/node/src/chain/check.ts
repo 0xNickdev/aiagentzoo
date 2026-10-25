@@ -85,7 +85,7 @@ export interface TokenCheck {
     runnerDev: boolean;
   } | null;
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
-  funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
+  funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
@@ -297,7 +297,7 @@ export function checkToken(
     },
     ...(holders !== undefined ? { holders } : {}),
     ...(lin !== undefined
-      ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
+      ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, funderService: lin.funderService ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),
   };
 }
