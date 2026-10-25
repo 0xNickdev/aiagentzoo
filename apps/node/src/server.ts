@@ -18,6 +18,7 @@ import { exchangeOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { originOf } from "./chain/origin.ts";
+import { loopOf, loopEnabled } from "./chain/loop.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
@@ -599,6 +600,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "GET" && path === "/v1/chain/builders") {
         return json(res, 200, { builders: tape.builders(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
+      const pmOf = /^\/v1\/chain\/paymaster\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && pmOf) {
+        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+        if (!fromPeer(req)) { const w = deepGate.take(caller); if (w > 0) return json(res, 429, { error: "slow down", retryAfterMs: w }); }
+        const funder = pmOf[1]!;
+        const devs = lineage.devsOf(funder);
+        if (!devs.size) return json(res, 404, { error: "this wallet has not been seen funding any dev the zoo traced" });
+        if (!loopEnabled()) return json(res, 200, { funder, devs: devs.size, loop: null, note: "no RPC configured for the reverse trace" });
+        return json(res, 200, (await loopOf(funder, devs)) ?? { funder, devs: devs.size, loop: null });
       }
       if (req.method === "GET" && path === "/v1/chain/paymasters") {
         res.setHeader("cache-control", "public, max-age=60");

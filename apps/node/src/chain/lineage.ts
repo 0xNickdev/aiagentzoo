@@ -155,6 +155,11 @@ export class Lineage {
     };
   }
 
+  /** The creators a wallet funded, as the lineage has traced so far. */
+  devsOf(funder: string): Set<string> {
+    return this.byFunder.get(funder) ?? new Set();
+  }
+
   /**
    * The private wallets that paid for the most distinct devs: the hand behind a wall of "independent" launchers.
    * Exchange hot wallets are left out (they fund everyone and tie no one together). A pure count over the index.
