@@ -556,15 +556,15 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   );
   const tiles = f && !old ? [
     { k: t("buyers"), v: String(f.buyers), d: t("{b} buys · {s} sells", { b: f.buys, s: f.sells }), tone: "" },
-    { k: t("dev sold"), v: f.creatorSoldPct === null || f.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`, d: t("of their own bag"), tone: (f.creatorSoldPct ?? 0) >= 50 ? "bad" : (f.creatorSoldPct ?? 0) === 0 ? "ok" : "" },
+    { k: t("dev sold"), v: f.creatorSoldPct === null || f.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`, d: t("of their own bag"), tone: (f.creatorSoldPct ?? 0) >= 50 ? "bad" : (f.creatorSoldPct ?? 0) === 0 && f.buyers >= 10 ? "ok" : "" },
     { k: t("bundlers hold"), v: `${f.bundlersHeldPct ?? 0}%`, d: t("peak {p}% · {n} wallets", { p: f.bundlersPeakPct ?? 0, n: f.bundlers ?? 0 }), tone: bundleBad && (f.bundlers ?? 0) >= 10 ? "bad" : "" },
     { k: t("churn"), v: `${f.churnPct ?? 0}%`, d: t("sold back what they bought"), tone: (f.churnPct ?? 0) >= 30 ? "bad" : "" },
   ] : [];
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-3 pb-10 sm:px-8">
-      <div className="xr-term relative mx-auto max-w-7xl overflow-hidden rounded-2xl border border-[rgba(166,227,180,0.18)] bg-[#0c100e] shadow-[0_30px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(166,227,180,0.25)]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-[12%] top-0 h-[2px] bg-[linear-gradient(90deg,transparent,#a6e3b4,transparent)]" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(166,227,180,0.07),transparent)]" />
+      <div className="xr-term relative mx-auto max-w-7xl overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0c100e] shadow-[0_30px_80px_rgba(0,0,0,0.6)]" style={{ boxShadow: `0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 ${tone.color}40` }}>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-[12%] top-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${tone.color}, transparent)` }} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-36" style={{ background: `linear-gradient(180deg, ${tone.color}12, transparent)` }} />
 
         {/* the tab of the terminal: what it is, the verdict, the stream, where to trade it */}
         <div className="relative flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
