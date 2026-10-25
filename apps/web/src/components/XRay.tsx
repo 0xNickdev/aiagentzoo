@@ -32,6 +32,8 @@ interface Check {
   verdict: Verdict;
   reasons: string[];
   notes: string[];
+  /** Whether the node's chain stream is live and how long ago it last heard the chain. */
+  stream?: { live: boolean; lastEventSecAgo: number };
   facts: {
     ageMin: number;
     buyers: number;
@@ -463,7 +465,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
       id: "xr-funder",
       k: "Who paid for the creator",
       v: !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? t("withdrawn from {x}", { x: fund.funderLabel }) : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
-      sub: fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? t("{d} dumps in 48h", { d: fund.siblingDumped48h }) : t("funded {w}", { w: short(fund.funder) })) : fund?.funderService ? t("pays for every launch there, ties no one") : fund?.funderIsHot ? t("funds everyone, ties no one") : "",
+      sub: fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? t("{d} dumps in 48h", { d: fund.siblingDumped48h }) : t("funded {w}", { w: short(fund.funder) })) : fund?.funderService ? t("pays for every launch") : fund?.funderIsHot ? t("funds everyone, ties no one") : "",
       bad: !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
     },
     {
@@ -552,44 +554,58 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
       {note && <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>}
     </div>
   );
+  const tiles = f && !old ? [
+    { k: t("buyers"), v: String(f.buyers), d: t("{b} buys · {s} sells", { b: f.buys, s: f.sells }), tone: "" },
+    { k: t("dev sold"), v: f.creatorSoldPct === null || f.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`, d: t("of their own bag"), tone: (f.creatorSoldPct ?? 0) >= 50 ? "bad" : (f.creatorSoldPct ?? 0) === 0 ? "ok" : "" },
+    { k: t("bundlers hold"), v: `${f.bundlersHeldPct ?? 0}%`, d: t("peak {p}% · {n} wallets", { p: f.bundlersPeakPct ?? 0, n: f.bundlers ?? 0 }), tone: bundleBad && (f.bundlers ?? 0) >= 10 ? "bad" : "" },
+    { k: t("churn"), v: `${f.churnPct ?? 0}%`, d: t("sold back what they bought"), tone: (f.churnPct ?? 0) >= 30 ? "bad" : "" },
+  ] : [];
   return (
-    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-10 sm:px-8">
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[290px_minmax(0,1fr)]">
-        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5">
-            <p className="tabular-nums flex flex-wrap items-center gap-2 text-[12.5px] text-fg-3">
-              <span>${r.symbol.replace(/^\$/, "")} · {ageOf(r)}</span>
-              <CopyCa mint={r.mint} />
-            </p>
-            <p className="mt-0.5 truncate text-[13px] text-fg-4">{r.name}</p>
-            <p className="font-display mt-3 text-4xl leading-none" style={{ color: tone.color }}>
-              {t(tone.label)}
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-1">
-              {(["avoid", "caution", "pass"] as const).map((v) => (
-                <span key={v} className="h-[3px] rounded-full" style={{ background: c.verdict === v ? tone.color : "rgba(255,255,255,.08)" }} />
-              ))}
-            </div>
-            <p className="tabular-nums mt-2 text-[12px] leading-relaxed text-fg-4">
-              {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}
-              {pool ? ` · ${pool}` : ""}
-              {f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
-            </p>
-            <HoldStrip c={c} />
-            <Swap mint={r.mint} symbol={r.symbol} />
-            <Terminals mint={r.mint} />
-            <nav className="-mx-5 mt-4 flex gap-1 overflow-x-auto border-t border-white/[0.08] px-5 pt-3 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
-              {MENU.map((m) => (
-                <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left transition lg:w-full ${tab === m.id ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"}`}>
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${m.bad ? "bg-[#ff8a7e] shadow-[0_0_8px_#ff8a7e]" : "bg-white/25"}`} />
-                  <span className="min-w-0">
-                    <span className={`block whitespace-nowrap text-[13px] ${tab === m.id ? "text-white" : "text-fg-3"}`}>{t(m.k)}</span>
-                    <span className={`tabular-nums hidden truncate text-[12px] lg:block ${m.bad ? "text-[#ff8a7e]/80" : "text-fg-4"}`}>{m.sub}</span>
-                  </span>
-                </button>
-              ))}
-            </nav>
-            <div className="mt-4 hidden space-y-1.5 border-t border-white/[0.08] pt-4 text-[12.5px] lg:block">
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-3 pb-10 sm:px-8">
+      <div className="xr-term relative mx-auto max-w-7xl overflow-hidden rounded-2xl border border-[rgba(166,227,180,0.18)] bg-[#0c100e] shadow-[0_30px_80px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(166,227,180,0.25)]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-[12%] top-0 h-[2px] bg-[linear-gradient(90deg,transparent,#a6e3b4,transparent)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(166,227,180,0.07),transparent)]" />
+
+        {/* the tab of the terminal: what it is, the verdict, the stream, where to trade it */}
+        <div className="relative flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
+            <b className="text-[17px] font-semibold tracking-[-0.01em] text-fg">${r.symbol.replace(/^\$/, "")}</b>
+            <span className="tabular-nums truncate text-[12.5px] text-fg-3">
+              {r.name}{r.name ? " · " : ""}{ageOf(r)} · {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
+            </span>
+          </div>
+          <CopyCa mint={r.mint} />
+          <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold tracking-[0.02em]" style={{ color: tone.color, borderColor: `${tone.color}4d`, background: `${tone.color}1f` }}>
+            <i className="h-[7px] w-[7px] rounded-full" style={{ background: tone.color, boxShadow: `0 0 10px ${tone.color}` }} />
+            {t(tone.label)}
+          </span>
+          <span className="tabular-nums ml-auto hidden items-center gap-2 text-[12px] text-fg-3 md:inline-flex">
+            <i className={`h-[7px] w-[7px] rounded-full ${c.stream?.live ? "bg-[#a6e3b4] shadow-[0_0_10px_#a6e3b4]" : "bg-white/30"}`} />
+            {c.stream?.live ? t("stream live · read {s} s ago", { s: c.stream.lastEventSecAgo }) : t("stream paused")}
+          </span>
+          <div className="flex w-full justify-between gap-1.5 rounded-xl border border-white/[0.07] bg-black/25 p-1 md:w-auto md:justify-start">
+            {TERMINALS(r.mint).map((x) => (
+              <a key={x.k} href={x.href} target="_blank" rel="noopener noreferrer" title={x.k} aria-label={x.k} className="block rounded-lg p-0.5 transition hover:-translate-y-0.5 hover:bg-white/[0.06]">
+                <img src={x.icon} alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-lg opacity-90" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_300px] [&>*]:min-w-0">
+          {/* read: the tabs */}
+          <aside className="flex gap-1 overflow-x-auto border-b border-white/[0.07] px-2.5 py-2 lg:flex-col lg:gap-0.5 lg:border-b-0 lg:border-r lg:px-2.5 lg:py-3.5">
+            <p className="hidden px-2.5 pb-2 pt-1.5 text-[11px] uppercase tracking-[0.14em] text-fg-4 lg:block">{t("read")}</p>
+            {MENU.map((m) => (
+              <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition lg:w-full lg:py-2 ${tab === m.id ? "bg-white/[0.07] text-white" : "hover:bg-white/[0.04]"}`}>
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${m.bad ? "bg-[#ff8a7e] shadow-[0_0_8px_#ff8a7e]" : "bg-white/25"}`} />
+                <span className="min-w-0">
+                  <span className={`block whitespace-nowrap text-[13px] ${tab === m.id ? "text-white" : "text-fg-3"}`}>{t(m.k)}</span>
+                  <span className={`tabular-nums hidden truncate text-[11.5px] lg:block ${m.bad ? "text-[#ff8a7e]/85" : "text-fg-4"}`}>{m.sub}</span>
+                </span>
+              </button>
+            ))}
+            <div className="mt-auto hidden space-y-1.5 border-t border-white/[0.07] px-2.5 pt-3 text-[12px] lg:block">
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("dev")} <Addr a={r.creator} />
               </p>
@@ -599,24 +615,39 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   {short(r.mint)} ↗
                 </a>
               </p>
+              <p className="tabular-nums flex justify-between text-fg-3">
+                {t("raw")}
+                <a href={`${NORTH}/v1/xray/${r.mint}`} className="font-mono text-[11.5px] underline decoration-white/20 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a>
+              </p>
             </div>
-          </div>
-        </aside>
+          </aside>
 
-        <div id="xr-main" className="min-w-0 scroll-mt-24 space-y-4">
+        <div id="xr-main" className="order-2 min-w-0 scroll-mt-24 space-y-4 px-3.5 py-4 sm:px-4 lg:order-none">
+          {tiles.length > 0 && (
+            <div className="mb-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] md:grid-cols-4">
+              {tiles.map((x) => (
+                <div key={x.k} className="bg-[#0f1412] px-4 py-3.5">
+                  <p className="text-[11.5px] text-fg-3">{x.k}</p>
+                  <p className={`tabular-nums mt-0.5 text-[22px] font-semibold tracking-[-0.02em] ${x.tone === "bad" ? "text-[#ff8a7e]" : x.tone === "ok" ? "text-[#a6e3b4]" : "text-fg"}`}>{x.v}</p>
+                  <p className="tabular-nums mt-0.5 text-[11.5px] text-fg-4">{x.d}</p>
+                </div>
+              ))}
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
               {tab === "overview" && (
                 <>
-                  <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
-                    <p className="font-display text-2xl leading-snug text-fg sm:text-[28px]">{head}</p>
-                    {c.reasons.length > 1 && (
-                      <ul className="mt-5 divide-y divide-white/[0.06] border-y border-white/[0.08]">
-                        {shown.map((x, i) => (
-                          <li key={x} className="flex gap-3 py-2.5 text-[14px] font-normal leading-snug text-fg-3">
-                            <span className="tabular-nums w-6 shrink-0 text-[12.5px] leading-6" style={{ color: tone.color }}>
-                              {String(i + 1).padStart(2, "0")}
-                            </span>
+                  <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="text-[15px] font-semibold text-fg">{c.reasons.length ? t("Why {v}", { v: t(tone.label).toLowerCase() }) : head}</p>
+                      <span className="text-[12px] text-fg-4">{t("read from the chain, not from the chart")}</span>
+                    </div>
+                    {c.reasons.length > 0 && (
+                      <ul className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.08]">
+                        {shown.map((x) => (
+                          <li key={x} className="flex items-start gap-3 py-2.5 text-[14px] font-normal leading-snug text-fg-2">
+                            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color, boxShadow: `0 0 8px ${tone.color}80` }} />
                             {tChain(x)}
                           </li>
                         ))}
@@ -633,9 +664,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>
                     )}
                     <KeyFacts r={r} go={go} />
-                    <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
                   </div>
-                  <ShareBar r={r} />
                 </>
               )}
 
@@ -867,9 +896,21 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               )}
             </motion.div>
           </AnimatePresence>
-          <p className="tabular-nums text-center text-[12.5px] text-fg-4">
-            {t("raw:")} <a href={`${NORTH}/v1/xray/${r.mint}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a> · {t("Not financial advice. Read from public chain data.")}
-          </p>
+          <ShareBar r={r} />
+          </div>
+
+          {/* trade: the swap, who holds it */}
+          <aside className="order-3 border-t border-white/[0.07] px-4 py-4 lg:order-none lg:border-l lg:border-t-0 [&>*:first-child]:mt-0 [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
+            <Swap mint={r.mint} symbol={r.symbol} />
+            <HoldStrip c={c} />
+          </aside>
+        </div>
+
+        {/* the status line */}
+        <div className="tabular-nums relative flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 text-[11.5px] leading-relaxed text-fg-4 sm:px-5">
+          <span className="min-w-0 flex-1 basis-[60%]">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
+          <span className="font-mono text-fg-3">{NORTH.replace(/^https?:\/\//, "")}/v1/xray/{short(r.mint)}</span>
+          <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#a6e3b4]" />{t("3 nodes · one operator")} · {t("Not financial advice.")}</span>
         </div>
       </div>
     </motion.section>
