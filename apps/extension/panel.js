@@ -167,8 +167,8 @@ var ZooPanel = (() => {
       fact("the dev", rec ? t("{a} of {b} dumped", { a: rec.dumped, b: rec.launches48h }) : t("first launch"), f.creatorSoldPct == null ? t("never bought their own") : t("sold {p}% of their bag", { p: f.creatorSoldPct }), (rec?.dumped ?? 0) >= 2 || (f.creatorSoldPct ?? 0) >= 50, r.creator ? () => openWallet(ctx, r.creator) : null),
       fact(
         "who paid the dev",
-        !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other devs", { n: fund.siblings.length }) : t("only this dev"),
-        fund?.funder ? (fund.funderIsHot ? t("funds everyone, ties no one") : fund.siblings.length ? t("{n} dumps in 48h", { n: fund.siblingDumped48h }) : short(fund.funder)) : "",
+        !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? t("withdrawn from {x}", { x: fund.funderLabel }) : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other devs", { n: fund.siblings.length }) : t("only this dev"),
+        fund?.funder ? (fund.funderService ? t("pays for every launch there, ties no one") : fund.funderIsHot ? t("funds everyone, ties no one") : fund.siblings.length ? t("{n} dumps in 48h", { n: fund.siblingDumped48h }) : short(fund.funder)) : "",
         !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
         fund?.funder ? () => openWallet(ctx, fund.funder) : null,
       ),
@@ -320,7 +320,7 @@ var ZooPanel = (() => {
                 "div",
                 {},
                 h("div", { class: "li" }, h("span", { class: "l" }, t("funded by")), h("span", { class: "r" }, addr(ctx, p.funding.funder))),
-                h("p", { class: "p dim", style: { marginTop: "6px" } }, p.funding.funderIsHot ? t("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? t("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : t("It paid for no other dev the zoo traced.")),
+                h("p", { class: "p dim", style: { marginTop: "6px" } }, p.funding.funderService ? t("{x}'s launcher: it pays for every creator launched through {x}, so it ties no one together.", { x: p.funding.funderService }) : p.funding.funderIsHot ? t("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? t("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : t("It paid for no other dev the zoo traced.")),
               ),
       );
       if (d.regulars.length)
