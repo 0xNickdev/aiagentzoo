@@ -340,3 +340,45 @@ export class RateGate {
     return 0;
   }
 }
+
+/**
+ * A token the stream never saw (launched before its window): what happened at launch is not on record, so there is
+ * no pass. What can still be read is who holds it now and the dev's record in the long memory; either can make it
+ * avoid or caution, and when neither does the verdict stays unknown, said plainly.
+ */
+export function outsideCheck(
+  mint: string,
+  o: { symbol: string | null; createdAt: number; holders: HolderReport | null | undefined; dev: { launches: number; dumped: number } | null },
+  opts: { now?: number; stream?: TokenCheck["stream"] } = {},
+): TokenCheck {
+  const now = opts.now ?? Date.now();
+  const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
+  const avoid: string[] = [];
+  const caution: string[] = [];
+  const day = new Date(o.createdAt).toISOString().slice(0, 10);
+  const notes = [`launched ${day}, before the stream's window: what happened at launch is not on record, only who holds it now and the dev's record`];
+  const h = o.holders;
+  const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
+  if (!h) notes.push("holders could not be read from Solana right now");
+  else if (h.topShare >= 0.5) avoid.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
+  else if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
+  else if (h.top10Share >= 0.5) caution.push(`the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`);
+  const d = o.dev;
+  if (d && d.launches >= 3 && d.dumped / d.launches >= 0.6) avoid.push(`its dev dumped ${d.dumped} of ${d.launches} launches the zoo has kept`);
+  else if (d && d.dumped >= 2) caution.push(`its dev dumped ${d.dumped} of ${d.launches} launches the zoo has kept`);
+  const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "unknown";
+  return {
+    version: CHECK_VERSION,
+    mint,
+    checkedAt: now,
+    more: "https://zooaiagency.com/skill.md",
+    stream,
+    symbol: o.symbol,
+    verdict,
+    proceed: verdict === "avoid" ? false : null,
+    reasons: [...avoid, ...caution],
+    notes,
+    facts: null,
+    ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null } : {}),
+  };
+}

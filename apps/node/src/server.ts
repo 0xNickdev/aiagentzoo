@@ -16,7 +16,8 @@ import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { exchangeOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
-import { checkToken, RateGate } from "./chain/check.ts";
+import { checkToken, outsideCheck, RateGate } from "./chain/check.ts";
+import { originOf } from "./chain/origin.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
 import { balanceOf, HOLDER_MIN, isHolder, TOKEN_MINT } from "./holders.ts";
@@ -461,6 +462,39 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
         const image = socials.image(mint);
         if (!image) socials.want(mint);
+        // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
+        // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
+        if (!found && !past && deep && holdersEnabled()) {
+          const origin = await within(originOf(mint), 6_000);
+          if (origin) {
+            const holdersNow = await within(holderReport(mint, fetch, Date.now(), origin.creator));
+            const kept = history?.wallet(origin.creator, 20) ?? null;
+            const dev = kept ? { launches: kept.launches, dumped: kept.dumped } : null;
+            const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream });
+            let funded: LineageView | null = null;
+            if (fundersEnabled()) {
+              funded = lineage.view(origin.creator);
+              if (!funded) lineage.enqueue(origin.creator, true);
+            }
+            if (checkOf) return json(res, 200, { ...outside, ...(image ? { image } : {}), outsideStream: true, createdAt: origin.createdAt, access: tier });
+            return json(res, 200, {
+              mint,
+              symbol: origin.symbol ?? "",
+              name: origin.name ?? "",
+              creator: origin.creator,
+              createdAt: origin.createdAt,
+              check: outside,
+              early: [],
+              creatorRecord: null,
+              devHistory: kept ? { launches: kept.launches, dumped: kept.dumped, tokens: kept.tokens.slice(0, 8) } : null,
+              funding: funded,
+              bundle: { wallets: [], funding: null },
+              socials: [],
+              outsideStream: true,
+              access: tier,
+            });
+          }
+        }
         if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
         if (past) {
           const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;

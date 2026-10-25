@@ -1971,3 +1971,23 @@ test("bundles anywhere in a token's life: four or more wallets in one block are 
   again.load(tape.snapshot(), now);
   assert.equal(again.facts(mint, now)!.bundlersPeak, 0.48);
 });
+
+test("a token older than the stream gets no pass: holders and the dev's kept record can make it caution or avoid, else unknown", async () => {
+  const { outsideCheck } = await import("../src/chain/check.ts");
+  const at = Date.UTC(2026, 9, 13, 17, 27);
+  const holders = (topShare: number, top10Share = topShare) => ({ top10Share, topShare, programShare: 0.1, creator: null, creatorShare: 0 });
+  const whale = outsideCheck("M", { symbol: "SUI", createdAt: at, holders: holders(0.346, 0.593), dev: null });
+  assert.equal(whale.verdict, "caution");
+  assert.deepEqual(whale.reasons, ["one wallet holds 35% of the supply"]);
+  assert.equal(whale.holders?.topWalletPct, 34.6);
+  assert.match(whale.notes[0]!, /launched 2026-10-13, before the stream's window/);
+  const dumper = outsideCheck("M", { symbol: "X", createdAt: at, holders: holders(0.05, 0.2), dev: { launches: 12, dumped: 11 } });
+  assert.equal(dumper.verdict, "avoid");
+  assert.equal(dumper.proceed, false);
+  const quiet = outsideCheck("M", { symbol: "Y", createdAt: at, holders: holders(0.04, 0.24), dev: { launches: 1, dumped: 0 } });
+  assert.equal(quiet.verdict, "unknown");
+  assert.deepEqual(quiet.reasons, []);
+  const unread = outsideCheck("M", { symbol: "Z", createdAt: at, holders: null, dev: null });
+  assert.equal(unread.verdict, "unknown");
+  assert.ok(unread.notes.includes("holders could not be read from Solana right now"));
+});
