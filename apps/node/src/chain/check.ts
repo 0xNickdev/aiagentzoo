@@ -1,6 +1,7 @@
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
+import { deployerOf } from "./exchanges.ts";
 import type { AccountRecord } from "./socials.ts";
 import type { ChainFacts, CreatorRecord } from "./pump.ts";
 
@@ -132,8 +133,13 @@ export function checkToken(
   if (f.creatorSold !== null && f.creatorSold >= 0.5) avoid.push(`the creator sold ${pct(Math.min(1, f.creatorSold))}% of their own bag`);
   else if (f.creatorSold !== null && f.creatorSold > 0.1) caution.push(`the creator has sold ${pct(f.creatorSold)}% of their own bag`);
 
+  // A launchpad's own deployer wallet creates every coin on that platform: hundreds a day, none of them its own. Named
+  // when known, else read from the shape: thirty or more launches a day, none dumped, some graduated.
+  const deployer = deployerOf(c?.wallet) ?? (f.creatorLaunches24h >= 30 && c && c.dumped === 0 && c.graduated >= 2 ? "a launchpad" : null);
   // Their history, from every launch of theirs the tape saw in two days.
-  if (c && c.dumped >= 3 && c.dumped / Math.max(1, c.launches48h) >= 0.5) {
+  if (deployer) {
+    notes.push(`the creator wallet is ${deployer === "a launchpad" ? "a launchpad's deployer" : `${deployer}'s deployer`}: it creates every coin launched there (${f.creatorLaunches24h} in 24 hours), so its launch count is the platform's, not a dev's`);
+  } else if (c && c.dumped >= 3 && c.dumped / Math.max(1, c.launches48h) >= 0.5) {
     const speed = c.medianDumpMin === null ? "" : `, usually ${c.medianDumpMin} min after launch`;
     avoid.push(`this creator dumped ${c.dumped} of their ${c.launches48h} launches in 48 hours${speed}`);
   } else if (f.creatorLaunches24h >= 30) {

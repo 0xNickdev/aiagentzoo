@@ -44,3 +44,16 @@ const LAUNCHERS: Record<string, string> = {
 export function launcherOf(wallet: string | null | undefined): string | null {
   return wallet ? (LAUNCHERS[wallet] ?? null) : null;
 }
+
+/**
+ * Launchpads that create every coin from one wallet of their own, so that wallet's record (hundreds of launches a day)
+ * is the platform's, not a person's. "Launch" on Raydium LaunchLab.
+ */
+const DEPLOYERS: Record<string, string> = {
+  HgKfkiGWeToDfhMBjfniZvg2KhHhyw6CdqWQtz6mxVdk: "Launch",
+};
+
+/** The launchpad a creator wallet deploys for, when it is a known one. */
+export function deployerOf(wallet: string | null | undefined): string | null {
+  return wallet ? (DEPLOYERS[wallet] ?? null) : null;
+}
