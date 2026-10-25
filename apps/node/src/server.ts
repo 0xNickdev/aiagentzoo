@@ -600,6 +600,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/chain/builders") {
         return json(res, 200, { builders: tape.builders(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
       }
+      if (req.method === "GET" && path === "/v1/chain/paymasters") {
+        res.setHeader("cache-control", "public, max-age=60");
+        return json(res, 200, { paymasters: lineage.topFunders(clampInt(url.searchParams.get("limit"), 50, 1, 200), clampInt(url.searchParams.get("min"), 3, 2, 50)) });
+      }
       if (req.method === "GET" && path === "/v1/chain/funding") {
         res.setHeader("cache-control", "public, max-age=60");
         return json(res, 200, lineage.funderStats());

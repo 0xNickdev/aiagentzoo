@@ -155,6 +155,22 @@ export class Lineage {
     };
   }
 
+  /**
+   * The private wallets that paid for the most distinct devs: the hand behind a wall of "independent" launchers.
+   * Exchange hot wallets are left out (they fund everyone and tie no one together). A pure count over the index.
+   */
+  topFunders(limit = 50, minDevs = 3, now = Date.now()): Array<{ funder: string; devs: number; launches48h: number; dumped48h: number }> {
+    const rows: Array<{ funder: string; devs: number; launches48h: number; dumped48h: number }> = [];
+    for (const [funder, set] of this.byFunder) {
+      if (set.size < minDevs) continue;
+      if (exchangeOf(funder) || (this.hot.get(funder)?.hot ?? false)) continue;
+      let launches = 0, dumped = 0;
+      for (const w of set) { const r = this.tape.creator(w, now); launches += r?.launches48h ?? 0; dumped += r?.dumped ?? 0; }
+      rows.push({ funder, devs: set.size, launches48h: launches, dumped48h: dumped });
+    }
+    return rows.sort((a, b) => b.devs - a.devs || b.dumped48h - a.dumped48h).slice(0, limit);
+  }
+
   /** The creators a wallet paid for, as far as the zoo has traced, the worst first; empty when it funded none or is an exchange. */
   funded(funder: string, now = Date.now()): { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> } {
     const hot = this.hot.get(funder)?.hot ?? false;
