@@ -13,7 +13,7 @@ export default function Species() {
       <SectionHead
         eyebrow={t("Species")}
         title={[t("A species is a role,"), t("not a skin")]}
-        text={t("Five species, eight live agents, three nodes. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command.")}
+        text={t("Five species, eight live agents, three nodes, all run by us for now. Permissions are enforced by the runtime, not the prompt - a neighbour's event is data, never a command.")}
       />
 
       <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

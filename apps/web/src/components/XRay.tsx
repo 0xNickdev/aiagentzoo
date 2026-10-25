@@ -88,12 +88,20 @@ export interface XRayReport {
   socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
   funding: Funding | null;
   bundle: { wallets: Array<{ wallet: string; share: number }>; funding: { groups: Array<{ funder: string; wallets: string[] }>; linked: number; checked: number } | null };
+  /** Launched before the stream's window: no launch record, only who holds it now and the dev's kept record. */
+  outsideStream?: boolean;
+  devHistory?: { launches: number; dumped: number } | null;
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
+/** How old the token is: from the stream's facts, or from its launch time when it is older than the stream. */
+const ageOf = (r: XRayReport) => {
+  const m = r.check.facts?.ageMin ?? Math.max(0, Math.round((Date.now() - r.createdAt) / 60_000));
+  return m < 120 ? t("{m} min old", { m }) : m < 2_880 ? t("{h} h old", { h: Math.round(m / 60) }) : t("{d} days old", { d: Math.round(m / 1_440) });
+};
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
 
@@ -204,7 +212,11 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   // The first reason, wrapped.
   ctx.font = '400 26px "Geist", sans-serif';
   ctx.fillStyle = FG2;
-  const reason = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : t("No red flags on chain so far. Not a call that it goes up.");
+  const reason = c.reasons[0]
+    ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase())
+    : r.outsideStream
+      ? t("Launched before our stream. Who holds it now is what we read.")
+      : t("No red flags on chain so far. Not a call that it goes up.");
   const zh = /[\u4e00-\u9fff]/.test(reason);
   const words = zh ? Array.from(reason) : reason.split(/\s+/);
   const lines: string[] = [];
@@ -220,7 +232,14 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   lines.slice(0, 3).forEach((l, i) => ctx.fillText(i === 2 && lines.length > 3 ? `${l}…` : l, L, 356 + i * 36));
 
   const took = r.early.reduce((n, e) => n + e.bought, 0);
-  const facts: Array<[string, string, boolean]> = [
+  const h = c.holders;
+  const facts: Array<[string, string, boolean]> = r.outsideStream
+    ? [
+        [t("top 10 hold"), h ? `${h.top10Pct}%` : "-", (h?.top10Pct ?? 0) >= 50],
+        [t("largest wallet"), h ? `${h.topWalletPct}%` : "-", (h?.topWalletPct ?? 0) >= 20],
+        [t("dev holds"), h?.creatorHoldsPct != null ? `${h.creatorHoldsPct}%` : "-", false],
+      ]
+    : [
     [t("wallets in the first 5 s"), String(r.early.length), r.early.length >= 5],
     [t("supply they took"), pct(took), took >= 0.25],
     f && (f.creatorCrew ?? 0) > 0 ? [t("the creator's own crew"), String(f.creatorCrew), true] : [t("serial snipers"), String(f?.serialSnipers ?? 0), (f?.serialSnipers ?? 0) >= 3],
@@ -417,19 +436,22 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
   const holds = r.early.reduce((n, e) => n + e.held, 0);
   const fund = r.funding;
   const rec = r.creatorRecord;
+  // Older than the stream: the launch was never seen, so its cells say so instead of reading empty data as facts.
+  const old = !!r.outsideStream;
+  const kept = r.devHistory;
   const cells: Array<{ id: string; k: string; v: string; sub: string; bad: boolean }> = [
     {
       id: "xr-creator",
       k: "The creator",
-      v: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"),
-      sub: f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought their own") : t("sold {p}% of their bag", { p: f.creatorSoldPct }),
-      bad: (rec?.dumped ?? 0) >= 2 || (f?.creatorSoldPct ?? 0) >= 50,
+      v: old ? (kept ? t("{d} of {n} dumped", { d: kept.dumped, n: kept.launches }) : "-") : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"),
+      sub: old ? (kept ? t("launches we kept") : t("no launches we kept")) : f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought their own") : t("sold {p}% of their bag", { p: f.creatorSoldPct }),
+      bad: old ? (kept?.dumped ?? 0) >= 2 : (rec?.dumped ?? 0) >= 2 || (f?.creatorSoldPct ?? 0) >= 50,
     },
     {
       id: "xr-five",
       k: "The first 5 seconds",
-      v: r.early.length ? t("{n} wallets", { n: r.early.length }) : t("nobody"),
-      sub: r.early.length ? t("took {a} · hold {b}", { a: pct(took), b: pct(holds) }) : t("no one bought before it was visible"),
+      v: old ? "-" : r.early.length ? t("{n} wallets", { n: r.early.length }) : t("nobody"),
+      sub: old ? t("before our stream") : r.early.length ? t("took {a} · hold {b}", { a: pct(took), b: pct(holds) }) : t("no one bought before it was visible"),
       bad: took >= 0.25 || (f?.creatorCrew ?? 0) >= 2,
     },
     {
@@ -506,17 +528,18 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const fiveBad = took >= 0.25 || (f?.creatorCrew ?? 0) >= 2 || (f?.ringWallets ?? 0) >= 3 || (f?.bundleSharePct ?? 0) >= 15;
   const bundleBad = (((f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30) || (f?.churnPct ?? 0) >= 30) && !f?.mayhem;
   const holdBad = (c.holders?.top10Pct ?? 0) >= 50 || (c.holders?.topWalletPct ?? 0) >= 20;
+  const old = !!r.outsideStream;
   const MENU: Array<{ id: Tab; k: string; sub: string; bad?: boolean }> = [
-    { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : t("no red flags") },
+    { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : old ? t("only holders read") : t("no red flags") },
     { id: "network", k: "Network", sub: t("who is behind it, on one map") },
-    { id: "dev", k: "The dev", sub: rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
-    { id: "five", k: "First 5 seconds", sub: early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
+    { id: "dev", k: "The dev", sub: old ? (r.devHistory ? t("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches }) : t("before our stream")) : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
+    { id: "five", k: "First 5 seconds", sub: old ? t("before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
     ...(early.length ? [{ id: "map" as Tab, k: "Money map", sub: t("who paid, who sold") }] : []),
-    { id: "bundles", k: "Bundles & volume", sub: f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
+    { id: "bundles", k: "Bundles & volume", sub: old ? t("before our stream") : f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
     { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
     ...(early.length ? [{ id: "wallets" as Tab, k: "All wallets", sub: t("{n} in the first 5 s", { n: early.length }) }] : []),
   ];
-  const head = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : t("No red flags on the chain so far.");
+  const head = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : old ? t("Launched before our stream.") : t("No red flags on the chain so far.");
   const shown = all ? c.reasons : c.reasons.slice(0, 3);
   const Title = ({ k, note }: { k: string; note?: string }) => (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -530,7 +553,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
         <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5">
             <p className="tabular-nums text-[12.5px] text-fg-3">
-              ${r.symbol.replace(/^\$/, "")} · {t("{m} min old", { m: f?.ageMin ?? 0 })}
+              ${r.symbol.replace(/^\$/, "")} · {ageOf(r)}
             </p>
             <p className="mt-0.5 truncate text-[13px] text-fg-4">{r.name}</p>
             <p className="font-display mt-3 text-4xl leading-none" style={{ color: tone.color }}>
@@ -607,10 +630,26 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {tab === "dev" && (
                 <div className="grid gap-4 xl:grid-cols-2">
                   <div id="xr-creator" className="[&>*]:h-full">
-                    <Panel title="The creator" note="last 48 hours">
+                    <Panel title="The creator" note={r.outsideStream ? "before our stream" : "last 48 hours"}>
+              {r.outsideStream ? (
+                <>
+                  <p className="text-[13px] font-normal leading-relaxed text-fg-3">{t("This coin launched before our stream, so we did not see the dev launch it or sell. What we have is the dev's record in the launches we kept.")}</p>
+                  {r.devHistory ? (
+                    <>
+                      <Stat k="launches we kept" v={String(r.devHistory.launches)} bad={r.devHistory.launches >= 3} />
+                      <Stat k="dumped" v={String(r.devHistory.dumped)} bad={r.devHistory.dumped >= 2} />
+                    </>
+                  ) : (
+                    <p className="mt-3 text-[13px] font-normal text-fg-4">{t("None of this dev's launches are in our record.")}</p>
+                  )}
+                </>
+              ) : (
+                <>
               <Stat k="launches" v={String(r.creatorRecord?.launches48h ?? 1)} bad={(r.creatorRecord?.launches48h ?? 1) >= 3} />
               <Stat k="dumped" v={String(r.creatorRecord?.dumped ?? 0)} bad={(r.creatorRecord?.dumped ?? 0) >= 2} />
               <Stat k="sold of their own bag" v={f?.creatorSoldPct === null || f?.creatorSoldPct === undefined ? t("never bought") : `${f.creatorSoldPct}%`} bad={(f?.creatorSoldPct ?? 0) >= 50} />
+                </>
+              )}
               {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
               {r.socials?.map((s) => (
                 <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2">
@@ -1009,9 +1048,10 @@ export default function XRay() {
     return () => window.removeEventListener("popstate", read);
   }, []);
 
-  const submit = (e: FormEvent) => {
+  const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const mint = mintIn(input);
+    // Read the field itself too: a value set by a script (a password manager, a test agent) never reaches React's state.
+    const mint = mintIn(input) ?? mintIn(String(new FormData(e.currentTarget).get("mint") ?? ""));
     if (!mint) return setError(t("Paste a token address or link."));
     void run(mint);
   };
@@ -1035,6 +1075,7 @@ export default function XRay() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              name="mint"
               placeholder={t("token address: pump.fun, LaunchLab, Meteora")}
               spellCheck={false}
               autoComplete="off"

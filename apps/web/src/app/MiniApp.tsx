@@ -654,6 +654,13 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
         </div>
         <p className="mt-2 text-center text-[11.5px] font-normal text-fg-4">{watching ?? tt("The bot tells you the moment the dev sells, the pool is drained or it graduates.")}</p>
 
+        {r.outsideStream ? (
+          <p className="mt-6 rounded-2xl bg-black/30 px-3.5 py-3 text-[12.5px] font-normal leading-relaxed text-fg-3 ring-1 ring-white/[0.06]">
+            {tt("This coin launched before our stream, so we did not see the dev launch it or sell. What we have is the dev's record in the launches we kept.")}
+            {r.devHistory ? ` ${tt("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches })}.` : ` ${tt("None of this dev's launches are in our record.")}`}
+          </p>
+        ) : (
+          <>
         <p className="tabular-nums mb-2 mt-6 text-[11.5px] [&::first-letter]:uppercase text-fg-4">
           {tt("The first 5 seconds")}
         </p>
@@ -691,6 +698,8 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
               </button>
             ))}
           </div>
+        )}
+          </>
         )}
         <div className="mt-2 rounded-2xl bg-black/30 px-3.5 py-3 ring-1 ring-white/[0.06]">
           <p className="text-[11.5px] text-fg-4">{tt("Who paid for the creator")}</p>

@@ -121,7 +121,7 @@ export default function NightWatch() {
           <h2 className="font-display mt-2 text-4xl text-white md:text-5xl">{t("The Night Watch")}</h2>
         </div>
         <p className="max-w-md text-[14px] font-normal leading-relaxed text-fg-4 md:text-right">
-          {t("Three nodes, five species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
+          {t("Three nodes run by one operator, five species, zero humans in the loop. By 07:00 UTC the pack ships the Morning Brief.")}
         </p>
       </Reveal>
 

@@ -51,7 +51,8 @@ const rgba = (hex: string, a: number) => {
 };
 
 function build(r: XRayReport, dev: DevProfile | null): { nodes: Node[]; links: Link[]; total: number; record: { launches: number; dumped: number } } {
-  const total = dev?.launches48h ?? r.creatorRecord?.launches48h ?? 1;
+  // A token older than the stream has no launch record: 0 here means "not known", and the pill says only DEV.
+  const total = dev?.launches48h ?? r.creatorRecord?.launches48h ?? (r.outsideStream ? 0 : 1);
   const nodes = new Map<string, Node>();
   const links: Link[] = [];
   const add = (n: Node) => {
@@ -296,7 +297,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
         const [x, y] = tr.apply([n.x!, n.y!]);
         const rad = R(n) * tr.k;
         if (n.kind === "dev") {
-          const label = `${t("DEV")} · ${t("{d}/{n} dumped", { d: record.dumped, n: record.launches })}`;
+          const label = record.launches > 0 ? `${t("DEV")} · ${t("{d}/{n} dumped", { d: record.dumped, n: record.launches })}` : t("DEV");
           ctx.font = "600 11px Geist, system-ui, sans-serif";
           const w = ctx.measureText(label).width + 16;
           const lx = x + rad + 10, ly = y;

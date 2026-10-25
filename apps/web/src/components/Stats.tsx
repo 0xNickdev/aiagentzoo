@@ -220,6 +220,25 @@ export default function Stats() {
           </Reveal>
         </div>
 
+        {/* Where the token's creator fees go: pump.fun pays them to the creator wallet, so the proof is the buybacks and burns themselves. */}
+        <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h3 className="font-display text-xl text-fg">{t("$ZOOAGENCY creator fees")}</h3>
+            <span className="tabular-nums text-[12px] text-fg-4">{t("buybacks and burns")}</span>
+          </div>
+          <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-fg-3">
+            {t("pump.fun pays a coin's creator fees to the creator wallet, with no split on chain. ClawPump splits ours after that: 61.5% buys $ZOOAGENCY back and burns it. Its page lists every buyback with its transaction and how much has been burned, so the proof is not our word.")}
+          </p>
+          <a
+            href="https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.12] px-5 py-2.5 text-[13.5px] text-fg-2 transition hover:text-white"
+          >
+            {t("See the buybacks and burns on ClawPump")} ↗
+          </a>
+        </Reveal>
+
         <p className="tabular-nums pt-2 text-center text-[12.5px] text-fg-4">
           {t("raw:")}{" "}
           {["/v1/usage", "/v1/chain", "/v1/check/record", "/v1/chain/ruggers", "/v1/chain/builders"].map((p, i) => (

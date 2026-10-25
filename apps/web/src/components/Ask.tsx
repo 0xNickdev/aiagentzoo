@@ -313,9 +313,10 @@ export default function AskPage() {
     }
   };
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const mint = mintIn(input);
+    // Read the field itself too: a value set by a script (a password manager, a test agent) never reaches React's state.
+    const mint = mintIn(input) ?? mintIn(String(new FormData(e.currentTarget).get("mint") ?? ""));
     if (!mint) {
       setError("Paste a Solana token address, a creator's wallet, or a pump.fun or DexScreener link.");
       return;
@@ -344,6 +345,7 @@ export default function AskPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              name="mint"
               placeholder={t("token, creator wallet, or pump.fun link")}
               spellCheck={false}
               autoComplete="off"
