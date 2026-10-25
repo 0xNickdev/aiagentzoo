@@ -169,7 +169,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
   const server = createServer(async (req, res) => {
     res.setHeader("access-control-allow-origin", corsOrigin);
-    res.setHeader("access-control-allow-headers", "content-type, authorization");
+    res.setHeader("access-control-allow-headers", "content-type, authorization, solana-client");
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
     if (req.method === "OPTIONS") return end(res, 204);
 
