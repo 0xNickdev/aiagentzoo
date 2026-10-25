@@ -1135,8 +1135,9 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
 const TERMINALS = (mint: string) => [
   { k: "Axiom", icon: "/terminals/axiom.png", href: `https://axiom.trade/t/${mint}` },
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/sol/token/${mint}` },
-  { k: "Photon", icon: "/terminals/photon.png", href: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
+  { k: "Padre", icon: "/terminals/padre.png", href: `https://trade.padre.gg/trade/solana/${mint}` },
+  { k: "pump.fun", icon: "/terminals/pump.png", href: `https://pump.fun/coin/${mint}` },
 ];
 
 function Terminals({ mint }: { mint: string }) {

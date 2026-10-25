@@ -34,8 +34,9 @@ type Keyboard = Button[][];
 const terminals = (mint: string): Button[] => [
   { text: "Axiom", url: `https://axiom.trade/t/${mint}` },
   { text: "GMGN", url: `https://gmgn.ai/sol/token/${mint}` },
-  { text: "Photon", url: `https://photon-sol.tinyastro.io/en/lp/${mint}` },
   { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
+  { text: "Padre", url: `https://trade.padre.gg/trade/solana/${mint}` },
+  { text: "pump.fun", url: `https://pump.fun/coin/${mint}` },
 ];
 
 interface Message {
