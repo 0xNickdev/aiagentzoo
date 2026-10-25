@@ -92,6 +92,8 @@ export interface XRayReport {
   bundle: { wallets: Array<{ wallet: string; share: number }>; funding: { groups: Array<{ funder: string; wallets: string[] }>; linked: number; checked: number } | null };
   /** Launched before the stream's window: no launch record, only who holds it now and the dev's kept record. */
   outsideStream?: boolean;
+  /** Read from the long memory, as it stood when last written, not from the live tape. */
+  fromHistory?: boolean;
   devHistory?: { launches: number; dumped: number } | null;
 }
 
@@ -629,7 +631,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>
                     )}
                     <KeyFacts r={r} go={go} />
-                    <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept for 48 hours. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
+                    <p className="tabular-nums mt-3 text-[12px] leading-relaxed text-fg-4">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</p>
                   </div>
                   <ShareBar r={r} />
                 </>
@@ -1138,8 +1140,7 @@ const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string;
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
   { k: "Padre", icon: "/terminals/padre.png", href: `https://trade.padre.gg/trade/solana/${mint}` },
   { k: "pump.fun", icon: "/terminals/pump.png", href: `https://pump.fun/coin/${mint}` },
-  // FOMO has no page per token on the web: the CA goes onto the clipboard and the app opens, paste it in the search.
-  { k: "FOMO", icon: "/terminals/fomo.png", href: "https://fomo.family/", copies: true },
+  { k: "FOMO", icon: "/terminals/fomo.png", href: `https://fomo.family/coin?address=${mint}&chainId=1399811149&r=ZOOClawAgency` },
 ];
 
 function Terminals({ mint }: { mint: string }) {
