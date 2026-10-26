@@ -470,7 +470,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
     {
       id: "xr-funder",
       k: "Who paid for the creator",
-      v: !fund ? t("tracing…") : !fund.funder ? t("no transfer found") : fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? t("withdrawn from {x}", { x: fund.funderLabel }) : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
+      v: !fund ? t(chainOf(r.mint) === "bsc" ? "not on BNB Chain yet" : "tracing…") : !fund.funder ? t("no transfer found") : fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? t("withdrawn from {x}", { x: fund.funderLabel }) : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other creators", { n: fund.siblings.length }) : t("only this creator"),
       sub: fund?.funder && !fund.funderIsHot ? (fund.siblings.length ? t("{d} dumps in 48h", { d: fund.siblingDumped48h }) : t("funded {w}", { w: short(fund.funder) })) : fund?.funderService ? t("pays for every launch") : fund?.funderIsHot ? t("funds everyone, ties no one") : "",
       bad: !!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3,
     },
@@ -478,7 +478,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
       id: "xr-holders",
       k: "Holders now",
       v: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }),
-      sub: !c.holders ? t("could not be read right now") : c.holders.top10Pct === 0 ? (c.holders.programPct ? t("{p}% sits in the curve or pool", { p: c.holders.programPct }) : t("everyone sold back to the curve")) : t("largest wallet {p}%", { p: c.holders.topWalletPct }),
+      sub: !c.holders ? t(chainOf(r.mint) === "bsc" ? "not read on BNB Chain yet" : "could not be read right now") : c.holders.top10Pct === 0 ? (c.holders.programPct ? t("{p}% sits in the curve or pool", { p: c.holders.programPct }) : t("everyone sold back to the curve")) : t("largest wallet {p}%", { p: c.holders.topWalletPct }),
       bad: (c.holders?.top10Pct ?? 0) >= 50,
     },
   ];
