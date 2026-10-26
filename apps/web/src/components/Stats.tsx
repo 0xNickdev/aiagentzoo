@@ -239,6 +239,8 @@ export default function Stats() {
           </a>
         </Reveal>
 
+        <FeeLoop />
+
         <p className="tabular-nums pt-2 text-center text-[12.5px] text-fg-4">
           {t("raw:")}{" "}
           {["/v1/usage", "/v1/chain", "/v1/check/record", "/v1/chain/ruggers", "/v1/chain/builders"].map((p, i) => (
@@ -252,5 +254,63 @@ export default function Stats() {
         </p>
       </div>
     </Section>
+  );
+}
+
+
+interface BuybackRun { at: number; feesSol: number; buySol: number; sweptSol: number; tokens: number | null; buyTx: string | null; sweepTx: string | null; error?: string }
+interface Buybacks { hot: string | null; treasury: string | null; buyShare: number; totals: { feesSol: number; boughtSol: number; sweptSol: number; runs: number }; runs: BuybackRun[] }
+const CANYON_URL = NODE_URLS.find((u) => u.includes("canyon")) ?? "";
+
+/** The swap fee loop, run by run: what came in, the tenth that bought $ZOOAGENCY, the rest swept to the treasury. */
+function FeeLoop() {
+  const [b, setB] = useState<Buybacks | null>(null);
+  useEffect(() => {
+    if (!CANYON_URL) return;
+    fetch(`${CANYON_URL}/v1/buybacks`).then((r) => (r.ok ? r.json() : null)).then((d) => setB(d as Buybacks | null)).catch(() => null);
+  }, []);
+  if (!b?.hot) return null;
+  const sol = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
+  return (
+    <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h3 className="font-display text-xl text-fg">{t("Swap fees")}</h3>
+        <span className="tabular-nums text-[12px] text-fg-4">{t("{p}% buys $ZOOAGENCY back, the rest runs the zoo", { p: Math.round(b.buyShare * 100) })}</span>
+      </div>
+      <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-fg-3">
+        {t("Every trade in the X-Ray pays its fee in SOL to a hot wallet. Every six hours the node sweeps it: a tenth buys $ZOOAGENCY through Jupiter straight into the treasury, the rest goes to the treasury as SOL. Each run below links both transactions.")}
+      </p>
+      <div className="tabular-nums mt-4 grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-4">
+        <div><p className="text-fg">{sol(b.totals.feesSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("fees swept")}</p></div>
+        <div><p className="text-fg">{sol(b.totals.boughtSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("spent on buybacks")}</p></div>
+        <div><p className="text-fg">{sol(b.totals.sweptSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("to the treasury")}</p></div>
+        <div><p className="text-fg">{b.totals.runs}</p><p className="text-[11.5px] text-fg-4">{t("runs")}</p></div>
+      </div>
+      <p className="tabular-nums mt-3 text-[12px] text-fg-4">
+        {t("hot wallet")} <a href={`https://solscan.io/account/${b.hot}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.hot)}</a>
+        {b.treasury && <> · {t("treasury")} <a href={`https://solscan.io/account/${b.treasury}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.treasury)}</a></>}
+      </p>
+      {b.runs.length > 0 && (
+        <ul className="mt-4 divide-y divide-white/[0.06] border-t border-white/[0.08] text-[13px]">
+          {b.runs.slice(0, 20).map((r) => (
+            <li key={r.at} className="tabular-nums flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-fg-3">
+              <span className="text-fg-4">{new Date(r.at).toISOString().slice(0, 16).replace("T", " ")}</span>
+              {r.error ? (
+                <span className="text-[#ff8a7e]">{t("failed")}: {r.error}</span>
+              ) : (
+                <>
+                  <span>{sol(r.feesSol)} SOL {t("in")}</span>
+                  <span className="text-fg">{sol(r.buySol)} SOL → {r.tokens ? `${Math.round(r.tokens).toLocaleString("en-US")} ZOOAGENCY` : "ZOOAGENCY"}</span>
+                  {r.buyTx && <a href={`https://solscan.io/tx/${r.buyTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("buy")} ↗</a>}
+                  <span>{sol(r.sweptSol)} SOL {t("to the treasury")}</span>
+                  {r.sweepTx && <a href={`https://solscan.io/tx/${r.sweepTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("sweep")} ↗</a>}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Reveal>
   );
 }
