@@ -10,6 +10,8 @@ var ZooPanel = (() => {
     early: { color: "#a9a8a3", get label() { return t("first 5 s"); } },
   };
   const ORDER = ["crew", "ring", "serial", "bundle", "early"];
+  /** The node's wallet tags the kinds above do not already say, as one word each. */
+  const TAGL = { get rugger() { return t("rugger"); }, get whale() { return t("whale"); }, get dev() { return t("dev"); }, get exchange() { return t("exchange"); }, get new() { return t("new wallet"); } };
   const kindOf = (e) => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
 
   function h(tag, props = {}, ...kids) {
@@ -147,7 +149,7 @@ var ZooPanel = (() => {
     const verdict = frame(
       { class: "verdict-card", style: { "--tone": tone.color } },
       h("div", { class: "v-top mono" }, h("span", {}, h("span", { style: { opacity: 0.6 } }, "01  "), t("VERDICT")), h("span", { class: `live ${live ? "" : "off"}` }, h("i"), live ? t("LIVE READ") : t("STREAM BEHIND"))),
-      h("p", { class: "verdict" }, tone.label),
+      h("p", { class: "verdict" }, c.score === null || c.score === undefined ? tone.label : `${tone.label} · ${c.score}`),
       ...meter(c.verdict),
       c.reasons?.length ? h("ol", { class: "reasons" }, ...c.reasons.slice(0, compact ? 3 : 5).map((x, i) => h("li", {}, h("b", {}, String(i + 1).padStart(2, "0")), h("span", {}, tChain(x))))) : null,
       c.notes?.length && !compact ? h("p", { class: "notes" }, c.notes.map(tChain).join(" · ")) : null,
@@ -210,7 +212,7 @@ var ZooPanel = (() => {
                 { class: "row", onclick: () => openWallet(ctx, e.wallet), title: t("Open its page") },
                 h("i", { style: { background: KIND[kindOf(e)].color } }),
                 h("span", { class: "w" }, short(e.wallet)),
-                h("span", { class: "k", style: { color: KIND[kindOf(e)].color } }, KIND[kindOf(e)].label),
+                h("span", { class: "k", style: { color: KIND[kindOf(e)].color } }, [KIND[kindOf(e)].label, ...(e.tags || []).filter((k) => TAGL[k]).map((k) => TAGL[k])].join(" · ")),
                 h("span", { class: "n" }, pct(e.bought)),
                 h("span", { class: "n" }, e.exitSec === null ? t("in") : secs(e.exitSec)),
               ),
