@@ -325,11 +325,13 @@ export interface XRayReply {
   symbol: string;
   check: {
     verdict: "avoid" | "caution" | "pass" | "unknown";
+    /** Risk 0..100 inside the verdict's band; null when the tape never saw the token. */
+    score?: number | null;
     reasons: string[];
     notes: string[];
     facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
-  early: Array<{ bought: number }>;
+  early: Array<{ bought: number; tags?: string[] }>;
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
@@ -340,7 +342,8 @@ export function xrayMessage(x: XRayReply): string {
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
   const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora", fourmeme: "four.meme" }[f?.platform ?? f?.venue ?? ""] ?? (isBsc(x.mint) ? "four.meme" : "pump.fun");
-  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ""];
+  const score = c.score === null || c.score === undefined ? "" : ` · ${T("risk {n}/100", { n: c.score })}`;
+  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>${score} · ${venue}`, ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
   if (f) {
@@ -349,10 +352,14 @@ export function xrayMessage(x: XRayReply): string {
     if (!f.earlyWallets) lines.push(T("<b>First 5 seconds:</b> nobody bought before it was visible"));
     else {
       lines.push(T("<b>First 5 seconds:</b> {n} wallets took {t}, still hold {h}", { n: f.earlyWallets, t: pct(took), h: `${f.earlyHeldPct ?? 0}%` }));
+      const count = (tag: string) => x.early.filter((e) => e.tags?.includes(tag)).length;
       const who = [
         f.creatorCrew ? T("creator's crew {n}", { n: f.creatorCrew }) : "",
+        count("rugger") ? T("known ruggers {n}", { n: count("rugger") }) : "",
         f.ringWallets ? T("sniper ring {n}", { n: f.ringWallets }) : "",
         f.serialSnipers ? T("serial snipers {n}", { n: f.serialSnipers }) : "",
+        count("whale") ? T("whales {n}", { n: count("whale") }) : "",
+        count("new") ? T("new wallets {n}", { n: count("new") }) : "",
       ].filter(Boolean);
       if (who.length) lines.push(who.join(" · "));
     }
@@ -675,7 +682,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
+    const score = c.score === null || c.score === undefined ? "" : ` · ${T("risk {n}/100", { n: c.score })}`;
+    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>${score}`, ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
     return void send(chat, lines.join("\n"), full(`x-${address}`), reply);
   };
 
