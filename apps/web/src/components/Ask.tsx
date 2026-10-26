@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import { X_URL, XIcon } from "../links";
 import { nodeOf, useGuardian } from "../zoo";
 import { Reveal, Section } from "./ui";
+import CopyCa from "./CopyCa";
 import { lang, pick, t, t as tr } from "../i18n";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 import { base, eyes, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
@@ -499,9 +500,12 @@ function Answer({ a }: { a: Ask }) {
         <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="min-w-0">
-              <p className="tabular-nums truncate text-[12.5px] text-fg-4">
-                {a.name ? `${a.name} · ` : ""}
-                {a.mint}
+              <p className="tabular-nums flex flex-wrap items-center gap-2 text-[12.5px] text-fg-4">
+                <span className="min-w-0 truncate">
+                  {a.name ? `${a.name} · ` : ""}
+                  {a.mint}
+                </span>
+                <CopyCa mint={a.mint} />
               </p>
               <h2 className="font-display mt-1 text-4xl">${a.symbol}</h2>
             </div>
