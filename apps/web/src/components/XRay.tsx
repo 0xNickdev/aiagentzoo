@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { addressIn, chainOf, chart, unitOf } from "../chain";
+import { TagList, Tags, type WalletTag } from "./WalletTags";
 import MoneyMap from "./MoneyMap";
 import { Reveal, Section } from "./ui";
 import { lang, t, tChain } from "../i18n";
@@ -28,10 +29,14 @@ export interface Early {
   crew: boolean;
   ring: boolean;
   serial: boolean;
+  /** Who the wallet is across every launch the zoo has seen; the node's tags. */
+  tags?: WalletTag[];
 }
 
 interface Check {
   verdict: Verdict;
+  /** Risk 0..100 inside the verdict's band: pass 0..24, caution 25..59, avoid 60..100. Null when never seen. */
+  score?: number | null;
   reasons: string[];
   notes: string[];
   /** Whether the node's chain stream is live and how long ago it last heard the chain. */
@@ -216,7 +221,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   ctx.fillText(`${r.mint.slice(0, 6)}…${r.mint.slice(-6)}`, L, 196);
   ctx.font = '600 84px "Geist", sans-serif';
   ctx.fillStyle = tone.color;
-  ctx.fillText(t(tone.label), L - 4, 300);
+  ctx.fillText(c.score === null || c.score === undefined ? t(tone.label) : `${t(tone.label)} · ${c.score}`, L - 4, 300);
 
   // The first reason, wrapped.
   ctx.font = '400 26px "Geist", sans-serif';
@@ -375,6 +380,7 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
         </button>
       </div>
       <p className="mt-2 text-[12.5px] font-normal leading-snug text-fg-4">{t(k.what)}</p>
+      <TagList tags={e.tags} />
       <button type="button" onClick={() => openWallet(e.wallet)} className="tabular-nums mt-3 self-start rounded-full px-3 py-1.5 text-[12.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 transition hover:bg-[#ffc27a]/10">
         {t("open this wallet's page →")}
       </button>
@@ -579,6 +585,11 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold tracking-[0.02em]" style={{ color: tone.color, borderColor: `${tone.color}4d`, background: `${tone.color}1f` }}>
             <i className="h-[7px] w-[7px] rounded-full" style={{ background: tone.color, boxShadow: `0 0 10px ${tone.color}` }} />
             {t(tone.label)}
+            {c.score !== null && c.score !== undefined && (
+              <span className="tabular-nums font-normal opacity-80" title={t("risk 0 to 100: no red flags up to 24, caution 25 to 59, avoid from 60")}>
+                · {c.score}
+              </span>
+            )}
           </span>
           <span className="tabular-nums ml-auto hidden items-center gap-2 text-[12px] text-fg-3 md:inline-flex">
             <i className={`h-[7px] w-[7px] rounded-full ${c.stream?.live ? "bg-[#a6e3b4] shadow-[0_0_10px_#a6e3b4]" : "bg-white/30"}`} />
@@ -874,6 +885,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className="flex items-center gap-2 truncate text-fg-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
+                    <Tags tags={e.tags} className="ml-1" />
                   </span>
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}
