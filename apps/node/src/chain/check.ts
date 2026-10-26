@@ -189,7 +189,9 @@ export function checkToken(
   }
 
   // Who those first-second wallets are, from every launch the tape saw them snipe in two days.
-  if ((f.creatorCrew ?? 0) >= 2) {
+  // A launchpad's deployer "launches" every coin on the platform, so wallets that snipe many of them are platform-wide
+  // snipers, not the creator's crew; the serial-sniper line below covers them.
+  if ((f.creatorCrew ?? 0) >= 2 && !deployer) {
     avoid.push(`${f.creatorCrew} of the wallets in the first 5 seconds keep sniping this creator's other launches: they are the creator's own wallets`);
   }
   if ((f.ringWallets ?? 0) >= 3) caution.push(`${f.ringWallets} of the first-second wallets have sniped launches together before: one operator`);
