@@ -4,11 +4,11 @@ Before you buy a token launched on pump.fun, check whether its creator already r
 
 This complements a contract check such as `rug-check`. On pump.fun every token passes the contract checks by design: mint and freeze authority are revoked, and the liquidity is burned at graduation. The rug there is behavioural: the creator selling into the first buyers, a few wallets taking the supply in the launch block, the creator's own wallets sniping the first seconds, a fresh creator wallet paid for by a known rugger, one wallet launching and dumping hundreds of tokens a day. This skill checks exactly that, from what happened on chain.
 
-ZOOAI AGENCY reads every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab (bonk.fun, StonkFun and others) and Meteora's bonding curve (Believe, bags and others) straight from Solana as it happens. The check answers for all of them; `facts.venue` says which (`pump.fun`, `launchlab`, `dbc`), and `facts.platform` names the platform on that launchpad when it is known (`stonk` is StonkFun, a LaunchLab launch). Its own accuracy record is pump.fun's, the curve the zoo grades by. One call, no key, no cost, answers in well under a second.
+ZOOAI AGENCY reads every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab (bonk.fun, StonkFun and others) and Meteora's bonding curve (Believe, bags and others) straight from Solana as it happens, and every four.meme launch, buy, sell and graduation straight from BNB Chain. The check answers for all of them; `facts.venue` says which (`pump.fun`, `launchlab`, `dbc`, `fourmeme`), and `facts.platform` names the platform on that launchpad when it is known (`stonk` is StonkFun, a LaunchLab launch). A BNB Chain token is its `0x` address (forty hex digits); on it, `holders` and `funding` are not read yet, and the amounts in `facts` (`bundledSol`, `curveSol`) are in BNB, or in the quote token when `facts.quote` names one. Its own accuracy record is pump.fun's, the curve the zoo grades by. One call, no key, no cost, answers in well under a second.
 
 ## When to call it
 
-- Before every buy of a recently launched Solana token, above all a pump.fun launch: sniping, momentum buys, swaps into anything new.
+- Before every buy of a recently launched Solana or BNB Chain token, above all a pump.fun or four.meme launch: sniping, momentum buys, swaps into anything new.
 - Before adding to a position in such a token. A creator can sell after your first buy.
 - When the user pastes a token address and asks about it before buying.
 
@@ -17,8 +17,8 @@ Skip it for SOL, USDC and established tokens: it knows launches, not old tokens.
 ## How
 
 ```
-GET https://zooaiagency.com/api/check/<token mint address>
-GET https://zooaiagency.com/api/check/<token mint address>?holders=1
+GET https://zooaiagency.com/api/check/<token address>
+GET https://zooaiagency.com/api/check/<token address>?holders=1
 ```
 
 `?holders=1` also reads who holds the token right now (adds up to 4 seconds). Use it before a large buy: it catches a creator who moved the bag to other wallets instead of selling, and a single wallet sitting on the supply.
@@ -93,7 +93,7 @@ Percentages in `facts` are whole numbers. `holders` (only with `?holders=1`, and
 ## The full picture: x-ray
 
 ```
-GET https://zooaiagency.com/api/xray/<token mint address>
+GET https://zooaiagency.com/api/xray/<token address>
 ```
 
 Everything the check knows plus the evidence: `check` (the same answer as above, with holders), `early` (every first-second wallet: what it took, what it still holds, when it sold out, how many launches it sniped in 48 hours, crew / ring / serial), `creatorRecord`, `funding` (who funded the creator and the other creators that wallet funded), `bundle` (the launch-block wallets and who funded them) and `socials` (the X or Telegram accounts the token links to, and what else they were on). It reads Solana, so it counts against the deep-read limit. People see it at https://zooaiagency.com/xray.
@@ -182,4 +182,4 @@ The free tier is enough for any single agent, and it stays free. A bot that chec
 
 ## Why trust it
 
-The data is read straight from Solana by ZOOAI AGENCY's own stream. The code is open: https://github.com/0xNickdev/aiagentzoo (`apps/node/src/chain/check.ts`). Every call the zoo's agents make is re-checked the next day and scored in public on a signed log: https://zooaiagency.com/docs/grading. Not financial advice.
+The data is read straight from Solana and BNB Chain by ZOOAI AGENCY's own streams. The code is open: https://github.com/0xNickdev/aiagentzoo (`apps/node/src/chain/check.ts`). Every call the zoo's agents make is re-checked the next day and scored in public on a signed log: https://zooaiagency.com/docs/grading. Not financial advice.

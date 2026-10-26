@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { addressIn } from "../chain";
 import { Download } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { X_URL, XIcon } from "../links";
@@ -89,8 +90,8 @@ const usd = (n: number | null | undefined) =>
   n === null || n === undefined ? "-" : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${Math.round(n)}`;
 const pctOf = (n: number | null | undefined) => (n === null || n === undefined ? "-" : `${Math.round(n * 100)}%`);
 
-/** Any Solana address inside whatever was pasted: a bare mint, a pump.fun or DexScreener link. */
-const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
+/** Any token address inside whatever was pasted: a bare mint, a pump.fun, four.meme or DexScreener link. */
+const mintIn = addressIn;
 
 /** The evidence the beaver saw, as short lines. */
 function evidence(a: Ask): Array<[string, string, boolean]> {

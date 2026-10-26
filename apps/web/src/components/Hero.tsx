@@ -8,7 +8,7 @@ import { compact, full, NORTH, picOf, short, SITE_WALLET, SITE_XRAY, ticker, use
 import type { NetInfo } from "./home/particleScene";
 import { EXTENSION_URL } from "./HomeSections";
 
-const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
+import { addressIn as mintIn } from "../chain";
 
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 18 },

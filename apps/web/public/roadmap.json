@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-25",
+  "updated": "2026-10-26",
   "repo": "https://github.com/0xNickdev/aiagentzoo",
   "chapters": [
     {
@@ -656,6 +656,26 @@
       }
     },
     {
+      "id": "chains",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "title": "BNB Chain: four.meme",
+      "text": "The same x-ray on BNB Chain. Every four.meme launch, buy, sell and graduation read straight from the chain's logs: the dev's record, the launch-block bundle, the first-seconds wallets, churn. Paste a 0x address anywhere the x-ray lives: the site, the bot, the extension.",
+      "why": "Every chain we add, we read straight from the chain like Solana, not from someone else's API. four.meme first, because that is where BNB Chain launches happen; holders and who paid for the dev come next.",
+      "zh": {
+        "title": "BNB Chain：four.meme",
+        "text": "同样的透视来到 BNB Chain。每一次 four.meme 的发币、买入、卖出和毕业都直接从链上日志读取：开发者的记录、开盘区块捆绑、前几秒的钱包、刷量。在网站、机器人、扩展里任何能透视的地方粘贴 0x 地址即可。",
+        "why": "每增加一条链，我们都像 Solana 一样直接读链上数据，而不是用别人的 API。先做 four.meme，因为 BNB Chain 的发币都在那里；持币者和谁给开发者打钱是下一步。"
+      },
+      "date": "2026-10-26",
+      "proof": [
+        {
+          "label": "/xray",
+          "href": "/xray"
+        }
+      ]
+    },
+    {
       "id": "pro",
       "chapter": "2026-11",
       "status": "next",
@@ -781,19 +801,6 @@
         "title": "守卫进入交易终端",
         "text": "在大家已经在用的交易终端里直接看到我们的判断。",
         "why": "取决于合作方，签约之前一直标为探索中。"
-      }
-    },
-    {
-      "id": "chains",
-      "chapter": "later",
-      "status": "exploring",
-      "title": "Other chains",
-      "text": "The same x-ray beyond Solana.",
-      "why": "Every chain we add, we want to read straight from the chain like Solana, not from someone else's API. Solana goes deep first.",
-      "zh": {
-        "title": "其他公链",
-        "text": "把同样的透视带到 Solana 以外的链。",
-        "why": "每增加一条链，我们都要像 Solana 一样直接读链上数据，而不是用别人的 API。先把 Solana 做深。"
       }
     }
   ],

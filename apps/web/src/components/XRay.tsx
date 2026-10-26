@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
+import { addressIn, chainOf, chart, unitOf } from "../chain";
 import MoneyMap from "./MoneyMap";
 import { Reveal, Section } from "./ui";
 import { lang, t, tChain } from "../i18n";
@@ -55,7 +56,7 @@ interface Check {
     poolSol?: number | null;
     curveSol?: number | null;
     mayhem?: boolean;
-    venue?: "pump.fun" | "launchlab" | "dbc";
+    venue?: "pump.fun" | "launchlab" | "dbc" | "fourmeme";
     platform?: string;
     earlyWallets: number | null;
     earlyHeldPct: number | null;
@@ -103,7 +104,7 @@ export interface XRayReport {
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun", fourmeme: "four.meme" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 /** How old the token is: from the stream's facts, or from its launch time when it is older than the stream. */
 const ageOf = (r: XRayReport) => {
@@ -111,7 +112,7 @@ const ageOf = (r: XRayReport) => {
   return m < 120 ? t("{m} min old", { m }) : m < 2_880 ? t("{h} h old", { h: Math.round(m / 60) }) : t("{d} days old", { d: Math.round(m / 1_440) });
 };
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
-const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
+const mintIn = addressIn;
 
 export const TONE: Record<Verdict, { label: string; color: string }> = {
   avoid: { label: "AVOID", color: "#ff8a7e" },
@@ -269,7 +270,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   });
   ctx.font = small(15);
   ctx.fillStyle = FG4;
-  ctx.fillText(t("read straight from Solana · zooaiagency.com/xray").replace(/^./, (x) => x.toUpperCase()), L, H - 40);
+  ctx.fillText(t(chainOf(r.mint) === "bsc" ? "read straight from BNB Chain · zooaiagency.com/xray" : "read straight from Solana · zooaiagency.com/xray").replace(/^./, (x) => x.toUpperCase()), L, H - 40);
 }
 
 /** Post it, keep watching it, or ask the beaver for its call. */
@@ -320,8 +321,6 @@ function ShareBar({ r }: { r: XRayReport }) {
     </div>
   );
 }
-
-const solscan = (w: string) => `https://solscan.io/account/${w}`;
 
 /** Opens a wallet's own page inside the X-Ray. */
 const openWallet = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet", { detail: w }));
@@ -496,6 +495,7 @@ type Tab = "overview" | "network" | "dev" | "five" | "map" | "bundles" | "holder
 function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
   const c = r.check;
   const f = c.facts;
+  const bsc = chainOf(r.mint) === "bsc";
   const tone = TONE[c.verdict];
   const early = r.early;
   const took = early.reduce((n, e) => n + e.bought, 0);
@@ -612,7 +612,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               </p>
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("token")}
-                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : `https://dexscreener.com/solana/${r.mint}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : f.venue === "fourmeme" ? `https://four.meme/token/${r.mint}` : chart(r.mint)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
                   {short(r.mint)} ↗
                 </a>
               </p>
@@ -718,8 +718,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
             </Panel>
                   </div>
                   <div id="xr-funder" className="[&>*]:h-full">
-                    <Panel title="Who paid for the creator" note="traced on Solana">
-              {!fund && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+                    <Panel title="Who paid for the creator" note={bsc ? "BNB Chain" : "traced on Solana"}>
+              {!fund && <p className="text-[13px] font-normal text-fg-3">{t(bsc ? "Not traced on BNB Chain: the zoo reads four.meme's launches and trades there, not wallet transfers yet." : "Not traced yet. It is queued: open this again in a minute.")}</p>}
               {fund && !fund.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the creator's recent history.")}</p>}
               {fund?.funder && (
                 <>
@@ -824,7 +824,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                       <Stat k="bump bot trades" v={String(f?.bumps ?? 0)} bad={(f?.bumps ?? 0) >= 3 && !f?.mayhem} />
                       <Stat k="bought in bundles (4+ wallets in one block)" v={`${f?.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f?.bundlesSince ? ` · ${t("counted since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`} bad={(f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30 && !f?.mayhem} />
                       {!!f?.bundlers && <Stat k="bundlers hold now · at most" v={`${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`} bad={(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem} />}
-                      {!!f?.bundledSol && <Stat k="SOL through bundles" v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
+                      {!!f?.bundledSol && <Stat k={`${unitOf(r.mint)} through bundles`} v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
                     </div>
                   {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
                   <p className="mt-4 text-[12.5px] font-normal leading-relaxed text-fg-3">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
@@ -833,8 +833,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
 
               {tab === "holders" && (
                 <div id="xr-holders">
-                  <Panel title="Holders now" note="read from Solana">
-              {!c.holders && <p className="text-[13px] font-normal text-fg-3">{t("Holders could not be read right now.")}</p>}
+                  <Panel title="Holders now" note={bsc ? "BNB Chain" : "read from Solana"}>
+              {!c.holders && <p className="text-[13px] font-normal text-fg-3">{t(bsc ? "Holders are not read on BNB Chain: what the first wallets and the bundlers still hold comes from four.meme's own trades above." : "Holders could not be read right now.")}</p>}
               {c.holders && c.holders.top10Pct === 0 && <p className="text-[13px] font-normal text-fg-3">{t("Nobody holds it outside the curve: everyone sold back.")}{c.holders.programPct ? ` ${t("{p}% sits in the curve or pool", { p: c.holders.programPct })}.` : ""}</p>}
               {c.holders && c.holders.top10Pct > 0 && !!c.holders.programPct && <Stat k="in the curve or pool" v={`${c.holders.programPct}%`} />}
               {c.holders && c.holders.top10Pct > 0 && (
@@ -909,7 +909,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
 
         {/* the status line */}
         <div className="tabular-nums relative flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 text-[11.5px] leading-relaxed text-fg-4 sm:px-5">
-          <span className="min-w-0 flex-1 basis-[60%]">{r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
+          <span className="min-w-0 flex-1 basis-[60%]">{bsc ? t(r.outsideStream ? "How we know: this coin launched on four.meme before our two-day window, so what happened at launch is not on record; the dev's record is what the stream kept of their earlier launches." : "How we know: every four.meme launch, buy and sell read from BNB Chain as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who holds it now and who paid for the dev are not read on BNB Chain yet.") : r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
           <span className="font-mono text-fg-3">{NORTH.replace(/^https?:\/\//, "")}/v1/xray/{short(r.mint)}</span>
           <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#a6e3b4]" />{t("3 nodes · one operator")} · {t("Not financial advice.")}</span>
         </div>
@@ -1073,7 +1073,7 @@ export default function XRay() {
           return;
         }
       }
-      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
+      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).") : t("Something went wrong."));
       setReport(body);
       const keepTab = new URLSearchParams(window.location.search).get("tab");
       history.pushState(null, "", `/xray?mint=${mint}${keepTab ? `&tab=${encodeURIComponent(keepTab)}` : ""}`);
@@ -1116,7 +1116,7 @@ export default function XRay() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab and Meteora trade, read live from Solana")}</p>
+          <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora and four.meme trade, read live from Solana and BNB Chain")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
             <br />
@@ -1132,7 +1132,7 @@ export default function XRay() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               name="mint"
-              placeholder={t("token address: pump.fun, LaunchLab, Meteora")}
+              placeholder={t("token address: pump.fun, LaunchLab, Meteora, four.meme")}
               spellCheck={false}
               autoComplete="off"
               className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-fg-4"
@@ -1178,7 +1178,13 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
  * where that share alone can decide the price.
  */
 /** The trade terminals people actually use, each opening this mint straight away. Icons: their own favicons. */
-const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string; copies?: boolean }> => [
+const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string; copies?: boolean }> => chainOf(mint) === "bsc" ? [
+  { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/bsc/token/${mint}` },
+  { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=56&address=${mint}` },
+  { k: "four.meme", icon: "/terminals/fourmeme.png", href: `https://four.meme/token/${mint}` },
+  { k: "PancakeSwap", icon: "/terminals/pancake.png", href: `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc` },
+  { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `https://dexscreener.com/bsc/${mint}` },
+] : [
   { k: "Axiom", icon: "/terminals/axiom.png", href: `https://axiom.trade/t/${mint}` },
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/sol/token/${mint}` },
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },

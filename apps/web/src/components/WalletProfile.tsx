@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { chainName, explorer, explorerName } from "../chain";
 import { type ReactNode, useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t } from "../i18n";
@@ -40,7 +41,7 @@ export function WalletLink({ a, onWallet, className = "" }: { a: string; onWalle
       <button type="button" onClick={() => onWallet(a)} className="underline decoration-white/15 underline-offset-4 transition hover:text-white hover:decoration-white/60">
         {short(a)}
       </button>
-      <a href={`https://solscan.io/account/${a}`} target="_blank" rel="noopener noreferrer" title="Solscan" className="text-[11.5px] text-fg-4 hover:text-white">
+      <a href={explorer(a)} target="_blank" rel="noopener noreferrer" title={explorerName(a)} className="text-[11.5px] text-fg-4 hover:text-white">
         ↗
       </a>
     </span>
@@ -149,8 +150,8 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                 {t("Try again")}
               </button>
             )}
-            <a href={`https://solscan.io/account/${wallet}`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-6 py-2.5 text-fg-2 transition hover:text-white">
-              Solscan ↗
+            <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-6 py-2.5 text-fg-2 transition hover:text-white">
+              {explorerName(wallet)} ↗
             </a>
           </div>
         </div>
@@ -172,8 +173,8 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="tabular-nums text-fg-3 hover:text-white">
                 {t("copy")}
               </button>
-              <a href={`https://solscan.io/account/${wallet}`} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
-                Solscan ↗
+              <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
+                {explorerName(wallet)} ↗
               </a>
             </span>
           </div>
@@ -236,7 +237,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </div>
             </Box>
             <div className="space-y-4">
-              <Box title="Who paid for this dev" note="traced on Solana">
+              <Box title="Who paid for this dev" note={chainName(wallet) === "Solana" ? "traced on Solana" : "BNB Chain"}>
                 {!p.funding && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
                 {p.funding && !p.funding.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the dev's recent history.")}</p>}
                 {p.funding?.funder && (
@@ -309,7 +310,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </Box>
           )}
           {(p.funded.creators.length > 0 || p.funded.hot) && (
-            <Box title="Devs it paid for" note="traced on Solana">
+            <Box title="Devs it paid for" note={chainName(wallet) === "Solana" ? "traced on Solana" : "BNB Chain"}>
               {p.funded.hot ? (
                 <p className="text-[13px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
               ) : (

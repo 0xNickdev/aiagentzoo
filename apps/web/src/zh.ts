@@ -1,5 +1,15 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "read straight from BNB Chain · zooaiagency.com/xray": "直接读自 BNB Chain · zooaiagency.com/xray",
+  "Not traced on BNB Chain: the zoo reads four.meme's launches and trades there, not wallet transfers yet.": "BNB Chain 上暂未追踪：动物园在那里读的是 four.meme 的发币和交易，还没读钱包转账。",
+  "Holders are not read on BNB Chain: what the first wallets and the bundlers still hold comes from four.meme's own trades above.": "BNB Chain 上暂不读取持币者：上面前几秒钱包和捆绑钱包的持仓来自 four.meme 自己的交易。",
+  "How we know: this coin launched on four.meme before our two-day window, so what happened at launch is not on record; the dev's record is what the stream kept of their earlier launches.": "我们怎么知道：这个币在我们两天窗口之前就在 four.meme 上发了，所以开盘时发生了什么没有记录；开发者的记录来自数据流保存的他之前的发币。",
+  "How we know: every four.meme launch, buy and sell read from BNB Chain as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who holds it now and who paid for the dev are not read on BNB Chain yet.": "我们怎么知道：每一次 four.meme 的发币、买入和卖出都在发生时直接从 BNB Chain 读取，实时记录保留 48 小时，长期记忆保留 90 天。开发者的记录和前几秒的钱包来自这条数据流；当前持币者和谁给开发者打钱在 BNB Chain 上暂未读取。",
+  "X-Ray · every pump.fun, LaunchLab, Meteora and four.meme trade, read live from Solana and BNB Chain": "透视 · 每一笔 pump.fun、LaunchLab、Meteora 和 four.meme 交易，实时读自 Solana 和 BNB Chain",
+  "token address: pump.fun, LaunchLab, Meteora, four.meme": "代币地址：pump.fun、LaunchLab、Meteora、four.meme",
+  "Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).": "过去两天数据流里没有这个币或钱包（pump.fun、LaunchLab、Meteora、four.meme）。",
+  "BNB through bundles": "经捆绑流入的 BNB",
+  "BNB Chain": "BNB Chain",
   " · a serial dumper": " · 连环砸盘号",
   " · rules only, the model was busy": " · 只用了规则，模型在忙",
   " · you": " · 你",

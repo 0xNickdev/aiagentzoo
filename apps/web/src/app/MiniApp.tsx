@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { chart, explorer, explorerTx } from "../chain";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
@@ -354,7 +355,7 @@ function Verdict({ a }: { a: Ask }) {
             >
               {tt("Share")}
             </button>
-            <button type="button" onClick={() => openLink(a.facts.url ?? `https://dexscreener.com/solana/${a.mint}`)} className="glass-btn">
+            <button type="button" onClick={() => openLink(a.facts.url ?? chart(a.mint))} className="glass-btn">
               {tt("Chart")}
             </button>
           </div>
@@ -795,7 +796,7 @@ function WalletSheet({ wallet, onToken, onWallet }: { wallet: string; onToken: (
   return (
     <div className="glass-card relative overflow-hidden rounded-[26px] p-5">
       <p className="tabular-nums text-[11px] text-fg-4">{tt("wallet")}</p>
-      <button type="button" onClick={() => openLink(`https://solscan.io/account/${wallet}`)} className="tabular-nums mt-1 block break-all text-left text-[13px] text-fg-2">
+      <button type="button" onClick={() => openLink(explorer(wallet))} className="tabular-nums mt-1 block break-all text-left text-[13px] text-fg-2">
         {wallet} ↗
       </button>
       <p className={`font-display mt-3 text-[20px] leading-snug ${lead.cls}`}>{lead.text}</p>
@@ -902,7 +903,7 @@ function RugsTab() {
                 animate={{ opacity: 1, backgroundColor: "rgba(255,110,95,0)" }}
                 transition={{ duration: 1.2 }}
                 type="button"
-                onClick={() => e.tx && openLink(`https://solscan.io/tx/${e.tx}`)}
+                onClick={() => e.tx && openLink(explorerTx(e.tx))}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
               >
                 <span className="min-w-0">
@@ -1062,7 +1063,7 @@ function Ticker() {
         <motion.button
           key={e.seq}
           type="button"
-          onClick={() => e.tx && openLink(`https://solscan.io/tx/${e.tx}`)}
+          onClick={() => e.tx && openLink(explorerTx(e.tx))}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}

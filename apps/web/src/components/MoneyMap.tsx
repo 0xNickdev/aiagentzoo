@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { explorer } from "../chain";
 import type { Early, XRayReport } from "./XRay";
 import { t } from "../i18n";
 
@@ -201,8 +202,8 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
               );
             })}
             <g data-dust style={{ mixBlendMode: "screen" }} />
-            <Node x={COL[0]} y={midY - BH / 2} h={BH} title={funderTitle} sub={funderSub} left color={funderColor} href={fund?.funder ? `https://solscan.io/account/${fund.funder}` : undefined} />
-            <Node x={COL[1]} y={midY - (BH + 18) / 2} h={BH + 18} title={t("The dev {w}", { w: short(r.creator) })} sub={devSold || devRecord} sub2={devSold ? devRecord : undefined} color={(f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE} href={`https://solscan.io/account/${r.creator}`} />
+            <Node x={COL[0]} y={midY - BH / 2} h={BH} title={funderTitle} sub={funderSub} left color={funderColor} href={fund?.funder ? explorer(fund.funder) : undefined} />
+            <Node x={COL[1]} y={midY - (BH + 18) / 2} h={BH + 18} title={t("The dev {w}", { w: short(r.creator) })} sub={devSold || devRecord} sub2={devSold ? devRecord : undefined} color={(f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE} href={explorer(r.creator)} />
             {gs.map((g, i) => (
               <Node key={g.key} x={COL[2]} y={gy(i)} h={BH} title={t(g.label)} sub={t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} color={g.color} />
             ))}

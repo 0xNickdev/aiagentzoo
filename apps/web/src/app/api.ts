@@ -1,4 +1,5 @@
 import { NODE_URLS } from "../sim/live";
+import { addressIn } from "../chain";
 
 /** The two nodes the app talks to: north reads the chain, canyon keeps the beaver, the nursery and the board. */
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -133,4 +134,4 @@ export const ago = (t: number) => {
   const s = Math.max(0, Math.round((Date.now() - t) / 1000));
   return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`;
 };
-export const mintIn = (text: string) => text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
+export const mintIn = addressIn;
