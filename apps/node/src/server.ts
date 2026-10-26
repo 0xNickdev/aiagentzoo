@@ -18,6 +18,7 @@ import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscTape, fourMeme } from "./chain/bsc.ts";
+import { tagAll } from "./chain/tags.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
 import { replayMint } from "./chain/replay.ts";
@@ -125,6 +126,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       historySince: history!.since(),
     };
   };
+  /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
+  const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
@@ -534,10 +537,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             creator: past.creator,
             createdAt: past.createdAt,
             check,
-            early: past.early,
+            early: tagAll(past.early, kept),
             creatorRecord: preferHistory(past.creatorRecord, past.creator),
             funding: funding ?? null,
-            bundle: { wallets: past.bundle, funding: bundle },
+            bundle: { wallets: tagAll(past.bundle, kept), funding: bundle },
             socials: linked,
             ...memory,
             access: tier,
@@ -555,10 +558,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           creator: found.creator,
           createdAt: found.createdAt,
           check,
-          early: chainTape.earlyOf(mint),
+          early: tagAll(chainTape.earlyOf(mint) ?? [], kept),
           creatorRecord: preferHistory(found.creatorRecord, found.creator),
           funding: funding ?? null,
-          bundle: { wallets: found.bundle, funding: bundle },
+          bundle: { wallets: tagAll(found.bundle, kept), funding: bundle },
           socials: linked,
           access: tier,
         });

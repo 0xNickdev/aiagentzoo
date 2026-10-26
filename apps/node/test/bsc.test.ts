@@ -270,3 +270,40 @@ test("the backfill asks the archive for ascending thousand-block ranges and the 
   assert.equal(feed.cursor, head);
   assert.equal(feed.backfilled, true);
 });
+
+test("the risk score sits inside the verdict's band and grows with the reasons; wallet tags read the tape and the long memory", async () => {
+  const { scoreOf, WEIGHT } = await import("../src/chain/check.ts");
+  const { tagsOf } = await import("../src/chain/tags.ts");
+  assert.equal(scoreOf("unknown", []), null);
+  assert.equal(scoreOf("pass", []), 0);
+  assert.equal(scoreOf("pass", [], { early: true }), 10);
+  const one = scoreOf("caution", [WEIGHT.top5])!;
+  const two = scoreOf("caution", [WEIGHT.top5, WEIGHT.ring, WEIGHT.wash])!;
+  assert.ok(one >= 25 && one < two && two <= 59, `${one} ${two}`);
+  assert.equal(scoreOf("caution", [99, 99]), 59);
+  const sold = scoreOf("avoid", [WEIGHT.creatorSold])!;
+  const soldCrew = scoreOf("avoid", [WEIGHT.creatorSold, WEIGHT.crew, WEIGHT.launchBundle])!;
+  assert.ok(sold >= 60 && sold < soldCrew && soldCrew <= 100, `${sold} ${soldCrew}`);
+  assert.equal(scoreOf("avoid", [99, 99, 99]), 100);
+  // The check itself carries it, in the band of its verdict.
+  const t0 = Date.now() - 20 * 60_000;
+  const tape = new PumpTape("BNB");
+  const feed = new BscFeed(tape, { quoteOf: async () => null });
+  feed.onLog(createLog(1, Math.floor(t0 / 1000), "0xc1"));
+  feed.onLog(tradeLog(true, CREATOR, 50_000_000, 0.5, 1, Math.floor(t0 / 1000), "0xc1", 5));
+  await new Promise((r) => setTimeout(r, 10));
+  feed.onLog(tradeLog(false, CREATOR, 50_000_000, 0.6, 400, Math.floor(t0 / 1000) + 300, "0xc3"));
+  const found = tape.token(TOKEN)!;
+  const c = checkToken(TOKEN, { symbol: found.symbol, facts: found.facts, creatorRecord: found.creatorRecord });
+  assert.equal(c.verdict, "avoid");
+  assert.ok(c.score! >= 60 && c.score! <= 100);
+  assert.equal(checkToken(TOKEN, null).score, null);
+  // Tags.
+  const none = { launches: 0, dumped: 0, snipes: 0, crewHits: 0, bundleHits: 0, serial: false };
+  assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001 }, null), ["new"]);
+  assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001, snipes48h: 4 }, null), []);
+  assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.03, crew: true, bundle: true }, none), ["crew", "bundle", "whale"]);
+  assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001 }, { ...none, launches: 4, dumped: 3 }), ["rugger"]);
+  assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001 }, { ...none, launches: 2, dumped: 0, snipes: 12 }), ["serial", "dev"]);
+  assert.deepEqual(tagsOf({ wallet: SNIPER, share: 0.05, ring: true }, { ...none, bundleHits: 3 }), ["ring", "bundle", "whale"]);
+});
