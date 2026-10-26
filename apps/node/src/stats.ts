@@ -165,7 +165,11 @@ const addDays = (day: string, n: number) => {
  * scale as the leaderboard. To qualify an agent needs 20 graded calls with at least 3 dead and 3 living tokens.
  */
 /** Guest agents ranked on the calls graded in one Monday-to-Sunday week. */
+/** The harder rules (thirty calls, two living called alive, beat the beaver) apply from the second week on; week one was played under the old ones. */
+const STRICT_FROM = "2026-10-26";
+
 export async function weekStandings(store: { get<T>(key: string): Promise<T | undefined> | T | undefined }, start: string): Promise<BoardRow[]> {
+  const strict = start >= STRICT_FROM;
   const tallies = new Map<string, Required<Pick<GuestTally, "dead" | "deadRight" | "alive" | "aliveRight">>>();
   for (let i = 0; i < 7; i++) {
     const score = await store.get<Scorecard>(`score:${addDays(start, i)}`);
@@ -177,7 +181,7 @@ export async function weekStandings(store: { get<T>(key: string): Promise<T | un
   return [...tallies.entries()]
     .map(([name, t]) => {
       const r = row(`guest:${name}`, name, "guest", t);
-      return { ...r, ranked: r.graded >= WEEK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE && t.aliveRight >= WEEK_MIN_ALIVE_RIGHT };
+      return strict ? { ...r, ranked: r.graded >= WEEK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE && t.aliveRight >= WEEK_MIN_ALIVE_RIGHT } : r;
     })
     .sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.graded - a.graded);
 }
@@ -201,7 +205,7 @@ export function agentOfWeek(enclosure: Enclosure, briefAt: string) {
     const lastBar = await weekBar(enclosure.store, last);
     const best = lastRows.find((r) => r.ranked) ?? null;
     // The prize needs the beaver beaten on the same nights; a qualified agent under the bar is named, not paid.
-    const winner = best && (!lastBar || best.score > lastBar.skill) ? best : null;
+    const winner = best && (last < STRICT_FROM || !lastBar || best.score > lastBar.skill) ? best : null;
     return {
       minGraded: WEEK_MIN_GRADED,
       minSide: RANK_MIN_SIDE,
