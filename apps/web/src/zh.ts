@@ -1,5 +1,6 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "reading Solana and BNB Chain now": "正在读取 Solana 和 BNB Chain",
   "Buy on four.meme ↗": "在 four.meme 买入 ↗",
   "PancakeSwap ↗": "PancakeSwap ↗",
   "Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.": "BNB Chain 上的交易暂未经过动物园路由：在内盘时去 four.meme，毕业后去 PancakeSwap。不构成投资建议。",

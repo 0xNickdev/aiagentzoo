@@ -21,7 +21,10 @@ interface Chain {
   tracked: number;
   seen: { launches: number; trades: number; launchlab?: number; dbc?: number };
   perMinute: { launches: number; trades: number };
+  /** The BNB Chain tape next to the Solana one, when the node reads it. */
+  bsc?: { live: boolean; seen: { launches: number; trades: number }; perMinute: { launches: number; trades: number } };
 }
+const tradesPerMinute = (c: Chain) => c.perMinute.trades + (c.bsc?.perMinute.trades ?? 0);
 
 const usd = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`);
 
@@ -151,8 +154,8 @@ function HeroStats({ chain }: { chain: Chain | null }) {
   const usage = useNorth<{ last7: { xrays: number; checks: number } }>("/v1/usage");
   const rec = useNorth<{ flaggedAvoid: { n: number } }>("/v1/check/record");
   const launches = chain ? chain.seen.launches + (chain.seen.launchlab ?? 0) + (chain.seen.dbc ?? 0) : null;
-  const trades = useTicker(chain?.seen.trades ?? null, chain?.perMinute.trades ?? 0);
-  const launched = useTicker(launches, chain?.perMinute.launches ?? 0);
+  const trades = useTicker(chain ? chain.seen.trades + (chain.bsc?.seen.trades ?? 0) : null, chain ? tradesPerMinute(chain) : 0);
+  const launched = useTicker(launches === null ? null : launches + (chain?.bsc?.seen.launches ?? 0), (chain?.perMinute.launches ?? 0) + (chain?.bsc?.perMinute.launches ?? 0));
   const avoid = useTicker(rec?.flaggedAvoid.n ?? null);
   const checks = useTicker(usage ? usage.last7.checks + usage.last7.xrays : null);
   const cells: Array<[string, string]> = [
@@ -202,9 +205,9 @@ export default function Hero() {
         <div className="max-w-[640px]">
           <motion.div {...rise(0.1)} className="inline-flex items-center gap-2.5 rounded-md border border-white/[0.12] bg-[#0a0e0c]/90 px-3.5 py-2 text-[13px] text-[#eaeaea] backdrop-blur">
             <span className={`h-[7px] w-[7px] rounded-full ${chain?.live ? "animate-pulse bg-[#a6e3b4]" : "bg-[#ffc27a]"}`} />
-            {chain ? (chain.live ? t("reading Solana now") : t("stream reconnecting")) : t("connecting")}
+            {chain ? (chain.live ? t(chain.bsc?.live ? "reading Solana and BNB Chain now" : "reading Solana now") : t("stream reconnecting")) : t("connecting")}
             <span className="h-3 w-px bg-white/25" />
-            <span className="tabular-nums">{chain ? full(chain.perMinute.trades) : "-"}</span> {t("trades a minute")}
+            <span className="tabular-nums">{chain ? full(tradesPerMinute(chain)) : "-"}</span> {t("trades a minute")}
           </motion.div>
 
           <motion.h1 {...rise(0.2)} className="font-display mt-7 text-[46px] font-semibold leading-none tracking-[-0.045em] text-white sm:text-7xl lg:text-[92px]">
