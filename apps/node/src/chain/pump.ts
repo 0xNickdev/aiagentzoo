@@ -27,8 +27,8 @@ const DISC = {
   ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
 };
 
-/** Where a token was launched, when not pump.fun. */
-export type Venue = "launchlab" | "dbc";
+/** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, or four.meme on BNB Chain. */
+export type Venue = "launchlab" | "dbc" | "fourmeme";
 
 /** A trade on a followed pool, as the buy bot reads it. */
 export interface FollowedSwap {
@@ -661,7 +661,13 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen: { launches: number; trades: number; launchlab?: number; dbc?: number } = { launches: 0, trades: 0 };
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number } = { launches: 0, trades: 0 };
+  /** What the amounts are in: SOL on Solana, BNB on BNB Chain. Only the moments' wording reads it. */
+  readonly unit: "SOL" | "BNB";
+
+  constructor(unit: "SOL" | "BNB" = "SOL") {
+    this.unit = unit;
+  }
   private pulse: PulseEvent[] = [];
   private pulseSeq = 0;
   /** Pools followed whether or not the tape tracks the token: the zoo's own, for the buy bot. */
@@ -902,7 +908,7 @@ export class PumpTape {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
       }
       // Paired with another token, the amount is in that token, not SOL: no whale call on it.
-      if (!t.quote && ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy`, tx);
+      if (!t.quote && ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy`, tx);
     } else {
       t.sells += 1;
       t.solOut += ev.sol;
@@ -1009,7 +1015,7 @@ export class PumpTape {
     t.poolPeak = Math.max(t.poolPeak ?? 0, sol);
     if (!t.drained && t.poolPeak >= DRAIN_MIN_PEAK && sol < t.poolPeak * DRAIN_SHARE) {
       t.drained = true;
-      this.emit(now, "drained", t, `pool drained to ${sol.toFixed(1)} SOL after graduation`);
+      this.emit(now, "drained", t, `pool drained to ${sol.toFixed(1)} ${this.unit} after graduation`);
     }
   }
 
@@ -1035,7 +1041,7 @@ export class PumpTape {
     // A graduated pool opens with about 85 SOL. Down to a fifth of its best, the liquidity has left: announced once.
     if (ev.pool === t.pool && !t.drained && t.poolPeak !== null && t.poolPeak >= DRAIN_MIN_PEAK && ev.poolSol < t.poolPeak * DRAIN_SHARE) {
       t.drained = true;
-      this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} SOL after graduation`, tx);
+      this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} ${this.unit} after graduation`, tx);
     }
     // A first buyer still trading it in the pool: what they hold moves, the curve's churn numbers do not.
     const b = t.buyers.get(ev.user);
@@ -1047,7 +1053,7 @@ export class PumpTape {
         notePeak(b);
       }
       if (ev.user === t.creator && t.devIn !== undefined) t.devIn += ev.sol;
-      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} SOL buy after graduation`, tx);
+      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy after graduation`, tx);
     } else {
       t.ammSells += 1;
       t.ammSolOut += ev.sol;
@@ -1088,7 +1094,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number };
         bundleSince?: number;
       };
       if (saved.v !== 1) return 0;
@@ -1135,8 +1141,8 @@ export class PumpTape {
       }
       this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
       if (saved.seen) {
-        const add = (k: "launchlab" | "dbc") => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
-        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc") };
+        const add = (k: Venue) => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
+        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}) };
       }
       return this.tokens.size;
     } catch {

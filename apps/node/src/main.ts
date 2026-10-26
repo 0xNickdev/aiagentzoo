@@ -22,6 +22,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
+import { BscFeed, bscTape } from "./chain/bsc.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
@@ -90,9 +91,19 @@ const tapeFile = join(config.dataDir, "chain-tape.json");
 // Who funded which creator: slow to learn (RPC calls), so it is kept too.
 const lineageFile = join(config.dataDir, "chain-lineage.json");
 const socialsFile = join(config.dataDir, "chain-socials.json");
+// BNB Chain has its own tape, and a cursor: the last block read, so a restart resumes there instead of two days back.
+const bscTapeFile = join(config.dataDir, "chain-tape-bsc.json");
+const bscCursorFile = join(config.dataDir, "chain-bsc-cursor.json");
+let bscFeed: BscFeed | null = null;
 const saveTape = () => {
   writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
   renameSync(`${tapeFile}.tmp`, tapeFile);
+  if (bscFeed) {
+    writeFileSync(`${bscTapeFile}.tmp`, bscTape.snapshot());
+    renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
+    writeFileSync(`${bscCursorFile}.tmp`, JSON.stringify({ cursor: bscFeed.cursor, at: Date.now() }));
+    renameSync(`${bscCursorFile}.tmp`, bscCursorFile);
+  }
   writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
   renameSync(`${lineageFile}.tmp`, lineageFile);
   writeFileSync(`${socialsFile}.tmp`, socials.snapshot());
@@ -103,6 +114,16 @@ if (config.role === "north") {
   tape.follow(TOKEN_MINT, TOKEN_POOL);
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
+  if (process.env.ZOO_BSC !== "off") {
+    if (existsSync(bscTapeFile)) console.log(`[${config.id}] bsc tape restored: ${bscTape.load(readFileSync(bscTapeFile, "utf8"))} tokens`);
+    let cursor: number | null = null;
+    try {
+      if (existsSync(bscCursorFile)) cursor = Number(JSON.parse(readFileSync(bscCursorFile, "utf8")).cursor) || null;
+    } catch {
+      /* two days are read again */
+    }
+    bscFeed = new BscFeed(bscTape, { cursor, wsUrl: process.env.BSC_WS_URL, rpcUrl: process.env.BSC_RPC_URL, logsUrl: process.env.BSC_LOGS_URL, log: (m) => console.log(`[${config.id}] ${m}`) });
+  }
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   // One creator traced every 30 s by default: about 3 RPC calls each, a few hundred thousand a month.
   lineage.start(Number(process.env.ZOO_TRACE_GAP_MS ?? 250));
@@ -124,6 +145,9 @@ if (config.role === "north") {
 // The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
 const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
+// The same long memory keeps four.meme launches: addresses never collide across the two chains.
+const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
+const stopBsc = bscFeed?.start() ?? null;
 // North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);
 const stopStream =
@@ -264,6 +288,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     enclosure.stop();
     stopStream?.();
+    stopBsc?.();
     if (config.role === "north") {
       try {
         saveTape();
@@ -272,6 +297,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       }
       try {
         stopHistory?.();
+        stopBscHistory?.();
         stopBuyback?.();
         history?.close();
       } catch {

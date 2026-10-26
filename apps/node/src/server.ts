@@ -16,7 +16,8 @@ import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
-import { checkToken, outsideCheck, RateGate } from "./chain/check.ts";
+import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
+import { bscTape, fourMeme } from "./chain/bsc.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
 import { replayMint } from "./chain/replay.ts";
@@ -67,6 +68,23 @@ export interface ServerOptions {
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+/** A token or wallet on either chain the zoo reads: base58 on Solana, 0x and forty hex digits on BNB Chain. */
+const ADDR = "([1-9A-HJ-NP-Za-km-z]{32,44}|0x[0-9a-fA-F]{40})";
+const route = (pattern: string) => new RegExp(`^${pattern.replace("ADDR", ADDR)}$`);
+const ROUTE = {
+  chainToken: route("/v1/chain/token/ADDR"),
+  check: route("/v1/check/ADDR"),
+  xray: route("/v1/xray/ADDR"),
+  creator: route("/v1/chain/creator/ADDR"),
+  walletHistory: route("/v1/wallet/ADDR/history"),
+  sniper: route("/v1/chain/sniper/ADDR"),
+  wallet: route("/v1/wallet/ADDR"),
+  bundle: route("/v1/chain/bundle/ADDR"),
+};
+/** EVM addresses are case-insensitive, so one spelling keys everything: lowercase. Solana addresses stay as they are. */
+const norm = (address: string) => (chainOf(address) === "bsc" ? address.toLowerCase() : address);
+/** The tape that reads the chain an address lives on. */
+const tapeOf = (address: string) => (chainOf(address) === "bsc" ? bscTape : tape);
 
 export interface VisitorPolicy {
   /** Agents visitors may wake. Keep this to cheap, harmless species. */
@@ -383,11 +401,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         });
       }
       if (req.method === "GET" && path === "/v1/chain") {
-        return json(res, 200, tape.status());
+        return json(res, 200, { ...tape.status(), bsc: bscTape.status() });
       }
-      const chainToken = /^\/v1\/chain\/token\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const chainToken = ROUTE.chainToken.exec(path);
       if (req.method === "GET" && chainToken) {
-        const found = tape.token(chainToken[1]!);
+        const found = tapeOf(chainToken[1]!).token(norm(chainToken[1]!));
         return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
       }
       // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
@@ -411,10 +429,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const key = await issueKey(enclosure.store, signed.address);
         return json(res, 200, { key, wallet: signed.address, perMinute: HOLDER_PER_MIN, deepPerMinute: HOLDER_DEEP_PER_MIN, note: "shown once: keep it safe. A new key replaces this one." });
       }
-      const checkOf = /^\/v1\/check\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
-      const xrayOf = /^\/v1\/xray\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const checkOf = ROUTE.check.exec(path);
+      const xrayOf = ROUTE.xray.exec(path);
       if (req.method === "GET" && (checkOf || xrayOf)) {
-        if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
+        const mint = norm((checkOf ?? xrayOf)![1]!);
+        // BNB Chain tokens are read from four.meme's tape: no RPC calls, so no holders or funders yet.
+        const bsc = chainOf(mint) === "bsc";
+        const chainTape = tapeOf(mint);
+        if (chainTape.lastEventAt === 0) return json(res, 404, { error: bsc ? "this node does not read BNB Chain; use the north node" : "this node does not read the chain; use the north node" });
         // A key lifts the limits while its wallet still holds; without one, everyone gets the free tier.
         const key = keyFrom(req.headers, url.searchParams);
         let wallet: string | null = null;
@@ -440,17 +462,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
         void usage.bump(deep, caller);
-        const mint = (checkOf ?? xrayOf)![1]!;
-        const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
-        let found = tape.token(mint);
+        const stream = { live: chainTape.connected && Date.now() - chainTape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - chainTape.lastEventAt) / 1000) };
+        let found = chainTape.token(mint);
         // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
         const past = !found && history ? history.report(mint) : null;
         const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
-        const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
+        const pool = deep && found && !bsc && holdersEnabled() ? tape.poolOf(mint) : null;
         const [holders, , poolSol] = await Promise.all([
-          deep && (found || past) && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
-          deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
+          deep && (found || past) && !bsc && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
+          deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
           // The pool's SOL as it is now, not as the last trade the tape saw left it.
           pool ? within(poolSolOf(pool)) : Promise.resolve(null),
         ]);
@@ -459,28 +480,28 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           found = tape.token(mint);
         }
         let funding: LineageView | null | undefined;
-        if (found && fundersEnabled()) {
+        if (found && !bsc && fundersEnabled()) {
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
         }
-        if (past) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
-        const linked = found || past ? socials.forMint(mint) : [];
-        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        if (past && !bsc) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
+        const linked = (found || past) && !bsc ? socials.forMint(mint) : [];
+        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) && !bsc ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
-        const image = socials.image(mint);
-        if (!image) socials.want(mint);
+        const image = bsc ? fourMeme.image(mint) : socials.image(mint);
+        if (!image) bsc ? fourMeme.want(mint) : socials.want(mint);
         // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
         // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
-        if (!found && !past && deep && holdersEnabled()) {
-          const origin = await within(originOf(mint), 6_000);
+        if (!found && !past && deep && (bsc || holdersEnabled())) {
+          const origin = bsc ? await within(fourMeme.get(mint), 6_000) : await within(originOf(mint), 6_000);
           if (origin) {
-            const holdersNow = await within(holderReport(mint, fetch, Date.now(), origin.creator));
+            const holdersNow = bsc ? undefined : await within(holderReport(mint, fetch, Date.now(), origin.creator));
             const kept = history?.wallet(origin.creator, 20) ?? null;
             const dev = kept ? { launches: kept.launches, dumped: kept.dumped } : null;
             const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream });
             let funded: LineageView | null = null;
-            if (fundersEnabled()) {
+            if (!bsc && fundersEnabled()) {
               funded = lineage.view(origin.creator);
               if (!funded) lineage.enqueue(origin.creator, true);
             }
@@ -505,7 +526,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         }
         if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
         if (past) {
-          const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
+          const bundle = past.bundle.length >= 2 && !bsc ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
           return json(res, 200, {
             mint,
             symbol: past.symbol,
@@ -522,8 +543,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             access: tier,
           });
         }
-        if (!found) return json(res, 404, { error: history ? "not a launch the stream saw (pump.fun, LaunchLab, Meteora)" : "not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)", check });
-        const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
+        if (!found) {
+          const where = bsc ? "four.meme" : "pump.fun, LaunchLab, Meteora";
+          return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
+        }
+        const bundle = found.bundle.length >= 2 && !bsc ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
         return json(res, 200, {
           mint,
           symbol: found.symbol,
@@ -531,7 +555,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           creator: found.creator,
           createdAt: found.createdAt,
           check,
-          early: tape.earlyOf(mint),
+          early: chainTape.earlyOf(mint),
           creatorRecord: preferHistory(found.creatorRecord, found.creator),
           funding: funding ?? null,
           bundle: { wallets: found.bundle, funding: bundle },
@@ -539,55 +563,57 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           access: tier,
         });
       }
-      const creatorOf = /^\/v1\/chain\/creator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const creatorOf = ROUTE.creator.exec(path);
       if (req.method === "GET" && creatorOf) {
-        const found = preferHistory(tape.creator(creatorOf[1]!), creatorOf[1]!);
+        const w = norm(creatorOf[1]!);
+        const found = preferHistory(tapeOf(w).creator(w), w);
         return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
       }
       // The wallet dossier from the long memory: what it did as a dev, a first-second buyer, a bundler and a crew member.
-      const dossierOf = /^\/v1\/wallet\/([1-9A-HJ-NP-Za-km-z]{32,44})\/history$/.exec(path);
+      const dossierOf = ROUTE.walletHistory.exec(path);
       if (req.method === "GET" && dossierOf) {
         if (!history) return json(res, 404, { error: "this node keeps no chain history; use the north node" });
         const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
         const wait = fromPeer(req) ? 0 : checkGate.take(caller);
         if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
-        const found = history.wallet(dossierOf[1]!, clampInt(url.searchParams.get("limit"), 50, 1, 200));
+        const found = history.wallet(norm(dossierOf[1]!), clampInt(url.searchParams.get("limit"), 50, 1, 200));
         if (!found) return json(res, 404, { error: "this wallet did not launch, snipe or bundle a launch the zoo has kept" });
         res.setHeader("cache-control", "no-store");
         return json(res, 200, { ...found, historySince: history.since(), keptDays: 90 });
       }
-      const sniperOf = /^\/v1\/chain\/sniper\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const sniperOf = ROUTE.sniper.exec(path);
       if (req.method === "GET" && sniperOf) {
-        const found = tape.sniper(sniperOf[1]!);
+        const found = tapeOf(sniperOf[1]!).sniper(norm(sniperOf[1]!));
         return found ? json(res, 200, found) : json(res, 404, { error: "this wallet sniped no launch in the last two days" });
       }
       // One page per wallet: what it did as a dev, as a first-second buyer and as the one who pays for devs.
-      const walletOf = /^\/v1\/wallet\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const walletOf = ROUTE.wallet.exec(path);
       if (req.method === "GET" && walletOf) {
-        const w = walletOf[1]!;
+        const w = norm(walletOf[1]!);
+        const bsc = chainOf(w) === "bsc";
         const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
         const wait = fromPeer(req) ? 0 : checkGate.take(caller);
         if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
-        const dev = tape.creatorProfile(w);
+        const dev = tapeOf(w).creatorProfile(w);
         let funding: LineageView | null = null;
-        if (dev && fundersEnabled()) {
+        if (dev && !bsc && fundersEnabled()) {
           funding = lineage.view(w);
           if (!funding) lineage.enqueue(w, true);
         }
         const funded = lineage.funded(w);
-        const sniper = tape.sniper(w);
+        const sniper = tapeOf(w).sniper(w);
         // The accounts this dev's own tokens link to in their metadata: typed by the dev, so a lead, not proof of who it is.
         const seen = new Set<string>();
-        const accounts = dev
+        const accounts = dev && !bsc
           ? dev.launches.flatMap((l) => socials.forMint(l.mint)).filter((a) => !seen.has(a.social.url) && seen.add(a.social.url)).slice(0, 10)
           : [];
         if (!dev && !sniper && !funded.creators.length) return json(res, 404, { error: "this wallet did not launch, snipe or fund a launch the stream saw in the last two days" });
         res.setHeader("cache-control", "no-store");
         return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, checkedAt: Date.now() });
       }
-      const bundleOf = /^\/v1\/chain\/bundle\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      const bundleOf = ROUTE.bundle.exec(path);
       if (req.method === "GET" && bundleOf) {
-        const t = tape.token(bundleOf[1]!);
+        const t = tapeOf(bundleOf[1]!).token(norm(bundleOf[1]!));
         if (!t) return json(res, 404, { error: "not on the stream" });
         const funding = t.bundle.length >= 2 ? await traceFunders(t.mint, t.bundle.map((b) => b.wallet)) : null;
         return json(res, 200, { mint: t.mint, bundleWallets: t.facts.bundleWallets, bundleShare: t.facts.bundleShare, wallets: t.bundle, funding, fundingEnabled: fundersEnabled() });

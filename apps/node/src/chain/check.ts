@@ -62,7 +62,7 @@ export interface TokenCheck {
     quote: string | null;
     mayhem: boolean;
     /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
-    venue: "pump.fun" | "launchlab" | "dbc";
+    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme";
     /** The platform on that launchpad when known, e.g. "stonk" (StonkFun on LaunchLab). */
     platform?: string;
     curveSol: number | null;
@@ -97,6 +97,14 @@ export interface TokenCheck {
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? null : Math.round(x * 100));
 
+/** Which chain an address belongs to, from its shape: 0x and forty hex digits is BNB Chain, base58 is Solana. */
+export const chainOf = (address: string): "solana" | "bsc" => (/^0x[0-9a-fA-F]{40}$/.test(address) ? "bsc" : "solana");
+const CHAIN_NAME = { solana: "Solana", bsc: "BNB Chain" } as const;
+const NO_RECORD = {
+  solana: "not a launch from pump.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check",
+  bsc: "not a launch from four.meme in the last two days, so there is no chain record to check",
+} as const;
+
 export interface CheckInput {
   symbol: string;
   facts: ChainFacts;
@@ -117,7 +125,7 @@ export function checkToken(
       symbol: null,
       verdict: "unknown",
       proceed: null,
-      reasons: ["not a launch from pump.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check"],
+      reasons: [NO_RECORD[chainOf(mint)]],
       notes: stream.live ? [] : ["the chain stream is down right now: a fresh launch may be missing for that reason"],
       facts: null,
     };
@@ -225,7 +233,7 @@ export function checkToken(
     // Shares of the supply to one decimal: a coin where everyone sold back shows 0.3%, not a misleading 0%.
     const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
     holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null;
-    if (!h) notes.push("holders could not be read from Solana right now");
+    if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chainOf(mint)]} right now`);
     else {
       // Half the supply in one wallet: whoever holds it decides when the price goes to zero.
       if (h.topShare >= 0.5) avoid.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
@@ -367,7 +375,7 @@ export function outsideCheck(
   const notes = [`launched ${day}, before the stream's window: what happened at launch is not on record, only who holds it now and the dev's record`];
   const h = o.holders;
   const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
-  if (!h) notes.push("holders could not be read from Solana right now");
+  if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chainOf(mint)]} right now`);
   else if (h.topShare >= 0.5) avoid.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
   else if (h.topShare >= 0.2) caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`);
   else if (h.top10Share >= 0.5) caution.push(`the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`);
