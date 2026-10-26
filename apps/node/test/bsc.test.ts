@@ -225,3 +225,48 @@ test("the node answers a 0x address from the BNB Chain tape: check, x-ray, creat
     server.close();
   }
 });
+
+test("the backfill asks the archive for ascending thousand-block ranges and the live endpoint for the last few thousand", async () => {
+  const tape = new PumpTape("BNB");
+  const asked: Array<[string, number, number]> = [];
+  const head = 1_000_000;
+  const rpc = (async (url: string, method: string, params: unknown[]) => {
+    if (method === "eth_blockNumber") return `0x${head.toString(16)}`;
+    if (method === "eth_getLogs") {
+      const p = params[0] as { fromBlock: string; toBlock: string };
+      asked.push([url, Number(p.fromBlock), Number(p.toBlock)]);
+      return [];
+    }
+    throw new Error(method);
+  }) as never;
+  const sockets: Array<{ onopen?: () => void; onmessage?: (m: { data: string }) => void; close(): void }> = [];
+  class FakeSocket {
+    onopen?: () => void;
+    onmessage?: (m: { data: string }) => void;
+    onerror?: () => void;
+    onclose?: () => void;
+    constructor() {
+      sockets.push(this);
+      setTimeout(() => this.onopen?.(), 1);
+    }
+    send() {
+      setTimeout(() => this.onmessage?.({ data: JSON.stringify({ id: 1, result: "0x1" }) }), 1);
+    }
+    close() {
+      setTimeout(() => this.onclose?.(), 1);
+    }
+  }
+  const feed = new BscFeed(tape, { cursor: head - 5_500, rpc, rpcUrl: "live", logsUrl: "archive", quoteOf: async () => null, WebSocketImpl: FakeSocket as never, log: () => {} });
+  const stop = feed.start();
+  await new Promise((r) => setTimeout(r, 50));
+  stop();
+  assert.ok(asked.length >= 3, `asked ${asked.length}`);
+  for (const [, from, to] of asked) assert.ok(from <= to, `range ${from}..${to}`);
+  for (let i = 1; i < asked.length; i++) assert.equal(asked[i]![1], asked[i - 1]![2] + 1);
+  assert.equal(asked[0]![0], "archive");
+  assert.equal(asked[0]![2] - asked[0]![1], 999);
+  assert.equal(asked[asked.length - 1]![0], "live");
+  assert.equal(asked[asked.length - 1]![2], head);
+  assert.equal(feed.cursor, head);
+  assert.equal(feed.backfilled, true);
+});

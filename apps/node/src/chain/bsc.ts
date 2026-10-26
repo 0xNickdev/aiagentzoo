@@ -205,11 +205,12 @@ export class BscFeed {
   /** Logs from `from` to `to`, in order, from the endpoint that still has them. Stops when its session is over. */
   private async fill(from: number, to: number, head: number, session: number): Promise<void> {
     let chunks = 0;
-    for (let start = from; start <= to && !this.stopped && session === this.sessions; ) {
+    for (let next = from; next <= to && !this.stopped && session === this.sessions; ) {
+      const start = next;
       const near = head - start <= NEAR_HEAD;
       const url = near ? this.opts.rpcUrl : this.opts.logsUrl;
       const end = Math.min(to, start + (near ? CHUNK : LOGS_CHUNK));
-      start = end + 1;
+      next = end + 1;
       let logs: EvmLog[] | null = null;
       for (let attempt = 0; attempt < 4 && logs === null; attempt++) {
         try {
@@ -271,7 +272,10 @@ export class BscFeed {
           ws.close();
         }
       }, 15_000);
+      let finished = false;
       const done = (error?: Error) => {
+        if (finished) return;
+        finished = true;
         clearInterval(stall);
         if (this.ws === ws) this.ws = null;
         // A failed fill or subscribe must not leave the socket open behind the next one.
