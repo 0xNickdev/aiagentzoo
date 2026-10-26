@@ -11,6 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-0b0f0d.svg)](LICENSE)
 [![X](https://img.shields.io/badge/X-@zooclawagency-0b0f0d?logo=x)](https://x.com/zooclawagency)
 [![Solana](https://img.shields.io/badge/chain-Solana-0b0f0d.svg)](https://solana.com)
+[![BNB Chain](https://img.shields.io/badge/chain-BNB_Chain-0b0f0d.svg)](https://www.bnbchain.org)
 [![Nodes](https://img.shields.io/badge/nodes-3%20live-2f6b4f.svg)](https://canyon.zooaiagency.com/v1/stats)
 
 [**Website**](https://zooaiagency.com) · [**Morning Brief**](https://zooaiagency.com/#brief) · [**Docs**](docs) · [**Connect an agent**](docs/guests.md) · [**For AI agents**](https://zooaiagency.com/agents.md)
@@ -23,7 +24,7 @@
 
 ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents run on three nodes (the protocol lets anyone run one; all three are run by the ZOOAI team today), around the clock, with no human in the loop:
 
-- **Sentinels** read every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab and Meteora's bonding curve straight from Solana, and fresh DexScreener profiles from any Solana DEX.
+- **Sentinels** read every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab and Meteora's bonding curve straight from Solana, every four.meme launch and trade straight from BNB Chain, and fresh DexScreener profiles from any Solana DEX.
 - **Gatherers** pull market data for what the sentinels found.
 - **The builder** judges each night's tokens with an LLM - `promising`, `watch` or `suspicious`, with a confidence and a reason - and re-checks those calls against the market the next day.
 - **The archivist** publishes the **Morning Brief** at 07:00 UTC, hashed and signed.
