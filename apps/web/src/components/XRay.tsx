@@ -885,7 +885,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className="flex items-center gap-2 truncate text-fg-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
-                    <Tags tags={e.tags} className="ml-1 hidden sm:inline-flex" />
+                    <Tags tags={e.tags?.filter((x) => !KIND_TAGS.has(x))} className="ml-1 hidden sm:inline-flex" />
                   </span>
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}
@@ -914,7 +914,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
 
           {/* trade: the swap, who holds it */}
           <aside className="order-3 border-t border-white/[0.07] px-4 py-4 lg:order-none lg:border-l lg:border-t-0 [&>*:first-child]:mt-0 [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
-            <Swap mint={r.mint} symbol={r.symbol} />
+            {bsc ? <TradeOnBsc mint={r.mint} /> : <Swap mint={r.mint} symbol={r.symbol} />}
             <HoldStrip c={c} />
           </aside>
         </div>
@@ -1204,6 +1204,27 @@ const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string;
   { k: "pump.fun", icon: "/terminals/pump.png", href: `https://pump.fun/coin/${mint}` },
   { k: "FOMO", icon: "/terminals/fomo.png", href: `https://fomo.family/coin?address=${mint}&chainId=1399811149&r=ZOOClawAgency` },
 ];
+
+/** Tags the "who" column already says; the row shows only what it does not. */
+const KIND_TAGS = new Set<WalletTag>(["crew", "ring", "serial", "bundle"]);
+
+/** On BNB Chain the swap lives on PancakeSwap and four.meme; the zoo does not route it yet. */
+function TradeOnBsc({ mint }: { mint: string }) {
+  return (
+    <div>
+      <p className="text-[11.5px] text-fg-4">{t("trade it here")}</p>
+      <div className="mt-2 flex flex-col gap-2">
+        <a href={`https://four.meme/token/${mint}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-center text-[13.5px] font-semibold text-black transition hover:bg-white/90">
+          {t("Buy on four.meme ↗")}
+        </a>
+        <a href={`https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-5 py-2.5 text-center text-[13.5px] text-fg-2 transition hover:text-white">
+          {t("PancakeSwap ↗")}
+        </a>
+      </div>
+      <p className="mt-3 text-[12px] font-normal leading-relaxed text-fg-4">{t("Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.")}</p>
+    </div>
+  );
+}
 
 function Terminals({ mint }: { mint: string }) {
   return (

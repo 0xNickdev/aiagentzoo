@@ -1,5 +1,8 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "Buy on four.meme ↗": "在 four.meme 买入 ↗",
+  "PancakeSwap ↗": "PancakeSwap ↗",
+  "Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.": "BNB Chain 上的交易暂未经过动物园路由：在内盘时去 four.meme，毕业后去 PancakeSwap。不构成投资建议。",
   "risk 0 to 100: no red flags up to 24, caution 25 to 59, avoid from 60": "风险 0 到 100：24 以下无危险信号，25 到 59 谨慎，60 起回避",
   "creator's own wallet": "开发者自己的钱包",
   "snipes this creator's other launches too": "也在狙这个开发者的其他币",
