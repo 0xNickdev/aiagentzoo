@@ -32,6 +32,8 @@ export const DEFAULT_LOGS = "https://rpc.48.club";
 const BLOCK_MS = 750;
 export const BACKFILL_BLOCKS = Math.round((48 * 3_600_000) / BLOCK_MS);
 const CHUNK = 4_999;
+/** The archive endpoint takes about 5 ms a block: a thousand at a time stays well inside its own timeout. */
+const LOGS_CHUNK = 999;
 /** Blocks near the head the live endpoint still serves logs for. */
 const NEAR_HEAD = 3_000;
 const WEI = 1e18;
@@ -100,7 +102,7 @@ export function parseLog(log: EvmLog): ChainEvent | null {
 export type Rpc = <T>(url: string, method: string, params: unknown[]) => Promise<T>;
 
 export const jsonRpc: Rpc = async (url, method, params) => {
-  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(30_000) });
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(60_000) });
   if (!r.ok) throw new Error(`${method}: ${r.status}`);
   const body = (await r.json()) as { result?: unknown; error?: { message?: string } };
   if (body.error) throw new Error(`${method}: ${body.error.message ?? "rpc error"}`);
@@ -203,9 +205,11 @@ export class BscFeed {
   /** Logs from `from` to `to`, in order, from the endpoint that still has them. Stops when its session is over. */
   private async fill(from: number, to: number, head: number, session: number): Promise<void> {
     let chunks = 0;
-    for (let start = from; start <= to && !this.stopped && session === this.sessions; start += CHUNK + 1) {
-      const end = Math.min(to, start + CHUNK);
-      const url = head - start <= NEAR_HEAD ? this.opts.rpcUrl : this.opts.logsUrl;
+    for (let start = from; start <= to && !this.stopped && session === this.sessions; ) {
+      const near = head - start <= NEAR_HEAD;
+      const url = near ? this.opts.rpcUrl : this.opts.logsUrl;
+      const end = Math.min(to, start + (near ? CHUNK : LOGS_CHUNK));
+      start = end + 1;
       let logs: EvmLog[] | null = null;
       for (let attempt = 0; attempt < 4 && logs === null; attempt++) {
         try {
@@ -219,7 +223,7 @@ export class BscFeed {
       if (session !== this.sessions) return;
       for (const log of logs!) this.onLog(log);
       if (this.cursor === null || end > this.cursor) this.cursor = end;
-      if (++chunks % 10 === 0) this.opts.log(`[bsc] backfill ${Math.round(((end - from) / Math.max(1, to - from)) * 100)}%: ${this.tape.status().tracked} tokens`);
+      if (++chunks % 25 === 0) this.opts.log(`[bsc] backfill ${Math.round(((end - from) / Math.max(1, to - from)) * 100)}%: ${this.tape.status().tracked} tokens`);
     }
   }
 
