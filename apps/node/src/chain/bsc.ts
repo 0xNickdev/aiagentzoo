@@ -23,7 +23,8 @@ export const TOPIC = {
   liquidity: "0xc18aa71171b358b706fe3dd345299685ba21a5316c66ffa9e319268b033c44b0", // LiquidityAdded(address base, uint256 offers, address quote, uint256 funds)
 } as const;
 
-export const DEFAULT_WS = "wss://bsc-rpc.publicnode.com";
+/** Public WebSockets that carry four.meme's logs; the feed moves to the next one when a connection fails. */
+export const DEFAULT_WS = "wss://bsc-rpc.publicnode.com,wss://bsc.publicnode.com,wss://bsc.drpc.org";
 export const DEFAULT_RPC = "https://bsc-rpc.publicnode.com";
 /** Serves eth_getLogs two days back, five thousand blocks a call; publicnode stops a few thousand blocks behind the head. */
 export const DEFAULT_LOGS = "https://rpc.48.club";
@@ -117,6 +118,7 @@ export async function quoteOf(token: string, rpc: Rpc = jsonRpc, url = DEFAULT_R
 }
 
 export interface FeedOptions {
+  /** One WebSocket URL, or several separated by commas, tried in turn. */
   wsUrl?: string;
   rpcUrl?: string;
   logsUrl?: string;
@@ -143,6 +145,7 @@ export class BscFeed {
   private ws: WebSocket | null = null;
   private readonly pending = new Map<string, ChainEvent[]>();
   private readonly seen = new Set<string>();
+  private sessions = 0;
   private readonly opts: Required<Pick<FeedOptions, "wsUrl" | "rpcUrl" | "logsUrl" | "log" | "rpc">> & Pick<FeedOptions, "WebSocketImpl">;
   private readonly quote: (token: string) => Promise<string | null>;
 
@@ -248,7 +251,9 @@ export class BscFeed {
   private session(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const Impl = this.opts.WebSocketImpl ?? WebSocket;
-      const ws = new Impl(this.opts.wsUrl);
+      const urls = this.opts.wsUrl.split(",").map((u) => u.trim()).filter(Boolean);
+      const url = urls[this.sessions++ % urls.length]!;
+      const ws = new Impl(url);
       this.ws = ws;
       let buffer: EvmLog[] | null = [];
       let heard = Date.now();
@@ -262,7 +267,13 @@ export class BscFeed {
       const done = (error?: Error) => {
         clearInterval(stall);
         if (this.ws === ws) this.ws = null;
-        error ? reject(error) : resolve();
+        // A failed fill or subscribe must not leave the socket open behind the next one.
+        try {
+          ws.close();
+        } catch {
+          /* already closed */
+        }
+        error ? reject(new Error(`${url}: ${error.message}`)) : resolve();
       };
       ws.onopen = () => {
         ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_subscribe", params: ["logs", { address: TOKEN_MANAGER2 }] }));
