@@ -1,7 +1,7 @@
 // The report, drawn the same way in the popup and in the panel on a trading page: a token's X-Ray and every wallet's page,
 // one leading to the other with a back step. Built from DOM nodes, never from HTML strings.
 var ZooPanel = (() => {
-  const { TONE, VENUE, pct, short, secs, mins, ago, sym, SITE, BOT, ask } = ZOO;
+  const { TONE, VENUE, pct, short, secs, mins, ago, sym, SITE, BOT, ask, explorer, explorerName } = ZOO;
   const KIND = {
     crew: { color: "#ff8a7e", get label() { return t("dev's own wallet"); } },
     ring: { color: "#f2b56b", get label() { return t("sniper ring"); } },
@@ -248,7 +248,7 @@ var ZooPanel = (() => {
           watchBtn,
           h("a", { class: "btn", href: `${BOT}?start=w-${r.mint}`, target: "_blank", rel: "noopener", title: t("Alerts in the Telegram bot") }, "Telegram"),
         ),
-        h("p", { class: "foot mono" }, t("read from public Solana data · not financial advice")),
+        h("p", { class: "foot mono" }, t("read from public chain data · not financial advice")),
       ].filter(Boolean),
     );
   }
@@ -283,7 +283,7 @@ var ZooPanel = (() => {
       backBar(ctx),
       frame(
         { class: "wallet-card" },
-        h("div", { class: "w-top mono" }, h("span", {}, [t("WALLET"), ...roles].join(" · ")), h("span", { style: { display: "flex", gap: "10px" } }, copyBtn, ext(`https://solscan.io/account/${p.wallet}`, t("solscan ↗")))),
+        h("div", { class: "w-top mono" }, h("span", {}, [t("WALLET"), ...roles].join(" · ")), h("span", { style: { display: "flex", gap: "10px" } }, copyBtn, ext(explorer(p.wallet), `${explorerName(p.wallet).toLowerCase()} ↗`))),
         h("p", { class: "w-addr mono" }, p.wallet),
         h("p", { class: `w-lead ${l.good ? "good" : l.bad ? "bad" : ""}` }, l.text),
       ),
@@ -349,8 +349,8 @@ var ZooPanel = (() => {
         h("div", { class: "list" }, ...p.funded.creators.slice(0, 8).map((x) => h("div", { class: "li" }, h("span", { class: "l" }, addr(ctx, x.wallet)), h("span", { class: `r mono ${x.dumped >= 1 ? "bad" : ""}` }, t("{n} launched · {d} dumped", { n: x.launches48h, d: x.dumped }))))),
       );
     parts.push(
-      h("div", { class: "actions", style: { gridTemplateColumns: "1fr 1fr" } }, h("a", { class: "btn primary", href: `${SITE}/xray?wallet=${p.wallet}`, target: "_blank", rel: "noopener" }, t("Full page ↗")), h("a", { class: "btn", href: `https://solscan.io/account/${p.wallet}`, target: "_blank", rel: "noopener" }, t("Solscan ↗"))),
-      h("p", { class: "foot mono" }, t("read from public Solana data · not financial advice")),
+      h("div", { class: "actions", style: { gridTemplateColumns: "1fr 1fr" } }, h("a", { class: "btn primary", href: `${SITE}/xray?wallet=${p.wallet}`, target: "_blank", rel: "noopener" }, t("Full page ↗")), h("a", { class: "btn", href: explorer(p.wallet), target: "_blank", rel: "noopener" }, `${explorerName(p.wallet)} ↗`)),
+      h("p", { class: "foot mono" }, t("read from public chain data · not financial advice")),
     );
     ctx.root.replaceChildren(...parts.filter(Boolean));
   }

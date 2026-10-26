@@ -41,7 +41,7 @@ const opts = { onHome: home };
 async function run(raw, quiet = false) {
   const addr = addresses(raw)[0];
   if (!addr) {
-    $("out").replaceChildren(h("p", { class: "err" }, t("Paste a Solana token or wallet address, or a link.")));
+    $("out").replaceChildren(h("p", { class: "err" }, t("Paste a token or wallet address (Solana or BNB Chain), or a link.")));
     return;
   }
   $("mint").value = addr;

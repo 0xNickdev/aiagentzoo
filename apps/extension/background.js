@@ -8,7 +8,7 @@ const TONE = {
   caution: { get label() { return t("CAUTION"); }, badge: "!", bg: "#b8913f" },
   pass: { get label() { return t("NO RED FLAGS"); }, badge: "ok", bg: "#3f8f55" },
 };
-const B58 = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
+const ADDR = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
 
 const cache = new Map();
 /** One read per token per minute or so: the free tier is generous for checks, tight for full x-rays. */
@@ -31,9 +31,10 @@ const getJson = async (url) => {
 const tokenOfPair = (addr) =>
   cached(`pair:${addr}`, 3_600_000, async () => {
     try {
-      const { ok, body } = await getJson(`https://api.dexscreener.com/latest/dex/pairs/solana/${addr}`);
+      const { ok, body } = await getJson(`https://api.dexscreener.com/latest/dex/pairs/${addr.startsWith("0x") ? "bsc" : "solana"}/${addr}`);
       const p = ok ? body.pairs?.[0] ?? body.pair : null;
-      return p?.baseToken?.address ?? null;
+      const token = p?.baseToken?.address ?? null;
+      return token && token.startsWith("0x") ? token.toLowerCase() : token;
     } catch {
       return null;
     }
@@ -59,7 +60,7 @@ async function xray(addr) {
   return cached(`xray:${mint}`, 90_000, async () => {
     const { status, ok, body } = await getJson(`${NORTH}/v1/xray/${mint}`);
     if (status === 429) return { error: t("Ten full x-rays a minute on the free tier. Try again in a minute.") };
-    if (!ok) return { error: t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") };
+    if (!ok) return { error: t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).") };
     void remember(body);
     return { report: body };
   }).then((r) => {
@@ -149,7 +150,8 @@ chrome.storage.onChanged.addListener((ch, area) => {
   if (area === "local" && ch.lang) chrome.contextMenus.update("xray", { title: t("X-Ray this token") }, () => void chrome.runtime.lastError);
 });
 chrome.contextMenus.onClicked.addListener((info) => {
-  const m = String(info.selectionText || info.linkUrl || "").match(B58)?.[0];
+  const found = String(info.selectionText || info.linkUrl || "").match(ADDR)?.[0];
+  const m = found && found.startsWith("0x") ? found.toLowerCase() : found;
   chrome.tabs.create({ url: m ? `${SITE}/xray?mint=${m}` : `${SITE}/xray` });
 });
 
