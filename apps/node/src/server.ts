@@ -465,7 +465,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
         void usage.bump(deep, caller);
-        const stream = { live: chainTape.connected && Date.now() - chainTape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - chainTape.lastEventAt) / 1000) };
+        // four.meme goes quiet for minutes at night where pump.fun never does: its stream counts as live for longer.
+        const liveMs = bsc ? 5 * 60_000 : 60_000;
+        const stream = { live: chainTape.connected && Date.now() - chainTape.lastEventAt < liveMs, lastEventSecAgo: Math.round((Date.now() - chainTape.lastEventAt) / 1000) };
         let found = chainTape.token(mint);
         // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
         const past = !found && history ? history.report(mint) : null;
