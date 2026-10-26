@@ -29,6 +29,7 @@ import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
 import { balanceOf, TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
 import { startBuyBot } from "./buybot.ts";
+import { buybackView, startBuyback } from "./buyback.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 
 const config = loadConfig();
@@ -201,6 +202,15 @@ const stopBuyBot =
       })
     : null;
 
+// The swap fee loop: a tenth of the fees buys $ZOOAGENCY into the treasury, the rest is swept there as SOL. Key on this node only.
+const feeSecret = process.env.ZOO_FEE_WALLET_KEY ?? "";
+const feeTreasury = process.env.ZOO_FEE_TREASURY ?? "";
+const stopBuyback =
+  config.role === "canyon" && feeSecret && feeTreasury && process.env.SOLANA_RPC_URL
+    ? startBuyback({ secret: feeSecret, treasury: feeTreasury, mint: process.env.ZOO_TOKEN_MINT || "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B", rpc: process.env.SOLANA_RPC_URL, store: enclosure.store, buyShare: Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1), everyMs: Number(process.env.ZOO_FEE_SWEEP_HOURS ?? 6) * 3_600_000, log: (m) => console.log(`[${config.id}] ${m}`) })
+    : null;
+const feeHot = process.env.ZOO_FEE_WALLET_PUBKEY ?? null;
+
 // The zoo watching itself: model failures, a silent stream, a node down, a late brief, straight to the operators.
 const alertChats = String(process.env.ZOO_ALERT_CHAT ?? "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n !== 0);
 const stopWatchdog =
@@ -228,6 +238,7 @@ const server = createNodeServer({
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
+  buybacks: () => buybackView(enclosure.store, feeHot, feeTreasury || null, Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1)),
   visitor: {
     agents: visitorAgents,
     agentCooldownMs: Number(process.env.ZOO_VISITOR_AGENT_COOLDOWN_MS ?? 60_000),
@@ -261,6 +272,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       }
       try {
         stopHistory?.();
+        stopBuyback?.();
         history?.close();
       } catch {
         /* at most the last few seconds of history are lost */

@@ -17,7 +17,10 @@
   "dependencies": {
     "@aiagentzoo/sdk": "*",
     "@anthropic-ai/sdk": "*",
-    "@triton-one/yellowstone-grpc": "^9.0.0"
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "@triton-one/yellowstone-grpc": "^9.0.0",
+    "bs58": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

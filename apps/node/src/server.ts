@@ -57,6 +57,7 @@ export interface ServerOptions {
   beaverHistory?: () => Promise<unknown>;
   /** Agent of the week standings, served at GET /v1/agent-of-the-week. */
   weekly?: () => Promise<unknown>;
+  buybacks?: () => Promise<unknown>;
   /** "Ask the beaver", on the node that keeps it. */
   asks?: AskDesk;
   /** The nursery, served at GET /v1/evolution on the node that keeps it. */
@@ -84,7 +85,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
@@ -257,6 +258,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/leaderboard") {
         return board ? json(res, 200, await board()) : json(res, 404, { error: "no leaderboard on this node" });
       }
+      // The swap fee loop, run by run: fees in, the tenth that bought $ZOOAGENCY, the rest swept to the treasury.
+      if (req.method === "GET" && path === "/v1/buybacks") {
+        return buybacks ? json(res, 200, await buybacks()) : json(res, 404, { error: "no fee loop on this node" });
+      }
+
       if (req.method === "GET" && path === "/v1/stats") {
         return stats ? json(res, 200, await stats()) : json(res, 404, { error: "no stats on this node" });
       }
