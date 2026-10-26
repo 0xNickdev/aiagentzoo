@@ -200,10 +200,10 @@ export class BscFeed {
     }
   }
 
-  /** Logs from `from` to `to`, in order, from the endpoint that still has them. */
-  private async fill(from: number, to: number, head: number): Promise<void> {
+  /** Logs from `from` to `to`, in order, from the endpoint that still has them. Stops when its session is over. */
+  private async fill(from: number, to: number, head: number, session: number): Promise<void> {
     let chunks = 0;
-    for (let start = from; start <= to && !this.stopped; start += CHUNK + 1) {
+    for (let start = from; start <= to && !this.stopped && session === this.sessions; start += CHUNK + 1) {
       const end = Math.min(to, start + CHUNK);
       const url = head - start <= NEAR_HEAD ? this.opts.rpcUrl : this.opts.logsUrl;
       let logs: EvmLog[] | null = null;
@@ -215,6 +215,8 @@ export class BscFeed {
           await new Promise((r) => setTimeout(r, 1_000 * (attempt + 1)));
         }
       }
+      // The socket may have died while the chunk was in flight: the next session reads on from the cursor.
+      if (session !== this.sessions) return;
       for (const log of logs!) this.onLog(log);
       if (this.cursor === null || end > this.cursor) this.cursor = end;
       if (++chunks % 10 === 0) this.opts.log(`[bsc] backfill ${Math.round(((end - from) / Math.max(1, to - from)) * 100)}%: ${this.tape.status().tracked} tokens`);
@@ -252,7 +254,8 @@ export class BscFeed {
     return new Promise<void>((resolve, reject) => {
       const Impl = this.opts.WebSocketImpl ?? WebSocket;
       const urls = this.opts.wsUrl.split(",").map((u) => u.trim()).filter(Boolean);
-      const url = urls[this.sessions++ % urls.length]!;
+      const session = ++this.sessions;
+      const url = urls[(session - 1) % urls.length]!;
       const ws = new Impl(url);
       this.ws = ws;
       let buffer: EvmLog[] | null = [];
@@ -289,7 +292,8 @@ export class BscFeed {
         if (msg.id === 1) {
           if (msg.error) return done(new Error(`subscribe: ${msg.error.message}`));
           subscribed = true;
-          void this.catchUp().then(() => {
+          void this.catchUp(session).then(() => {
+            if (session !== this.sessions) return;
             const held = buffer ?? [];
             buffer = null;
             // What the fill also read is dropped by its transaction and log index.
@@ -314,13 +318,13 @@ export class BscFeed {
   }
 
   /** The blocks since the cursor (two days on a cold start), up to the head as it stands now. */
-  private async catchUp(): Promise<void> {
+  private async catchUp(session: number): Promise<void> {
     const head = Number(await this.opts.rpc<string>(this.opts.rpcUrl, "eth_blockNumber", []));
     if (!Number.isFinite(head) || head <= 0) throw new Error("no block height");
     const from = Math.max(this.cursor === null ? 0 : this.cursor + 1, head - BACKFILL_BLOCKS);
     if (from > head) return;
     if (head - from > NEAR_HEAD) this.opts.log(`[bsc] reading ${head - from} blocks of four.meme logs (${Math.round(((head - from) * BLOCK_MS) / 3_600_000)} h)`);
-    await this.fill(from, head, head);
+    await this.fill(from, head, head, session);
   }
 }
 
