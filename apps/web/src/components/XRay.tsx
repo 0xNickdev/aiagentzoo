@@ -862,7 +862,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {tab === "wallets" && (
                 
           <div className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-            <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7">
+            <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7">
               <span>{t("wallet")}</span>
               <span className="hidden sm:block">{t("who")}</span>
               <span className="text-right">{t("took")}</span>
@@ -880,12 +880,12 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   id={`xr-row-${e.wallet}`}
                   type="button"
                   onClick={() => setSel(on ? null : e.wallet)}
-                  className={`tabular-nums grid w-full outline-none focus-visible:bg-white/[0.05] grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_9rem_5rem_5rem_5rem_6rem_6rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
+                  className={`tabular-nums grid w-full outline-none focus-visible:bg-white/[0.05] grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
                 >
                   <span className="flex items-center gap-2 truncate text-fg-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
-                    <Tags tags={e.tags} className="ml-1" />
+                    <Tags tags={e.tags} className="ml-1 hidden sm:inline-flex" />
                   </span>
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}
