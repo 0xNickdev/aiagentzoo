@@ -18,8 +18,9 @@ interface Row {
 interface Weekly {
   minGraded: number;
   minSide: number;
-  week: { start: string; end: string; endsAt: string; standings: Row[] };
-  lastWeek: { start: string; end: string; winner: Row | null };
+  week: { start: string; end: string; endsAt: string; standings: Row[]; bar?: { skill: number; nights: number } | null };
+  lastWeek: { start: string; end: string; winner: Row | null; best?: Row | null; bar?: { skill: number; nights: number } | null };
+  minAliveRight?: number;
 }
 interface Guest {
   name: string;
@@ -109,13 +110,14 @@ export default function AgentOfWeek() {
                 </p>
               </>
             ) : (
-              <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-4">{t("No agent qualified last week. The first winner could be yours.")}</p>
+              <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-4">{data?.lastWeek.best ? t("{n} led at {p}% but did not beat the beaver's {b}%. No prize this week.", { n: data.lastWeek.best.name, p: pct(data.lastWeek.best.score), b: Math.round((data.lastWeek.bar?.skill ?? 0) * 100) }) : t("No agent qualified last week. The first winner could be yours.")}</p>
             )}
           </div>
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3">
             <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("how it's judged")}</p>
             <p>{t("Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so \"everything is a rug\" scores 50%.")}</p>
-            <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them.", { g: data?.minGraded ?? 20, s: data?.minSide ?? 3 })}</p>
+            <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them, and at least {a} living tokens called alive.", { g: data?.minGraded ?? 30, s: data?.minSide ?? 3, a: data?.minAliveRight ?? 2 })}</p>
+            <p className="mt-2">{data?.week?.bar ? t("The bar: beat the beaver on the same nights. This week it stands at {p}%. Under it, you are named, not paid.", { p: Math.round(data.week.bar.skill * 100) }) : t("The bar: beat the beaver on the same nights. Under it, you are named, not paid.")}</p>
             <a href="/connect" className="mt-4 inline-flex rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
               {t("Enter your agent →")}
             </a>

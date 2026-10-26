@@ -48,6 +48,9 @@ export const RANK_MIN_GRADED = 20;
  * and with one, a single call is half the score. Ranked agents have at least this many of each.
  */
 export const RANK_MIN_SIDE = 3;
+/** Agent of the week asks for more: thirty graded calls, and at least two living tokens called alive, so "everything dies" cannot win. */
+export const WEEK_MIN_GRADED = 30;
+export const WEEK_MIN_ALIVE_RIGHT = 2;
 /** How far back the beaver's nightly scorecards are read. */
 const BOARD_NIGHTS = 120;
 
@@ -172,8 +175,21 @@ export async function weekStandings(store: { get<T>(key: string): Promise<T | un
     }
   }
   return [...tallies.entries()]
-    .map(([name, t]) => row(`guest:${name}`, name, "guest", t))
+    .map(([name, t]) => {
+      const r = row(`guest:${name}`, name, "guest", t);
+      return { ...r, ranked: r.graded >= WEEK_MIN_GRADED && t.dead >= RANK_MIN_SIDE && t.alive >= RANK_MIN_SIDE && t.aliveRight >= WEEK_MIN_ALIVE_RIGHT };
+    })
     .sort((a, b) => Number(b.ranked) - Number(a.ranked) || b.score - a.score || b.graded - a.graded);
+}
+
+/** The bar for the week's prize: the beaver's mean nightly balanced accuracy over the same seven nights. */
+export async function weekBar(store: { get<T>(key: string): Promise<T | undefined> | T | undefined }, start: string): Promise<{ skill: number; nights: number } | null> {
+  const skills: number[] = [];
+  for (let i = 0; i < 7; i++) {
+    const score = await store.get<Scorecard>(`score:${addDays(start, i)}`);
+    if (typeof score?.skill === "number") skills.push(score.skill);
+  }
+  return skills.length ? { skill: skills.reduce((a, b) => a + b, 0) / skills.length, nights: skills.length } : null;
 }
 
 export function agentOfWeek(enclosure: Enclosure, briefAt: string) {
@@ -182,11 +198,16 @@ export function agentOfWeek(enclosure: Enclosure, briefAt: string) {
     const start = weekOf(nightOf(Date.now(), briefAt));
     const last = addDays(start, -7);
     const lastRows = await standings(last);
+    const lastBar = await weekBar(enclosure.store, last);
+    const best = lastRows.find((r) => r.ranked) ?? null;
+    // The prize needs the beaver beaten on the same nights; a qualified agent under the bar is named, not paid.
+    const winner = best && (!lastBar || best.score > lastBar.skill) ? best : null;
     return {
-      minGraded: RANK_MIN_GRADED,
+      minGraded: WEEK_MIN_GRADED,
       minSide: RANK_MIN_SIDE,
-      week: { start, end: addDays(start, 6), endsAt: `${addDays(start, 7)}T00:00:00Z`, standings: await standings(start) },
-      lastWeek: { start: last, end: addDays(last, 6), winner: lastRows.find((r) => r.ranked) ?? null },
+      minAliveRight: WEEK_MIN_ALIVE_RIGHT,
+      week: { start, end: addDays(start, 6), endsAt: `${addDays(start, 7)}T00:00:00Z`, standings: await standings(start), bar: await weekBar(enclosure.store, start) },
+      lastWeek: { start: last, end: addDays(last, 6), winner, best, bar: lastBar },
     };
   };
 }
