@@ -14,7 +14,12 @@ import { type BotLang, botLang, chatLang, inLang, setChatLang, T, TC } from "./t
  */
 
 const API = "https://api.telegram.org";
-const MINT = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
+/** A token or wallet on Solana (base58) or BNB Chain (0x and forty hex digits). */
+const MINT = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
+const MINT_ONLY = /^(?:0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
+const isBsc = (a: string) => /^0x[0-9a-fA-F]{40}$/.test(a);
+const explorerTx = (tx: string) => (tx.startsWith("0x") ? `https://bscscan.com/tx/${tx}` : `https://solscan.io/tx/${tx}`);
+const chart = (mint: string) => (isBsc(mint) ? `https://dexscreener.com/bsc/${mint}` : `https://dexscreener.com/solana/${mint}`);
 const WATCH_MAX = 5;
 const SITE = "https://zooaiagency.com";
 const TOKEN_CA = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -31,7 +36,13 @@ type Button = { text: string; callback_data?: string; url?: string; web_app?: { 
 type Keyboard = Button[][];
 
 /** One row of the trade terminals people use, each opening this mint straight away. */
-const terminals = (mint: string): Button[] => [
+const terminals = (mint: string): Button[] => isBsc(mint) ? [
+  { text: "GMGN", url: `https://gmgn.ai/bsc/token/${mint}` },
+  { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=56&address=${mint}` },
+  { text: "four.meme", url: `https://four.meme/token/${mint}` },
+  { text: "PancakeSwap", url: `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc` },
+  { text: "DexScreener", url: `https://dexscreener.com/bsc/${mint}` },
+] : [
   { text: "Axiom", url: `https://axiom.trade/t/${mint}` },
   { text: "GMGN", url: `https://gmgn.ai/sol/token/${mint}` },
   { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
@@ -182,9 +193,9 @@ export async function setWatch(store: StateStore, chat: number, mint: string, on
 const WELCOME_LINES = [
   "<b>Welcome to ZOOAI AGENCY.</b>",
   "",
-  "See who you're buying from: paste any Solana token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.",
+  "See who you're buying from: paste any Solana or BNB Chain token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.",
   "",
-  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana and gets graded by reality the next day. In public.",
+  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana, four.meme straight from BNB Chain, and gets graded by reality the next day. In public.",
   "",
   "<b>What I can do for you:</b>",
   "· X-Ray any token: who bought in the first 5 seconds, and who they are",
@@ -328,7 +339,7 @@ export function xrayMessage(x: XRayReply): string {
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
+  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora", fourmeme: "four.meme" }[f?.platform ?? f?.venue ?? ""] ?? (isBsc(x.mint) ? "four.meme" : "pump.fun");
   const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
@@ -389,13 +400,13 @@ function askKeyboard(a: Ask): Keyboard {
       { text: T("Watch it"), callback_data: `watch:${a.mint}` },
       { text: T("Card & record"), url: `${SITE}/ask#${a.id}` },
     ],
-    [{ text: T("Chart"), url: a.facts.url ?? `https://dexscreener.com/solana/${a.mint}` }],
+    [{ text: T("Chart"), url: a.facts.url ?? chart(a.mint) }],
   ];
 }
 
 export function alertMessage(e: PulseEvent): string {
   const icon = e.kind === "dump" || e.kind === "drained" ? "🔴" : e.kind === "graduated" ? "🟢" : "⚪️";
-  const tx = e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : "";
+  const tx = e.tx ? ` · <a href="${explorerTx(e.tx)}">tx</a>` : "";
   return `${icon} <b>$${esc(e.symbol)}</b>: ${esc(TC(e.text))}${tx}\n<code>${e.mint}</code>`;
 }
 
@@ -488,7 +499,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
     try {
       const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
-      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
+      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), isBsc(mint) ? undefined : [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
@@ -621,7 +632,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
   };
 
   const prompt = (chat: number, what: "ask" | "dev" | "xray") =>
-    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a token to x-ray: pump.fun, LaunchLab or Meteora." : "Send me a token address or a pump.fun link."), undefined, {
+    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a token to x-ray: pump.fun, LaunchLab, Meteora or four.meme." : "Send me a token address or a pump.fun link."), undefined, {
       reply_markup: { force_reply: true, input_field_placeholder: T(what === "dev" ? "wallet address" : "token address or link") },
     });
 
@@ -660,7 +671,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       return void send(chat, [`<b>${T("Dev {w}", { w: short(r.wallet) })}</b> · ${creatorLine(r)}`, line ? `${T("last:")} $${esc(r.recent[0]!.symbol)} · ${line}` : ""].filter(Boolean).join("\n"), full(`d-${address}`), reply);
     }
     const x = await north<XRayReply>(`/v1/xray/${address}`);
-    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), undefined, reply);
+    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), undefined, reply);
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
@@ -676,7 +687,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const [head = "", ...rest] = text.split(/\s+/);
     const cmd = head.startsWith("/") ? head.toLowerCase().replace(`@${botName.toLowerCase()}`, "") : "";
     const arg = rest.join(" ");
-    const address = (cmd ? arg : text).match(MINT)?.[0];
+    const found = (cmd ? arg : text).match(MINT)?.[0];
+    const address = found && isBsc(found) ? found.toLowerCase() : found;
     const who = `tg:${msg.from?.id ?? chat}`;
     // A group gets the short x-ray and dev check only, rate limited; the rest of the bot lives in private.
     if (!isPrivate) return groupReply(msg, cmd, address);
@@ -690,10 +702,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
         // t.me/<bot>?start=link-<code> from the site links the chat in one tap.
         if (arg.startsWith("link-")) return link(chat, arg.slice(5));
         // t.me/<bot>?start=w-<mint> from an x-ray on the site: watch that token in one tap.
-        if (arg.startsWith("w-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return watch(chat, arg.slice(2), true);
+        if (arg.startsWith("w-") && MINT_ONLY.test(arg.slice(2))) return watch(chat, arg.slice(2), true);
         // "Full report" from a group: the whole x-ray or dev record, here in private.
-        if (arg.startsWith("x-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return xray(chat, arg.slice(2));
-        if (arg.startsWith("d-") && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(arg.slice(2))) return dev(chat, arg.slice(2));
+        if (arg.startsWith("x-") && MINT_ONLY.test(arg.slice(2))) return xray(chat, arg.slice(2));
+        if (arg.startsWith("d-") && MINT_ONLY.test(arg.slice(2))) return dev(chat, arg.slice(2));
         return welcome(chat, msg.from?.first_name);
       case "/app":
         return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);
@@ -744,7 +756,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return switchLang(chat);
       default:
         // In a private chat, a pasted address is a question.
-        if (isPrivate && address) return ask(chat, who, address);
+        if (isPrivate && address) return isBsc(address) ? xray(chat, address) : ask(chat, who, address);
         if (isPrivate) return void send(chat, T("Paste a token address or a pump.fun link, or pick from the menu."), menu());
     }
   };
@@ -772,11 +784,11 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "prompt":
         return prompt(chat, value === "dev" ? "dev" : value === "xray" ? "xray" : "ask");
       case "ask":
-        return MINT.test(value) ? ask(chat, `tg:${q.from.id}`, value) : undefined;
+        return MINT_ONLY.test(value) ? (isBsc(value) ? xray(chat, value) : ask(chat, `tg:${q.from.id}`, value)) : undefined;
       case "watch":
-        return MINT.test(value) ? watch(chat, value, true) : undefined;
+        return MINT_ONLY.test(value) ? watch(chat, value, true) : undefined;
       case "unwatch":
-        return MINT.test(value) ? watch(chat, value, false) : undefined;
+        return MINT_ONLY.test(value) ? watch(chat, value, false) : undefined;
       case "rugs":
         return rugs(chat);
       case "clean":
@@ -798,10 +810,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
       await call("setMyCommands", { commands: zh(list as typeof COMMANDS), scope, language_code: "zh" }).catch(() => null);
     }
     await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open", web_app: { url: APP_URL } } }).catch(() => null);
-    await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana token. Free." }).catch(() => null);
+    await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana or BNB Chain token. Free." }).catch(() => null);
     await call("setMyDescription", {
       description:
-        "ZOOAI AGENCY: AI agents that read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
+        "ZOOAI AGENCY: AI agents that read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana, and every four.meme launch straight from BNB Chain.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
     }).catch(() => null);
     log(`[telegram] bot @${botName || "?"} listening`);
   };

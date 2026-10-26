@@ -35,6 +35,8 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^wallet's (\d+)(?:st|nd|rd|th) launch today$/, (m) => `该钱包今天第 ${m[1]} 次发币`],
   [/^\+([\d.]+) SOL buy after graduation$/, (m) => `毕业后 +${m[1]} SOL 大单买入`],
   [/^\+([\d.]+) SOL buy$/, (m) => `+${m[1]} SOL 大单买入`],
+  [/^\+([\d.]+) BNB buy$/, (m) => `+${m[1]} BNB 大单买入`],
+  [/^not a launch from four\.meme in the last two days, so there is no chain record to check$/, () => "不是过去两天里在 four.meme 上发的币，所以没有链上记录可查"],
   [/^graduated$/, () => "已毕业"],
   [/^new launch$/, () => "新币上线"],
   // The creator check's reasons and notes (apps/node/src/chain/check.ts).
@@ -69,7 +71,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^pass means .*$/, () => "通过只代表链上没看到开发者砸盘、捆绑、开发者小号、狙击手囤货、连环发币或内盘归零，不代表会涨"],
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],
-  [/^holders could not be read from Solana right now$/, () => "暂时无法从 Solana 读取持币者"],
+  [/^holders could not be read from (Solana|BNB Chain) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
   [/^the chain stream is down right now: .*$/, () => "链上数据流暂时中断：结果可能不是最新的"],
 ];
 
@@ -287,13 +289,13 @@ export const BOT_ZH: Record<string, string> = {
   "<b>Who paid for the creator:</b> a withdrawal from {x}": "<b>谁给开发者打的钱：</b>从 {x} 提的币",
   "<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h": "<b>谁给开发者打的钱：</b><code>{w}</code> · 还资助了 {n} 个开发者，48 小时砸盘 {d} 次",
   "The chain reader is not reachable right now. Try again in a minute.": "链上读取节点暂时连不上，一分钟后再试。",
-  "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora）。",
+  "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora、four.meme）。",
   "Ask the beaver instead": "改问河狸",
   "Too many x-rays right now. Try again in a minute.": "现在透视的人太多，一分钟后再试。",
   "Open the map": "打开地图",
-  "Send me a token to x-ray: pump.fun, LaunchLab or Meteora.": "发给我一个要透视的代币：pump.fun、LaunchLab 或 Meteora。",
+  "Send me a token to x-ray: pump.fun, LaunchLab, Meteora or four.meme.": "发给我一个要透视的代币：pump.fun、LaunchLab、Meteora 或 four.meme。",
   "· X-Ray any token: who bought in the first 5 seconds, and who they are": "· 透视任何代币：开盘前 5 秒谁买了，他们是谁",
   "/xray &lt;token&gt; · who bought in the first 5 seconds, and who they are": "/xray &lt;代币&gt; · 开盘前 5 秒谁买了，他们是谁",
-  "See who you're buying from: paste any Solana token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.": "看清你从谁手里买：粘贴任何 Solana 代币，我会告诉你开发者自己的小号、开盘前五秒的狙击手，以及是谁给他们打的钱。免费。",
-  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana and gets graded by reality the next day. In public.": "背后是一座 AI 智能体动物园：直接从 Solana 链上读取 pump.fun、Raydium LaunchLab 和 Meteora，第二天由市场公开打分。",
+  "See who you're buying from: paste any Solana or BNB Chain token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.": "看清你从谁手里买：粘贴任何 Solana 或 BNB Chain 代币，我会告诉你开发者自己的小号、开盘前五秒的狙击手，以及是谁给他们打的钱。免费。",
+  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana, four.meme straight from BNB Chain, and gets graded by reality the next day. In public.": "背后是一座 AI 智能体动物园：直接从 Solana 链上读取 pump.fun、Raydium LaunchLab 和 Meteora，从 BNB Chain 读取 four.meme，第二天由市场公开打分。",
 };
