@@ -20,15 +20,16 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
   {
     label: "Product",
     items: [
+      // Most used first: the check itself, where traders already are, then what to watch, then the rest.
       { label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
+      { label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun, four.meme" },
       { label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
-      { label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun" },
       { label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
-      { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
       { label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
+      { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
+      { label: "Stats", href: "/stats", note: "our numbers, live" },
       { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
       { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
-      { label: "Stats", href: "/stats", note: "our numbers, live" },
     ],
   },
   {

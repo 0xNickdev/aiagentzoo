@@ -116,7 +116,7 @@ function ParticleArt() {
       if (cancelled || !webglOk()) return;
       stop = startScene(el, {
         north: NORTH,
-        captions: [t("Every launch on Solana, read as it happens."), t("We keep watching the dev, coin after coin.")],
+        captions: [t("Every launch on Solana, BNB Chain and Base, read as it happens."), t("We keep watching the dev, coin after coin.")],
         netCaption: (dev, launches, dumped, regs, rank) =>
           rank === 1
             ? t("The loudest dev right now: {dev} · {n} launches in 48 hours, {d} dumped · {r} wallets that buy their launches", { dev, n: launches, d: dumped, r: regs })
@@ -165,7 +165,7 @@ function HeroStats({ chain }: { chain: Chain | null }) {
   const avoid = useTicker(rec?.flaggedAvoid.n ?? null);
   const checks = useTicker(usage ? usage.last7.checks + usage.last7.xrays : null);
   const cells: Array<[string, string]> = [
-    [trades != null ? full(trades) : "-", t("trades read from Solana")],
+    [trades != null ? full(trades) : "-", t("trades read on 3 chains")],
     [launched != null ? full(launched) : "-", t("launches watched")],
     [avoid != null ? compact(avoid) : "-", t("launches flagged avoid, last 24h")],
     [checks != null ? compact(checks) : "-", t("checks people ran this week")],
@@ -231,7 +231,7 @@ export default function Hero() {
             )}
           </motion.h1>
           <motion.p {...rise(0.35)} className="mt-6 max-w-xl text-[17px] leading-relaxed text-[#d9dddb] sm:text-lg">
-            {t("Paste any Solana token. In a second you see the dev's other launches, who sniped the first seconds, who paid for them and when they sold. Free, read straight from the chain.")}
+            {t("Paste any token from Solana, BNB Chain or Base. In a second you see the dev's other launches, who sniped the first seconds, who paid for them and when they sold. Free, read straight from the chain.")}
           </motion.p>
 
           <motion.form

@@ -30,13 +30,14 @@ function useNorth<T>(path: string): T | null {
 
 /** Four numbers straight from the nodes, set big: the chain we read, and what people do with it. */
 export function NumbersBand() {
-  const chain = useNorth<{ seen: { launches: number; trades: number; launchlab?: number; dbc?: number } }>("/v1/chain");
+  type Seen = { seen: { launches: number; trades: number } };
+  const chain = useNorth<{ seen: { launches: number; trades: number; launchlab?: number; dbc?: number }; bsc?: Seen; base?: Seen }>("/v1/chain");
   const usage = useNorth<{ days: Array<{ xrays: number; checks: number }> }>("/v1/usage");
   const rec = useNorth<{ flaggedAvoid: { n: number } }>("/v1/check/record");
   const sum = (k: "xrays" | "checks") => (usage ? usage.days.reduce((s, d) => s + d[k], 0) : null);
   const cells: Array<[string | null, string]> = [
-    [chain ? compact(chain.seen.trades) : null, t("trades read from Solana")],
-    [chain ? compact(chain.seen.launches + (chain.seen.launchlab ?? 0) + (chain.seen.dbc ?? 0)) : null, t("launches watched")],
+    [chain ? compact(chain.seen.trades + (chain.bsc?.seen.trades ?? 0) + (chain.base?.seen.trades ?? 0)) : null, t("trades read on 3 chains")],
+    [chain ? compact(chain.seen.launches + (chain.seen.launchlab ?? 0) + (chain.seen.dbc ?? 0) + (chain.bsc?.seen.launches ?? 0) + (chain.base?.seen.launches ?? 0)) : null, t("launches watched")],
     [rec ? compact(rec.flaggedAvoid.n) : null, t("launches flagged avoid, last 24h")],
     [sum("checks") != null ? compact((sum("checks") ?? 0) + (sum("xrays") ?? 0)) : null, t("checks people ran this week")],
   ];

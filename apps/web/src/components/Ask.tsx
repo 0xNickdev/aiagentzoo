@@ -337,7 +337,7 @@ export default function AskPage() {
             <span className="accent">{t("Ask the beaver.")}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
-            {t("Paste any Solana token, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.")}{" "}
+            {t("Paste any token from Solana, BNB Chain or Base, or a creator's wallet to see how often it rugs. The beaver judges a token with the same playbook it uses every night, from the market and, for fresh pump.fun tokens, straight from the chain.")}{" "}
             {t("Tomorrow its answer is checked against what the token actually did. Signed on the public log either way.")}
           </p>
         </Reveal>
