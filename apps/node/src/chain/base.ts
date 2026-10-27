@@ -39,6 +39,8 @@ const BLOCK_MS = 2_000;
 export const BACKFILL_BLOCKS = Math.round((48 * 3_600_000) / BLOCK_MS);
 /** publicnode answers eth_getLogs over ten thousand blocks at a time, two days back; drpc's free plan stops at ten thousand too. */
 const CHUNK = 9_999;
+/** ...and takes at most ten addresses in one filter over HTTP (the socket takes thousands). */
+const ADDRESSES_PER_CALL = 10;
 const STALL_MS = 5 * 60_000;
 /** Clanker v4 mints a hundred billion of every token. */
 export const CLANKER_SUPPLY = 100_000_000_000;
@@ -499,22 +501,30 @@ export class BaseFeed {
         if (launch) await this.onCreate(launch, Date.now());
       }
       const poolIds = [...this.pools.keys()];
+      // The transfers asked for are those of the tokens that traded in the chunk: they name each swap's trader. A
+      // plain move of a token nobody traded that hour is the lesser record, and ten addresses a call is the limit.
+      const traded = new Set<string>();
       if (poolIds.length) {
         const swaps = await this.getLogs({ ...range, address: POOL_MANAGER, topics: [TOPIC.swap, poolIds] });
         if (session !== this.sessions) return;
-        for (const log of swaps) this.onLog(log);
-      }
-      const mints = this.tape.mints();
-      if (mints.length) {
-        try {
-          const transfers = await this.getLogs({ ...range, address: mints, topics: [TRANSFER_TOPIC] }, 2);
-          if (session !== this.sessions) return;
-          for (const log of transfers) this.onLog(log);
-        } catch (error) {
-          // Positions are the lesser record: a chunk without its transfers still has its trades.
-          this.opts.log(`[base] transfers ${start}..${end} not read: ${(error as Error).message?.slice(0, 80)}`);
+        for (const log of swaps) {
+          const pool = this.pools.get(log.topics[1]?.toLowerCase() ?? "");
+          if (pool) traded.add(pool.mint);
+          this.onLog(log);
         }
       }
+      const mints = [...traded];
+      let missed = 0;
+      for (let i = 0; i < mints.length; i += ADDRESSES_PER_CALL) {
+        try {
+          const transfers = await this.getLogs({ ...range, address: mints.slice(i, i + ADDRESSES_PER_CALL), topics: [TRANSFER_TOPIC] }, 2);
+          if (session !== this.sessions) return;
+          for (const log of transfers) this.onLog(log);
+        } catch {
+          missed += 1;
+        }
+      }
+      if (missed) this.opts.log(`[base] transfers ${start}..${end}: ${missed} of ${Math.ceil(mints.length / ADDRESSES_PER_CALL)} reads failed; those swaps name their router`);
       this.settle(Date.now(), true);
       if (this.cursor === null || end > this.cursor) this.cursor = end;
       if (++chunks % 3 === 0) this.opts.log(`[base] backfill ${Math.round(((end - from) / Math.max(1, to - from)) * 100)}%: ${this.tape.status().tracked} tokens`);
