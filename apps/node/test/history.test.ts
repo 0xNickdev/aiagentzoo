@@ -211,3 +211,41 @@ test("a dev's launch keeps its caps and the dev's habits are read from them, liv
     setSolUsd(null);
   }
 });
+
+test("cabals: wallets tied by a funder, by crew hits or by a repeated launch block form one numbered set with its record", async () => {
+  const { CabalIndex } = await import("../src/chain/cabals.ts");
+  const { store, done } = tempStore();
+  try {
+    const t = new PumpTape();
+    const t0 = Date.now() - 30 * 60_000;
+    const DEV2 = pad("Dev2");
+    const DEV3 = pad("Dev3");
+    // Dev and Dev2 share a funder; Dev3 stands alone; the sniper is Dev's crew (in the first seconds twice).
+    launch(t, pad("Mint1"), t0);
+    launch(t, pad("Mint2"), t0 + 60_000);
+    t.apply({ kind: "create", name: "two", symbol: "TWO", mint: pad("Mint3"), creator: DEV2, ts: t0 + 120_000 }, t0 + 120_000, "tx5", 500);
+    t.apply({ kind: "create", name: "three", symbol: "THR", mint: pad("Mint4"), creator: DEV3, ts: t0 + 130_000 }, t0 + 130_000, "tx6", 600);
+    for (const mint of [pad("Mint1"), pad("Mint2"), pad("Mint3"), pad("Mint4")]) {
+      const rec = t.historyOf(mint)!;
+      store.enqueue({ ...rec, funder: rec.creator === DEV || rec.creator === DEV2 ? pad("Fund") : null });
+    }
+    store.flush();
+    const index = new CabalIndex(store.db);
+    assert.equal(await index.build(Date.now()), 1);
+    const c = index.top()[0]!;
+    assert.ok(c.wallets >= 3, `wallets ${c.wallets}`);
+    const members = c.members.map((m) => m.wallet);
+    assert.ok(members.includes(DEV) && members.includes(DEV2), members.join(","));
+    assert.ok(!members.includes(DEV3));
+    assert.equal(index.of(DEV), c.id);
+    assert.equal(index.of(DEV3), null);
+    assert.ok(c.launches >= 3 && c.dumped >= 2, `${c.launches} ${c.dumped}`);
+    // Built again: the same number.
+    await index.build(Date.now() + 1);
+    assert.equal(index.top()[0]!.id, c.id);
+    assert.equal(new CabalIndex(store.db).of(DEV2), c.id);
+  } finally {
+    store.close();
+    done();
+  }
+});

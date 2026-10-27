@@ -20,6 +20,7 @@ import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll, tagsOf } from "./chain/tags.ts";
+import type { CabalIndex } from "./chain/cabals.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
@@ -68,6 +69,8 @@ export interface ServerOptions {
   evolution?: { briefAt: string };
   /** The chain's long memory on the north node: tokens and wallets for 90 days, after the tape forgets them. */
   history?: HistoryStore;
+  /** Cabals read from that memory: wallets that launch, snipe and fund together. */
+  cabals?: CabalIndex;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -106,7 +109,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks, cabals }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
@@ -130,6 +133,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   };
   /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
   const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
+  /** Tags plus the cabal each wallet belongs to, when it does. */
+  const withCabal = <T extends { wallet: string }>(list: T[]) => (cabals ? list.map((w) => ({ ...w, cabal: cabals.of(w.wallet) })) : list);
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
@@ -557,10 +562,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             creator: past.creator,
             createdAt: past.createdAt,
             check,
-            early: tagAll(past.early, kept),
+            early: withCabal(tagAll(past.early, kept)),
             creatorRecord: preferHistory(past.creatorRecord, past.creator),
             funding: funding ?? null,
-            bundle: { wallets: tagAll(past.bundle, kept), funding: bundle },
+            bundle: { wallets: withCabal(tagAll(past.bundle, kept)), funding: bundle },
             socials: linked,
             ...memory,
             access: tier,
@@ -578,13 +583,27 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           creator: found.creator,
           createdAt: found.createdAt,
           check,
-          early: tagAll(chainTape.earlyOf(mint) ?? [], kept),
+          early: withCabal(tagAll(chainTape.earlyOf(mint) ?? [], kept)),
           creatorRecord: preferHistory(found.creatorRecord, found.creator),
           funding: funding ?? null,
-          bundle: { wallets: tagAll(found.bundle, kept), funding: bundle },
+          bundle: { wallets: withCabal(tagAll(found.bundle, kept)), funding: bundle },
           socials: linked,
           access: tier,
         });
+      }
+      // Cabals: the wallets that work as one hand, from the long memory.
+      if (req.method === "GET" && path === "/v1/cabals") {
+        if (!cabals) return json(res, 404, { error: "this node keeps no chain history; use the north node" });
+        res.setHeader("cache-control", "public, max-age=300");
+        return json(res, 200, { builtAt: cabals.builtAt || null, count: cabals.count(), cabals: cabals.top(clampInt(url.searchParams.get("limit"), 50, 1, 200)).map((c) => ({ ...c, members: c.members.slice(0, 8) })) });
+      }
+      const cabalOf = /^\/v1\/cabal\/(\d{1,9})$/.exec(path);
+      if (req.method === "GET" && cabalOf) {
+        if (!cabals) return json(res, 404, { error: "this node keeps no chain history; use the north node" });
+        const c = cabals.get(Number(cabalOf[1]));
+        if (!c) return json(res, 404, { error: "no cabal with this number" });
+        res.setHeader("cache-control", "public, max-age=120");
+        return json(res, 200, { ...c, live: cabals.live(c.id, tape).concat(cabals.live(c.id, bscTape)) });
       }
       const creatorOf = ROUTE.creator.exec(path);
       if (req.method === "GET" && creatorOf) {
@@ -638,7 +657,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // The wallet's tags, from what it did on the tape and in the long memory: the same marks the x-ray shows.
         const tags = tagsOf({ wallet: w, snipes48h: sniper?.snipes48h ?? 0, serial: (sniper?.snipes48h ?? 0) >= 10 }, kept(w));
         if (funded.hot && !tags.includes("exchange")) tags.push("exchange");
-        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, tags, checkedAt: Date.now() });
+        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, tags, cabal: cabals?.of(w) ?? null, checkedAt: Date.now() });
       }
       const bundleOf = ROUTE.bundle.exec(path);
       if (req.method === "GET" && bundleOf) {

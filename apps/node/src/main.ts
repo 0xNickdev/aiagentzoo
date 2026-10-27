@@ -24,6 +24,7 @@ import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { BscFeed, bscLineage, bscTape, recordFourMeme } from "./chain/bsc.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
+import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -156,6 +157,9 @@ if (bscFeed) {
   };
 }
 const stopBsc = bscFeed?.start() ?? null;
+// Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
+const cabals = history ? new CabalIndex(history.db) : null;
+const stopCabals = cabals ? startCabals(cabals, { log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);
 const stopStream =
@@ -270,6 +274,7 @@ const server = createNodeServer({
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
+  ...(cabals ? { cabals } : {}),
   buybacks: () => buybackView(enclosure.store, feeHot, feeTreasury || null, Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1)),
   visitor: {
     agents: visitorAgents,
@@ -306,6 +311,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       try {
         stopHistory?.();
         stopBscHistory?.();
+        stopCabals?.();
         stopBuyback?.();
         history?.close();
       } catch {
