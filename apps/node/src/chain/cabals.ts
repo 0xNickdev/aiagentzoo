@@ -30,6 +30,9 @@ const MIN_WALLETS = 3;
 /** A wallet this busy is a platform or a bot that touches everything, not a member: it ties no one together. */
 const HUB_LAUNCHES = 150;
 const HUB_SNIPES = 150;
+/** No cabal is bigger than this: when one is, the most-tied wallets are hubs and are taken out, until it fits. */
+const MAX_WALLETS = 400;
+const DEGREE_STEPS = [40, 24, 16, 10, 6, 4];
 const MEMBERS_KEPT = 200;
 const SLICE = 400;
 const F_RING = 4;
@@ -135,8 +138,9 @@ export class CabalIndex {
       const hubs = new Set<number>();
       for (const r of this.db.prepare("SELECT id, wallet, launches, snipes FROM wallets WHERE launches >= ? OR snipes >= ?").all(HUB_LAUNCHES, HUB_SNIPES) as Array<{ id: number; wallet: string; launches: number; snipes: number }>) hubs.add(Number(r.id));
       for (const r of this.db.prepare("SELECT id, wallet FROM wallets").all() as Array<{ id: number; wallet: string }>) if (deployerOf(r.wallet) || hot(r.wallet)) hubs.add(Number(r.id));
+      const edges: Array<[number, number]> = [];
       const tie = (a: number, b: number) => {
-        if (!hubs.has(a) && !hubs.has(b)) uf.union(a, b);
+        if (a !== b && !hubs.has(a) && !hubs.has(b)) edges.push([a, b]);
       };
       await pause();
       // Ties through a funder: every creator a wallet paid for, unless that wallet is everyone's.
@@ -179,12 +183,32 @@ export class CabalIndex {
         }
         await pause();
       }
-      // The sets, with each member's record.
+      // The sets: a wallet tied to more others than a step allows is a hub for that pass; the steps tighten until no
+      // set is bigger than MAX_WALLETS, so a few bridge wallets never fold every cabal into one.
+      let sets = new Map<number, number[]>();
+      for (const step of [Infinity, ...DEGREE_STEPS]) {
+        const degree = new Map<number, Set<number>>();
+        for (const [a, b] of edges) {
+          (degree.get(a) ?? degree.set(a, new Set()).get(a)!).add(b);
+          (degree.get(b) ?? degree.set(b, new Set()).get(b)!).add(a);
+        }
+        const out = new Set<number>();
+        for (const [w, d] of degree) if (d.size > step) out.add(w);
+        const pass = new UnionFind();
+        for (const [a, b] of edges) if (!out.has(a) && !out.has(b)) pass.union(a, b);
+        sets = pass.members();
+        let largest = 0;
+        for (const m of sets.values()) largest = Math.max(largest, m.length);
+        await pause();
+        if (largest <= MAX_WALLETS) break;
+      }
+      void uf;
+      // Each set with its members' record.
       const walletOf = this.db.prepare("SELECT wallet, launches, dumped, snipes, crew_hits, bundle_hits, first_seen, last_seen FROM wallets WHERE id = ?");
       const graduatedOf = this.db.prepare("SELECT count(*) AS n FROM tokens WHERE creator_id = ? AND graduated_at IS NOT NULL");
       const built: Array<{ key: number; cabal: Omit<Cabal, "id">; walletIds: number[] }> = [];
       let n = 0;
-      for (const [, ids] of uf.members()) {
+      for (const [, ids] of sets) {
         if (ids.length < MIN_WALLETS) continue;
         const members: Cabal["members"] = [];
         let launches = 0, dumped = 0, graduated = 0, snipes = 0, firstSeen = Infinity, lastSeen = 0;
