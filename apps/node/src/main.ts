@@ -22,7 +22,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
-import { BscFeed, bscTape } from "./chain/bsc.ts";
+import { BscFeed, bscLineage, bscTape } from "./chain/bsc.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
@@ -146,7 +146,7 @@ if (config.role === "north") {
 const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // The same long memory keeps four.meme launches: addresses never collide across the two chains.
-const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
+const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { funderOf: (c) => bscLineage.funderOf(c), log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
 const stopBsc = bscFeed?.start() ?? null;
 // North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);

@@ -345,3 +345,49 @@ test("holders on BNB Chain: the position book ranks what the feed saw, the chain
   // A node that answers nothing: null, not a report of zeros.
   assert.equal(await bscHolderReport("0x0000000000000000000000000000000000000002", null, [], { call: async () => { throw new Error("down"); } }), null);
 });
+
+test("funders on BNB Chain: the creator's first incoming BNB names the funder; the funder's other transfers name the siblings; an exchange ties no one", async () => {
+  const { BscLineage } = await import("../src/chain/bscFunders.ts");
+  const tape = new PumpTape("BNB");
+  const FUNDER = "0x1111111111111111111111111111111111111111";
+  const OTHER = "0x2222222222222222222222222222222222222222";
+  const t0 = Math.floor(Date.now() / 1000) - 3600;
+  // Two launches from the sibling, both dumped.
+  for (const [i, mint] of ["0x00000000000000000000000000000000000000a1", "0x00000000000000000000000000000000000000a2"].entries()) {
+    tape.apply({ kind: "create", name: "s", symbol: "S", mint, creator: OTHER, ts: (t0 + i) * 1000, venue: "fourmeme" }, (t0 + i) * 1000, `0xs${i}`, 10 + i);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 50_000_000, isBuy: true, user: OTHER, ts: (t0 + i) * 1000, curveSol: null }, (t0 + i) * 1000, `0xs${i}`, 10 + i);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 50_000_000, isBuy: false, user: OTHER, ts: (t0 + i + 60) * 1000, curveSol: null }, (t0 + i + 60) * 1000, `0xd${i}`, 100 + i);
+  }
+  const calls: string[] = [];
+  const f = (async (url: string) => {
+    calls.push(url);
+    const u = new URL(url);
+    const address = u.searchParams.get("address")!;
+    const sort = u.searchParams.get("sort");
+    const body = (result: unknown) => new Response(JSON.stringify({ status: "1", message: "OK", result }), { status: 200 });
+    if (address === CREATOR && sort === "asc") return body([{ from: FUNDER, to: CREATOR, value: String(2e17), timeStamp: String(t0 - 100), hash: "0xf1" }, { from: CREATOR, to: TOKEN_MANAGER2, value: "0", timeStamp: String(t0), hash: "0xf2" }]);
+    if (address === FUNDER && sort === "desc") return body([{ from: FUNDER, to: OTHER, value: String(1e17), timeStamp: String(t0 - 50), hash: "0xf3" }, { from: FUNDER, to: CREATOR, value: String(2e17), timeStamp: String(t0 - 100), hash: "0xf1" }]);
+    if (address === SNIPER && sort === "asc") return body([{ from: "0x8894e0a0c962cb723c1976a4421c95949be2d4e3", to: SNIPER, value: String(1e18), timeStamp: String(t0), hash: "0xf4" }]);
+    return body([]);
+  }) as unknown as typeof fetch;
+  const lineage = new BscLineage(tape, f, () => "key");
+  assert.equal(lineage.view(CREATOR), undefined);
+  const v = (await lineage.trace(CREATOR))!;
+  assert.equal(v.funder, FUNDER);
+  assert.equal(v.funderIsHot, false);
+  assert.deepEqual(v.siblings, [{ wallet: OTHER, launches48h: 2, dumped: 2 }]);
+  assert.equal(v.siblingDumped48h, 2);
+  assert.equal(calls.length, 2);
+  // Kept: no more calls for the same creator.
+  await lineage.trace(CREATOR);
+  assert.equal(calls.length, 2);
+  assert.equal(lineage.funderOf(CREATOR), FUNDER);
+  // Funded from Binance: hot, labelled, no siblings, and no second call.
+  const b = (await lineage.trace(SNIPER))!;
+  assert.equal(b.funderIsHot, true);
+  assert.equal(b.funderLabel, "Binance");
+  assert.deepEqual(b.siblings, []);
+  assert.equal(calls.length, 3);
+  // No key: nothing.
+  assert.equal(await new BscLineage(tape, f, () => undefined).trace(CREATOR), null);
+});

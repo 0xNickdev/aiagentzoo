@@ -1,5 +1,6 @@
 import { PumpTape, type PumpEvent } from "./pump.ts";
 import { bscBook, type PositionBook } from "./bscHolders.ts";
+import { BscLineage } from "./bscFunders.ts";
 
 /**
  * BNB Chain, read the same way as Solana: four.meme's TokenManager2 writes a log for every launch, buy, sell and
@@ -446,3 +447,5 @@ export class FourMemeInfo {
 /** The one BNB Chain tape per node process, next to the Solana one. */
 export const bscTape = new PumpTape("BNB");
 export const fourMeme = new FourMemeInfo();
+/** Who paid for which four.meme creator, through BscScan when a key is set. */
+export const bscLineage = new BscLineage(bscTape);

@@ -17,7 +17,8 @@ import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
-import { bscTape, fourMeme } from "./chain/bsc.ts";
+import { bscLineage, bscTape, fourMeme } from "./chain/bsc.ts";
+import { bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll } from "./chain/tags.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
@@ -482,7 +483,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
               deep && bsc && found && bscBook.has(mint)
               ? within(bscHolderReport(mint, found.creator, bscBook.top(mint)))
               : Promise.resolve(undefined),
-          deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
+          deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator)
+            ? within(lineage.trace(found.creator))
+            : deep && found && bsc && bscFundersEnabled() && !bscLineage.view(found.creator)
+              ? within(bscLineage.trace(found.creator))
+              : Promise.resolve(null),
           // The pool's SOL as it is now, not as the last trade the tape saw left it.
           pool ? within(poolSolOf(pool)) : Promise.resolve(null),
         ]);
@@ -494,6 +499,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (found && !bsc && fundersEnabled()) {
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
+        } else if (found && bsc && bscFundersEnabled()) {
+          funding = bscLineage.view(found.creator);
+          if (!funding) bscLineage.enqueue(found.creator);
         }
         if (past && !bsc) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
         const linked = (found || past) && !bsc ? socials.forMint(mint) : [];
@@ -512,7 +520,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             const dev = kept ? { launches: kept.launches, dumped: kept.dumped } : null;
             const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream });
             let funded: LineageView | null = null;
-            if (!bsc && fundersEnabled()) {
+            if (bsc && bscFundersEnabled()) {
+              funded = bscLineage.view(origin.creator) ?? null;
+              if (!funded) bscLineage.enqueue(origin.creator);
+            } else if (!bsc && fundersEnabled()) {
               funded = lineage.view(origin.creator);
               if (!funded) lineage.enqueue(origin.creator, true);
             }
@@ -607,7 +618,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
         const dev = tapeOf(w).creatorProfile(w);
         let funding: LineageView | null = null;
-        if (dev && !bsc && fundersEnabled()) {
+        if (dev && bsc && bscFundersEnabled()) {
+          funding = bscLineage.view(w) ?? null;
+          if (!funding) bscLineage.enqueue(w);
+        } else if (dev && !bsc && fundersEnabled()) {
           funding = lineage.view(w);
           if (!funding) lineage.enqueue(w, true);
         }
