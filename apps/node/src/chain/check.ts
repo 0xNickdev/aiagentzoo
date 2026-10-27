@@ -33,6 +33,8 @@ export type RiskScore = number | null;
 export interface TokenCheck {
   version: number;
   mint: string;
+  /** Which chain the address was read on: a 0x address is BNB Chain or Base, and the shape alone cannot say. */
+  chain: Chain;
   symbol: string | null;
   verdict: CheckVerdict;
   /**
@@ -70,7 +72,7 @@ export interface TokenCheck {
     quote: string | null;
     mayhem: boolean;
     /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
-    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme";
+    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "clanker";
     /** The platform on that launchpad when known, e.g. "stonk" (StonkFun on LaunchLab). */
     platform?: string;
     curveSol: number | null;
@@ -152,13 +154,20 @@ export function scoreOf(verdict: CheckVerdict, weights: number[], opts: { early?
   return opts.early ? 10 : 0;
 }
 
-/** Which chain an address belongs to, from its shape: 0x and forty hex digits is BNB Chain, base58 is Solana. */
-export const chainOf = (address: string): "solana" | "bsc" => (/^0x[0-9a-fA-F]{40}$/.test(address) ? "bsc" : "solana");
-const CHAIN_NAME = { solana: "Solana", bsc: "BNB Chain" } as const;
-const NO_RECORD = {
+export type Chain = "solana" | "bsc" | "base";
+/**
+ * Which chain an address belongs to. Base58 is Solana. 0x and forty hex digits is an EVM address, BNB Chain or Base:
+ * the shape cannot tell them apart, so the caller says which when it knows (the tape that has the token, the venue the
+ * long memory kept, a `?chain=` on the request); BNB Chain otherwise, the first EVM chain the zoo read.
+ */
+export const chainOf = (address: string, evm: "bsc" | "base" = "bsc"): Chain => (/^0x[0-9a-fA-F]{40}$/.test(address) ? evm : "solana");
+export const isEvm = (address: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(address);
+export const CHAIN_NAME: Record<Chain, string> = { solana: "Solana", bsc: "BNB Chain", base: "Base" };
+const NO_RECORD: Record<Chain, string> = {
   solana: "not a launch from pump.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check",
   bsc: "not a launch from four.meme in the last two days, so there is no chain record to check",
-} as const;
+  base: "not a Clanker launch on Base in the last two days, so there is no chain record to check",
+};
 
 export interface CheckInput {
   symbol: string;
@@ -169,11 +178,12 @@ export interface CheckInput {
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[] } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
-  const base = { version: CHECK_VERSION, mint, checkedAt: now, more: "https://zooaiagency.com/skill.md", stream };
+  const chain = opts.chain ?? chainOf(mint);
+  const base = { version: CHECK_VERSION, mint, chain, checkedAt: now, more: "https://zooaiagency.com/skill.md", stream };
   if (!found) {
     return {
       ...base,
@@ -181,7 +191,7 @@ export function checkToken(
       verdict: "unknown",
       score: null,
       proceed: null,
-      reasons: [NO_RECORD[chainOf(mint)]],
+      reasons: [NO_RECORD[chain]],
       notes: stream.live ? [] : ["the chain stream is down right now: a fresh launch may be missing for that reason"],
       facts: null,
     };
@@ -294,7 +304,7 @@ export function checkToken(
     // Shares of the supply to one decimal: a coin where everyone sold back shows 0.3%, not a misleading 0%.
     const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
     holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null;
-    if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chainOf(mint)]} right now`);
+    if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chain]} right now`);
     else {
       // Half the supply in one wallet: whoever holds it decides when the price goes to zero.
       if (h.topShare >= 0.5) flag(avoid, `one wallet holds ${pct(h.topShare)}% of the supply`, WEIGHT.topWalletAvoid);
@@ -435,10 +445,11 @@ export class RateGate {
 export function outsideCheck(
   mint: string,
   o: { symbol: string | null; createdAt: number; holders: HolderReport | null | undefined; dev: { launches: number; dumped: number } | null },
-  opts: { now?: number; stream?: TokenCheck["stream"] } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; chain?: Chain } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
+  const chain = opts.chain ?? chainOf(mint);
   const avoid: string[] = [];
   const caution: string[] = [];
   const weights: number[] = [];
@@ -446,7 +457,7 @@ export function outsideCheck(
   const notes = [`launched ${day}, before the stream's window: what happened at launch is not on record, only who holds it now and the dev's record`];
   const h = o.holders;
   const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
-  if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chainOf(mint)]} right now`);
+  if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chain]} right now`);
   else if (h.topShare >= 0.5) (avoid.push(`one wallet holds ${pct(h.topShare)}% of the supply`), weights.push(WEIGHT.topWalletAvoid));
   else if (h.topShare >= 0.2) (caution.push(`one wallet holds ${pct(h.topShare)}% of the supply`), weights.push(WEIGHT.topWalletCaution));
   else if (h.top10Share >= 0.5) (caution.push(`the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`), weights.push(WEIGHT.top10));
@@ -457,6 +468,7 @@ export function outsideCheck(
   return {
     version: CHECK_VERSION,
     mint,
+    chain,
     checkedAt: now,
     more: "https://zooaiagency.com/skill.md",
     stream,

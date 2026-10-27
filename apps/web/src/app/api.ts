@@ -1,5 +1,5 @@
 import { NODE_URLS } from "../sim/live";
-import { addressIn } from "../chain";
+import { addressIn, rememberChains } from "../chain";
 
 /** The two nodes the app talks to: north reads the chain, canyon keeps the beaver, the nursery and the board. */
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -95,7 +95,11 @@ export interface BoardRow {
 export async function get<T>(url: string): Promise<T | null> {
   try {
     const r = await fetch(url);
-    return r.ok ? ((await r.json()) as T) : null;
+    if (!r.ok) return null;
+    const body = (await r.json()) as T;
+    // A 0x address is BNB Chain or Base: the node's answer says which, for every address in it.
+    rememberChains(body);
+    return body;
   } catch {
     return null;
   }

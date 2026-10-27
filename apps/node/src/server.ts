@@ -16,15 +16,16 @@ import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
-import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
+import { type Chain, CHAIN_NAME, checkToken, isEvm, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
-import { bscFundersEnabled } from "./chain/bscFunders.ts";
+import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "./chain/base.ts";
+import { baseFundersEnabled, bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll, tagsOf, type WalletTag } from "./chain/tags.ts";
 import type { CabalIndex } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
 import type { SideWallets } from "./chain/sidewallets.ts";
 import { handleOf, type Mentions } from "./chain/mentions.ts";
-import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
+import { bscBook, bscHolderReport, evmHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
 import { replayMint } from "./chain/replay.ts";
@@ -35,7 +36,7 @@ import type { BoardRow } from "./stats.ts";
 import { creatureView, evolutionView } from "./agents/evolution.ts";
 import { koiView } from "./agents/koi.ts";
 import { type GuestTally, skillOf } from "./agents/judgement.ts";
-import { type CreatorRecord, tape } from "./chain/pump.ts";
+import { CHAIN_OF_VENUE, type CreatorRecord, tape, type Venue } from "./chain/pump.ts";
 import type { HistoryStore } from "./chain/history.ts";
 import { type GuestHouse, isGuestNode, publicGuest } from "./guests.ts";
 
@@ -95,9 +96,7 @@ const ROUTE = {
   bundle: route("/v1/chain/bundle/ADDR"),
 };
 /** EVM addresses are case-insensitive, so one spelling keys everything: lowercase. Solana addresses stay as they are. */
-const norm = (address: string) => (chainOf(address) === "bsc" ? address.toLowerCase() : address);
-/** The tape that reads the chain an address lives on. */
-const tapeOf = (address: string) => (chainOf(address) === "bsc" ? bscTape : tape);
+const norm = (address: string) => (isEvm(address) ? address.toLowerCase() : address);
 
 export interface VisitorPolicy {
   /** Agents visitors may wake. Keep this to cheap, harmless species. */
@@ -140,6 +139,23 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   };
   /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
   const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
+  /**
+   * Which chain an address is on. Base58 is Solana. A 0x address is BNB Chain or Base, and its shape cannot say which:
+   * the tape that has it (as a token, a creator or a sniper) decides, then the venue the long memory kept it under,
+   * then the caller's `?chain=`; BNB Chain otherwise, the first EVM chain the zoo read.
+   */
+  const chainFor = (address: string, hint?: string | null): Chain => {
+    if (!isEvm(address)) return "solana";
+    for (const [t, c] of [[bscTape, "bsc"], [baseTape, "base"]] as const) if (t.token(address) || t.creator(address) || t.sniper(address)) return c;
+    const venue = history?.venueOf(address) ?? history?.walletVenue(address);
+    if (venue && venue in CHAIN_OF_VENUE) return CHAIN_OF_VENUE[venue as Venue];
+    return hint === "base" || hint === "bsc" ? hint : "bsc";
+  };
+  /** The tape that reads the chain an address lives on. */
+  const tapeOf = (address: string, hint?: string | null) => {
+    const c = chainFor(address, hint);
+    return c === "bsc" ? bscTape : c === "base" ? baseTape : tape;
+  };
   /**
    * Where the token was seen on X, and the one thing worth saying about it: a KOL whose wallet (or side wallet)
    * bought in the first seconds and who posted it later. Written into the check's notes, never a reason.
@@ -440,12 +456,13 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         });
       }
       if (req.method === "GET" && path === "/v1/chain") {
-        return json(res, 200, { ...tape.status(), bsc: bscTape.status() });
+        return json(res, 200, { ...tape.status(), bsc: bscTape.status(), base: baseTape.status() });
       }
       const chainToken = ROUTE.chainToken.exec(path);
       if (req.method === "GET" && chainToken) {
-        const found = tapeOf(chainToken[1]!).token(norm(chainToken[1]!));
-        return found ? json(res, 200, found) : json(res, 404, { error: "not on the stream" });
+        const a = norm(chainToken[1]!);
+        const found = tapeOf(a, url.searchParams.get("chain")).token(a);
+        return found ? json(res, 200, { chain: chainFor(a, url.searchParams.get("chain")), ...found }) : json(res, 404, { error: "not on the stream" });
       }
       // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
       if (req.method === "GET" && path === "/v1/check/record") {
@@ -472,11 +489,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       const xrayOf = ROUTE.xray.exec(path);
       if (req.method === "GET" && (checkOf || xrayOf)) {
         const mint = norm((checkOf ?? xrayOf)![1]!);
-        // BNB Chain tokens are read from four.meme's tape: no RPC calls, so no holders or funders yet.
-        const bsc = chainOf(mint) === "bsc";
-        const chainTape = tapeOf(mint);
+        // A 0x address is BNB Chain (four.meme's tape) or Base (Clanker's): the tape that has it says which.
+        const chain = chainFor(mint, url.searchParams.get("chain"));
+        const bsc = chain === "bsc";
+        const base = chain === "base";
+        const evm = bsc || base;
+        const chainTape = tapeOf(mint, chain);
         // A tape with nothing on it and nothing heard reads no chain; a restored one answers while its stream reconnects.
-        if (chainTape.lastEventAt === 0 && chainTape.status().tracked === 0) return json(res, 404, { error: bsc ? "this node does not read BNB Chain; use the north node" : "this node does not read the chain; use the north node" });
+        if (chainTape.lastEventAt === 0 && chainTape.status().tracked === 0) return json(res, 404, { error: evm ? `this node does not read ${CHAIN_NAME[chain]}; use the north node` : "this node does not read the chain; use the north node" });
         // A key lifts the limits while its wallet still holds; without one, everyone gets the free tier.
         const key = keyFrom(req.headers, url.searchParams);
         let wallet: string | null = null;
@@ -502,26 +522,31 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
         }
         void usage.bump(deep, caller);
-        // four.meme goes quiet for minutes at night where pump.fun never does: its stream counts as live for longer.
-        const liveMs = bsc ? 5 * 60_000 : 60_000;
+        // four.meme and Clanker go quiet for minutes at night where pump.fun never does: their streams count as live for longer.
+        const liveMs = evm ? 5 * 60_000 : 60_000;
         const stream = { live: chainTape.connected && Date.now() - chainTape.lastEventAt < liveMs, lastEventSecAgo: Math.round((Date.now() - chainTape.lastEventAt) / 1000) };
         let found = chainTape.token(mint);
         // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
         const past = !found && history ? history.report(mint) : null;
         const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
-        const pool = deep && found ? (bsc ? bscTape.poolOf(mint) : holdersEnabled() ? tape.poolOf(mint) : null) : null;
+        // On Base the whole pool lives in Uniswap's PoolManager, with no reserves to read: the tape's own sum stands.
+        const pool = deep && found ? (bsc ? bscTape.poolOf(mint) : base ? null : holdersEnabled() ? tape.poolOf(mint) : null) : null;
+        const evmLineage = bsc ? bscLineage : baseLineage;
+        const evmFunders = bsc ? bscFundersEnabled() : baseFundersEnabled();
         const [holders, , poolSol] = await Promise.all([
-          deep && (found || past) && !bsc && holdersEnabled()
+          deep && (found || past) && !evm && holdersEnabled()
             ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
-            : // On BNB Chain the wallets the feed saw trade are asked for their balance on chain, the creator first.
+            : // On BNB Chain and Base the wallets the feed saw trade are asked for their balance on chain, the creator first.
               deep && bsc && found
               ? within(bscHolderReport(mint, found.creator, [...new Set([...bscBook.top(mint), ...bscTape.positionsOf(mint)])]))
-              : Promise.resolve(undefined),
-          deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator)
+              : deep && base && found
+                ? within(evmHolderReport(mint, found.creator, [...new Set([...baseBook.top(mint), ...baseTape.positionsOf(mint)])], { program: POOL_MANAGER, url: process.env.BASE_RPC_URL ?? BASE_RPC }))
+                : Promise.resolve(undefined),
+          deep && found && !evm && fundersEnabled() && !lineage.view(found.creator)
             ? within(lineage.trace(found.creator))
-            : deep && found && bsc && bscFundersEnabled() && !bscLineage.view(found.creator)
-              ? within(bscLineage.trace(found.creator))
+            : deep && found && evm && evmFunders && !evmLineage.view(found.creator)
+              ? within(evmLineage.trace(found.creator))
               : Promise.resolve(null),
           // The pool's SOL (or BNB) as it is now, not as the last trade the tape saw left it.
           pool ? within(bsc ? bscPoolSol(pool, BigInt(mint) < BigInt(found!.facts.quote ?? WBNB)) : poolSolOf(pool)) : Promise.resolve(null),
@@ -531,40 +556,41 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           found = tape.token(mint);
         }
         let funding: LineageView | null | undefined;
-        if (found && !bsc && fundersEnabled()) {
+        if (found && !evm && fundersEnabled()) {
           funding = lineage.view(found.creator);
           if (!funding) lineage.enqueue(found.creator, true);
-        } else if (found && bsc && bscFundersEnabled()) {
-          funding = bscLineage.view(found.creator);
-          if (!funding) bscLineage.enqueue(found.creator);
+        } else if (found && evm && evmFunders) {
+          funding = evmLineage.view(found.creator);
+          if (!funding) evmLineage.enqueue(found.creator);
         }
-        if (past && !bsc) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
-        const linked = found || past ? (bsc ? bscSocials : socials).forMint(mint) : [];
-        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) && (!bsc || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        if (past && !evm) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
+        const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
+        const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
-        const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : socials.image(mint);
-        if (!image) bsc ? void recordFourMeme(mint) : socials.want(mint);
+        const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : base ? (baseSocials.image(mint) ?? clanker.image(mint)) : socials.image(mint);
+        if (!image) bsc ? void recordFourMeme(mint) : base ? void recordClankerFromApi(mint) : socials.want(mint);
         // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
         // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
-        if (!found && !past && deep && (bsc || holdersEnabled())) {
-          const origin = bsc ? await within(fourMeme.get(mint), 6_000) : await within(originOf(mint), 6_000);
+        if (!found && !past && deep && (evm || holdersEnabled())) {
+          const origin = bsc ? await within(fourMeme.get(mint), 6_000) : base ? await within(clanker.get(mint), 6_000) : await within(originOf(mint), 6_000);
           if (origin) {
-            const holdersNow = bsc ? undefined : await within(holderReport(mint, fetch, Date.now(), origin.creator));
+            const holdersNow = evm ? undefined : await within(holderReport(mint, fetch, Date.now(), origin.creator));
             const kept = history?.wallet(origin.creator, 20) ?? null;
             const dev = kept ? { launches: kept.launches, dumped: kept.dumped } : null;
-            const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream });
+            const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream, chain });
             let funded: LineageView | null = null;
-            if (bsc && bscFundersEnabled()) {
-              funded = bscLineage.view(origin.creator) ?? null;
-              if (!funded) bscLineage.enqueue(origin.creator);
-            } else if (!bsc && fundersEnabled()) {
+            if (evm && evmFunders) {
+              funded = evmLineage.view(origin.creator) ?? null;
+              if (!funded) evmLineage.enqueue(origin.creator);
+            } else if (!evm && fundersEnabled()) {
               funded = lineage.view(origin.creator);
               if (!funded) lineage.enqueue(origin.creator, true);
             }
             if (checkOf) return json(res, 200, { ...outside, ...(image ? { image } : {}), outsideStream: true, createdAt: origin.createdAt, access: tier });
             return json(res, 200, {
               mint,
+              chain,
               symbol: origin.symbol ?? "",
               name: origin.name ?? "",
               creator: origin.creator,
@@ -583,9 +609,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         }
         if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
         if (past) {
-          const bundle = past.bundle.length >= 2 && !bsc ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
+          const bundle = past.bundle.length >= 2 && !evm ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
           return json(res, 200, {
             mint,
+            chain,
             symbol: past.symbol,
             name: past.name,
             creator: past.creator,
@@ -601,13 +628,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           });
         }
         if (!found) {
-          const where = bsc ? "four.meme" : "pump.fun, LaunchLab, Meteora";
+          const where = bsc ? "four.meme" : base ? "Clanker" : "pump.fun, LaunchLab, Meteora";
           return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
         }
-        const bundle = found.bundle.length >= 2 && !bsc ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
+        const bundle = found.bundle.length >= 2 && !evm ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
         const earlyTagged = withCabal(tagAll(chainTape.earlyOf(mint) ?? [], kept));
         return json(res, 200, {
           mint,
+          chain,
           symbol: found.symbol,
           name: found.name,
           creator: found.creator,
@@ -634,7 +662,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const c = cabals.get(Number(cabalOf[1]));
         if (!c) return json(res, 404, { error: "no cabal with this number" });
         res.setHeader("cache-control", "public, max-age=120");
-        return json(res, 200, { ...c, live: cabals.live(c.id, tape).concat(cabals.live(c.id, bscTape)) });
+        const live = [...cabals.live(c.id, tape).map((l) => ({ ...l, chain: "solana" as const })), ...cabals.live(c.id, bscTape).map((l) => ({ ...l, chain: "bsc" as const })), ...cabals.live(c.id, baseTape).map((l) => ({ ...l, chain: "base" as const }))].sort((a, b) => b.createdAt - a.createdAt);
+        return json(res, 200, { ...c, live });
       }
       // The extension saw a token in a post: who posted it and when. Public posts, nothing about the reader.
       if (req.method === "POST" && path === "/v1/seen") {
@@ -653,8 +682,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       const creatorOf = ROUTE.creator.exec(path);
       if (req.method === "GET" && creatorOf) {
         const w = norm(creatorOf[1]!);
-        const found = preferHistory(tapeOf(w).creator(w), w);
-        return found ? json(res, 200, found) : json(res, 404, { error: "no launches from this wallet in the last two days" });
+        const hint = url.searchParams.get("chain");
+        const found = preferHistory(tapeOf(w, hint).creator(w), w);
+        return found ? json(res, 200, { chain: chainFor(w, hint), ...found }) : json(res, 404, { error: "no launches from this wallet in the last two days" });
       }
       // The wallet dossier from the long memory: what it did as a dev, a first-second buyer, a bundler and a crew member.
       const dossierOf = ROUTE.walletHistory.exec(path);
@@ -666,36 +696,40 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const found = history.wallet(norm(dossierOf[1]!), clampInt(url.searchParams.get("limit"), 50, 1, 200));
         if (!found) return json(res, 404, { error: "this wallet did not launch, snipe or bundle a launch the zoo has kept" });
         res.setHeader("cache-control", "no-store");
-        return json(res, 200, { ...found, historySince: history.since(), keptDays: 90 });
+        return json(res, 200, { chain: chainFor(norm(dossierOf[1]!), url.searchParams.get("chain")), ...found, historySince: history.since(), keptDays: 90 });
       }
       const sniperOf = ROUTE.sniper.exec(path);
       if (req.method === "GET" && sniperOf) {
-        const found = tapeOf(sniperOf[1]!).sniper(norm(sniperOf[1]!));
+        const found = tapeOf(norm(sniperOf[1]!), url.searchParams.get("chain")).sniper(norm(sniperOf[1]!));
         return found ? json(res, 200, found) : json(res, 404, { error: "this wallet sniped no launch in the last two days" });
       }
       // One page per wallet: what it did as a dev, as a first-second buyer and as the one who pays for devs.
       const walletOf = ROUTE.wallet.exec(path);
       if (req.method === "GET" && walletOf) {
         const w = norm(walletOf[1]!);
-        const bsc = chainOf(w) === "bsc";
+        const chain = chainFor(w, url.searchParams.get("chain"));
+        const evm = chain !== "solana";
         const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
         const wait = fromPeer(req) ? 0 : checkGate.take(caller);
         if (wait > 0) return json(res, 429, { error: "slow down: too many lookups a minute on the free tier", retryAfterMs: wait });
-        const dev = tapeOf(w).creatorProfile(w);
+        const walletTape = tapeOf(w, chain);
+        const dev = walletTape.creatorProfile(w);
         let funding: LineageView | null = null;
-        if (dev && bsc && bscFundersEnabled()) {
-          funding = bscLineage.view(w) ?? null;
-          if (!funding) bscLineage.enqueue(w);
-        } else if (dev && !bsc && fundersEnabled()) {
+        const evmLineage = chain === "bsc" ? bscLineage : baseLineage;
+        if (dev && evm && (chain === "bsc" ? bscFundersEnabled() : baseFundersEnabled())) {
+          funding = evmLineage.view(w) ?? null;
+          if (!funding) evmLineage.enqueue(w);
+        } else if (dev && !evm && fundersEnabled()) {
           funding = lineage.view(w);
           if (!funding) lineage.enqueue(w, true);
         }
         const funded = lineage.funded(w);
-        const sniper = tapeOf(w).sniper(w);
+        const sniper = walletTape.sniper(w);
         // The accounts this dev's own tokens link to in their metadata: typed by the dev, so a lead, not proof of who it is.
         const seen = new Set<string>();
-        const accounts = dev && !bsc
-          ? dev.launches.flatMap((l) => socials.forMint(l.mint)).filter((a) => !seen.has(a.social.url) && seen.add(a.social.url)).slice(0, 10)
+        const registry = chain === "bsc" ? bscSocials : chain === "base" ? baseSocials : socials;
+        const accounts = dev
+          ? dev.launches.flatMap((l) => registry.forMint(l.mint)).filter((a) => !seen.has(a.social.url) && seen.add(a.social.url)).slice(0, 10)
           : [];
         if (!dev && !sniper && !funded.creators.length) return json(res, 404, { error: "this wallet did not launch, snipe or fund a launch the stream saw in the last two days" });
         res.setHeader("cache-control", "no-store");
@@ -703,11 +737,11 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const tags = tagsOf({ wallet: w, snipes48h: sniper?.snipes48h ?? 0, serial: (sniper?.snipes48h ?? 0) >= 10 }, kept(w));
         if (funded.hot && !tags.includes("exchange")) tags.push("exchange");
         const [who] = withCabal([{ wallet: w, tags }]);
-        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, ...who, checkedAt: Date.now() });
+        return json(res, 200, { wallet: w, chain, dev, funding, funded, sniper, accounts, ...who, checkedAt: Date.now() });
       }
       const bundleOf = ROUTE.bundle.exec(path);
       if (req.method === "GET" && bundleOf) {
-        const t = tapeOf(bundleOf[1]!).token(norm(bundleOf[1]!));
+        const t = tapeOf(norm(bundleOf[1]!), url.searchParams.get("chain")).token(norm(bundleOf[1]!));
         if (!t) return json(res, 404, { error: "not on the stream" });
         const funding = t.bundle.length >= 2 ? await traceFunders(t.mint, t.bundle.map((b) => b.wallet)) : null;
         return json(res, 200, { mint: t.mint, bundleWallets: t.facts.bundleWallets, bundleShare: t.facts.bundleShare, wallets: t.bundle, funding, fundingEnabled: fundersEnabled() });

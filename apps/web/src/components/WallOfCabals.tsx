@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
-import { chainName } from "../chain";
+import { chainName, rememberChains } from "../chain";
 
 /**
  * The wall of cabals: wallets the long memory ties together as one hand, through a shared funder, crew hits, sniping
@@ -27,7 +27,7 @@ interface Cabal {
   firstSeen: number;
   lastSeen: number;
   members: Member[];
-  live?: Array<{ mint: string; symbol: string; creator: string; createdAt: number }>;
+  live?: Array<{ mint: string; symbol: string; creator: string; createdAt: number; chain?: "solana" | "bsc" | "base" }>;
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -59,7 +59,10 @@ export default function WallOfCabals() {
     if (!wanted) return;
     fetch(`${NORTH}/v1/cabal/${wanted}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((c: Cabal | null) => c && setOpen(c))
+      .then((c: Cabal | null) => {
+        rememberChains(c?.live);
+        if (c) setOpen(c);
+      })
       .catch(() => {});
   }, [wanted]);
 
@@ -67,7 +70,10 @@ export default function WallOfCabals() {
     history.pushState(null, "", `/cabals?id=${c.id}`);
     fetch(`${NORTH}/v1/cabal/${c.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((full: Cabal | null) => setOpen(full ?? c))
+      .then((full: Cabal | null) => {
+        rememberChains(full?.live);
+        setOpen(full ?? c);
+      })
       .catch(() => setOpen(c));
   };
 

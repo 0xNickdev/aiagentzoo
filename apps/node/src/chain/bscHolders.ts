@@ -82,20 +82,26 @@ export async function batchCall(calls: Array<{ to: string; data: string }>, rpc:
   return calls.map((_, i) => byId.get(i + 1) ?? null);
 }
 
-export async function bscHolderReport(
+/**
+ * Who holds a token on any EVM chain the zoo reads: the candidates' balances, the program's (four.meme's curve, or
+ * Uniswap's PoolManager on Base) and the whole supply, in one batch against that chain's RPC.
+ */
+export async function evmHolderReport(
   token: string,
   creator: string | null,
   candidates: string[],
-  opts: { now?: number; url?: string; call?: typeof batchCall } = {},
+  opts: { now?: number; url?: string; call?: typeof batchCall; program?: string } = {},
 ): Promise<HolderReport | null> {
   const now = opts.now ?? Date.now();
-  const hit = cache.get(token);
+  const program = (opts.program ?? TOKEN_MANAGER2).toLowerCase();
+  const key = `${opts.url ?? ""}:${token}`;
+  const hit = cache.get(key);
   if (hit && now - hit.at < CACHE_MS) return hit.report;
   const call = opts.call ?? batchCall;
-  const wallets = [...new Set([...(creator ? [creator.toLowerCase()] : []), ...candidates.map((w) => w.toLowerCase())])].filter((w) => w !== TOKEN_MANAGER2);
+  const wallets = [...new Set([...(creator ? [creator.toLowerCase()] : []), ...candidates.map((w) => w.toLowerCase())])].filter((w) => w !== program);
   const calls = [
     { to: token, data: TOTAL_SUPPLY },
-    { to: token, data: `${BALANCE_OF}${pad(TOKEN_MANAGER2)}` },
+    { to: token, data: `${BALANCE_OF}${pad(program)}` },
     ...wallets.map((w) => ({ to: token, data: `${BALANCE_OF}${pad(w)}` })),
   ];
   let answers: Array<string | null>;
@@ -106,10 +112,10 @@ export async function bscHolderReport(
   }
   const total = toNumber(answers[0]);
   if (!total) {
-    cache.set(token, { at: now, report: null });
+    cache.set(key, { at: now, report: null });
     return null;
   }
-  const program = toNumber(answers[1]);
+  const programHeld = toNumber(answers[1]);
   const held = wallets.map((w, i) => [w, toNumber(answers[i + 2])] as const).filter(([, v]) => v > 0);
   const ranked = held.map(([, v]) => v).sort((a, b) => b - a);
   const creatorShare = creator ? (held.find(([w]) => w === creator.toLowerCase())?.[1] ?? 0) / total : null;
@@ -117,14 +123,16 @@ export async function bscHolderReport(
   const report: HolderReport = {
     top10Share: round(ranked.slice(0, 10).reduce((a, b) => a + b, 0) / total),
     topShare: round((ranked[0] ?? 0) / total),
-    programShare: round(program / total),
+    programShare: round(programHeld / total),
     creator: creator ? creator.toLowerCase() : null,
     creatorShare: creatorShare === null ? null : round(creatorShare),
   };
-  cache.set(token, { at: now, report });
+  cache.set(key, { at: now, report });
   if (cache.size > 5_000) for (const [k, v] of cache) if (now - v.at > CACHE_MS) cache.delete(k);
   return report;
 }
+
+export const bscHolderReport = (token: string, creator: string | null, candidates: string[], opts: { now?: number; url?: string; call?: typeof batchCall } = {}) => evmHolderReport(token, creator, candidates, opts);
 
 /** The one book per node process, written by the feed, read by the holders report. */
 export const bscBook = new PositionBook();

@@ -22,7 +22,7 @@ export const PANCAKE_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
 /** The pair's own events: reserves after every trade, and each swap. */
 /** ERC-20 Transfer(address indexed from, address indexed to, uint256 value). */
 export const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const ZERO = "0x0000000000000000000000000000000000000000";
+export const ZERO = "0x0000000000000000000000000000000000000000";
 export const PAIR_TOPIC = {
   sync: "0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1", // Sync(uint112 reserve0, uint112 reserve1)
   swap: "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822", // Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
@@ -75,15 +75,31 @@ export interface ChainEvent {
   quote?: string;
 }
 
-const word = (data: string, i: number): bigint => BigInt(`0x${data.slice(2 + i * 64, 66 + i * 64)}`);
-const addr = (data: string, i: number): string => `0x${data.slice(2 + i * 64 + 24, 66 + i * 64)}`.toLowerCase();
-const num = (data: string, i: number): number => Number(word(data, i)) / WEI;
+/** ABI words of a log's data, shared with the Base reader: the i-th 32-byte word as a number, an address or a string. */
+export const word = (data: string, i: number): bigint => BigInt(`0x${data.slice(2 + i * 64, 66 + i * 64)}`);
+export const addr = (data: string, i: number): string => `0x${data.slice(2 + i * 64 + 24, 66 + i * 64)}`.toLowerCase();
+export const num = (data: string, i: number, decimals = 18): number => Number(word(data, i)) / 10 ** decimals;
+/** A signed word (int128 or int256 both arrive sign-extended to 32 bytes). */
+export const signed = (data: string, i: number): bigint => {
+  const n = word(data, i);
+  return n >= 1n << 255n ? n - (1n << 256n) : n;
+};
 /** An ABI string: its offset word points at a length word, then the bytes. */
-const str = (data: string, i: number): string => {
+export const str = (data: string, i: number): string => {
   const at = Number(word(data, i)) * 2;
   const len = Number(BigInt(`0x${data.slice(2 + at, 66 + at)}`));
   return Buffer.from(data.slice(66 + at, 66 + at + len * 2), "hex").toString("utf8");
 };
+/** An ABI dynamic array of addresses: its offset word points at a length word, then one word per address. */
+export const addrs = (data: string, i: number): string[] => {
+  const at = Number(word(data, i)) * 2;
+  const len = Number(BigInt(`0x${data.slice(2 + at, 66 + at)}`));
+  const out: string[] = [];
+  for (let k = 0; k < len && k < 64; k++) out.push(`0x${data.slice(66 + at + k * 64 + 24, 66 + at + (k + 1) * 64)}`.toLowerCase());
+  return out;
+};
+/** A topic as an address: the low twenty bytes of the word. */
+export const topicAddr = (topic: string): string => `0x${topic.slice(26)}`.toLowerCase();
 
 /**
  * One TokenManager2 log as a tape event. A create comes without its quote: the caller reads that from Helper3 and sets

@@ -1,7 +1,10 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { checkToken } from "./check.ts";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { capsFrom, type ChainFacts, type CreatorRecord, devPattern, type PulseEvent, type PumpTape, repeatsOf, tempoOf } from "./pump.ts";
+import { capsFrom, CHAIN_OF_VENUE, type ChainFacts, type CreatorRecord, devPattern, type PulseEvent, type PumpTape, repeatsOf, tempoOf, UNIT_OF_CHAIN, type Venue } from "./pump.ts";
+
+/** What a kept token's amounts are in, from where it launched: SOL unless the venue is on another chain. */
+const unitOfVenue = (venue: string | null | undefined) => UNIT_OF_CHAIN[CHAIN_OF_VENUE[(venue ?? "") as Venue] ?? "solana"];
 
 /**
  * The north node's long memory. The tape forgets a token after two days; this keeps what the X-Ray needs of it
@@ -145,8 +148,10 @@ export class HistoryStore {
       ...Object.fromEntries(ROLE_NAME.map((r) => [`count_${r}`, p(`UPDATE wallets SET ${COUNTER[r]} = ${COUNTER[r]} + 1 WHERE id = ?`)])),
       has: p("SELECT 1 FROM tokens WHERE mint = ?"),
       token: p("SELECT t.*, w.wallet AS creator FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.mint = ?"),
-      recent: p(`SELECT mint, symbol, created_at, dev_dumped_at, graduated_at, pool_drained_at, dev_took, left_holding, alive,
+      recent: p(`SELECT mint, symbol, venue, created_at, dev_dumped_at, graduated_at, pool_drained_at, dev_took, left_holding, alive,
         cap_first, cap_peak, cap_peak_at, cap_dump, cap_low, cap_high, dev_first_sell_at FROM tokens WHERE creator_id = ? ORDER BY created_at DESC LIMIT 40`),
+      venue: p("SELECT venue FROM tokens WHERE mint = ?"),
+      walletVenue: p(`SELECT t.venue FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.wallet_id = ? ORDER BY wt.token_id DESC LIMIT 1`),
       dumpMins: p("SELECT dev_dumped_at - created_at AS ms FROM tokens WHERE creator_id = ? AND dev_dumped_at IS NOT NULL AND created_at > ? AND created_at <= ? ORDER BY ms LIMIT 2000"),
       window: p(`SELECT count(*) AS n, sum(created_at > ?) AS n24, sum(dev_dumped_at IS NOT NULL) AS dumped, sum(graduated_at IS NOT NULL) AS graduated
         FROM tokens WHERE creator_id = ? AND created_at > ? AND created_at <= ?`),
@@ -239,6 +244,18 @@ export class HistoryStore {
   }
 
   /** When the store first saw a token: the X-Ray says how far back it remembers. */
+  /** Where a kept token launched, or null when the store never kept it: the venue names the chain for a 0x address. */
+  venueOf(mint: string): string | null {
+    return ((this.s.venue!.get(mint) as { venue: string | null } | undefined)?.venue) ?? null;
+  }
+
+  /** The venue of the last token a kept wallet had a part in, for the chain of a 0x wallet. */
+  walletVenue(wallet: string): string | null {
+    const w = this.s.walletRow!.get(wallet) as { id: number } | undefined;
+    if (!w) return null;
+    return ((this.s.walletVenue!.get(w.id) as { venue: string | null } | undefined)?.venue) ?? null;
+  }
+
   since(): number | null {
     if (this.sinceAt === undefined) this.sinceAt = ((this.s.since!.get() as { at: number | null } | undefined)?.at) ?? null;
     return this.sinceAt;
@@ -335,7 +352,7 @@ export class HistoryStore {
   }
 
   private recentOf(creatorId: number): CreatorRecord["recent"] {
-    type Row = { mint: string; symbol: string; created_at: number; dev_dumped_at: number | null; graduated_at: number | null; pool_drained_at: number | null; dev_took: number | null; left_holding: number | null; alive: number | null;
+    type Row = { mint: string; symbol: string; venue: string | null; created_at: number; dev_dumped_at: number | null; graduated_at: number | null; pool_drained_at: number | null; dev_took: number | null; left_holding: number | null; alive: number | null;
       cap_first: number | null; cap_peak: number | null; cap_peak_at: number | null; cap_dump: number | null; cap_low: number | null; cap_high: number | null; dev_first_sell_at: number | null };
     return (this.s.recent!.all(creatorId) as Row[]).map((t) => ({
       mint: t.mint,
@@ -347,7 +364,7 @@ export class HistoryStore {
       leftHolding: t.left_holding,
       alive: t.pool_drained_at !== null ? false : t.alive === null ? null : t.alive === 1,
       graduated: t.graduated_at !== null,
-      ...capsFrom({ capFirst: t.cap_first, capPeak: t.cap_peak, capPeakAt: t.cap_peak_at, capDump: t.cap_dump, capLow: t.cap_low, capHigh: t.cap_high, devFirstSellAt: t.dev_first_sell_at, createdAt: t.created_at }),
+      ...capsFrom({ capFirst: t.cap_first, capPeak: t.cap_peak, capPeakAt: t.cap_peak_at, capDump: t.cap_dump, capLow: t.cap_low, capHigh: t.cap_high, devFirstSellAt: t.dev_first_sell_at, createdAt: t.created_at }, unitOfVenue(t.venue)),
     }));
   }
 

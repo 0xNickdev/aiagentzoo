@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { chainName, explorer, explorerName } from "../chain";
+import { chainName, explorer, explorerName, rememberChains } from "../chain";
 import { TagList, Tags, type WalletTag } from "./WalletTags";
 import { type ReactNode, useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
@@ -126,6 +126,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
       .then(async (r) => {
         const b = (await r.json().catch(() => null)) as (Profile & { error?: string }) | null;
         if (!live) return;
+        rememberChains(b);
         if (r.ok && !b?.funded) throw new Error("bad body");
         if (r.ok && b) setP(b);
         else {
@@ -248,7 +249,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </div>
             </Box>
             <div className="space-y-4">
-              <Box title="Who paid for this dev" note={chainName(wallet) === "Solana" ? "traced on Solana" : "BNB Chain"}>
+              <Box title="Who paid for this dev" note={chainName(wallet) === "Solana" ? "traced on Solana" : chainName(wallet)}>
                 {!p.funding && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
                 {p.funding && !p.funding.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the dev's recent history.")}</p>}
                 {p.funding?.funder && (
@@ -321,7 +322,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </Box>
           )}
           {(p.funded.creators.length > 0 || p.funded.hot) && (
-            <Box title="Devs it paid for" note={chainName(wallet) === "Solana" ? "traced on Solana" : "BNB Chain"}>
+            <Box title="Devs it paid for" note={chainName(wallet) === "Solana" ? "traced on Solana" : chainName(wallet)}>
               {p.funded.hot ? (
                 <p className="text-[13px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
               ) : (

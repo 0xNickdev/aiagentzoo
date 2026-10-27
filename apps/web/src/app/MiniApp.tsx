@@ -915,7 +915,7 @@ function RugsTab() {
                 animate={{ opacity: 1, backgroundColor: "rgba(255,110,95,0)" }}
                 transition={{ duration: 1.2 }}
                 type="button"
-                onClick={() => e.tx && openLink(explorerTx(e.tx))}
+                onClick={() => e.tx && openLink(explorerTx(e.tx, e.mint))}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
               >
                 <span className="min-w-0">
@@ -1075,7 +1075,7 @@ function Ticker() {
         <motion.button
           key={e.seq}
           type="button"
-          onClick={() => e.tx && openLink(explorerTx(e.tx))}
+          onClick={() => e.tx && openLink(explorerTx(e.tx, e.mint))}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}

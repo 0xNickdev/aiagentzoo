@@ -8,7 +8,7 @@
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
-import { solUsd } from "./price.ts";
+import { type Unit, unitUsd } from "./price.ts";
 import { isOnCurve } from "./curve.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
@@ -27,8 +27,11 @@ const DISC = {
   ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
 };
 
-/** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, or four.meme on BNB Chain. */
-export type Venue = "launchlab" | "dbc" | "fourmeme";
+/** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, four.meme on BNB Chain, or Clanker on Base. */
+export type Venue = "launchlab" | "dbc" | "fourmeme" | "clanker";
+/** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
+export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", fourmeme: "bsc", clanker: "base" };
+export const UNIT_OF_CHAIN: Record<"solana" | "bsc" | "base", Unit> = { solana: "SOL", bsc: "BNB", base: "ETH" };
 
 /** A trade on a followed pool, as the buy bot reads it. */
 export interface FollowedSwap {
@@ -322,9 +325,9 @@ export interface ChainFacts {
 const SUPPLY = 1_000_000_000;
 /** In Mayhem Mode pump.fun's own bot mints a second billion to trade with for the first 24 hours. */
 const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.mayhem ? 2 * SUPPLY : SUPPLY);
-/** A token's caps in dollars at today's SOL price, and how it moved after the dev's dump. */
-export function capsFrom(c: { capFirst?: number | null; capPeak?: number | null; capPeakAt?: number | null; capDump?: number | null; capLow?: number | null; capHigh?: number | null; devFirstSellAt?: number | null; createdAt: number }) {
-  const usd = solUsd();
+/** A token's caps in dollars at today's price of the chain's coin, and how it moved after the dev's dump. */
+export function capsFrom(c: { capFirst?: number | null; capPeak?: number | null; capPeakAt?: number | null; capDump?: number | null; capLow?: number | null; capHigh?: number | null; devFirstSellAt?: number | null; createdAt: number }, unit: Unit = "SOL") {
+  const usd = unitUsd(unit);
   const $ = (sol: number | null | undefined) => (usd && sol ? Math.round(sol * usd) : null);
   const sec = (at: number | null | undefined) => (at === null || at === undefined ? null : Math.max(0, Math.round((at - c.createdAt) / 1000)));
   return {
@@ -337,7 +340,7 @@ export function capsFrom(c: { capFirst?: number | null; capPeak?: number | null;
     devFirstSellSec: sec(c.devFirstSellAt),
   };
 }
-const capsOf = (t: Tracked) => capsFrom(t);
+const capsOf = (t: Tracked, unit: Unit) => capsFrom(t, unit);
 
 /** How long after a dump the price is still watched: what buyers who stayed went through. */
 const AFTER_DUMP_MS = 30 * 60_000;
@@ -661,11 +664,11 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number } = { launches: 0, trades: 0 };
-  /** What the amounts are in: SOL on Solana, BNB on BNB Chain. Only the moments' wording reads it. */
-  readonly unit: "SOL" | "BNB";
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; clanker?: number } = { launches: 0, trades: 0 };
+  /** What the amounts are in: SOL on Solana, BNB on BNB Chain, ETH on Base. The moments' wording and the dollar caps read it. */
+  readonly unit: Unit;
 
-  constructor(unit: "SOL" | "BNB" = "SOL") {
+  constructor(unit: Unit = "SOL") {
     this.unit = unit;
   }
   private pulse: PulseEvent[] = [];
@@ -1111,7 +1114,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; clanker?: number };
         bundleSince?: number;
       };
       if (saved.v !== 1) return 0;
@@ -1159,7 +1162,7 @@ export class PumpTape {
       this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
       if (saved.seen) {
         const add = (k: Venue) => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
-        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}) };
+        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}), ...(add("clanker") ? { clanker: add("clanker") } : {}) };
       }
       return this.tokens.size;
     } catch {
@@ -1484,7 +1487,7 @@ export class PumpTape {
       leftHolding: t.heldAtDump ?? null,
       alive: this.aliveNow(t),
       graduated: t.graduated,
-      ...capsOf(t),
+      ...capsOf(t, this.unit),
     };
   }
 

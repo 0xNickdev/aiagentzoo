@@ -23,6 +23,7 @@ import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { BscFeed, bscLineage, bscTape, recordFourMeme } from "./chain/bsc.ts";
+import { BaseFeed, baseLineage, baseTape, type Pool, recordClanker } from "./chain/base.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
@@ -99,6 +100,10 @@ const socialsFile = join(config.dataDir, "chain-socials.json");
 const bscTapeFile = join(config.dataDir, "chain-tape-bsc.json");
 const bscCursorFile = join(config.dataDir, "chain-bsc-cursor.json");
 let bscFeed: BscFeed | null = null;
+// Base too: its tape, and the feed's cursor with the Uniswap pools it follows (a pool id is not on the tape).
+const baseTapeFile = join(config.dataDir, "chain-tape-base.json");
+const baseFeedFile = join(config.dataDir, "chain-base-feed.json");
+let baseFeed: BaseFeed | null = null;
 // Who funded the first-second wallets: slow to learn (RPC calls), so it is kept too.
 const sideFile = join(config.dataDir, "chain-sidewallets.json");
 const sideWallets = new SideWallets(labels);
@@ -112,6 +117,12 @@ const saveTape = () => {
     renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
     writeFileSync(`${bscCursorFile}.tmp`, JSON.stringify({ cursor: bscFeed.cursor, at: Date.now() }));
     renameSync(`${bscCursorFile}.tmp`, bscCursorFile);
+  }
+  if (baseFeed) {
+    writeFileSync(`${baseTapeFile}.tmp`, baseTape.snapshot());
+    renameSync(`${baseTapeFile}.tmp`, baseTapeFile);
+    writeFileSync(`${baseFeedFile}.tmp`, baseFeed.snapshot());
+    renameSync(`${baseFeedFile}.tmp`, baseFeedFile);
   }
   writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
   renameSync(`${lineageFile}.tmp`, lineageFile);
@@ -132,6 +143,22 @@ if (config.role === "north") {
       /* two days are read again */
     }
     bscFeed = new BscFeed(bscTape, { cursor, wsUrl: process.env.BSC_WS_URL, rpcUrl: process.env.BSC_RPC_URL, logsUrl: process.env.BSC_LOGS_URL, log: (m) => console.log(`[${config.id}] ${m}`) });
+  }
+  if (process.env.ZOO_BASE !== "off") {
+    if (existsSync(baseTapeFile)) console.log(`[${config.id}] base tape restored: ${baseTape.load(readFileSync(baseTapeFile, "utf8"))} tokens`);
+    let cursor: number | null = null;
+    let pools: Array<[string, Pool]> = [];
+    try {
+      if (existsSync(baseFeedFile)) {
+        const saved = JSON.parse(readFileSync(baseFeedFile, "utf8")) as { cursor?: number; pools?: Array<[string, Pool]> };
+        cursor = Number(saved.cursor) || null;
+        pools = Array.isArray(saved.pools) ? saved.pools : [];
+      }
+    } catch {
+      /* two days are read again */
+    }
+    // Each launch's accounts and picture come with the factory's own log: no API to ask.
+    baseFeed = new BaseFeed(baseTape, { cursor, pools, wsUrl: process.env.BASE_WS_URL, rpcUrl: process.env.BASE_RPC_URL, onLaunch: recordClanker, log: (m) => console.log(`[${config.id}] ${m}`) });
   }
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
@@ -172,6 +199,7 @@ const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? n
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // The same long memory keeps four.meme launches: addresses never collide across the two chains.
 const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { funderOf: (c) => bscLineage.funderOf(c), log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
+const stopBaseHistory = history && baseFeed ? startHistory(history, baseTape, { funderOf: (c) => baseLineage.funderOf(c), log: (m) => console.log(`[${config.id}] base ${m}`) }) : null;
 if (bscFeed) {
   // Each launch's accounts and picture from four.meme, half a minute in, when its API has the token.
   const previous = bscTape.onMoment;
@@ -181,6 +209,7 @@ if (bscFeed) {
   };
 }
 const stopBsc = bscFeed?.start() ?? null;
+const stopBase = baseFeed?.start() ?? null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
 const mentions = history ? new Mentions(history.db) : null;
@@ -336,6 +365,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     enclosure.stop();
     stopStream?.();
     stopBsc?.();
+    stopBase?.();
     if (config.role === "north") {
       try {
         saveTape();
@@ -345,6 +375,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       try {
         stopHistory?.();
         stopBscHistory?.();
+        stopBaseHistory?.();
         stopCabals?.();
         stopLabels?.();
         stopBuyback?.();

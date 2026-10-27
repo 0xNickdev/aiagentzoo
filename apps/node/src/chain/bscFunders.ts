@@ -18,6 +18,20 @@ const BINPLORER = "https://api.binplorer.com";
 export const bscFundersEnabled = () => process.env.BSC_FUNDERS !== "off";
 export type FunderKeys = { moralis?: string; etherscan?: string; binplorer?: string };
 export const bscFunderKeys = (): FunderKeys | undefined => (process.env.BSC_FUNDERS === "off" ? undefined : { moralis: process.env.MORALIS_API_KEY, etherscan: process.env.BSCSCAN_API_KEY, binplorer: process.env.BINPLORER_API_KEY ?? "freekey" });
+/**
+ * Base has no free transaction list: Etherscan's free plan does not cover it and Binplorer reads BNB Chain only. A
+ * Moralis key or a paid Etherscan key (ETHERSCAN_API_KEY, Base included) turns the tracing on; without one, nothing.
+ */
+export const baseFundersEnabled = () => process.env.BASE_FUNDERS !== "off" && Boolean(process.env.MORALIS_API_KEY || process.env.ETHERSCAN_API_KEY);
+export const baseFunderKeys = (): FunderKeys | undefined => (baseFundersEnabled() ? { moralis: process.env.MORALIS_API_KEY, etherscan: process.env.ETHERSCAN_API_KEY } : undefined);
+
+/** Which EVM chain a lineage reads: its Etherscan chain id, Moralis's name for it, and whether Binplorer (BNB Chain only) can answer. */
+export interface EvmChain {
+  chainId: number;
+  moralis: string;
+  binplorer: boolean;
+  exchanges: Record<string, string>;
+}
 const KEEP_MS = 6 * 3_600_000;
 /** A funder that moved this many transactions in a day is an exchange or a router, not a person. */
 const HOT_PER_DAY = 1_000;
@@ -50,9 +64,9 @@ interface Tx {
 
 type Fetch = typeof fetch;
 
-async function txlist(address: string, sort: "asc" | "desc", offset: number, keys: FunderKeys, f: Fetch): Promise<Tx[] | null> {
+async function txlist(address: string, sort: "asc" | "desc", offset: number, keys: FunderKeys, f: Fetch, chain: EvmChain = BSC_CHAIN): Promise<Tx[] | null> {
   if (keys.moralis) {
-    const url = `${MORALIS}/${address}?chain=bsc&order=${sort.toUpperCase()}&limit=${Math.min(offset, 100)}`;
+    const url = `${MORALIS}/${address}?chain=${chain.moralis}&order=${sort.toUpperCase()}&limit=${Math.min(offset, 100)}`;
     const r = await f(url, { headers: { "X-API-Key": keys.moralis, accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
     if (!r.ok) return null;
     const body = (await r.json()) as { result?: Array<{ from_address: string; to_address: string | null; value: string; block_timestamp: string; hash: string; receipt_status?: string }> };
@@ -60,6 +74,7 @@ async function txlist(address: string, sort: "asc" | "desc", offset: number, key
     return body.result.map((t) => ({ from: t.from_address, to: t.to_address ?? "", value: t.value, timeStamp: String(Math.floor(new Date(t.block_timestamp).getTime() / 1000)), hash: t.hash, isError: t.receipt_status === "0" ? "1" : "0" }));
   }
   if (!keys.etherscan) {
+    if (!chain.binplorer) return null;
     // Binplorer: the newest fifty; a creator wallet is young, so its first incoming transfer is among them.
     const r = await f(`${BINPLORER}/getAddressTransactions/${address}?apiKey=${keys.binplorer ?? "freekey"}&limit=50`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
     if (!r.ok) return null;
@@ -68,7 +83,7 @@ async function txlist(address: string, sort: "asc" | "desc", offset: number, key
     const list = body.map((t) => ({ from: t.from, to: t.to ?? "", value: String(Math.round(Number(t.value) * WEI)), timeStamp: String(t.timestamp), hash: t.hash, isError: t.success === false ? "1" : "0" }));
     return sort === "asc" ? list.reverse() : list;
   }
-  const url = `${API}?chainid=56&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=${offset}&sort=${sort}&apikey=${keys.etherscan}`;
+  const url = `${API}?chainid=${chain.chainId}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=${offset}&sort=${sort}&apikey=${keys.etherscan}`;
   const r = await f(url, { signal: AbortSignal.timeout(10_000) });
   if (!r.ok) return null;
   const body = (await r.json()) as { status?: string; message?: string; result?: Tx[] | string };
@@ -86,6 +101,11 @@ export interface BscTrace {
   at: number;
 }
 
+export const BSC_CHAIN: EvmChain = { chainId: 56, moralis: "bsc", binplorer: true, exchanges: BSC_EXCHANGES };
+/** Base: Etherscan chain 8453, Moralis "base". Exchange hot wallets are not labelled yet; the labels file can name them. */
+export const BASE_CHAIN: EvmChain = { chainId: 8453, moralis: "base", binplorer: false, exchanges: {} };
+
+/** One lineage per EVM chain: BNB Chain's reads Binplorer or BscScan, Base's needs a Moralis or paid Etherscan key. */
 export class BscLineage {
   private readonly traces = new Map<string, BscTrace>();
   private readonly queue: string[] = [];
@@ -93,11 +113,17 @@ export class BscLineage {
   private readonly tape: PumpTape;
   private readonly f: Fetch;
   private readonly keyOf: () => FunderKeys | undefined;
+  readonly chain: EvmChain;
 
-  constructor(tape: PumpTape, f: Fetch = fetch, keyOf: () => FunderKeys | undefined = bscFunderKeys) {
+  constructor(tape: PumpTape, f: Fetch = fetch, keyOf: () => FunderKeys | undefined = bscFunderKeys, chain: EvmChain = BSC_CHAIN) {
     this.tape = tape;
     this.f = f;
     this.keyOf = keyOf;
+    this.chain = chain;
+  }
+
+  private exchangeOf(wallet: string): string | null {
+    return this.chain.exchanges[wallet.toLowerCase()] ?? null;
   }
 
   /** The traced view of a creator, as the Solana lineage gives it; undefined when not traced yet. */
@@ -105,7 +131,7 @@ export class BscLineage {
     const t = this.traces.get(creator.toLowerCase());
     if (!t || now - t.at > KEEP_MS) return undefined;
     const funder = t.funder;
-    const label = funder ? bscExchangeOf(funder) : null;
+    const label = funder ? this.exchangeOf(funder) : null;
     const hot = t.hot || label !== null;
     const siblings: LineageView["siblings"] = [];
     if (funder && !hot) {
@@ -135,16 +161,16 @@ export class BscLineage {
     const w = creator.toLowerCase();
     const kept = this.view(w, now);
     if (kept) return kept;
-    const first = await txlist(w, "asc", 25, keys, this.f);
+    const first = await txlist(w, "asc", 25, keys, this.f, this.chain);
     if (!first) return null;
     const incoming = first.find((tx) => tx.to.toLowerCase() === w && tx.from.toLowerCase() !== w && Number(tx.value) / WEI > 0 && tx.isError !== "1");
     const funder = incoming ? incoming.from.toLowerCase() : null;
     let hot = false;
     const paid: string[] = [];
-    if (funder && !bscExchangeOf(funder)) {
+    if (funder && !this.exchangeOf(funder)) {
       // Moralis hands out a hundred a page: a funder with a hundred transactions in a day is busy enough to be a service.
       const page = keys.moralis ? 100 : keys.etherscan ? HOT_PER_DAY : 50;
-      const recent = await txlist(funder, "desc", page, keys, this.f);
+      const recent = await txlist(funder, "desc", page, keys, this.f, this.chain);
       if (recent) {
         const day = recent.filter((tx) => now / 1000 - Number(tx.timeStamp) < 86_400).length;
         hot = day >= page;

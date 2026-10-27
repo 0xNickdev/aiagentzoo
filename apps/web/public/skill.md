@@ -4,11 +4,11 @@ Before you buy a token launched on pump.fun, check whether its creator already r
 
 This complements a contract check such as `rug-check`. On pump.fun every token passes the contract checks by design: mint and freeze authority are revoked, and the liquidity is burned at graduation. The rug there is behavioural: the creator selling into the first buyers, a few wallets taking the supply in the launch block, the creator's own wallets sniping the first seconds, a fresh creator wallet paid for by a known rugger, one wallet launching and dumping hundreds of tokens a day. This skill checks exactly that, from what happened on chain.
 
-ZOOAI AGENCY reads every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab (bonk.fun, StonkFun and others) and Meteora's bonding curve (Believe, bags and others) straight from Solana as it happens, and every four.meme launch, buy, sell and graduation straight from BNB Chain. The check answers for all of them; `facts.venue` says which (`pump.fun`, `launchlab`, `dbc`, `fourmeme`), and `facts.platform` names the platform on that launchpad when it is known (`stonk` is StonkFun, a LaunchLab launch). A BNB Chain token is its `0x` address (forty hex digits); on it, `holders` and `funding` are not read yet, and the amounts in `facts` (`bundledSol`, `curveSol`) are in BNB, or in the quote token when `facts.quote` names one. Its own accuracy record is pump.fun's, the curve the zoo grades by. One call, no key, no cost, answers in well under a second.
+ZOOAI AGENCY reads every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab (bonk.fun, StonkFun and others) and Meteora's bonding curve (Believe, bags and others) straight from Solana as it happens, every four.meme launch, buy, sell and graduation straight from BNB Chain, and every Clanker launch and Uniswap v4 swap straight from Base. The check answers for all of them; `facts.venue` says which (`pump.fun`, `launchlab`, `dbc`, `fourmeme`, `clanker`), and `facts.platform` names the platform on that launchpad when it is known (`stonk` is StonkFun, a LaunchLab launch; `Bankr` is a Clanker launch asked for through Bankr). A BNB Chain or Base token is its `0x` address (forty hex digits); the two chains share that shape, so every answer carries `chain` (`solana`, `bsc` or `base`), and a request about a `0x` address no stream has seen may say which with `?chain=base` (BNB Chain is assumed otherwise). On both EVM chains `holders` is read from the chain on a deep read, `funding` only where the operator set a key for it, and the amounts in `facts` (`bundledSol`, `curveSol`) are in BNB or ETH, or in the quote token when `facts.quote` names one. A Clanker token has no bonding curve: it trades in its Uniswap pool from the first second, so it never `graduated`, and its first buyers, bundles and the dev's exit are read from that pool. Its own accuracy record is pump.fun's, the curve the zoo grades by. One call, no key, no cost, answers in well under a second.
 
 ## When to call it
 
-- Before every buy of a recently launched Solana or BNB Chain token, above all a pump.fun or four.meme launch: sniping, momentum buys, swaps into anything new.
+- Before every buy of a recently launched Solana, BNB Chain or Base token, above all a pump.fun, four.meme or Clanker launch: sniping, momentum buys, swaps into anything new.
 - Before adding to a position in such a token. A creator can sell after your first buy.
 - When the user pastes a token address and asks about it before buying.
 
@@ -72,7 +72,7 @@ A real answer (October 23, 2026, check version 5, with `?holders=1`), for a wall
 | `top5BuyingPct` | share of all buying done by the top 5 buyers |
 | `graduated`, `curveSol`, `poolSol` | whether it left the curve, SOL in the curve, SOL in the pool |
 | `quote` | the token it trades against when not SOL (then `curveSol` is `null`) |
-| `venue` | `pump.fun`, `launchlab` (Raydium LaunchLab) or `dbc` (Meteora's bonding curve) |
+| `venue` | `pump.fun`, `launchlab` (Raydium LaunchLab), `dbc` (Meteora's bonding curve), `fourmeme` (four.meme on BNB Chain) or `clanker` (Clanker on Base) |
 | `platform` | present when known: the platform on that launchpad, e.g. `stonk` (shown as StonkFun) |
 | `mayhem` | launched in pump.fun's Mayhem Mode: 2 billion supply, and pump.fun's own bot trades it for 24 hours, so churn, bumps and bundles are not flagged |
 | `earlyWallets` | wallets other than the creator that bought in the first 5 seconds (snipers and the launch block) |
@@ -182,4 +182,4 @@ The free tier is enough for any single agent, and it stays free. A bot that chec
 
 ## Why trust it
 
-The data is read straight from Solana and BNB Chain by ZOOAI AGENCY's own streams. The code is open: https://github.com/0xNickdev/aiagentzoo (`apps/node/src/chain/check.ts`). Every call the zoo's agents make is re-checked the next day and scored in public on a signed log: https://zooaiagency.com/docs/grading. Not financial advice.
+The data is read straight from Solana, BNB Chain and Base by ZOOAI AGENCY's own streams. The code is open: https://github.com/0xNickdev/aiagentzoo (`apps/node/src/chain/check.ts`). Every call the zoo's agents make is re-checked the next day and scored in public on a signed log: https://zooaiagency.com/docs/grading. Not financial advice.

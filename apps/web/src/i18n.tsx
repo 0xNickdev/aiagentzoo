@@ -160,9 +160,10 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^pass means .*$/, () => "通过只代表链上没看到开发者砸盘、捆绑、开发者小号、狙击手囤货、连环发币或内盘归零，不代表会涨"],
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],
-  [/^holders could not be read from (Solana|BNB Chain) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
+  [/^holders could not be read from (Solana|BNB Chain|Base) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
   [/^not a launch from four\.meme in the last two days, so there is no chain record to check$/, () => "不是过去两天里在 four.meme 上发的币，所以没有链上记录可查"],
-  [/^\+([\d.]+) BNB buy$/, (m) => `+${m[1]} BNB 大单买入`],
+  [/^not a Clanker launch on Base in the last two days, so there is no chain record to check$/, () => "不是过去两天里在 Base 上通过 Clanker 发的币，所以没有链上记录可查"],
+  [/^\+([\d.]+) (BNB|ETH) buy$/, (m) => `+${m[1]} ${m[2]} 大单买入`],
   [/^the chain stream is down right now: .*$/, () => "链上数据流暂时中断：结果可能不是最新的"],
 ];
 
