@@ -1,5 +1,9 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "graduated · pool {s} BNB": "已毕业 · 池子 {s} BNB",
+  "known ruggers {n}": "已知跑路钱包 {n}",
+  "whales {n}": "巨鲸 {n}",
+  "new wallets {n}": "新钱包 {n}",
   "not on BNB Chain yet": "BNB Chain 上暂无",
   "not read on BNB Chain yet": "BNB Chain 上暂未读取",
   "reading Solana and BNB Chain now": "正在读取 Solana 和 BNB Chain",

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { chainName, explorer, explorerName } from "../chain";
+import { TagList, Tags, type WalletTag } from "./WalletTags";
 import { type ReactNode, useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t } from "../i18n";
@@ -31,6 +32,8 @@ interface Profile {
   funding: { funder: string | null; funderIsHot: boolean; siblings: Array<{ wallet: string; launches48h: number; dumped: number }>; siblingDumped48h: number } | null;
   funded: { hot: boolean; creators: Array<{ wallet: string; launches48h: number; dumped: number }> };
   sniper: { snipes48h: number; soldOut: number; medianExitSec: number | null; topCreators: Array<{ creator: string; launches: number }>; recent: Array<{ mint: string; symbol: string; createdAt: number }> } | null;
+  /** The node's marks for this wallet: the same ones the x-ray shows next to the first-seconds wallets. */
+  tags?: WalletTag[];
   accounts: Array<{ social: { url: string; label: string; kind: string }; launches: number; fastDumps: number; creators: number }>;
 }
 
@@ -166,8 +169,9 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
       <div className="mx-auto max-w-7xl space-y-4">
         <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="tabular-nums text-[12.5px] text-fg-3">
+            <p className="tabular-nums flex items-center gap-2 text-[12.5px] text-fg-3">
               {t("wallet")} · {roles.join(" · ")}
+              <Tags tags={p.tags} />
             </p>
             <span className="flex items-center gap-3 text-[12.5px]">
               <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="tabular-nums text-fg-3 hover:text-white">
@@ -186,6 +190,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             </p>
             <h2 className="font-display mt-3 max-w-4xl text-[32px] font-semibold leading-[1.05] text-white sm:text-[44px]">{l.title}</h2>
             {l.sub && <p className="mt-2 text-[17px] text-fg-3">{l.sub}</p>}
+          <TagList tags={p.tags} />
           </div>
           {d && (
             <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-5">

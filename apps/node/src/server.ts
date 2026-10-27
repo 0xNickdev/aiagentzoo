@@ -19,7 +19,7 @@ import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { bscFundersEnabled } from "./chain/bscFunders.ts";
-import { tagAll } from "./chain/tags.ts";
+import { tagAll, tagsOf } from "./chain/tags.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
@@ -634,7 +634,10 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           : [];
         if (!dev && !sniper && !funded.creators.length) return json(res, 404, { error: "this wallet did not launch, snipe or fund a launch the stream saw in the last two days" });
         res.setHeader("cache-control", "no-store");
-        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, checkedAt: Date.now() });
+        // The wallet's tags, from what it did on the tape and in the long memory: the same marks the x-ray shows.
+        const tags = tagsOf({ wallet: w, snipes48h: sniper?.snipes48h ?? 0, serial: (sniper?.snipes48h ?? 0) >= 10 }, kept(w));
+        if (funded.hot && !tags.includes("exchange")) tags.push("exchange");
+        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, tags, checkedAt: Date.now() });
       }
       const bundleOf = ROUTE.bundle.exec(path);
       if (req.method === "GET" && bundleOf) {

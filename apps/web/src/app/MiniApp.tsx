@@ -7,6 +7,7 @@ import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 import { TONE as XTONE, type XRayReport } from "../components/XRay";
 import XRayRadar, { secs } from "../components/XRayRadar";
+import { Tags } from "../components/WalletTags";
 import { useRadar, type Watched } from "../components/radarCore";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 
@@ -625,7 +626,18 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
 
         <p className="font-display mt-4 text-[38px] leading-none tracking-tight" style={{ color: tone.color, textShadow: `0 0 40px rgba(${glow},0.3)` }}>
           {tt(tone.label)}
+          {c.score !== null && c.score !== undefined && <span className="ml-3 text-[22px] opacity-70">{c.score}</span>}
         </p>
+        {(() => {
+          const count = (k: "rugger" | "whale" | "new") => r.early.filter((e) => e.tags?.includes(k)).length;
+          const who = [count("rugger") && tt("known ruggers {n}", { n: count("rugger") }), count("whale") && tt("whales {n}", { n: count("whale") }), count("new") && tt("new wallets {n}", { n: count("new") })].filter(Boolean);
+          return who.length ? (
+            <p className="mt-2 flex items-center gap-2 text-[12px] text-fg-3">
+              <Tags tags={["rugger", "whale", "new"].filter((k) => count(k as "rugger")) as never} size={12} />
+              {who.join(" · ")}
+            </p>
+          ) : null;
+        })()}
         {c.reasons.length > 0 && (
           <ul className="mt-4 space-y-2">
             {c.reasons.map((x) => (

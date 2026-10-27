@@ -537,7 +537,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
     setFrom("map");
     setSelState(w);
   };
-  const pool = f?.graduated ? (f.poolSol !== undefined && f.poolSol !== null ? t("graduated · pool {s} SOL", { s: f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol) }) : t("graduated")) : null;
+  const pool = f?.graduated ? (f.poolSol !== undefined && f.poolSol !== null ? t(unitOf(r.mint) === "BNB" ? "graduated · pool {s} BNB" : "graduated · pool {s} SOL", { s: f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol) }) : t("graduated")) : null;
   const devBad = (rec?.dumped ?? 0) >= 2 || (f?.creatorSoldPct ?? 0) >= 50 || (!!fund?.funder && !fund.funderIsHot && fund.siblingDumped48h >= 3);
   const fiveBad = took >= 0.25 || (f?.creatorCrew ?? 0) >= 2 || (f?.ringWallets ?? 0) >= 3 || (f?.bundleSharePct ?? 0) >= 15;
   const bundleBad = (((f?.bundlers ?? 0) >= 10 && (f?.bundlersPeakPct ?? 0) >= 30) || (f?.churnPct ?? 0) >= 30) && !f?.mayhem;
