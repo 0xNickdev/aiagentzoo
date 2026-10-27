@@ -114,6 +114,13 @@ export interface XRayReport {
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun", fourmeme: "four.meme", flap: "Flap", clanker: "Clanker" };
+/** The launchpad and, when it names one, the platform on it: "StonkFun", "Flap · tax 9%", "Clanker · Bankr". */
+const venueLabel = (f: { venue?: string; platform?: string } | null | undefined) => {
+  const v = f?.venue ?? "pump.fun";
+  const p = f?.platform;
+  if (p && VENUE[p]) return VENUE[p];
+  return p ? `${VENUE[v] ?? v} · ${p}` : (VENUE[v] ?? v);
+};
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 /** How old the token is: from the stream's facts, or from its launch time when it is older than the stream. */
 const ageOf = (r: XRayReport) => {
@@ -216,7 +223,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, W, H);
 
-  await header(ctx, L, 86, `X-Ray · ${VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}`);
+  await header(ctx, L, 86, `X-Ray · ${venueLabel(f)}`);
   ctx.font = '600 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
   ctx.fillText(`$${r.symbol}`.slice(0, 16), L - 3, 166);
@@ -591,7 +598,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
             <b className="text-[17px] font-semibold tracking-[-0.01em] text-fg">${r.symbol.replace(/^\$/, "")}</b>
             <span className="tabular-nums truncate text-[12.5px] text-fg-3">
-              {r.name}{r.name ? " · " : ""}{ageOf(r)} · {VENUE[f?.platform ?? f?.venue ?? "pump.fun"]}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
+              {r.name}{r.name ? " · " : ""}{ageOf(r)} · {venueLabel(f)}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </span>
           </div>
           <CopyCa mint={r.mint} />

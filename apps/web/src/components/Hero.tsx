@@ -245,7 +245,7 @@ export default function Hero() {
                 setInput(e.target.value);
                 setError(false);
               }}
-              placeholder={t("token address or pump.fun link")}
+              placeholder={t("any token address or link, Solana, BNB or Base")}
               spellCheck={false}
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-fg-4"
