@@ -19,8 +19,9 @@ import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { bscFundersEnabled } from "./chain/bscFunders.ts";
-import { tagAll, tagsOf } from "./chain/tags.ts";
+import { tagAll, tagsOf, type WalletTag } from "./chain/tags.ts";
 import type { CabalIndex } from "./chain/cabals.ts";
+import { labels } from "./chain/labels.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
@@ -133,8 +134,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   };
   /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
   const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
-  /** Tags plus the cabal each wallet belongs to, when it does. */
-  const withCabal = <T extends { wallet: string }>(list: T[]) => (cabals ? list.map((w) => ({ ...w, cabal: cabals.of(w.wallet) })) : list);
+  /** Tags plus the cabal each wallet belongs to, and who it is said to be: a KOL, a smart-money wallet. */
+  const withCabal = <T extends { wallet: string; tags: WalletTag[] }>(list: T[]) =>
+    list.map((w) => {
+      const kol = labels.kol(w.wallet);
+      const smart = labels.smartOf(w.wallet);
+      const tags = [...w.tags.filter((x) => x !== "new" || (!kol && !smart)), ...(kol ? ["kol" as const] : []), ...(smart ? ["smart" as const] : [])];
+      return { ...w, tags, ...(cabals ? { cabal: cabals.of(w.wallet) } : {}), ...(kol ? { kol } : {}), ...(smart ? { smart } : {}) };
+    });
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
@@ -657,7 +664,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // The wallet's tags, from what it did on the tape and in the long memory: the same marks the x-ray shows.
         const tags = tagsOf({ wallet: w, snipes48h: sniper?.snipes48h ?? 0, serial: (sniper?.snipes48h ?? 0) >= 10 }, kept(w));
         if (funded.hot && !tags.includes("exchange")) tags.push("exchange");
-        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, tags, cabal: cabals?.of(w) ?? null, checkedAt: Date.now() });
+        const [who] = withCabal([{ wallet: w, tags }]);
+        return json(res, 200, { wallet: w, dev, funding, funded, sniper, accounts, ...who, checkedAt: Date.now() });
       }
       const bundleOf = ROUTE.bundle.exec(path);
       if (req.method === "GET" && bundleOf) {

@@ -1,11 +1,11 @@
-import { Hammer, Landmark, Network, Package, Rat, Repeat, Skull, Sprout, Waves } from "lucide-react";
+import { Gem, Hammer, Landmark, Megaphone, Network, Package, Rat, Repeat, Skull, Sprout, Waves } from "lucide-react";
 import { t } from "../i18n";
 
 /**
  * What a wallet is, the way terminals label them: one small mark each, the same set everywhere the x-ray lives.
  * The node gives the tags (apps/node/src/chain/tags.ts); this is only how they look.
  */
-export type WalletTag = "crew" | "rugger" | "ring" | "serial" | "bundle" | "whale" | "dev" | "exchange" | "new";
+export type WalletTag = "crew" | "rugger" | "ring" | "serial" | "bundle" | "whale" | "dev" | "exchange" | "new" | "kol" | "smart";
 
 export const TAG: Record<WalletTag, { Icon: typeof Rat; color: string; label: string; what: string }> = {
   crew: { Icon: Rat, color: "#ff8a7e", label: "creator's own wallet", what: "snipes this creator's other launches too" },
@@ -17,9 +17,11 @@ export const TAG: Record<WalletTag, { Icon: typeof Rat; color: string; label: st
   dev: { Icon: Hammer, color: "#d8c49a", label: "has launched before", what: "launched tokens the zoo has kept, and did not dump most of them" },
   exchange: { Icon: Landmark, color: "#a3aaa6", label: "exchange or launcher", what: "everyone's wallet, so it ties no one together" },
   new: { Icon: Sprout, color: "#a6e3b4", label: "new wallet", what: "never seen by the zoo before this launch" },
+  kol: { Icon: Megaphone, color: "#f2d39b", label: "KOL", what: "a KOL's wallet, as Kolscan lists it" },
+  smart: { Icon: Gem, color: "#7fe0d6", label: "smart money", what: "a trader with a record of winning" },
 };
 
-const ORDER: WalletTag[] = ["crew", "rugger", "ring", "serial", "bundle", "whale", "dev", "exchange", "new"];
+const ORDER: WalletTag[] = ["kol", "smart", "crew", "rugger", "ring", "serial", "bundle", "whale", "dev", "exchange", "new"];
 export const sortTags = (tags: WalletTag[] | undefined) => ORDER.filter((k) => tags?.includes(k));
 
 /** The marks in a row, each with its name on hover. */

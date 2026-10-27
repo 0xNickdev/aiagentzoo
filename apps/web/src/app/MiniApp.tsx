@@ -629,11 +629,11 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
           {c.score !== null && c.score !== undefined && <span className="ml-3 text-[22px] opacity-70">{c.score}</span>}
         </p>
         {(() => {
-          const count = (k: "rugger" | "whale" | "new") => r.early.filter((e) => e.tags?.includes(k)).length;
-          const who = [count("rugger") && tt("known ruggers {n}", { n: count("rugger") }), count("whale") && tt("whales {n}", { n: count("whale") }), count("new") && tt("new wallets {n}", { n: count("new") })].filter(Boolean);
+          const count = (k: "rugger" | "whale" | "new" | "kol" | "smart") => r.early.filter((e) => e.tags?.includes(k)).length;
+          const who = [count("kol") && tt("KOL wallets {n}", { n: count("kol") }), count("smart") && tt("smart money {n}", { n: count("smart") }), count("rugger") && tt("known ruggers {n}", { n: count("rugger") }), count("whale") && tt("whales {n}", { n: count("whale") }), count("new") && tt("new wallets {n}", { n: count("new") })].filter(Boolean);
           return who.length ? (
             <p className="mt-2 flex items-center gap-2 text-[12px] text-fg-3">
-              <Tags tags={["rugger", "whale", "new"].filter((k) => count(k as "rugger")) as never} size={12} />
+              <Tags tags={["kol", "smart", "rugger", "whale", "new"].filter((k) => count(k as "rugger")) as never} size={12} />
               {who.join(" · ")}
             </p>
           ) : null;

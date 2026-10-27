@@ -208,8 +208,8 @@ test("the node answers a 0x address from the BNB Chain tape: check, x-ray, creat
     assert.equal(x.creator, CREATOR);
     assert.deepEqual(x.early.map((e) => e.wallet), [SNIPER]);
     assert.deepEqual(x.bundle.wallets.map((b) => b.wallet), [SNIPER]);
-    // No funders on BNB Chain yet; holders are asked of the chain, and a made-up token answers nothing.
-    assert.equal(x.funding, null);
+    // Funders come from Binplorer when it answers; a made-up creator has no funder either way.
+    assert.ok(x.funding === null || (x.funding as { funder: string | null }).funder === null);
     assert.ok(x.check.holders === null || x.check.holders === undefined || typeof x.check.holders === "object");
     const dev = (await (await fetch(`${base}/v1/chain/creator/${CREATOR}`)).json()) as { launches48h: number; dumped: number };
     assert.equal(dev.launches48h, 1);
@@ -465,4 +465,28 @@ test("a plain transfer between wallets moves positions in the book; a curve leg,
   assert.deepEqual(book.top(TOKEN), [SNIPER, OTHER]);
   feed.onTransferLog(xfer(SNIPER, OTHER, 30_000_000n, "0xt6"));
   assert.deepEqual(book.top(TOKEN), [OTHER, SNIPER]);
+});
+
+test("labels: Kolscan's page gives each KOL wallet its name and X; the operator's file gives smart money; binplorer traces a funder with a free key", async () => {
+  const { Labels, parseKolscan } = await import("../src/chain/labels.ts");
+  const html = String.raw`<script>self.__next_f.push([1,"{\"name\":\"slingoor\",\"twitter\":\"https://x.com/slingoori\",\"address\":\"5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij\",\"pnl\":855},{\"name\":\"Cented\",\"twitter\":\"\",\"address\":\"CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o\"}"])</script>`;
+  const kols = parseKolscan(html);
+  assert.deepEqual(kols.get("5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij"), { name: "slingoor", x: "https://x.com/slingoori" });
+  assert.deepEqual(kols.get("CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o"), { name: "Cented", x: null });
+  const l = new Labels();
+  assert.equal(await l.readKolscan((async () => new Response(html, { status: 200 })) as unknown as typeof fetch), 2);
+  assert.equal(l.kol("5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij")!.name, "slingoor");
+  assert.equal(l.kol(SNIPER), null);
+  const { BscLineage } = await import("../src/chain/bscFunders.ts");
+  const FUNDER = "0x1111111111111111111111111111111111111111";
+  const f = (async (url: string) => {
+    const a = /getAddressTransactions\/(0x[0-9a-f]{40})/.exec(url)![1];
+    const t0 = Math.floor(Date.now() / 1000) - 3600;
+    if (a === CREATOR) return new Response(JSON.stringify([{ from: CREATOR, to: TOKEN_MANAGER2, value: 0, timestamp: t0 + 10, hash: "0xb2", success: true }, { from: FUNDER, to: CREATOR, value: 0.2, timestamp: t0, hash: "0xb1", success: true }]), { status: 200 });
+    if (a === FUNDER) return new Response(JSON.stringify([{ from: FUNDER, to: CREATOR, value: 0.2, timestamp: t0, hash: "0xb1", success: true }]), { status: 200 });
+    return new Response("[]", { status: 200 });
+  }) as unknown as typeof fetch;
+  const v = (await new BscLineage(new PumpTape("BNB"), f, () => ({ binplorer: "freekey" })).trace(CREATOR))!;
+  assert.equal(v.funder, FUNDER);
+  assert.equal(v.funderIsHot, false);
 });

@@ -354,6 +354,8 @@ export function xrayMessage(x: XRayReply): string {
       lines.push(T("<b>First 5 seconds:</b> {n} wallets took {t}, still hold {h}", { n: f.earlyWallets, t: pct(took), h: `${f.earlyHeldPct ?? 0}%` }));
       const count = (tag: string) => x.early.filter((e) => e.tags?.includes(tag)).length;
       const who = [
+        count("kol") ? T("KOL wallets {n}", { n: count("kol") }) : "",
+        count("smart") ? T("smart money {n}", { n: count("smart") }) : "",
         f.creatorCrew ? T("creator's crew {n}", { n: f.creatorCrew }) : "",
         count("rugger") ? T("known ruggers {n}", { n: count("rugger") }) : "",
         f.ringWallets ? T("sniper ring {n}", { n: f.ringWallets }) : "",

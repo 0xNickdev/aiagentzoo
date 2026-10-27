@@ -1,5 +1,11 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "KOL": "KOL",
+  "a KOL's wallet, as Kolscan lists it": "Kolscan 上列出的 KOL 钱包",
+  "smart money": "聪明钱",
+  "a trader with a record of winning": "有盈利记录的交易者",
+  "KOL wallets {n}": "KOL 钱包 {n}",
+  "smart money {n}": "聪明钱 {n}",
   "Wall of cabals · 90 days · rebuilt {h} h ago": "阴谋集团墙 · 90 天 · {h} 小时前重建",
   "Wall of cabals · 90 days": "阴谋集团墙 · 90 天",
   "The wallets that work": "协同作案的",

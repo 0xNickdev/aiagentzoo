@@ -4,7 +4,7 @@ import { exchangeOf, launcherOf } from "./exchanges.ts";
  * What a wallet is, in one word each, the way traders read labels on a terminal: who it is across every launch the
  * zoo has seen, not only on this one. Several can be true at once; they are given in order of how much they matter.
  */
-export type WalletTag = "crew" | "rugger" | "ring" | "serial" | "bundle" | "whale" | "dev" | "exchange" | "new";
+export type WalletTag = "crew" | "rugger" | "ring" | "serial" | "bundle" | "whale" | "dev" | "exchange" | "new" | "kol" | "smart";
 
 export const TAGS: Record<WalletTag, string> = {
   crew: "the creator's own wallet: snipes this creator's other launches too",
@@ -16,6 +16,8 @@ export const TAGS: Record<WalletTag, string> = {
   dev: "has launched tokens before",
   exchange: "an exchange or a launcher's wallet: it is everyone's, so it ties no one together",
   new: "never seen by the zoo before this launch",
+  kol: "a KOL's wallet, as Kolscan lists it",
+  smart: "a smart-money wallet: a trader with a record of winning",
 };
 
 /** A first-second or launch-block wallet as the tape reports it. */

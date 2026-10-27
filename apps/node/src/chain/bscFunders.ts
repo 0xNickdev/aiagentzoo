@@ -10,10 +10,14 @@ import type { PumpTape } from "./pump.ts";
 
 const API = "https://api.etherscan.io/v2/api";
 const MORALIS = "https://deep-index.moralis.io/api/v2.2";
-/** Either key traces: Moralis's free tier covers BNB Chain, Etherscan's covers it on a paid plan only. */
-export const bscFundersEnabled = () => Boolean(process.env.MORALIS_API_KEY || process.env.BSCSCAN_API_KEY);
-export type FunderKeys = { moralis?: string; etherscan?: string };
-export const bscFunderKeys = (): FunderKeys | undefined => (process.env.MORALIS_API_KEY || process.env.BSCSCAN_API_KEY ? { moralis: process.env.MORALIS_API_KEY, etherscan: process.env.BSCSCAN_API_KEY } : undefined);
+const BINPLORER = "https://api.binplorer.com";
+/**
+ * Binplorer answers with a free key: two calls a second, a thousand a day, the last fifty transactions of an address.
+ * A paid Moralis or Etherscan key answers deeper. BSC_FUNDERS=off turns the tracing off.
+ */
+export const bscFundersEnabled = () => process.env.BSC_FUNDERS !== "off";
+export type FunderKeys = { moralis?: string; etherscan?: string; binplorer?: string };
+export const bscFunderKeys = (): FunderKeys | undefined => (process.env.BSC_FUNDERS === "off" ? undefined : { moralis: process.env.MORALIS_API_KEY, etherscan: process.env.BSCSCAN_API_KEY, binplorer: process.env.BINPLORER_API_KEY ?? "freekey" });
 const KEEP_MS = 6 * 3_600_000;
 /** A funder that moved this many transactions in a day is an exchange or a router, not a person. */
 const HOT_PER_DAY = 1_000;
@@ -54,6 +58,15 @@ async function txlist(address: string, sort: "asc" | "desc", offset: number, key
     const body = (await r.json()) as { result?: Array<{ from_address: string; to_address: string | null; value: string; block_timestamp: string; hash: string; receipt_status?: string }> };
     if (!Array.isArray(body.result)) return null;
     return body.result.map((t) => ({ from: t.from_address, to: t.to_address ?? "", value: t.value, timeStamp: String(Math.floor(new Date(t.block_timestamp).getTime() / 1000)), hash: t.hash, isError: t.receipt_status === "0" ? "1" : "0" }));
+  }
+  if (!keys.etherscan) {
+    // Binplorer: the newest fifty; a creator wallet is young, so its first incoming transfer is among them.
+    const r = await f(`${BINPLORER}/getAddressTransactions/${address}?apiKey=${keys.binplorer ?? "freekey"}&limit=50`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
+    if (!r.ok) return null;
+    const body = (await r.json()) as Array<{ from: string; to: string; value: number; rawValue?: number | string; timestamp: number; hash: string; success?: boolean }> | { error?: unknown };
+    if (!Array.isArray(body)) return null;
+    const list = body.map((t) => ({ from: t.from, to: t.to ?? "", value: String(Math.round(Number(t.value) * WEI)), timeStamp: String(t.timestamp), hash: t.hash, isError: t.success === false ? "1" : "0" }));
+    return sort === "asc" ? list.reverse() : list;
   }
   const url = `${API}?chainid=56&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=${offset}&sort=${sort}&apikey=${keys.etherscan}`;
   const r = await f(url, { signal: AbortSignal.timeout(10_000) });
@@ -130,7 +143,7 @@ export class BscLineage {
     const paid: string[] = [];
     if (funder && !bscExchangeOf(funder)) {
       // Moralis hands out a hundred a page: a funder with a hundred transactions in a day is busy enough to be a service.
-      const page = keys.moralis ? 100 : HOT_PER_DAY;
+      const page = keys.moralis ? 100 : keys.etherscan ? HOT_PER_DAY : 50;
       const recent = await txlist(funder, "desc", page, keys, this.f);
       if (recent) {
         const day = recent.filter((tx) => now / 1000 - Number(tx.timeStamp) < 86_400).length;
