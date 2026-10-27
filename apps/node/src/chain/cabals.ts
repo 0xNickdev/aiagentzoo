@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { exchangeOf, launcherOf } from "./exchanges.ts";
+import { deployerOf, exchangeOf, launcherOf } from "./exchanges.ts";
 import type { PumpTape } from "./pump.ts";
 
 /**
@@ -27,6 +27,9 @@ export interface Cabal {
 }
 
 const MIN_WALLETS = 3;
+/** A wallet this busy is a platform or a bot that touches everything, not a member: it ties no one together. */
+const HUB_LAUNCHES = 150;
+const HUB_SNIPES = 150;
 const MEMBERS_KEPT = 200;
 const SLICE = 400;
 const F_RING = 4;
@@ -128,6 +131,14 @@ export class CabalIndex {
     try {
       const uf = new UnionFind();
       const hot = (w: string) => exchangeOf(w) !== null || launcherOf(w) !== null;
+      // Hubs: launchpad deployers, ticker farms and bots that snipe everything would glue every cabal into one.
+      const hubs = new Set<number>();
+      for (const r of this.db.prepare("SELECT id, wallet, launches, snipes FROM wallets WHERE launches >= ? OR snipes >= ?").all(HUB_LAUNCHES, HUB_SNIPES) as Array<{ id: number; wallet: string; launches: number; snipes: number }>) hubs.add(Number(r.id));
+      for (const r of this.db.prepare("SELECT id, wallet FROM wallets").all() as Array<{ id: number; wallet: string }>) if (deployerOf(r.wallet) || hot(r.wallet)) hubs.add(Number(r.id));
+      const tie = (a: number, b: number) => {
+        if (!hubs.has(a) && !hubs.has(b)) uf.union(a, b);
+      };
+      await pause();
       // Ties through a funder: every creator a wallet paid for, unless that wallet is everyone's.
       const funded = this.db.prepare("SELECT funder, creator_id FROM tokens WHERE funder IS NOT NULL").all() as Array<{ funder: string; creator_id: number }>;
       const byFunder = new Map<string, Set<number>>();
@@ -138,17 +149,17 @@ export class CabalIndex {
         byFunder.set(r.funder, set);
       }
       for (const set of byFunder.values()) {
-        const [first, ...rest] = [...set];
-        for (const c of rest) uf.union(first!, c);
+        const list = [...set].filter((c) => !hubs.has(c));
+        for (let k = 1; k < list.length; k++) tie(list[0]!, list[k]!);
       }
       await pause();
       // Crew: a wallet in a creator's launches again and again.
       const crew = this.db.prepare("SELECT wt.wallet_id AS w, t.creator_id AS c FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 3").all() as Array<{ w: number; c: number }>;
-      for (const r of crew) uf.union(Number(r.w), Number(r.c));
+      for (const r of crew) tie(Number(r.w), Number(r.c));
       await pause();
       // The launch block, twice for the same creator.
       const bundles = this.db.prepare("SELECT wt.wallet_id AS w, t.creator_id AS c, count(*) AS n FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 2 GROUP BY wt.wallet_id, t.creator_id HAVING n >= 2").all() as Array<{ w: number; c: number; n: number }>;
-      for (const r of bundles) uf.union(Number(r.w), Number(r.c));
+      for (const r of bundles) tie(Number(r.w), Number(r.c));
       await pause();
       // Rings: first-second wallets flagged as sniping together, token by token, a slice at a time.
       const ids = (this.db.prepare("SELECT id FROM tokens ORDER BY id").all() as Array<{ id: number }>).map((r) => Number(r.id));
@@ -163,8 +174,8 @@ export class CabalIndex {
           } catch {
             continue;
           }
-          const ring = e.filter((x) => (x[5] & F_RING) !== 0).map((x) => x[0]);
-          for (let k = 1; k < ring.length; k++) uf.union(ring[0]!, ring[k]!);
+          const ring = e.filter((x) => (x[5] & F_RING) !== 0).map((x) => x[0]).filter((w) => !hubs.has(w));
+          for (let k = 1; k < ring.length; k++) tie(ring[0]!, ring[k]!);
         }
         await pause();
       }

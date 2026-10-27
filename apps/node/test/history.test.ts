@@ -102,7 +102,10 @@ test("history counts a creator's launches over many days and prunes past the cut
     assert.equal(store.wallet(SNIPER)!.tokens.length, 3);
     // Everyone was written just now, so no wallet is old enough to go.
     assert.equal(pruned.wallets, 0);
-    const later = await store.prune(now + 200 * 86_400_000, 90 * 86_400_000);
+    // Wallets stay four times as long as tokens: gone only a year on.
+    const mid = await store.prune(now + 200 * 86_400_000, 90 * 86_400_000);
+    assert.equal(mid.wallets, 0);
+    const later = await store.prune(now + 400 * 86_400_000, 90 * 86_400_000);
     assert.equal(later.wallets, 3);
     assert.equal(store.counts().wallets, 0);
   } finally {

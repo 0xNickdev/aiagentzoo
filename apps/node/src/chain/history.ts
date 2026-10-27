@@ -420,7 +420,8 @@ export class HistoryStore {
       const page = this.s.walletPage!.all(after, chunk * 5) as Array<{ id: number; last_seen: number }>;
       if (!page.length) break;
       after = Number(page[page.length - 1]!.id);
-      const old = page.filter((r) => r.last_seen < cutoff).map((r) => Number(r.id));
+      // Wallets outlive their tokens four times over: a cabal's record is worth more the longer it runs.
+      const old = page.filter((r) => r.last_seen < now - keepMs * 4).map((r) => Number(r.id));
       if (old.length) {
         this.db.prepare(`DELETE FROM wallets WHERE id IN (${old.map(() => "?").join(",")})`).run(...old);
         wallets += old.length;
