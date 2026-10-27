@@ -17,7 +17,7 @@ import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
-import { bscLineage, bscTape, fourMeme } from "./chain/bsc.ts";
+import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll } from "./chain/tags.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
@@ -475,7 +475,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const past = !found && history ? history.report(mint) : null;
         const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
-        const pool = deep && found && !bsc && holdersEnabled() ? tape.poolOf(mint) : null;
+        const pool = deep && found ? (bsc ? bscTape.poolOf(mint) : holdersEnabled() ? tape.poolOf(mint) : null) : null;
         const [holders, , poolSol] = await Promise.all([
           deep && (found || past) && !bsc && holdersEnabled()
             ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
@@ -488,8 +488,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             : deep && found && bsc && bscFundersEnabled() && !bscLineage.view(found.creator)
               ? within(bscLineage.trace(found.creator))
               : Promise.resolve(null),
-          // The pool's SOL as it is now, not as the last trade the tape saw left it.
-          pool ? within(poolSolOf(pool)) : Promise.resolve(null),
+          // The pool's SOL (or BNB) as it is now, not as the last trade the tape saw left it.
+          pool ? within(bsc ? bscPoolSol(pool, BigInt(mint) < BigInt(found!.facts.quote ?? WBNB)) : poolSolOf(pool)) : Promise.resolve(null),
         ]);
         if (poolSol !== null && poolSol !== undefined) {
           tape.notePoolSol(mint, poolSol);
@@ -504,12 +504,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           if (!funding) bscLineage.enqueue(found.creator);
         }
         if (past && !bsc) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
-        const linked = (found || past) && !bsc ? socials.forMint(mint) : [];
+        const linked = found || past ? (bsc ? bscSocials : socials).forMint(mint) : [];
         const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) && (!bsc || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
-        const image = bsc ? fourMeme.image(mint) : socials.image(mint);
-        if (!image) bsc ? fourMeme.want(mint) : socials.want(mint);
+        const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : socials.image(mint);
+        if (!image) bsc ? void recordFourMeme(mint) : socials.want(mint);
         // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
         // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
         if (!found && !past && deep && (bsc || holdersEnabled())) {

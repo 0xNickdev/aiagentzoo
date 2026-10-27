@@ -25,7 +25,8 @@ import { curveCapSol } from "./sources.ts";
  * itself. Every answer is signed on the public log, and a day later it is graded against what the token did.
  */
 
-const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const MINT = /^(?:[1-9A-HJ-NP-Za-km-z]{32,44}|0x[0-9a-fA-F]{40})$/;
+const isBsc = (mint: string) => /^0x/.test(mint);
 const DAY_MS = 24 * 3_600_000;
 /** The same token asked again within this window gets the same answer, not a second model call. */
 const REUSE_MS = 30 * 60_000;
@@ -136,7 +137,7 @@ export class AskDesk {
 
   /** The deepest pool for a token, with what DexScreener knows about its socials. */
   private async market(mint: string) {
-    const pairs = (await this.json<DexPair[]>(`${DEX}/tokens/v1/solana/${mint}`)) ?? [];
+    const pairs = (await this.json<DexPair[]>(`${DEX}/tokens/v1/${isBsc(mint) ? "bsc" : "solana"}/${mint}`)) ?? [];
     const p = pairs.filter((x) => x.baseToken?.address === mint).sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
     if (!p) return null;
     return {
@@ -185,7 +186,7 @@ export class AskDesk {
     const holder = who.startsWith("holder:");
     const limit = holder ? this.perHolderPerHour : this.perIpPerHour;
     const mint = typeof mintRaw === "string" ? mintRaw.trim() : "";
-    if (!MINT.test(mint)) return { ok: false, status: 400, reason: "that is not a Solana token address" };
+    if (!MINT.test(mint)) return { ok: false, status: 400, reason: "that is not a token address" };
 
     const reuseId = await this.store.get<string>(`ask:mint:${mint}`);
     if (reuseId) {
@@ -207,7 +208,7 @@ export class AskDesk {
     if (today >= this.perDay) return { ok: false, status: 429, reason: "the beaver is done for today, back after midnight UTC" };
 
     const [m, c] = await Promise.all([this.market(mint), this.chain(mint)]);
-    if (!m && !c) return { ok: false, status: 404, reason: "no market on DexScreener and not on our pump.fun stream: nothing to judge yet" };
+    if (!m && !c) return { ok: false, status: 404, reason: "no market on DexScreener and not on our stream: nothing to judge yet" };
 
     const obs: Observation = {
       mint,
@@ -228,7 +229,8 @@ export class AskDesk {
     const playbook = (await this.store.get<Playbook>("beaver:playbook")) ?? DEFAULT_PLAYBOOK;
     const record = c?.creatorRecord ?? null;
     // Past the curve the stream is blind; who holds the supply now is the next best evidence.
-    const holders = !c || obs.complete ? await this.json<HolderReport>(`${this.opts.northUrl}/v1/chain/holders/${mint}`) : null;
+    // Holders on BNB Chain come with the x-ray itself; the holders endpoint reads Solana only.
+    const holders = (!c || obs.complete) && !isBsc(mint) ? await this.json<HolderReport>(`${this.opts.northUrl}/v1/chain/holders/${mint}`) : null;
     // A launch bundle: who bought in the launch block, and who paid them.
     let bundle: AskFacts["bundle"] = null;
     if (c && (c.facts.bundleWallets ?? 0) >= 2) {
@@ -241,7 +243,7 @@ export class AskDesk {
         // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
         const result = await this.opts.model.think({
           system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
-          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? " creatorRecord is the creator wallet's last two days on pump.fun: launches, how many it dumped, the median minutes to the dump." : ""}\n\n${renderUntrusted([
+          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? ` creatorRecord is the creator wallet's last two days on ${isBsc(mint) ? "four.meme (BNB Chain)" : "pump.fun"}: launches, how many it dumped, the median minutes to the dump.` : ""}\n\n${renderUntrusted([
             {
               ...compact(obs),
               ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}),
@@ -253,7 +255,7 @@ export class AskDesk {
                       largestWalletShare: holders.topShare,
                       inPoolsAndLocks: holders.programShare,
                       creatorStillHolds: holders.creatorShare,
-                      note: "read from Solana now; pools and locks excluded from wallet shares. Volume far above pool liquidity is normal for an actively traded graduated token.",
+                      note: `read from ${isBsc(mint) ? "BNB Chain" : "Solana"} now; pools and locks excluded from wallet shares. Volume far above pool liquidity is normal for an actively traded graduated token.`,
                     },
                   }
                 : {}),

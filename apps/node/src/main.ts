@@ -22,7 +22,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
-import { BscFeed, bscLineage, bscTape } from "./chain/bsc.ts";
+import { BscFeed, bscLineage, bscTape, recordFourMeme } from "./chain/bsc.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
@@ -147,6 +147,14 @@ const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? n
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // The same long memory keeps four.meme launches: addresses never collide across the two chains.
 const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { funderOf: (c) => bscLineage.funderOf(c), log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
+if (bscFeed) {
+  // Each launch's accounts and picture from four.meme, half a minute in, when its API has the token.
+  const previous = bscTape.onMoment;
+  bscTape.onMoment = (e) => {
+    previous?.(e);
+    if ((e.kind === "launch" || e.kind === "serial") && bscFeed?.backfilled) setTimeout(() => void recordFourMeme(e.mint), 30_000).unref();
+  };
+}
 const stopBsc = bscFeed?.start() ?? null;
 // North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);

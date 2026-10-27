@@ -391,3 +391,42 @@ test("funders on BNB Chain: the creator's first incoming BNB names the funder; t
   // No key: nothing.
   assert.equal(await new BscLineage(tape, f, () => undefined).trace(CREATOR), null);
 });
+
+test("a graduation finds its PancakeSwap pair, and the pair's swaps and reserves reach the tape as pool trades", async () => {
+  const { PAIR_TOPIC, parsePairLog } = await import("../src/chain/bsc.ts");
+  const tape = new PumpTape("BNB");
+  const PAIR = "0x25e8963b4444f95fc3c50d7e5f0ededd78376b1c";
+  const asked: string[] = [];
+  const feed = new BscFeed(tape, { quoteOf: async () => null, pairOf: async (token, quote) => (asked.push(`${token}/${quote}`), PAIR) });
+  const t0 = Math.floor(Date.now() / 1000) - 600;
+  feed.onLog(createLog(1, t0, "0xe1"));
+  feed.onLog(tradeLog(true, CREATOR, 50_000_000, 0.5, 1, t0, "0xe1", 5));
+  await new Promise((r) => setTimeout(r, 10));
+  // LiquidityAdded(base, offers, quote = zero address, funds)
+  feed.onLog({ address: TOKEN_MANAGER2, topics: [TOPIC.liquidity], data: `0x${addrWord(TOKEN)}${wordOf(200_000_000n * E18)}${wordOf(0)}${wordOf(24n * E18)}`, blockNumber: "0x10", blockTimestamp: `0x${(t0 + 300).toString(16)}`, transactionHash: "0xe2", logIndex: "0x1" });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(asked, [`${TOKEN}/${WBNB}`]);
+  assert.equal(tape.poolOf(TOKEN), PAIR);
+  assert.equal(tape.token(TOKEN)!.facts.graduated, true);
+  assert.equal(feed.pairs.get(PAIR)!.mint, TOKEN);
+  // The token's address sorts above WBNB's: it is token1, the quote is token0.
+  const baseIsToken0 = BigInt(TOKEN) < BigInt(WBNB);
+  assert.equal(feed.pairs.get(PAIR)!.baseIsToken0, baseIsToken0);
+  const r0 = baseIsToken0 ? 200_000_000n * E18 : 24n * E18;
+  const r1 = baseIsToken0 ? 24n * E18 : 200_000_000n * E18;
+  feed.onPairLog({ address: PAIR, topics: [PAIR_TOPIC.sync], data: `0x${wordOf(r0)}${wordOf(r1)}`, blockNumber: "0x11", transactionHash: "0xe3", logIndex: "0x1" });
+  assert.equal(feed.pairs.get(PAIR)!.quoteReserve, 24);
+  // A buy: 1 BNB in, 5M tokens out, to the sniper.
+  const inWord = (tokens: bigint, quote: bigint) => (baseIsToken0 ? `${wordOf(tokens)}${wordOf(quote)}` : `${wordOf(quote)}${wordOf(tokens)}`);
+  feed.onPairLog({ address: PAIR, topics: [PAIR_TOPIC.swap, pad("1"), pad(SNIPER.slice(2))], data: `0x${inWord(0n, 1n * E18)}${inWord(5_000_000n * E18, 0n)}`, blockNumber: "0x11", transactionHash: "0xe3", logIndex: "0x2" });
+  const f = tape.token(TOKEN)!.facts;
+  assert.equal(f.ammBuys, 1);
+  assert.equal(f.ammSolIn, 1);
+  assert.equal(f.poolSol, 24);
+  // The same log again is dropped; a sell counts on the other side.
+  feed.onPairLog({ address: PAIR, topics: [PAIR_TOPIC.swap, pad("1"), pad(SNIPER.slice(2))], data: `0x${inWord(0n, 1n * E18)}${inWord(5_000_000n * E18, 0n)}`, blockNumber: "0x11", transactionHash: "0xe3", logIndex: "0x2" });
+  feed.onPairLog({ address: PAIR, topics: [PAIR_TOPIC.swap, pad("1"), pad(SNIPER.slice(2))], data: `0x${inWord(2_000_000n * E18, 0n)}${inWord(0n, 4n * 10n ** 17n)}`, blockNumber: "0x12", transactionHash: "0xe4", logIndex: "0x1" });
+  assert.equal(tape.token(TOKEN)!.facts.ammBuys, 1);
+  assert.equal(tape.token(TOKEN)!.facts.ammSells, 1);
+  assert.equal(parsePairLog({ address: PAIR, topics: ["0x01"], data: "0x", blockNumber: "0x1", transactionHash: "0x", logIndex: "0x0" }, feed.pairs.get(PAIR)!), null);
+});

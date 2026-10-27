@@ -1,6 +1,7 @@
 import { PumpTape, type PumpEvent } from "./pump.ts";
 import { bscBook, type PositionBook } from "./bscHolders.ts";
 import { BscLineage } from "./bscFunders.ts";
+import { SocialsRegistry } from "./socials.ts";
 
 /**
  * BNB Chain, read the same way as Solana: four.meme's TokenManager2 writes a log for every launch, buy, sell and
@@ -16,6 +17,13 @@ export const TOKEN_MANAGER2 = "0x5c952063c7fc8610ffdb798152d69f0b9550762b";
 /** TokenManagerHelper3: reads a token's quote, price and curve from either TokenManager. */
 export const HELPER3 = "0xf251f83e40a78868fcfa3fa4599dad6494e46034";
 export const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
+/** PancakeSwap V2: where a four.meme token's liquidity goes when it graduates. */
+export const PANCAKE_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
+/** The pair's own events: reserves after every trade, and each swap. */
+export const PAIR_TOPIC = {
+  sync: "0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1", // Sync(uint112 reserve0, uint112 reserve1)
+  swap: "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822", // Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
+} as const;
 
 /** keccak256 of each event's signature: the first topic of its log. */
 export const TOPIC = {
@@ -60,6 +68,8 @@ export interface ChainEvent {
   ts: number | null;
   block: number;
   tx: string;
+  /** On a graduation: the token the pool is quoted in (WBNB when four.meme wrote the zero address). */
+  quote?: string;
 }
 
 const word = (data: string, i: number): bigint => BigInt(`0x${data.slice(2 + i * 64, 66 + i * 64)}`);
@@ -91,8 +101,10 @@ export function parseLog(log: EvmLog): ChainEvent | null {
       case TOPIC.buy:
       case TOPIC.sell:
         return { ...base, ev: { kind: "trade", mint: addr(d, 0), user: addr(d, 1), isBuy: log.topics[0] === TOPIC.buy, tokens: num(d, 3), sol: num(d, 4), ts: ts ?? Date.now(), curveSol: num(d, 7) } };
-      case TOPIC.liquidity:
-        return { ...base, ev: { kind: "complete", mint: addr(d, 0) } };
+      case TOPIC.liquidity: {
+        const quote = addr(d, 2);
+        return { ...base, ev: { kind: "complete", mint: addr(d, 0) }, quote: /^0x0+$/.test(quote) ? WBNB : quote };
+      }
       default:
         return null;
     }
@@ -102,6 +114,58 @@ export function parseLog(log: EvmLog): ChainEvent | null {
 }
 
 export type Rpc = <T>(url: string, method: string, params: unknown[]) => Promise<T>;
+
+/** A followed PancakeSwap pair: its token, and which side of the pair the token is. */
+export interface Pair {
+  mint: string;
+  /** True when the token is token0 (its address sorts below the quote's). */
+  baseIsToken0: boolean;
+  /** The quote reserve after the last Sync, in whole units. */
+  quoteReserve: number | null;
+}
+
+const GET_PAIR = "0xe6a43905";
+/** The PancakeSwap V2 pair of a token and its quote, from the factory; null when there is none. */
+export async function pairOf(token: string, quote: string, rpc: Rpc = jsonRpc, url = DEFAULT_RPC): Promise<string | null> {
+  const data = `${GET_PAIR}${token.slice(2).toLowerCase().padStart(64, "0")}${quote.slice(2).toLowerCase().padStart(64, "0")}`;
+  const out = await rpc<string>(url, "eth_call", [{ to: PANCAKE_FACTORY, data }, "latest"]);
+  if (!out || out.length < 66) return null;
+  const pair = addr(out, 0);
+  return /^0x0+$/.test(pair) ? null : pair;
+}
+
+const GET_RESERVES = "0x0902f1ac";
+/** What the pool holds of the quote right now, in whole units: the tape only knows the last Sync it saw. */
+export async function bscPoolSol(pair: string, baseIsToken0: boolean, rpc: Rpc = jsonRpc, url = DEFAULT_RPC): Promise<number | null> {
+  const out = await rpc<string>(url, "eth_call", [{ to: pair, data: GET_RESERVES }, "latest"]);
+  if (!out || out.length < 66 * 2) return null;
+  return num(out, baseIsToken0 ? 1 : 0);
+}
+
+/** A pair's Sync or Swap log as a tape swap, given which side the token is. Sync only moves the reserve. */
+export function parsePairLog(log: EvmLog, pair: Pair): Extract<PumpEvent, { kind: "swap" }> | null {
+  if (log.removed) return null;
+  const d = log.data;
+  const ts = log.blockTimestamp ? Number(log.blockTimestamp) * 1000 : Date.now();
+  try {
+    if (log.topics[0] === PAIR_TOPIC.sync) {
+      pair.quoteReserve = num(d, pair.baseIsToken0 ? 1 : 0);
+      return null;
+    }
+    if (log.topics[0] !== PAIR_TOPIC.swap) return null;
+    const [a0In, a1In, a0Out, a1Out] = [num(d, 0), num(d, 1), num(d, 2), num(d, 3)];
+    const tokensIn = pair.baseIsToken0 ? a0In : a1In;
+    const tokensOut = pair.baseIsToken0 ? a0Out : a1Out;
+    const quoteIn = pair.baseIsToken0 ? a1In : a0In;
+    const quoteOut = pair.baseIsToken0 ? a1Out : a0Out;
+    const isBuy = tokensOut > 0 && quoteIn > 0;
+    if (!isBuy && !(tokensIn > 0 && quoteOut > 0)) return null;
+    const to = log.topics[2] ? `0x${log.topics[2].slice(26)}`.toLowerCase() : "";
+    return { kind: "swap", pool: log.address.toLowerCase(), isBuy, sol: isBuy ? quoteIn : quoteOut, tokens: isBuy ? tokensOut : tokensIn, user: to, ts, poolSol: pair.quoteReserve ?? 0 };
+  } catch {
+    return null;
+  }
+}
 
 export const jsonRpc: Rpc = async (url, method, params) => {
   const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(60_000) });
@@ -132,6 +196,8 @@ export interface FeedOptions {
   rpc?: Rpc;
   /** The quote lookup, replaceable in tests. */
   quoteOf?: (token: string) => Promise<string | null>;
+  /** The pair lookup, replaceable in tests. */
+  pairOf?: (token: string, quote: string) => Promise<string | null>;
   /** Where every wallet's position per token is kept, for the holders report. */
   book?: PositionBook;
   WebSocketImpl?: typeof WebSocket;
@@ -154,6 +220,10 @@ export class BscFeed {
   private sessions = 0;
   private readonly opts: Required<Pick<FeedOptions, "wsUrl" | "rpcUrl" | "logsUrl" | "log" | "rpc">> & Pick<FeedOptions, "WebSocketImpl">;
   private readonly quote: (token: string) => Promise<string | null>;
+  private readonly pair: (token: string, quote: string) => Promise<string | null>;
+  /** The PancakeSwap pairs of graduated tokens, followed on the socket next to TokenManager2. */
+  readonly pairs = new Map<string, Pair>();
+  private pairSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
   private readonly book: PositionBook;
   private pruner: ReturnType<typeof setInterval> | null = null;
 
@@ -164,7 +234,54 @@ export class BscFeed {
     this.cursor = o.cursor ?? null;
     this.opts = { wsUrl: o.wsUrl ?? DEFAULT_WS, rpcUrl: o.rpcUrl ?? DEFAULT_RPC, logsUrl: o.logsUrl ?? DEFAULT_LOGS, log: o.log ?? console.log, rpc: o.rpc ?? jsonRpc, WebSocketImpl: o.WebSocketImpl };
     this.quote = o.quoteOf ?? ((token) => quoteOf(token, this.opts.rpc, this.opts.rpcUrl));
+    this.pair = o.pairOf ?? ((token, quote) => pairOf(token, quote, this.opts.rpc, this.opts.rpcUrl));
     this.book = o.book ?? bscBook;
+    // Pools the tape kept across a restart are followed again.
+    for (const pool of tape.poolAddresses()) {
+      const mint = tape.mintOfPool(pool);
+      if (mint) this.pairs.set(pool, { mint, baseIsToken0: BigInt(mint) < BigInt(tape.token(mint)?.facts.quote ?? WBNB), quoteReserve: null });
+    }
+  }
+
+  /** A pair's log in: reserves or a swap on a graduated token's pool. */
+  onPairLog(log: EvmLog, now = Date.now()): void {
+    const pair = this.pairs.get(log.address.toLowerCase());
+    if (!pair) return;
+    const key = `${log.transactionHash}:${Number(log.logIndex)}`;
+    if (this.seen.has(key)) return;
+    this.seen.add(key);
+    const ev = parsePairLog(log, pair);
+    if (ev) this.tape.apply(ev, now, log.transactionHash, Number(log.blockNumber));
+  }
+
+  /** On a graduation: the pool from the factory, then the tape learns it and the socket follows it. */
+  private async resolvePool(mint: string, quote: string, e: ChainEvent, now: number): Promise<void> {
+    let pool: string | null = null;
+    for (let attempt = 0; attempt < 3 && pool === null; attempt++) {
+      try {
+        pool = await this.pair(mint, quote);
+        if (pool === null) await new Promise((r) => setTimeout(r, 1_500 * (attempt + 1)));
+      } catch {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    if (!pool) return;
+    this.tape.apply({ kind: "pool", mint, pool }, e.ts ?? now, e.tx, e.block);
+    this.pairs.set(pool, { mint, baseIsToken0: BigInt(mint) < BigInt(quote), quoteReserve: null });
+    this.followPairs();
+  }
+
+  /** One subscription for every followed pair; replaced when the set changes. Nothing without a live socket. */
+  private followPairs(): void {
+    const sub = this.pairSub;
+    if (!sub || sub.ws.readyState !== 1) return;
+    const wanted = [...this.pairs.keys()].sort().join(",");
+    if (wanted === sub.wanted) return;
+    sub.wanted = wanted;
+    if (sub.id) sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 3, method: "eth_unsubscribe", params: [sub.id] }));
+    sub.id = null;
+    if (!wanted) return;
+    sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_subscribe", params: ["logs", { address: wanted.split(","), topics: [[PAIR_TOPIC.sync, PAIR_TOPIC.swap]] }] }));
   }
 
   /** One log in: parsed, deduplicated, queued behind its token's create when that is still being read. */
@@ -188,6 +305,7 @@ export class BscFeed {
       return;
     }
     this.tape.apply(e.ev, e.ts ?? now, e.tx, e.block);
+    if (e.ev.kind === "complete" && e.quote && this.tape.token(e.ev.mint)) void this.resolvePool(e.ev.mint, e.quote, e, now);
   }
 
   private async resolveCreate(mint: string, now: number): Promise<void> {
@@ -207,6 +325,7 @@ export class BscFeed {
       const ev = e.ev.kind === "create" ? { ...e.ev, quote } : e.ev;
       // Backfilled logs carry their block's time; live ones are applied as they arrive.
       this.tape.apply(ev, e.ts ?? now, e.tx, e.block);
+      if (e.ev.kind === "complete" && e.quote) void this.resolvePool(e.ev.mint, e.quote, e, now);
     }
   }
 
@@ -293,6 +412,7 @@ export class BscFeed {
         finished = true;
         clearInterval(stall);
         if (this.ws === ws) this.ws = null;
+        if (this.pairSub?.ws === ws) this.pairSub = null;
         // A failed fill or subscribe must not leave the socket open behind the next one.
         try {
           ws.close();
@@ -312,9 +432,17 @@ export class BscFeed {
         } catch {
           return;
         }
+        if (msg.id === 2) {
+          // The pairs' subscription; its id is what a later resubscribe ends.
+          if (!msg.error && this.pairSub?.ws === ws) this.pairSub.id = String(msg.result);
+          return;
+        }
+        if (msg.id === 3) return;
         if (msg.id === 1) {
           if (msg.error) return done(new Error(`subscribe: ${msg.error.message}`));
           subscribed = true;
+          this.pairSub = { ws, id: null, wanted: "" };
+          this.followPairs();
           void this.catchUp(session).then(() => {
             if (session !== this.sessions) return;
             const held = buffer ?? [];
@@ -332,6 +460,7 @@ export class BscFeed {
         }
         const log = msg.params?.result;
         if (!log || !subscribed) return;
+        if (this.pairs.has(log.address.toLowerCase())) return this.onPairLog(log);
         if (buffer) buffer.push(log);
         else this.onLog(log);
       };
@@ -449,3 +578,17 @@ export const bscTape = new PumpTape("BNB");
 export const fourMeme = new FourMemeInfo();
 /** Who paid for which four.meme creator, through BscScan when a key is set. */
 export const bscLineage = new BscLineage(bscTape);
+/** The X accounts and Telegram groups four.meme launches point to, and their record, like the Solana registry. */
+export const bscSocials = new SocialsRegistry(bscTape);
+
+/** four.meme's record of a launch into the socials registry: its accounts and picture. Once per token. */
+const recorded = new Set<string>();
+export async function recordFourMeme(mint: string): Promise<void> {
+  const key = mint.toLowerCase();
+  if (recorded.has(key)) return;
+  const info = await fourMeme.get(key);
+  if (!info) return;
+  recorded.add(key);
+  if (recorded.size > 50_000) recorded.clear();
+  bscSocials.recordMeta(key, { twitter: info.links.x ?? undefined, telegram: info.links.telegram ?? undefined, image: info.image ?? undefined });
+}

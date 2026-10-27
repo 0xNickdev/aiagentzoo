@@ -1024,6 +1024,11 @@ export class PumpTape {
     return [...this.pools.keys()].sort();
   }
 
+  /** The token a followed pool trades, when the tape knows the pool. */
+  mintOfPool(pool: string): string | null {
+    return this.pools.get(pool) ?? null;
+  }
+
   /** Life after the curve: trades on the PumpSwap pools of tokens we watched launch. */
   private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string, slot?: number): void {
     const mint = this.pools.get(ev.pool);

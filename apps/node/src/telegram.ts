@@ -506,7 +506,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
     try {
       const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
-      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), isBsc(mint) ? undefined : [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
+      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
@@ -764,7 +764,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return switchLang(chat);
       default:
         // In a private chat, a pasted address is a question.
-        if (isPrivate && address) return isBsc(address) ? xray(chat, address) : ask(chat, who, address);
+        if (isPrivate && address) return ask(chat, who, address);
         if (isPrivate) return void send(chat, T("Paste a token address or a pump.fun link, or pick from the menu."), menu());
     }
   };
@@ -792,7 +792,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "prompt":
         return prompt(chat, value === "dev" ? "dev" : value === "xray" ? "xray" : "ask");
       case "ask":
-        return MINT_ONLY.test(value) ? (isBsc(value) ? xray(chat, value) : ask(chat, `tg:${q.from.id}`, value)) : undefined;
+        return MINT_ONLY.test(value) ? ask(chat, `tg:${q.from.id}`, value) : undefined;
       case "watch":
         return MINT_ONLY.test(value) ? watch(chat, value, true) : undefined;
       case "unwatch":

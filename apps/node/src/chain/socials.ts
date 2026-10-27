@@ -96,6 +96,13 @@ export class SocialsRegistry {
     }
   }
 
+  /** A launch whose accounts and picture came from somewhere else (four.meme's own API): kept as if read. */
+  recordMeta(mint: string, meta: { twitter?: unknown; telegram?: unknown; image?: unknown }): void {
+    this.add(mint, socialsOf(meta));
+    const img = imageUrl(meta.image);
+    if (img) this.images.set(mint, img);
+  }
+
   /** Reads one token's metadata; false when the gateways refuse, so the reader backs off. */
   async read(mint: string, uri: string): Promise<boolean> {
     let refused = false;
