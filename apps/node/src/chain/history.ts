@@ -1,4 +1,5 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { checkToken } from "./check.ts";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { capsFrom, type ChainFacts, type CreatorRecord, devPattern, type PulseEvent, type PumpTape, repeatsOf, tempoOf } from "./pump.ts";
 
@@ -11,7 +12,7 @@ import { capsFrom, type ChainFacts, type CreatorRecord, devPattern, type PulseEv
  * deflated blob. Writes are queued and land in one transaction every few seconds, so the stream never waits on disk.
  */
 
-export type HistoryRecord = NonNullable<ReturnType<PumpTape["historyOf"]>> & { funder?: string | null };
+export type HistoryRecord = NonNullable<ReturnType<PumpTape["historyOf"]>> & { funder?: string | null; scoreFirst?: number | null };
 
 export const HISTORY_KEEP_MS = 90 * 24 * 3_600_000;
 const DAY_MS = 24 * 3_600_000;
@@ -120,7 +121,7 @@ export class HistoryStore {
     `);
     // Columns added after the first stores were written: what the dev took out, who was left holding, alive at last look.
     const have = new Set((this.db.prepare("PRAGMA table_info(tokens)").all() as Array<{ name: string }>).map((c) => c.name));
-    for (const [name, type] of [["dev_took", "REAL"], ["left_holding", "INTEGER"], ["alive", "INTEGER"], ["cap_first", "REAL"], ["cap_peak", "REAL"], ["cap_peak_at", "INTEGER"], ["cap_dump", "REAL"], ["cap_low", "REAL"], ["cap_high", "REAL"], ["dev_first_sell_at", "INTEGER"]] as const) {
+    for (const [name, type] of [["dev_took", "REAL"], ["left_holding", "INTEGER"], ["alive", "INTEGER"], ["cap_first", "REAL"], ["cap_peak", "REAL"], ["cap_peak_at", "INTEGER"], ["cap_dump", "REAL"], ["cap_low", "REAL"], ["cap_high", "REAL"], ["dev_first_sell_at", "INTEGER"], ["score_first", "INTEGER"]] as const) {
       if (!have.has(name)) this.db.exec(`ALTER TABLE tokens ADD COLUMN ${name} ${type}`);
     }
     const p = (sql: string) => this.db.prepare(sql);
@@ -129,14 +130,14 @@ export class HistoryStore {
       walletRow: p("SELECT * FROM wallets WHERE wallet = ?"),
       prev: p("SELECT id, dev_dumped_at FROM tokens WHERE mint = ?"),
       insertToken: p(`INSERT INTO tokens (mint, symbol, name, creator_id, venue, created_at, first_seen, graduated_at, dev_sold_pct, dev_dumped_at, peak_curve_sol, pool_drained_at, funder, body, updated_at, dev_took, left_holding, alive,
-        cap_first, cap_peak, cap_peak_at, cap_dump, cap_low, cap_high, dev_first_sell_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
+        cap_first, cap_peak, cap_peak_at, cap_dump, cap_low, cap_high, dev_first_sell_at, score_first)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
       updateToken: p(`UPDATE tokens SET symbol = ?, name = ?, graduated_at = coalesce(graduated_at, ?), dev_sold_pct = coalesce(?, dev_sold_pct),
         dev_dumped_at = coalesce(dev_dumped_at, ?), peak_curve_sol = max(coalesce(peak_curve_sol, 0), coalesce(?, 0)), pool_drained_at = coalesce(pool_drained_at, ?),
         funder = coalesce(?, funder), body = ?, updated_at = ?, dev_took = coalesce(?, dev_took), left_holding = coalesce(left_holding, ?), alive = coalesce(?, alive),
         cap_first = coalesce(cap_first, ?), cap_peak_at = CASE WHEN coalesce(?, 0) > coalesce(cap_peak, 0) THEN ? ELSE cap_peak_at END,
         cap_peak = max(coalesce(cap_peak, 0), coalesce(?, 0)), cap_dump = coalesce(cap_dump, ?), cap_low = coalesce(?, cap_low), cap_high = coalesce(?, cap_high),
-        dev_first_sell_at = coalesce(dev_first_sell_at, ?) WHERE id = ?`),
+        dev_first_sell_at = coalesce(dev_first_sell_at, ?), score_first = coalesce(score_first, ?) WHERE id = ?`),
       link: p("INSERT OR IGNORE INTO wallet_tokens (wallet_id, token_id, role, took, at) VALUES (?, ?, ?, ?, ?)"),
       relink: p("UPDATE wallet_tokens SET took = ? WHERE wallet_id = ? AND token_id = ? AND role = ?"),
       dumped: p("UPDATE wallets SET dumped = dumped + 1 WHERE id = ?"),
@@ -217,11 +218,11 @@ export class HistoryStore {
     if (!prev) {
       if (this.sinceAt === null) this.sinceAt = now;
       tokenId = Number((this.s.insertToken!.get(r.mint, r.symbol, r.name, creatorId, r.venue, r.createdAt, now, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now, r.devTookSol ?? null, r.leftHolding ?? null, r.alive === undefined ? null : r.alive ? 1 : 0,
-        c.capFirst, c.capPeak, c.capPeakAt, c.capDump, c.capLow, c.capHigh, c.devFirstSellAt) as { id: number | bigint }).id);
+        c.capFirst, c.capPeak, c.capPeakAt, c.capDump, c.capLow, c.capHigh, c.devFirstSellAt, r.scoreFirst ?? null) as { id: number | bigint }).id);
     } else {
       tokenId = Number(prev.id);
       this.s.updateToken!.run(r.symbol, r.name, graduatedAt, r.devSoldPct, r.dumpedAt, r.curveSol, drainedAt, r.funder ?? null, blob, now, r.devTookSol ?? null, r.leftHolding ?? null, r.alive === undefined ? null : r.alive ? 1 : 0,
-        c.capFirst, c.capPeak, c.capPeakAt, c.capPeak, c.capDump, c.capLow, c.capHigh, c.devFirstSellAt, tokenId);
+        c.capFirst, c.capPeak, c.capPeakAt, c.capPeak, c.capDump, c.capLow, c.capHigh, c.devFirstSellAt, r.scoreFirst ?? null, tokenId);
     }
     this.link(creatorId, tokenId, "dev", null, r.createdAt);
     if (r.dumpedAt !== null && (!prev || prev.dev_dumped_at === null)) this.s.dumped!.run(creatorId);
@@ -463,7 +464,11 @@ export function startHistory(store: HistoryStore, tape: PumpTape, { funderOf, lo
   };
   const take = (mint: string, now: number) => {
     const rec = tape.historyOf(mint, now);
-    if (rec) store.enqueue({ ...rec, funder: funderOf?.(rec.creator) ?? null });
+    if (!rec) return;
+    // The score as it stood when first written (a minute in): kept untouched, so the score can be checked against
+    // what happened later without the dump it later saw leaking into it.
+    const scoreFirst = checkToken(mint, { symbol: rec.symbol, facts: rec.facts, creatorRecord: tape.creator(rec.creator, now) }, { now }).score;
+    store.enqueue({ ...rec, funder: funderOf?.(rec.creator) ?? null, scoreFirst });
   };
   const tick = () => {
     const now = Date.now();

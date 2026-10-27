@@ -441,7 +441,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // BNB Chain tokens are read from four.meme's tape: no RPC calls, so no holders or funders yet.
         const bsc = chainOf(mint) === "bsc";
         const chainTape = tapeOf(mint);
-        if (chainTape.lastEventAt === 0) return json(res, 404, { error: bsc ? "this node does not read BNB Chain; use the north node" : "this node does not read the chain; use the north node" });
+        // A tape with nothing on it and nothing heard reads no chain; a restored one answers while its stream reconnects.
+        if (chainTape.lastEventAt === 0 && chainTape.status().tracked === 0) return json(res, 404, { error: bsc ? "this node does not read BNB Chain; use the north node" : "this node does not read the chain; use the north node" });
         // A key lifts the limits while its wallet still holds; without one, everyone gets the free tier.
         const key = keyFrom(req.headers, url.searchParams);
         let wallet: string | null = null;
