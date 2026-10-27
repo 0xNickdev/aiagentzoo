@@ -28,9 +28,9 @@ const DISC = {
 };
 
 /** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, four.meme on BNB Chain, or Clanker on Base. */
-export type Venue = "launchlab" | "dbc" | "fourmeme" | "clanker";
+export type Venue = "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
 /** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
-export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", fourmeme: "bsc", clanker: "base" };
+export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
 export const UNIT_OF_CHAIN: Record<"solana" | "bsc" | "base", Unit> = { solana: "SOL", bsc: "BNB", base: "ETH" };
 
 /** A trade on a followed pool, as the buy bot reads it. */
@@ -664,7 +664,7 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; clanker?: number } = { launches: 0, trades: 0 };
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number } = { launches: 0, trades: 0 };
   /** What the amounts are in: SOL on Solana, BNB on BNB Chain, ETH on Base. The moments' wording and the dollar caps read it. */
   readonly unit: Unit;
 
@@ -1114,7 +1114,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; clanker?: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
       };
       if (saved.v !== 1) return 0;
@@ -1162,7 +1162,7 @@ export class PumpTape {
       this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
       if (saved.seen) {
         const add = (k: Venue) => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
-        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}), ...(add("clanker") ? { clanker: add("clanker") } : {}) };
+        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}), ...(add("flap") ? { flap: add("flap") } : {}), ...(add("clanker") ? { clanker: add("clanker") } : {}) };
       }
       return this.tokens.size;
     } catch {

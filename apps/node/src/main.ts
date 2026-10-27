@@ -22,7 +22,9 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
-import { BscFeed, bscLineage, bscTape, recordFourMeme } from "./chain/bsc.ts";
+import { BscFeed, bscLineage, bscTape, recordFlap, recordFourMeme } from "./chain/bsc.ts";
+import { FlapFeed } from "./chain/flap.ts";
+import { bscBook } from "./chain/bscHolders.ts";
 import { BaseFeed, baseLineage, baseTape, type Pool, recordClanker } from "./chain/base.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
@@ -100,6 +102,9 @@ const socialsFile = join(config.dataDir, "chain-socials.json");
 const bscTapeFile = join(config.dataDir, "chain-tape-bsc.json");
 const bscCursorFile = join(config.dataDir, "chain-bsc-cursor.json");
 let bscFeed: BscFeed | null = null;
+// Flap shares the BNB Chain tape and has its own cursor.
+const flapCursorFile = join(config.dataDir, "chain-flap-cursor.json");
+let flapFeed: FlapFeed | null = null;
 // Base too: its tape, and the feed's cursor with the Uniswap pools it follows (a pool id is not on the tape).
 const baseTapeFile = join(config.dataDir, "chain-tape-base.json");
 const baseFeedFile = join(config.dataDir, "chain-base-feed.json");
@@ -117,6 +122,10 @@ const saveTape = () => {
     renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
     writeFileSync(`${bscCursorFile}.tmp`, JSON.stringify({ cursor: bscFeed.cursor, at: Date.now() }));
     renameSync(`${bscCursorFile}.tmp`, bscCursorFile);
+  }
+  if (flapFeed) {
+    writeFileSync(`${flapCursorFile}.tmp`, JSON.stringify({ cursor: flapFeed.cursor, at: Date.now() }));
+    renameSync(`${flapCursorFile}.tmp`, flapCursorFile);
   }
   if (baseFeed) {
     writeFileSync(`${baseTapeFile}.tmp`, baseTape.snapshot());
@@ -143,6 +152,26 @@ if (config.role === "north") {
       /* two days are read again */
     }
     bscFeed = new BscFeed(bscTape, { cursor, wsUrl: process.env.BSC_WS_URL, rpcUrl: process.env.BSC_RPC_URL, logsUrl: process.env.BSC_LOGS_URL, log: (m) => console.log(`[${config.id}] ${m}`) });
+    if (process.env.ZOO_FLAP !== "off") {
+      let flapCursor: number | null = null;
+      try {
+        if (existsSync(flapCursorFile)) flapCursor = Number(JSON.parse(readFileSync(flapCursorFile, "utf8")).cursor) || null;
+      } catch {
+        /* two days are read again */
+      }
+      const feed = bscFeed;
+      flapFeed = new FlapFeed(bscTape, {
+        cursor: flapCursor,
+        logsUrl: process.env.BSC_LOGS_URL,
+        book: bscBook,
+        onPair: (mint, pool, quote, ts, tx, block) => feed.followPair(mint, pool, quote, ts, tx, block),
+        // Each launch's accounts and picture from its metadata, half a minute in, once the feed is live.
+        onLaunch: (l) => {
+          if (flapFeed?.backfilled) setTimeout(() => void recordFlap(l.mint), 30_000).unref();
+        },
+        log: (m) => console.log(`[${config.id}] ${m}`),
+      });
+    }
   }
   if (process.env.ZOO_BASE !== "off") {
     if (existsSync(baseTapeFile)) console.log(`[${config.id}] base tape restored: ${baseTape.load(readFileSync(baseTapeFile, "utf8"))} tokens`);
@@ -205,10 +234,12 @@ if (bscFeed) {
   const previous = bscTape.onMoment;
   bscTape.onMoment = (e) => {
     previous?.(e);
-    if ((e.kind === "launch" || e.kind === "serial") && bscFeed?.backfilled) setTimeout(() => void recordFourMeme(e.mint), 30_000).unref();
+    // four.meme's own API for its launches; Flap's feed reads its launches' metadata itself.
+    if ((e.kind === "launch" || e.kind === "serial") && bscFeed?.backfilled && bscTape.venueOf(e.mint) === "fourmeme") setTimeout(() => void recordFourMeme(e.mint), 30_000).unref();
   };
 }
 const stopBsc = bscFeed?.start() ?? null;
+const stopFlap = flapFeed?.start() ?? null;
 const stopBase = baseFeed?.start() ?? null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
@@ -365,6 +396,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     enclosure.stop();
     stopStream?.();
     stopBsc?.();
+    stopFlap?.();
     stopBase?.();
     if (config.role === "north") {
       try {

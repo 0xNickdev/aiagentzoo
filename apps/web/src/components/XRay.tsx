@@ -63,7 +63,7 @@ interface Check {
     poolSol?: number | null;
     curveSol?: number | null;
     mayhem?: boolean;
-    venue?: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "clanker";
+    venue?: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
     platform?: string;
     earlyWallets: number | null;
     earlyHeldPct: number | null;
@@ -113,7 +113,7 @@ export interface XRayReport {
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun", fourmeme: "four.meme", clanker: "Clanker" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun", fourmeme: "four.meme", flap: "Flap", clanker: "Clanker" };
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 /** How old the token is: from the stream's facts, or from its launch time when it is older than the stream. */
 const ageOf = (r: XRayReport) => {
@@ -513,7 +513,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
   const chain = chainOf(r.mint);
   const bsc = chain !== "solana";
   const where = chainName(r.mint);
-  const venue = venueOfChain(r.mint);
+  // The launchpad by name: the token's own venue when the stream saw it, else the one the zoo reads on that chain.
+  const venue = f?.venue && f.venue !== "pump.fun" ? (VENUE[f.venue] ?? venueOfChain(r.mint)) : venueOfChain(r.mint);
   const tone = TONE[c.verdict];
   const early = r.early;
   const took = early.reduce((n, e) => n + e.bought, 0);
@@ -635,7 +636,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               </p>
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("token")}
-                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : f.venue === "fourmeme" ? `https://four.meme/token/${r.mint}` : f.venue === "clanker" ? `https://www.clanker.world/clanker/${r.mint}` : chart(r.mint)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : f.venue === "fourmeme" ? `https://four.meme/token/${r.mint}` : f.venue === "flap" ? `https://flap.sh/bnb/${r.mint}` : f.venue === "clanker" ? `https://www.clanker.world/clanker/${r.mint}` : chart(r.mint)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
                   {short(r.mint)} ↗
                 </a>
               </p>
@@ -944,7 +945,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
 
           {/* trade: the swap, who holds it */}
           <aside className="order-3 border-t border-white/[0.07] px-4 py-4 lg:order-none lg:border-l lg:border-t-0 [&>*:first-child]:mt-0 [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
-            {bsc ? <TradeOnEvm mint={r.mint} /> : <Swap mint={r.mint} symbol={r.symbol} />}
+            {bsc ? <TradeOnEvm mint={r.mint} flap={f?.venue === "flap"} /> : <Swap mint={r.mint} symbol={r.symbol} />}
             <HoldStrip c={c} />
           </aside>
         </div>
@@ -1117,7 +1118,7 @@ export default function XRay() {
           return;
         }
       }
-      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme, Clanker).") : t("Something went wrong."));
+      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme, Flap, Clanker).") : t("Something went wrong."));
       setReport(body);
       const keepTab = new URLSearchParams(window.location.search).get("tab");
       history.pushState(null, "", `/xray?mint=${mint}${keepTab ? `&tab=${encodeURIComponent(keepTab)}` : ""}`);
@@ -1160,7 +1161,7 @@ export default function XRay() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
+          <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme, Flap and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
             <br />
@@ -1176,7 +1177,7 @@ export default function XRay() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               name="mint"
-              placeholder={t("token address: pump.fun, LaunchLab, Meteora, four.meme, Clanker")}
+              placeholder={t("token address: pump.fun, LaunchLab, Meteora, four.meme, Flap, Clanker")}
               spellCheck={false}
               autoComplete="off"
               className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-fg-4"
@@ -1232,6 +1233,7 @@ const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string;
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/bsc/token/${mint}` },
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=56&address=${mint}` },
   { k: "four.meme", icon: "/terminals/fourmeme.png", href: `https://four.meme/token/${mint}` },
+  { k: "Flap", icon: "/terminals/flap.png", href: `https://flap.sh/bnb/${mint}` },
   { k: "PancakeSwap", icon: "/terminals/pancake.png", href: `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc` },
   { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `https://dexscreener.com/bsc/${mint}` },
 ] : [
@@ -1247,20 +1249,20 @@ const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string;
 const KIND_TAGS = new Set<WalletTag>(["crew", "ring", "serial", "bundle"]);
 
 /** On BNB Chain the swap lives on PancakeSwap and four.meme, on Base on Uniswap and clanker.world; the zoo does not route either yet. */
-function TradeOnEvm({ mint }: { mint: string }) {
+function TradeOnEvm({ mint, flap }: { mint: string; flap?: boolean }) {
   const base = chainOf(mint) === "base";
   return (
     <div>
       <p className="text-[11.5px] text-fg-4">{t("trade it here")}</p>
       <div className="mt-2 flex flex-col gap-2">
-        <a href={base ? `https://www.clanker.world/clanker/${mint}` : `https://four.meme/token/${mint}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-center text-[13.5px] font-semibold text-black transition hover:bg-white/90">
-          {base ? t("Buy on clanker.world ↗") : t("Buy on four.meme ↗")}
+        <a href={base ? `https://www.clanker.world/clanker/${mint}` : flap ? `https://flap.sh/bnb/${mint}` : `https://four.meme/token/${mint}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-center text-[13.5px] font-semibold text-black transition hover:bg-white/90">
+          {base ? t("Buy on clanker.world ↗") : flap ? t("Buy on Flap ↗") : t("Buy on four.meme ↗")}
         </a>
         <a href={base ? `https://app.uniswap.org/swap?chain=base&outputCurrency=${mint}` : `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-5 py-2.5 text-center text-[13.5px] text-fg-2 transition hover:text-white">
           {base ? t("Uniswap ↗") : t("PancakeSwap ↗")}
         </a>
       </div>
-      <p className="mt-3 text-[12px] font-normal leading-relaxed text-fg-4">{base ? t("Trading on Base is not routed through the zoo yet: a Clanker token lives in its Uniswap pool from the first second. Not financial advice.") : t("Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.")}</p>
+      <p className="mt-3 text-[12px] font-normal leading-relaxed text-fg-4">{base ? t("Trading on Base is not routed through the zoo yet: a Clanker token lives in its Uniswap pool from the first second. Not financial advice.") : flap ? t("Trading on BNB Chain is not routed through the zoo yet: Flap while it is on the curve, PancakeSwap after it graduates. Not financial advice.") : t("Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.")}</p>
     </div>
   );
 }

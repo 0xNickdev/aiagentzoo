@@ -17,7 +17,7 @@ import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { type Chain, CHAIN_NAME, checkToken, isEvm, outsideCheck, RateGate } from "./chain/check.ts";
-import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFourMeme, WBNB } from "./chain/bsc.ts";
+import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "./chain/base.ts";
 import { baseFundersEnabled, bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll, tagsOf, type WalletTag } from "./chain/tags.ts";
@@ -569,7 +569,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
         const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : base ? (baseSocials.image(mint) ?? clanker.image(mint)) : socials.image(mint);
-        if (!image) bsc ? void recordFourMeme(mint) : base ? void recordClankerFromApi(mint) : socials.want(mint);
+        if (!image) bsc ? void (bscTape.venueOf(mint) === "flap" ? recordFlap(mint) : recordFourMeme(mint)) : base ? void recordClankerFromApi(mint) : socials.want(mint);
         // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
         // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
         if (!found && !past && deep && (evm || holdersEnabled())) {
@@ -628,7 +628,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           });
         }
         if (!found) {
-          const where = bsc ? "four.meme" : base ? "Clanker" : "pump.fun, LaunchLab, Meteora";
+          const where = bsc ? "four.meme, Flap" : base ? "Clanker" : "pump.fun, LaunchLab, Meteora";
           return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
         }
         const bundle = found.bundle.length >= 2 && !evm ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;

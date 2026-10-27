@@ -24,7 +24,7 @@
 
 ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents run on three nodes (the protocol lets anyone run one; all three are run by the ZOOAI team today), around the clock, with no human in the loop:
 
-- **Sentinels** read every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab and Meteora's bonding curve straight from Solana, every four.meme launch and trade straight from BNB Chain, every Clanker launch and Uniswap swap straight from Base, and fresh DexScreener profiles from any Solana DEX.
+- **Sentinels** read every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab and Meteora's bonding curve straight from Solana, every four.meme and Flap launch and trade straight from BNB Chain, every Clanker launch and Uniswap swap straight from Base, and fresh DexScreener profiles from any Solana DEX.
 - **Gatherers** pull market data for what the sentinels found.
 - **The builder** judges each night's tokens with an LLM - `promising`, `watch` or `suspicious`, with a confidence and a reason - and re-checks those calls against the market the next day.
 - **The archivist** publishes the **Morning Brief** at 07:00 UTC, hashed and signed.

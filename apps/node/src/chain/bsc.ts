@@ -283,11 +283,14 @@ export class BscFeed {
     if (amount > 0) this.book.move(token, from, to, amount, now);
   }
 
-  /** The Transfer subscription follows every token the tape keeps; renewed when the count changes. */
+  /**
+   * The Transfer subscription follows four.meme's tokens on the tape; renewed when the count changes. Flap's tokens
+   * share the tape and are followed by their own feed.
+   */
   private followTransfers(): void {
     const sub = this.transferSub;
     if (!sub || sub.ws.readyState !== 1) return;
-    const mints = this.tape.mints();
+    const mints = this.tape.mints().filter((m) => this.tape.venueOf(m) === "fourmeme");
     if (mints.length === sub.wanted) return;
     sub.wanted = mints.length;
     if (sub.id) sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 5, method: "eth_unsubscribe", params: [sub.id] }));
@@ -307,6 +310,18 @@ export class BscFeed {
     if (!ev) return;
     this.tape.apply(ev, now, log.transactionHash, Number(log.blockNumber));
     this.book.note(pair.mint, ev.user, ev.tokens, ev.isBuy, now);
+  }
+
+  /**
+   * A PancakeSwap V2 pair another launchpad's token graduated into (Flap's tax tokens all do): the tape learns it and
+   * the socket follows its swaps and reserves, like a four.meme pair.
+   */
+  followPair(mint: string, pool: string, quote: string | null, ts: number, tx: string, block: number): void {
+    const p = pool.toLowerCase();
+    if (this.pairs.has(p) || !this.tape.token(mint)) return;
+    this.tape.apply({ kind: "pool", mint, pool: p }, ts, tx, block);
+    this.pairs.set(p, { mint, baseIsToken0: BigInt(mint) < BigInt(quote ?? WBNB), quoteReserve: null });
+    this.followPairs();
   }
 
   /** On a graduation: the pool from the factory, then the tape learns it and the socket follows it. */
@@ -654,6 +669,19 @@ export const bscSocials = new SocialsRegistry(bscTape);
 
 /** four.meme's record of a launch into the socials registry: its accounts and picture. Once per token. */
 const recorded = new Set<string>();
+/** Flap's metadata of a launch into the socials registry, once per token. */
+export async function recordFlap(mint: string): Promise<void> {
+  const key = mint.toLowerCase();
+  if (recorded.has(key)) return;
+  const uri = bscTape.metadataOf(key);
+  if (!uri) return;
+  const { flapMeta } = await import("./flap.ts");
+  const meta = await flapMeta(uri).catch(() => null);
+  if (!meta) return;
+  recorded.add(key);
+  bscSocials.recordMeta(key, meta);
+}
+
 export async function recordFourMeme(mint: string): Promise<void> {
   const key = mint.toLowerCase();
   if (recorded.has(key)) return;

@@ -72,7 +72,7 @@ export interface TokenCheck {
     quote: string | null;
     mayhem: boolean;
     /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
-    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "clanker";
+    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
     /** The platform on that launchpad when known, e.g. "stonk" (StonkFun on LaunchLab). */
     platform?: string;
     curveSol: number | null;
@@ -165,7 +165,7 @@ export const isEvm = (address: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(ad
 export const CHAIN_NAME: Record<Chain, string> = { solana: "Solana", bsc: "BNB Chain", base: "Base" };
 const NO_RECORD: Record<Chain, string> = {
   solana: "not a launch from pump.fun, Raydium LaunchLab or Meteora in the last two days, so there is no chain record to check",
-  bsc: "not a launch from four.meme in the last two days, so there is no chain record to check",
+  bsc: "not a launch from four.meme or Flap in the last two days, so there is no chain record to check",
   base: "not a Clanker launch on Base in the last two days, so there is no chain record to check",
 };
 
