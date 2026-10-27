@@ -14,6 +14,7 @@ const AgentsPage = lazy(() => import("./pages/AgentsPage"));
 const Brief = lazy(() => import("./components/Brief"));
 const AskPage = lazy(() => import("./components/Ask"));
 const WallOfRugs = lazy(() => import("./components/WallOfRugs"));
+const WallOfCabals = lazy(() => import("./components/WallOfCabals"));
 const XRay = lazy(() => import("./components/XRay"));
 const Play = lazy(() => import("./components/Play"));
 const Connect = lazy(() => import("./components/Connect"));
@@ -43,6 +44,7 @@ const PAGES: Record<Route, React.ComponentType> = {
   "/agents": AgentsPage,
   "/ask": AskPage,
   "/rugs": WallOfRugs,
+  "/cabals": WallOfCabals,
   "/xray": XRay,
   "/play": Play,
   "/connect": Connect,

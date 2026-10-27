@@ -34,6 +34,7 @@ interface Profile {
   sniper: { snipes48h: number; soldOut: number; medianExitSec: number | null; topCreators: Array<{ creator: string; launches: number }>; recent: Array<{ mint: string; symbol: string; createdAt: number }> } | null;
   /** The node's marks for this wallet: the same ones the x-ray shows next to the first-seconds wallets. */
   tags?: WalletTag[];
+  cabal?: number | null;
   accounts: Array<{ social: { url: string; label: string; kind: string }; launches: number; fastDumps: number; creators: number }>;
 }
 
@@ -191,6 +192,11 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
             <h2 className="font-display mt-3 max-w-4xl text-[32px] font-semibold leading-[1.05] text-white sm:text-[44px]">{l.title}</h2>
             {l.sub && <p className="mt-2 text-[17px] text-fg-3">{l.sub}</p>}
           <TagList tags={p.tags} />
+          {p.cabal && (
+            <a href={`/cabals?id=${p.cabal}`} className="mt-2 inline-block text-[13px] text-[#ffc27a] underline decoration-[#ffc27a]/30 underline-offset-4">
+              {t("in cabal #{n}: wallets the memory ties together →", { n: p.cabal })}
+            </a>
+          )}
           </div>
           {d && (
             <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-5">

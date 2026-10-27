@@ -31,6 +31,8 @@ export interface Early {
   serial: boolean;
   /** Who the wallet is across every launch the zoo has seen; the node's tags. */
   tags?: WalletTag[];
+  /** The cabal it belongs to, when the memory ties it to others. */
+  cabal?: number | null;
 }
 
 interface Check {
@@ -381,6 +383,11 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
       </div>
       <p className="mt-2 text-[12.5px] font-normal leading-snug text-fg-4">{t(k.what)}</p>
       <TagList tags={e.tags} />
+      {e.cabal && (
+        <a href={`/cabals?id=${e.cabal}`} className="mt-2 inline-block text-[12.5px] text-[#ffc27a] underline decoration-[#ffc27a]/30 underline-offset-4">
+          {t("in cabal #{n}: wallets the memory ties together →", { n: e.cabal })}
+        </a>
+      )}
       <button type="button" onClick={() => openWallet(e.wallet)} className="tabular-nums mt-3 self-start rounded-full px-3 py-1.5 text-[12.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 transition hover:bg-[#ffc27a]/10">
         {t("open this wallet's page →")}
       </button>
@@ -886,6 +893,11 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
                     <Tags tags={e.tags?.filter((x) => !KIND_TAGS.has(x))} className="ml-1 hidden sm:inline-flex" />
+                    {e.cabal && (
+                      <a href={`/cabals?id=${e.cabal}`} onClick={(ev) => ev.stopPropagation()} className="hidden rounded-full px-1.5 py-px text-[10.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 sm:inline" title={t("part of a cabal the memory ties together")}>
+                        #{e.cabal}
+                      </a>
+                    )}
                   </span>
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}

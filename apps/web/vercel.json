@@ -95,6 +95,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/cabals",
+      "destination": "/index.html"
+    },
+    {
       "source": "/play",
       "destination": "/index.html"
     },
