@@ -198,7 +198,7 @@ export class FlapFeed {
   private readonly seen = new Set<string>();
   private readonly buckets = new Map<string, Bucket>();
   /** Flap's tokens on the tape, with what their launch said; newest last. */
-  readonly tokens = new Map<string, { quote: string | null; taxBps: number; migrator: number; at: number }>();
+  readonly tokens = new Map<string, { quote: string | null; taxBps: number; migrator: number; at: number; launcher?: string; signer?: string | null }>();
   private transferSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
   /** When the next receipts batch may go, and how long to hold off after a 429. */
   private receiptsAt = 0;
@@ -324,7 +324,7 @@ export class FlapFeed {
       if (this.tape.token(l.mint)) continue;
       const ev: Extract<PumpEvent, { kind: "create" }> = { kind: "create", creator: signer ?? l.launcher, mint: l.mint, name: l.name, symbol: l.symbol, ts: l.ts, venue: "flap", quote: l.quote, supply: FLAP_SUPPLY, ...(l.meta ? { uri: `https://flap.mypinata.cloud/ipfs/${l.meta}` } : {}), ...(l.taxBps ? { platform: `tax ${l.taxBps / 100}%` } : {}) };
       this.tape.apply(ev, l.ts ?? now, l.tx, l.block);
-      this.tokens.set(l.mint, { quote: l.quote, taxBps: l.taxBps, migrator: l.migrator, at: l.ts ?? now });
+      this.tokens.set(l.mint, { quote: l.quote, taxBps: l.taxBps, migrator: l.migrator, at: l.ts ?? now, launcher: l.launcher, signer });
       this.opts.onLaunch?.(l);
     }
     for (const t of b.trades.sort((x, y) => x.logIndex - y.logIndex)) {
@@ -332,7 +332,11 @@ export class FlapFeed {
       const who = tradersOf(t, b.transfers);
       if (!who.length) this.unnamed += 1;
       const ts = t.ts ?? now;
-      for (const { wallet, share } of who.length ? who : [{ wallet: t.actor, share: 1 }]) {
+      // A launcher bot that keeps the launch's first buy holds it for the dev who signed the launch: it is the dev's.
+      const info = this.tokens.get(t.mint);
+      const own = (w: string) => (info?.signer && info.launcher && w === info.launcher && info.launcher !== info.signer ? info.signer : w);
+      for (const { wallet: w, share } of who.length ? who : [{ wallet: t.actor, share: 1 }]) {
+        const wallet = own(w);
         this.tape.apply({ kind: "trade", mint: t.mint, user: wallet, isBuy: t.isBuy, tokens: t.tokens * share, sol: t.quote * share, ts, curveSol: null }, ts, t.tx, t.block);
         this.opts.book?.note(t.mint, wallet, t.tokens * share, t.isBuy, ts);
       }

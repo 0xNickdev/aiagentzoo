@@ -83,8 +83,10 @@ test("the feed puts a Flap launch on the tape under the wallet that signed it, a
   assert.equal(t.facts.quote, undefined);
   assert.deepEqual(launched, ["MODELSELL"]);
   assert.equal(tape.metadataOf(MODELSELL)?.startsWith("https://flap.mypinata.cloud/ipfs/bafkrei"), true);
-  // The launch's own buy came through a bot without its transfers on the socket: the receipt named the wallet.
+  // The launch's own buy came through a bot without its transfers on the socket: the receipt named the wallet. The
+  // launcher bot kept those tokens, so the buy is the dev's, and the bot never shows up as an early buyer.
   assert.ok(t.facts.buys >= 1);
+  assert.ok(!(tape.earlyOf(MODELSELL) ?? []).some((e) => e.wallet === "0xe8c6037cfeb66b22235556d38dcfd51bb5346666"));
   assert.equal(feed.unnamed, 0);
   void FLAP_SUPPLY;
 
