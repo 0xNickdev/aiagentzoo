@@ -26,6 +26,8 @@ import { BscFeed, bscLineage, bscTape, recordFourMeme } from "./chain/bsc.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
+import { SideWallets } from "./chain/sidewallets.ts";
+import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -97,9 +99,14 @@ const socialsFile = join(config.dataDir, "chain-socials.json");
 const bscTapeFile = join(config.dataDir, "chain-tape-bsc.json");
 const bscCursorFile = join(config.dataDir, "chain-bsc-cursor.json");
 let bscFeed: BscFeed | null = null;
+// Who funded the first-second wallets: slow to learn (RPC calls), so it is kept too.
+const sideFile = join(config.dataDir, "chain-sidewallets.json");
+const sideWallets = new SideWallets(labels);
 const saveTape = () => {
   writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
   renameSync(`${tapeFile}.tmp`, tapeFile);
+  writeFileSync(`${sideFile}.tmp`, sideWallets.snapshot());
+  renameSync(`${sideFile}.tmp`, sideFile);
   if (bscFeed) {
     writeFileSync(`${bscTapeFile}.tmp`, bscTape.snapshot());
     renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
@@ -127,6 +134,22 @@ if (config.role === "north") {
     bscFeed = new BscFeed(bscTape, { cursor, wsUrl: process.env.BSC_WS_URL, rpcUrl: process.env.BSC_RPC_URL, logsUrl: process.env.BSC_LOGS_URL, log: (m) => console.log(`[${config.id}] ${m}`) });
   }
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
+  if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
+  // Every launch's first-second and launch-block wallets, traced to their funder a minute and a half in.
+  {
+    const previous = tape.onMoment;
+    tape.onMoment = (e) => {
+      previous?.(e);
+      if (e.kind === "launch" || e.kind === "serial") {
+        setTimeout(() => {
+          const early = (tape.earlyOf(e.mint) ?? []).slice(0, 10).map((w) => w.wallet);
+          const bundle = (tape.token(e.mint)?.bundle ?? []).slice(0, 6).map((b) => b.wallet);
+          sideWallets.enqueue([...new Set([...early, ...bundle])]);
+        }, 90_000).unref();
+      }
+    };
+  }
+  sideWallets.start(Number(process.env.ZOO_SIDE_GAP_MS ?? 500));
   // One creator traced every 30 s by default: about 3 RPC calls each, a few hundred thousand a month.
   lineage.start(Number(process.env.ZOO_TRACE_GAP_MS ?? 250));
   if (existsSync(socialsFile)) console.log(`[${config.id}] socials restored: ${socials.load(readFileSync(socialsFile, "utf8"))} launches`);
@@ -160,6 +183,7 @@ if (bscFeed) {
 const stopBsc = bscFeed?.start() ?? null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
+const mentions = history ? new Mentions(history.db) : null;
 const stopCabals = cabals ? startCabals(cabals, { log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // Who wallets are said to be: the operator's smart-money file next to the data, and Kolscan's KOLs.
 let stopLabels: (() => void) | null = null;
@@ -283,6 +307,8 @@ const server = createNodeServer({
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
   ...(cabals ? { cabals } : {}),
+  ...(mentions ? { mentions } : {}),
+  ...(config.role === "north" ? { sideWallets } : {}),
   buybacks: () => buybackView(enclosure.store, feeHot, feeTreasury || null, Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1)),
   visitor: {
     agents: visitorAgents,

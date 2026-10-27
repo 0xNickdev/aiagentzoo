@@ -107,6 +107,8 @@ export interface XRayReport {
   /** Read from the long memory, as it stood when last written, not from the live tape. */
   fromHistory?: boolean;
   devHistory?: { launches: number; dumped: number } | null;
+  /** Posts on X naming the token, oldest first, as the extension saw them. */
+  mentions?: Array<{ handle: string; url: string; postAt: number }>;
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -719,6 +721,19 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className={`tabular-nums shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
                 </div>
               ))}
+              {!!r.mentions?.length && (
+                <div className="border-t border-white/[0.08] pt-2">
+                  <p className="text-[12px] text-fg-4">{t("seen on X")}</p>
+                  {r.mentions.slice(0, 6).map((m) => (
+                    <div key={m.url} className="flex items-baseline justify-between gap-3 py-1">
+                      <a href={m.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-normal text-fg-3 hover:text-white">
+                        @{m.handle} ↗
+                      </a>
+                      <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{m.postAt >= r.createdAt ? t("{m} min after launch", { m: Math.round((m.postAt - r.createdAt) / 60_000) }) : t("before launch")}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <DevHabits h={r.creatorRecord} />
               {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
                 <div className="mt-3 border-t border-white/[0.08] pt-3">

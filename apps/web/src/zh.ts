@@ -1,5 +1,10 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "KOL side wallet": "KOL 小号",
+  "paid for by a KOL's known wallet": "由 KOL 已知钱包打钱",
+  "seen on X": "在 X 上出现",
+  "{m} min after launch": "发币后 {m} 分钟",
+  "before launch": "发币之前",
   "KOL": "KOL",
   "a KOL's wallet, as Kolscan lists it": "Kolscan 上列出的 KOL 钱包",
   "smart money": "聪明钱",

@@ -57,9 +57,21 @@
     return a;
   }
 
+  /** Who wrote the post the address sits in, and when: public, from the post itself. Nothing when it is not a post. */
+  function postOf(el) {
+    const article = el.closest("article");
+    if (!article || el.dataset.testid === "UserDescription") return null;
+    const link = [...article.querySelectorAll('a[href*="/status/"]')].map((a) => a.href.split("?")[0]).find((h) => /^https:\/\/(x|twitter)\.com\/[A-Za-z0-9_]{1,15}\/status\/\d+$/.test(h));
+    const time = article.querySelector("time")?.getAttribute("datetime");
+    const handle = link ? link.split("/")[3] : null;
+    const postAt = time ? Date.parse(time) : NaN;
+    return link && handle && Number.isFinite(postAt) ? { handle, url: link, postAt } : null;
+  }
+
   async function scan(el) {
     if (el.dataset.zooScanned) return;
     el.dataset.zooScanned = "1";
+    const post = postOf(el);
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     const hits = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
@@ -72,6 +84,8 @@
         if (!v || !node.parentNode) continue;
         if (node.nextSibling?.dataset?.zooChip) continue;
         node.parentNode.insertBefore(chip(v), node.nextSibling);
+        // The zoo learns where the token was seen: the post's author and time, never the reader.
+        if (post) void ask({ type: "seen", mint: v.mint, ...post });
       }
     }
   }

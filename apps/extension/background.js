@@ -55,6 +55,21 @@ async function check(addr) {
   return { mint, check: c };
 }
 
+/** A token seen in a post: told to the node once per post, so the x-ray can say who posted it and when. */
+const told = new Set();
+async function seen({ mint, handle, url, postAt }) {
+  const key = `${mint}:${url}`;
+  if (!mint || !url || told.has(key)) return { ok: false };
+  told.add(key);
+  if (told.size > 2_000) told.delete(told.values().next().value);
+  try {
+    const r = await fetch(`${NORTH}/v1/seen`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mint, handle, url, postAt }) });
+    return { ok: r.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
 async function xray(addr) {
   const { mint } = await check(addr);
   return cached(`xray:${mint}`, 90_000, async () => {
@@ -122,6 +137,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return { ok: true };
     }
     if (msg.type === "xray") return xray(msg.mint);
+    if (msg.type === "seen") return seen(msg);
     if (msg.type === "tabMint") return { mint: tabMint.get(msg.tabId) ?? null };
     if (msg.type === "sniper") return cached(`sniper:${msg.wallet}`, 120_000, async () => (await getJson(`${NORTH}/v1/chain/sniper/${msg.wallet}`)).body);
     if (msg.type === "wallet") return wallet(msg.wallet);

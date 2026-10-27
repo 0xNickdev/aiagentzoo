@@ -490,3 +490,31 @@ test("labels: Kolscan's page gives each KOL wallet its name and X; the operator'
   assert.equal(v.funder, FUNDER);
   assert.equal(v.funderIsHot, false);
 });
+
+test("side wallets: a first-second wallet paid for by a KOL's known wallet is that KOL's; mentions keep who posted a token and when", async () => {
+  const { SideWallets } = await import("../src/chain/sidewallets.ts");
+  const { Labels } = await import("../src/chain/labels.ts");
+  const { Mentions, handleOf } = await import("../src/chain/mentions.ts");
+  const { DatabaseSync } = await import("node:sqlite");
+  const labels = new Labels();
+  const MAIN = "5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij";
+  const SIDE = "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o";
+  await labels.readKolscan((async () => new Response(String.raw`{\"name\":\"slingoor\",\"twitter\":\"https://x.com/slingoori\",\"address\":\"${MAIN}\"}`, { status: 200 })) as unknown as typeof fetch);
+  const side = new SideWallets(labels);
+  assert.equal(side.kolOf(SIDE), null);
+  const restored = new SideWallets(labels);
+  restored.load(JSON.stringify({ v: 1, funders: [[SIDE, { funder: MAIN, at: Date.now() }]] }));
+  assert.deepEqual(restored.kolOf(SIDE), { name: "slingoor", x: "https://x.com/slingoori", main: MAIN });
+  assert.equal(restored.funderOf("nobody"), undefined);
+  assert.ok(restored.snapshot().includes(SIDE));
+  const m = new Mentions(new DatabaseSync(":memory:"));
+  const now = Date.now();
+  assert.equal(m.note({ mint: SIDE, handle: "@slingoori", url: "https://x.com/slingoori/status/2113429352352198986?s=20", postAt: now - 60_000 }), true);
+  assert.equal(m.note({ mint: SIDE, handle: "bad handle", url: "https://x.com/a/status/1", postAt: now }), false);
+  assert.equal(m.note({ mint: SIDE, handle: "x", url: "https://evil.com/x", postAt: now }), false);
+  assert.equal(m.note({ mint: "0xCD961D35DB6D52EDB54E213F5A2C329A25C84444", handle: "cz", url: "https://x.com/cz/status/12345", postAt: now }), true);
+  assert.deepEqual(m.of(SIDE).map((x) => [x.handle, x.url]), [["slingoori", "https://x.com/slingoori/status/2113429352352198986"]]);
+  assert.equal(m.of("0xcd961d35db6d52edb54e213f5a2c329a25c84444").length, 1);
+  assert.equal(handleOf("https://x.com/Slingoori?s=1"), "slingoori");
+  assert.equal(handleOf(null), null);
+});

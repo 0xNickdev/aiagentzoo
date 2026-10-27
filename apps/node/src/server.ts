@@ -22,6 +22,8 @@ import { bscFundersEnabled } from "./chain/bscFunders.ts";
 import { tagAll, tagsOf, type WalletTag } from "./chain/tags.ts";
 import type { CabalIndex } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
+import type { SideWallets } from "./chain/sidewallets.ts";
+import { handleOf, type Mentions } from "./chain/mentions.ts";
 import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
@@ -72,6 +74,10 @@ export interface ServerOptions {
   history?: HistoryStore;
   /** Cabals read from that memory: wallets that launch, snipe and fund together. */
   cabals?: CabalIndex;
+  /** Who funded the first-second wallets, traced in the background: a KOL's side wallets show. */
+  sideWallets?: SideWallets;
+  /** Where tokens were seen on X, as the extension reports it. */
+  mentions?: Mentions;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -110,7 +116,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks, cabals }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks, cabals, sideWallets, mentions }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
@@ -134,13 +140,29 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   };
   /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
   const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
+  /**
+   * Where the token was seen on X, and the one thing worth saying about it: a KOL whose wallet (or side wallet)
+   * bought in the first seconds and who posted it later. Written into the check's notes, never a reason.
+   */
+  const shills = (mint: string, early: Array<{ afterSec?: number; kol?: { x: string | null }; kolSide?: { x: string | null } }>, createdAt: number, check: { notes: string[] }) => {
+    const seen = mentions?.of(mint, 20) ?? [];
+    for (const e of early) {
+      const h = handleOf((e.kol ?? e.kolSide)?.x);
+      if (!h) continue;
+      const post = seen.find((m) => m.handle === h);
+      const boughtAt = createdAt + (e.afterSec ?? 0) * 1000;
+      if (post && post.postAt > boughtAt) check.notes.push(`@${h}'s ${e.kol ? "wallet" : "side wallet"} bought in the first ${e.afterSec ?? 0}s and posted it ${Math.max(1, Math.round((post.postAt - boughtAt) / 60_000))} min later`);
+    }
+    return { mentions: seen };
+  };
   /** Tags plus the cabal each wallet belongs to, and who it is said to be: a KOL, a smart-money wallet. */
   const withCabal = <T extends { wallet: string; tags: WalletTag[] }>(list: T[]) =>
     list.map((w) => {
       const kol = labels.kol(w.wallet);
       const smart = labels.smartOf(w.wallet);
-      const tags = [...w.tags.filter((x) => x !== "new" || (!kol && !smart)), ...(kol ? ["kol" as const] : []), ...(smart ? ["smart" as const] : [])];
-      return { ...w, tags, ...(cabals ? { cabal: cabals.of(w.wallet) } : {}), ...(kol ? { kol } : {}), ...(smart ? { smart } : {}) };
+      const side = !kol ? (sideWallets?.kolOf(w.wallet) ?? null) : null;
+      const tags = [...w.tags.filter((x) => x !== "new" || (!kol && !smart && !side)), ...(kol ? ["kol" as const] : []), ...(side ? ["kolside" as const] : []), ...(smart ? ["smart" as const] : [])];
+      return { ...w, tags, ...(cabals ? { cabal: cabals.of(w.wallet) } : {}), ...(kol ? { kol } : {}), ...(side ? { kolSide: side } : {}), ...(smart ? { smart } : {}) };
     });
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
@@ -583,6 +605,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
         }
         const bundle = found.bundle.length >= 2 && !bsc ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
+        const earlyTagged = withCabal(tagAll(chainTape.earlyOf(mint) ?? [], kept));
         return json(res, 200, {
           mint,
           symbol: found.symbol,
@@ -590,7 +613,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           creator: found.creator,
           createdAt: found.createdAt,
           check,
-          early: withCabal(tagAll(chainTape.earlyOf(mint) ?? [], kept)),
+          early: earlyTagged,
+          ...shills(mint, earlyTagged, found.createdAt, check),
           creatorRecord: preferHistory(found.creatorRecord, found.creator),
           funding: funding ?? null,
           bundle: { wallets: withCabal(tagAll(found.bundle, kept)), funding: bundle },
@@ -611,6 +635,20 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!c) return json(res, 404, { error: "no cabal with this number" });
         res.setHeader("cache-control", "public, max-age=120");
         return json(res, 200, { ...c, live: cabals.live(c.id, tape).concat(cabals.live(c.id, bscTape)) });
+      }
+      // The extension saw a token in a post: who posted it and when. Public posts, nothing about the reader.
+      if (req.method === "POST" && path === "/v1/seen") {
+        if (!mentions) return json(res, 404, { error: "this node keeps no mentions; use the north node" });
+        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+        if (checkGate.take(caller) > 0) return json(res, 429, { error: "slow down" });
+        const body = (await readJson(req).catch(() => null)) as { mint?: unknown; handle?: unknown; url?: unknown; postAt?: unknown } | null;
+        return json(res, body && mentions.note(body) ? 200 : 400, { ok: Boolean(body && mentions.note(body)) });
+      }
+      const mentionsOf = route("/v1/mentions/ADDR").exec(path);
+      if (req.method === "GET" && mentionsOf) {
+        if (!mentions) return json(res, 404, { error: "this node keeps no mentions; use the north node" });
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, { mint: norm(mentionsOf[1]!), mentions: mentions.of(norm(mentionsOf[1]!)) });
       }
       const creatorOf = ROUTE.creator.exec(path);
       if (req.method === "GET" && creatorOf) {
