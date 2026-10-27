@@ -61,8 +61,116 @@ declare global {
   }
 }
 
+/**
+ * Wallets that announce themselves through the Wallet Standard instead of a window global: Jupiter Wallet and most new
+ * Solana wallets. The page asks them to register once it loads; any wallet that loads later registers on its own.
+ */
+interface StandardAccount {
+  address: string;
+}
+interface StandardWallet {
+  name: string;
+  chains: readonly string[];
+  accounts: readonly StandardAccount[];
+  features: Record<string, unknown>;
+}
+const standardWallets: StandardWallet[] = [];
+if (typeof window !== "undefined") {
+  const api = {
+    register: (...wallets: StandardWallet[]) => {
+      for (const w of wallets) if (!standardWallets.includes(w)) standardWallets.push(w);
+      return () => {};
+    },
+  };
+  window.addEventListener("wallet-standard:register-wallet", (e) => {
+    try {
+      ((e as CustomEvent).detail as (a: typeof api) => void)(api);
+    } catch {
+      /* a wallet that registers badly is skipped */
+    }
+  });
+  try {
+    window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", { detail: api }));
+  } catch {
+    /* no CustomEvent: no standard wallets */
+  }
+}
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58(bytes: Uint8Array): string {
+  let n = 0n;
+  for (const b of bytes) n = (n << 8n) | BigInt(b);
+  let out = "";
+  while (n > 0n) {
+    out = B58[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  for (const b of bytes) {
+    if (b !== 0) break;
+    out = `1${out}`;
+  }
+  return out;
+}
+
+/** A Wallet Standard wallet, shaped like the injected providers the rest of the site already speaks to. */
+function fromStandard(w: StandardWallet): SolanaProvider {
+  type Feature<T> = Record<string, T> | undefined;
+  const f = w.features;
+  let account: StandardAccount | undefined = w.accounts[0];
+  const connect = (f["standard:connect"] as Feature<(input?: unknown) => Promise<{ accounts: readonly StandardAccount[] }>>)?.connect;
+  const disconnect = (f["standard:disconnect"] as Feature<() => Promise<void>>)?.disconnect;
+  const signMessage = (f["solana:signMessage"] as Feature<(...inputs: Array<{ account: StandardAccount; message: Uint8Array }>) => Promise<Array<{ signature: Uint8Array }>>>)?.signMessage;
+  const signAndSend = (f["solana:signAndSendTransaction"] as Feature<(...inputs: Array<{ account: StandardAccount; transaction: Uint8Array; chain: string }>) => Promise<Array<{ signature: Uint8Array }>>>)?.signAndSendTransaction;
+  const key = () => ({ toString: () => account!.address });
+  return {
+    get publicKey() {
+      return account ? key() : null;
+    },
+    async connect() {
+      const r = connect ? await connect() : { accounts: w.accounts };
+      account = r.accounts[0] ?? w.accounts[0];
+      if (!account) throw new Error(`${w.name} gave no account`);
+      return { publicKey: key() };
+    },
+    async disconnect() {
+      await disconnect?.();
+      account = undefined;
+    },
+    async signMessage(message: Uint8Array) {
+      if (!signMessage || !account) throw new Error(`${w.name} cannot sign messages`);
+      const [out] = await signMessage({ account, message });
+      return { signature: out!.signature };
+    },
+    ...(signAndSend
+      ? {
+          async signAndSendTransaction(transaction: unknown) {
+            if (!account) throw new Error("connect the wallet first");
+            const bytes = (transaction as { serialize(): Uint8Array }).serialize();
+            const [out] = await signAndSend({ account, transaction: bytes, chain: "solana:mainnet" });
+            return { signature: base58(out!.signature) };
+          },
+        }
+      : {}),
+  };
+}
+
+/** The first Solana wallet in the standard list that can connect and sign a message. */
+function standardProvider(): SolanaProvider | undefined {
+  const w = standardWallets.find((x) => x.chains.some((c) => c.startsWith("solana:")) && x.features["standard:connect"] && x.features["solana:signMessage"]);
+  return w ? fromStandard(w) : undefined;
+}
+
+let standardCached: { wallet: StandardWallet; provider: SolanaProvider } | null = null;
 function provider(): SolanaProvider | undefined {
-  return window.phantom?.solana ?? window.solflare ?? window.backpack?.solana ?? window.solana;
+  const injected = window.phantom?.solana ?? window.solflare ?? window.backpack?.solana;
+  if (injected) return injected;
+  // The same standard wallet keeps one adapter, so a connect and the signature after it share the account.
+  const first = standardWallets.find((x) => x.chains.some((c) => c.startsWith("solana:")) && x.features["standard:connect"] && x.features["solana:signMessage"]);
+  if (first) {
+    if (standardCached?.wallet !== first) standardCached = { wallet: first, provider: fromStandard(first) };
+    return standardCached.provider;
+  }
+  return window.solana ?? standardProvider();
 }
 /** The injected wallet, for the swap: connect, sign and send, no session needed. */
 export const walletProvider = provider;
@@ -132,7 +240,7 @@ export function useGuardian() {
     const wallet = provider();
     if (!wallet) {
       window.open("https://phantom.com/download", "_blank", "noopener");
-      setError("Install a Solana wallet such as Phantom, then try again.");
+      setError("Install a Solana wallet such as Phantom, Jupiter or Solflare, then try again.");
       return;
     }
     setBusy(true);

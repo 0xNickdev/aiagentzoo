@@ -58,7 +58,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
     const p = walletProvider();
     if (!p) {
       window.open("https://phantom.com/download", "_blank", "noopener");
-      return setError(t("Install a Solana wallet such as Phantom, then try again."));
+      return setError(t("Install a Solana wallet such as Phantom, Jupiter or Solflare, then try again."));
     }
     try {
       const { publicKey } = await p.connect();
