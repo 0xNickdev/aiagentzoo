@@ -20,20 +20,20 @@ export interface SmartLabel {
 const KOLSCAN = "https://kolscan.io/leaderboard";
 const B58 = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
 
-/** Kolscan's page carries its rows as escaped JSON: each wallet, the name and the X link written just before it. */
+/**
+ * Kolscan's page carries its rows as escaped JSON objects. Each row is one flat object holding the wallet (under
+ * `wallet_address`, `address` or `walletAddress`), the name and the X link, in whatever order the page writes them:
+ * today the wallet comes first and the name after it, so reading the name written before a wallet names the row above.
+ */
 export function parseKolscan(html: string): Map<string, KolLabel> {
   const text = html.replace(/\\"/g, '"');
   const out = new Map<string, KolLabel>();
-  const re = /"(?:address|wallet|walletAddress|wallet_address)":"([1-9A-HJ-NP-Za-km-z]{32,44})"/g;
-  for (const m of text.matchAll(re)) {
-    const wallet = m[1]!;
-    if (out.has(wallet)) continue;
-    const back = text.slice(Math.max(0, m.index! - 600), m.index!);
-    const names = [...back.matchAll(/"name":"([^"]{1,40})"/g)];
-    const xs = [...back.matchAll(/"twitter":"([^"]{0,120})"/g)];
-    const name = names.length ? names[names.length - 1]![1]! : null;
+  for (const [row] of text.matchAll(/\{[^{}]*\}/g)) {
+    const wallet = /"(?:address|wallet|walletAddress|wallet_address)":"([1-9A-HJ-NP-Za-km-z]{32,44})"/.exec(row)?.[1];
+    if (!wallet || out.has(wallet)) continue;
+    const name = /"name":"([^"]{1,40})"/.exec(row)?.[1];
     if (!name) continue;
-    const x = xs.length ? xs[xs.length - 1]![1] || null : null;
+    const x = /"twitter":"([^"]{0,120})"/.exec(row)?.[1] || null;
     out.set(wallet, { name, x: x && /^https?:\/\//.test(x) ? x : null });
   }
   return out;

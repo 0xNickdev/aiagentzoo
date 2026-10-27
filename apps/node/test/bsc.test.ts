@@ -473,6 +473,12 @@ test("labels: Kolscan's page gives each KOL wallet its name and X; the operator'
   const kols = parseKolscan(html);
   assert.deepEqual(kols.get("5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij"), { name: "slingoor", x: "https://x.com/slingoori" });
   assert.deepEqual(kols.get("CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o"), { name: "Cented", x: null });
+  // The page as it is written now: the wallet first, then the name and the X link of the same row. The name written
+  // before a wallet belongs to the row above, and must not be read as this wallet's.
+  const now = String.raw`<script>self.__next_f.push([1,"[{\"wallet_address\":\"3PWGw2AmfR641mLLS1GhGSMcfbDft59EUFuvHf7TpDwU\",\"name\":\"dints\",\"pfp\":null,\"telegram\":null,\"twitter\":\"https://x.com/dintsfi\",\"transactions\":[]},{\"wallet_address\":\"PMJA8UQDyWTFw2Smhyp9jGA6aTaP7jKHR7BPudrgyYN\",\"name\":\"chester\",\"pfp\":null,\"telegram\":null,\"twitter\":\"https://x.com/Chestererer\",\"transactions\":[]}]"])</script>`;
+  const rows = parseKolscan(now);
+  assert.deepEqual(rows.get("PMJA8UQDyWTFw2Smhyp9jGA6aTaP7jKHR7BPudrgyYN"), { name: "chester", x: "https://x.com/Chestererer" });
+  assert.deepEqual(rows.get("3PWGw2AmfR641mLLS1GhGSMcfbDft59EUFuvHf7TpDwU"), { name: "dints", x: "https://x.com/dintsfi" });
   const l = new Labels();
   assert.equal(await l.readKolscan((async () => new Response(html, { status: 200 })) as unknown as typeof fetch), 2);
   assert.equal(l.kol("5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij")!.name, "slingoor");
