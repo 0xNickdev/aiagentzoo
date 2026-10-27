@@ -208,9 +208,9 @@ test("the node answers a 0x address from the BNB Chain tape: check, x-ray, creat
     assert.equal(x.creator, CREATOR);
     assert.deepEqual(x.early.map((e) => e.wallet), [SNIPER]);
     assert.deepEqual(x.bundle.wallets.map((b) => b.wallet), [SNIPER]);
-    // Nothing is read from an RPC on BNB Chain yet: no funders, no holders.
+    // No funders on BNB Chain yet; holders are asked of the chain, and a made-up token answers nothing.
     assert.equal(x.funding, null);
-    assert.equal("holders" in x.check, false);
+    assert.ok(x.check.holders === null || x.check.holders === undefined || typeof x.check.holders === "object");
     const dev = (await (await fetch(`${base}/v1/chain/creator/${CREATOR}`)).json()) as { launches48h: number; dumped: number };
     assert.equal(dev.launches48h, 1);
     assert.equal(dev.dumped, 1);
@@ -306,4 +306,42 @@ test("the risk score sits inside the verdict's band and grows with the reasons; 
   assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001 }, { ...none, launches: 4, dumped: 3 }), ["rugger"]);
   assert.deepEqual(tagsOf({ wallet: SNIPER, bought: 0.001 }, { ...none, launches: 2, dumped: 0, snipes: 12 }), ["serial", "dev"]);
   assert.deepEqual(tagsOf({ wallet: SNIPER, share: 0.05, ring: true }, { ...none, bundleHits: 3 }), ["ring", "bundle", "whale"]);
+});
+
+test("holders on BNB Chain: the position book ranks what the feed saw, the chain's balances decide, a moved bag shows", async () => {
+  const { PositionBook, bscHolderReport } = await import("../src/chain/bscHolders.ts");
+  const book = new PositionBook();
+  const tape = new PumpTape("BNB");
+  const feed = new BscFeed(tape, { quoteOf: async () => null, book });
+  const t0 = Math.floor(Date.now() / 1000) - 600;
+  feed.onLog(createLog(1, t0, "0xd1"));
+  feed.onLog(tradeLog(true, CREATOR, 50_000_000, 0.5, 1, t0, "0xd1", 5));
+  feed.onLog(tradeLog(true, SNIPER, 80_000_000, 1, 2, t0 + 1, "0xd2"));
+  feed.onLog(tradeLog(false, SNIPER, 20_000_000, 0.3, 3, t0 + 2, "0xd3"));
+  assert.deepEqual(book.top(TOKEN), [SNIPER, CREATOR]);
+  // On chain: the creator moved their bag elsewhere, the sniper still holds, the curve has the rest.
+  const E18 = 10n ** 18n;
+  const word = (n: bigint) => `0x${n.toString(16).padStart(64, "0")}`;
+  const call = async (calls: Array<{ to: string; data: string }>) =>
+    calls.map((c) => {
+      if (c.data === "0x18160ddd") return word(1_000_000_000n * E18);
+      const who = `0x${c.data.slice(-40)}`;
+      if (who === TOKEN_MANAGER2) return word(870_000_000n * E18);
+      if (who === SNIPER) return word(50_000_000n * E18);
+      if (who === CREATOR) return word(0n);
+      return word(0n);
+    });
+  // A token of its own: the server test above already asked the chain about TOKEN and kept the answer.
+  const h = (await bscHolderReport("0x00000000000000000000000000000000000000dd", CREATOR, book.top(TOKEN), { call }))!;
+  assert.equal(h.creatorShare, 0);
+  assert.equal(h.topShare, 0.05);
+  assert.equal(h.top10Share, 0.05);
+  assert.equal(h.programShare, 0.87);
+  // The check then says the bag moved: the creator never sold on the curve yet holds nothing.
+  const found = tape.token(TOKEN)!;
+  const c = checkToken(TOKEN, { symbol: found.symbol, facts: found.facts, creatorRecord: found.creatorRecord }, { holders: h });
+  assert.ok(c.reasons.some((r) => r.includes("the bag moved to other wallets")), c.reasons.join(" | "));
+  assert.equal(c.holders!.creatorHoldsPct, 0);
+  // A node that answers nothing: null, not a report of zeros.
+  assert.equal(await bscHolderReport("0x0000000000000000000000000000000000000002", null, [], { call: async () => { throw new Error("down"); } }), null);
 });

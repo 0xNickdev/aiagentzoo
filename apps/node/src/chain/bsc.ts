@@ -1,4 +1,5 @@
 import { PumpTape, type PumpEvent } from "./pump.ts";
+import { bscBook, type PositionBook } from "./bscHolders.ts";
 
 /**
  * BNB Chain, read the same way as Solana: four.meme's TokenManager2 writes a log for every launch, buy, sell and
@@ -130,6 +131,8 @@ export interface FeedOptions {
   rpc?: Rpc;
   /** The quote lookup, replaceable in tests. */
   quoteOf?: (token: string) => Promise<string | null>;
+  /** Where every wallet's position per token is kept, for the holders report. */
+  book?: PositionBook;
   WebSocketImpl?: typeof WebSocket;
 }
 
@@ -150,6 +153,8 @@ export class BscFeed {
   private sessions = 0;
   private readonly opts: Required<Pick<FeedOptions, "wsUrl" | "rpcUrl" | "logsUrl" | "log" | "rpc">> & Pick<FeedOptions, "WebSocketImpl">;
   private readonly quote: (token: string) => Promise<string | null>;
+  private readonly book: PositionBook;
+  private pruner: ReturnType<typeof setInterval> | null = null;
 
   private readonly tape: PumpTape;
 
@@ -158,6 +163,7 @@ export class BscFeed {
     this.cursor = o.cursor ?? null;
     this.opts = { wsUrl: o.wsUrl ?? DEFAULT_WS, rpcUrl: o.rpcUrl ?? DEFAULT_RPC, logsUrl: o.logsUrl ?? DEFAULT_LOGS, log: o.log ?? console.log, rpc: o.rpc ?? jsonRpc, WebSocketImpl: o.WebSocketImpl };
     this.quote = o.quoteOf ?? ((token) => quoteOf(token, this.opts.rpc, this.opts.rpcUrl));
+    this.book = o.book ?? bscBook;
   }
 
   /** One log in: parsed, deduplicated, queued behind its token's create when that is still being read. */
@@ -169,6 +175,7 @@ export class BscFeed {
     this.seen.add(key);
     if (this.seen.size > 20_000) for (const k of [...this.seen].slice(0, 10_000)) this.seen.delete(k);
     if (e.block > (this.cursor ?? 0)) this.cursor = e.block;
+    if (e.ev.kind === "trade") this.book.note(e.ev.mint, e.ev.user, e.ev.tokens, e.ev.isBuy, e.ts ?? now);
     const queue = this.pending.get(e.ev.mint);
     if (queue) {
       queue.push(e);
@@ -231,8 +238,15 @@ export class BscFeed {
   /** Reads two days of logs (or the gap since the cursor), then stays on the WebSocket, reconnecting with backoff. */
   start(): () => void {
     void this.run();
+    // Two days is what the tape keeps: older tokens and their positions go, like the Solana tape's own pruner.
+    this.pruner = setInterval(() => {
+      this.tape.prune();
+      this.book.prune();
+    }, 10 * 60_000);
+    this.pruner.unref?.();
     return () => {
       this.stopped = true;
+      if (this.pruner) clearInterval(this.pruner);
       this.ws?.close();
     };
   }

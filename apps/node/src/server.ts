@@ -19,6 +19,7 @@ import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { chainOf, checkToken, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscTape, fourMeme } from "./chain/bsc.ts";
 import { tagAll } from "./chain/tags.ts";
+import { bscBook, bscHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
 import { replayMint } from "./chain/replay.ts";
@@ -475,7 +476,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
         const pool = deep && found && !bsc && holdersEnabled() ? tape.poolOf(mint) : null;
         const [holders, , poolSol] = await Promise.all([
-          deep && (found || past) && !bsc && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
+          deep && (found || past) && !bsc && holdersEnabled()
+            ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
+            : // On BNB Chain the wallets the feed saw trade are asked for their balance on chain, the creator first.
+              deep && bsc && found && bscBook.has(mint)
+              ? within(bscHolderReport(mint, found.creator, bscBook.top(mint)))
+              : Promise.resolve(undefined),
           deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
           // The pool's SOL as it is now, not as the last trade the tape saw left it.
           pool ? within(poolSolOf(pool)) : Promise.resolve(null),
@@ -491,7 +497,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         }
         if (past && !bsc) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
         const linked = (found || past) && !bsc ? socials.forMint(mint) : [];
-        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) && !bsc ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        const check = checkToken(mint, found ?? past, { stream, ...(deep && (found || past) && (!bsc || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
         const image = bsc ? fourMeme.image(mint) : socials.image(mint);
