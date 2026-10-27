@@ -14,7 +14,10 @@ import { SocialsRegistry } from "./socials.ts";
  *
  * A Swap names the router that called the PoolManager, not the trader. The trader is read from the token's own
  * Transfer in the same transaction: the wallet the tokens landed in (a buy) or left (a sell). Logs of one transaction
- * are held together for a moment so the two can meet.
+ * are held together for a moment so the two can meet; live, the transaction's receipt supplies the transfers.
+ *
+ * The public sockets take a filter of thousands of addresses but not one of hundreds of pool ids, so the feed hears
+ * every swap on the PoolManager (a few a second) and keeps the ones on pools it follows.
  */
 
 /** Clanker v4.0.0: creates every Clanker token on Base since mid 2025; v4.1.0 changed hooks and extensions, not the factory. */
@@ -46,6 +49,13 @@ const STALL_MS = 5 * 60_000;
 export const CLANKER_SUPPLY = 100_000_000_000;
 /** How long one transaction's logs wait for each other before the trades in it are read. */
 const SETTLE_MS = 1_500;
+/**
+ * A swap moving less quote than this is not a trade: the fee conversions Clanker's hooks run through the pool, a
+ * few hundredths of a cent at a time, credited to the token's admin, would otherwise count as the dev buying. By the
+ * quote's decimals: ETH-like, dollar-like, anything else.
+ */
+const DUST: Record<number, number> = { 18: 0.00002, 6: 0.02 };
+const dustOf = (decimals: number) => DUST[decimals] ?? 0;
 
 /** One Clanker launch, as the factory wrote it. */
 export interface ClankerLaunch {
@@ -282,9 +292,6 @@ export class BaseFeed {
   /** Pools whose create is still being read: swaps in their transactions wait. */
   private readonly pending = new Set<string>();
   private readonly buckets = new Map<string, Bucket>();
-  private poolSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
-  private transferSub: { ws: WebSocket; id: string | null; wanted: number } | null = null;
-  private subTimer: ReturnType<typeof setInterval> | null = null;
   private settleTimer: ReturnType<typeof setInterval> | null = null;
   private readonly book: PositionBook;
   private pruner: ReturnType<typeof setInterval> | null = null;
@@ -329,10 +336,12 @@ export class BaseFeed {
       return;
     }
     if (address === POOL_MANAGER && topic === TOPIC.swap) {
+      // Any swap heard says the socket is alive, whichever pool it was on.
+      this.tape.lastEventAt = now;
       const pool = this.pools.get(log.topics[1]?.toLowerCase() ?? "");
       if (!pool) return;
       const swap = parseSwap(log, pool);
-      if (!swap) return;
+      if (!swap || swap.quote < dustOf(pool.quoteDecimals)) return;
       this.seen.add(key);
       this.trim();
       this.bucketOf(swap.tx, swap.block, now).swaps.push(swap);
@@ -383,35 +392,66 @@ export class BaseFeed {
     if (fresh) this.tape.apply(createEvent(l), l.ts ?? now, l.tx, l.block);
     this.pools.set(l.poolId, pool);
     this.pending.delete(l.poolId);
-    this.followPools();
-    this.followTransfers();
     if (!fresh) return;
     this.opts.onLaunch?.(l);
-    // Live, the launch transaction's own swap (the dev's buy) was written before the pool was followed: its receipt has it.
+    // Live, the launch transaction's own swap (the dev's buy) arrived before its pool was known: its receipt has it.
     if (this.backfilled) await this.readReceipt(l.tx, now);
   }
 
-  /** Every log of one transaction, from its receipt: the launch's dev buy and the supply's first moves. */
+  private async receiptOf(tx: string): Promise<{ logs?: EvmLog[]; blockNumber?: string } | null> {
+    return this.opts.rpc<{ logs?: EvmLog[]; blockNumber?: string } | null>(this.opts.rpcUrl, "eth_getTransactionReceipt", [tx]);
+  }
+
+  /** Every log of one transaction, from its receipt: the launch's dev buy and the supply's first moves, read at once. */
   private async readReceipt(tx: string, now: number): Promise<void> {
     try {
-      const receipt = await this.opts.rpc<{ logs?: EvmLog[]; blockNumber?: string } | null>(this.opts.rpcUrl, "eth_getTransactionReceipt", [tx]);
+      const receipt = await this.receiptOf(tx);
       for (const log of receipt?.logs ?? []) this.onLog({ ...log, blockNumber: log.blockNumber ?? receipt?.blockNumber ?? "0x0", transactionHash: log.transactionHash ?? tx }, now);
-      const b = this.buckets.get(tx);
-      if (b) {
-        this.buckets.delete(tx);
-        this.resolve(b, now);
-      }
     } catch (error) {
       this.opts.log(`[base] receipt of ${tx.slice(0, 12)} not read: ${(error as Error).message?.slice(0, 80)}`);
     }
+    const b = this.buckets.get(tx);
+    if (b) {
+      this.buckets.delete(tx);
+      this.resolve(b, now);
+    }
   }
 
-  /** Buckets whose transaction is old enough, oldest first; the ones waiting on a launch stay. */
+  /** The token transfers of a swap's transaction, from its receipt, into its bucket: live, nothing else carries them. */
+  private async transfersFromReceipt(b: Bucket): Promise<void> {
+    try {
+      const receipt = await this.receiptOf(b.tx);
+      const have = new Set(b.transfers.map((t) => t.logIndex));
+      for (const log of receipt?.logs ?? []) {
+        const token = log.address.toLowerCase();
+        const index = Number(log.logIndex);
+        if (log.topics[0] !== TRANSFER_TOPIC || log.topics.length < 3 || have.has(index) || !this.tape.token(token)) continue;
+        const amount = log.data.length >= 66 ? num(log.data, 0) : 0;
+        if (amount > 0) b.transfers.push({ token, from: topicAddr(log.topics[1]!), to: topicAddr(log.topics[2]!), amount, logIndex: index });
+      }
+    } catch (error) {
+      this.opts.log(`[base] receipt of ${b.tx.slice(0, 12)} not read: ${(error as Error).message?.slice(0, 80)}`);
+    }
+  }
+
+  /** True when a swap in the bucket has no transfer of its token to name the trader by. */
+  private unnamedSwap(b: Bucket): boolean {
+    return b.swaps.some((s) => {
+      const mint = this.pools.get(s.pool)?.mint;
+      return mint !== undefined && !b.transfers.some((t) => t.token === mint);
+    });
+  }
+
+  /**
+   * Buckets whose transaction is old enough, oldest first; the ones waiting on a launch stay. Live, a swap whose
+   * transfers did not come with it gets them from its receipt first.
+   */
   settle(now = Date.now(), all = false): void {
     const due = [...this.buckets.values()].filter((b) => (all || now - b.at >= SETTLE_MS) && !b.swaps.some((s) => this.pending.has(s.pool))).sort((a, b) => a.block - b.block || Math.min(...a.swaps.map((s) => s.logIndex), ...a.transfers.map((t) => t.logIndex)) - Math.min(...b.swaps.map((s) => s.logIndex), ...b.transfers.map((t) => t.logIndex)));
     for (const b of due) {
       this.buckets.delete(b.tx);
-      this.resolve(b, now);
+      if (!all && this.backfilled && this.unnamedSwap(b)) void this.transfersFromReceipt(b).then(() => this.resolve(b, Date.now()));
+      else this.resolve(b, now);
     }
   }
 
@@ -441,32 +481,6 @@ export class BaseFeed {
   quoteNetOf(mint: string): number | null {
     for (const p of this.pools.values()) if (p.mint === mint) return p.quoteNet;
     return null;
-  }
-
-  /** One subscription for every followed pool's swaps; replaced when the set changes. Nothing without a live socket. */
-  private followPools(): void {
-    const sub = this.poolSub;
-    if (!sub || sub.ws.readyState !== 1) return;
-    const wanted = [...this.pools.keys()].sort().join(",");
-    if (wanted === sub.wanted) return;
-    sub.wanted = wanted;
-    if (sub.id) sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 3, method: "eth_unsubscribe", params: [sub.id] }));
-    sub.id = null;
-    if (!wanted) return;
-    sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_subscribe", params: ["logs", { address: POOL_MANAGER, topics: [TOPIC.swap, wanted.split(",")] }] }));
-  }
-
-  /** The Transfer subscription follows every token the tape keeps; renewed when the count changes. */
-  private followTransfers(): void {
-    const sub = this.transferSub;
-    if (!sub || sub.ws.readyState !== 1) return;
-    const mints = this.tape.mints();
-    if (mints.length === sub.wanted) return;
-    sub.wanted = mints.length;
-    if (sub.id) sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 5, method: "eth_unsubscribe", params: [sub.id] }));
-    sub.id = null;
-    if (!mints.length) return;
-    sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 4, method: "eth_subscribe", params: ["logs", { address: mints, topics: [TRANSFER_TOPIC] }] }));
   }
 
   private async getLogs(filter: Record<string, unknown>, attempts = 4): Promise<EvmLog[]> {
@@ -592,12 +606,6 @@ export class BaseFeed {
         finished = true;
         clearInterval(stall);
         if (this.ws === ws) this.ws = null;
-        if (this.poolSub?.ws === ws) this.poolSub = null;
-        if (this.transferSub?.ws === ws) this.transferSub = null;
-        if (this.subTimer) {
-          clearInterval(this.subTimer);
-          this.subTimer = null;
-        }
         try {
           ws.close();
         } catch {
@@ -607,6 +615,7 @@ export class BaseFeed {
       };
       ws.onopen = () => {
         ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_subscribe", params: ["logs", { address: CLANKER_FACTORY, topics: [TOPIC.create] }] }));
+        ws.send(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_subscribe", params: ["logs", { address: POOL_MANAGER, topics: [TOPIC.swap] }] }));
       };
       ws.onmessage = (m) => {
         heard = Date.now();
@@ -617,29 +626,12 @@ export class BaseFeed {
           return;
         }
         if (msg.id === 2) {
-          if (!msg.error && this.poolSub?.ws === ws) this.poolSub.id = String(msg.result);
-          else if (msg.error) this.opts.log(`[base] pools not followed: ${msg.error.message}`);
-          return;
-        }
-        if (msg.id === 3 || msg.id === 5) return;
-        if (msg.id === 4) {
-          if (!msg.error && this.transferSub?.ws === ws) this.transferSub.id = String(msg.result);
-          else if (msg.error) this.opts.log(`[base] transfers not followed: ${msg.error.message}`);
+          if (msg.error) return done(new Error(`swaps subscribe: ${msg.error.message}`));
           return;
         }
         if (msg.id === 1) {
           if (msg.error) return done(new Error(`subscribe: ${msg.error.message}`));
           subscribed = true;
-          this.poolSub = { ws, id: null, wanted: "" };
-          this.transferSub = { ws, id: null, wanted: -1 };
-          this.followPools();
-          this.followTransfers();
-          if (this.subTimer) clearInterval(this.subTimer);
-          this.subTimer = setInterval(() => {
-            this.followPools();
-            this.followTransfers();
-          }, 30_000);
-          this.subTimer.unref?.();
           void this.catchUp(session).then(() => {
             if (session !== this.sessions) return;
             const held = buffer ?? [];

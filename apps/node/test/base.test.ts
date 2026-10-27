@@ -310,3 +310,34 @@ test("the node tells a Base token from a BNB Chain one by the tape that has it: 
     server.close();
   }
 });
+
+test("live, a swap that arrives without its transfers gets them from the transaction's receipt, and a dust fee swap is not a trade", async () => {
+  const tape = new PumpTape("ETH");
+  const t0 = Math.floor(Date.now() / 1000) - 300;
+  const block = 53_300_000;
+  const receipts: string[] = [];
+  const rpc = (async (_url: string, method: string, params: unknown[]) => {
+    if (method === "eth_getTransactionReceipt") {
+      const tx = String(params[0]);
+      receipts.push(tx);
+      if (tx === "0xee02") return { blockNumber: hex(BigInt(block + 3)), logs: [transferLog(KEYS_MINT, POOL_MANAGER, ROUTER, 7_000_000n * E18, block + 3, t0 + 3, tx, 2), transferLog(KEYS_MINT, ROUTER, SNIPER, 7_000_000n * E18, block + 3, t0 + 3, tx, 3)] };
+      return { blockNumber: hex(BigInt(block)), logs: [] };
+    }
+    throw new Error(method);
+  }) as never;
+  const feed = new BaseFeed(tape, { rpc, book: new PositionBook(), decimalsOf: async () => 18, log: () => {} });
+  feed.onLog(createAt(CLANKEYS, block, t0));
+  await new Promise((r) => setTimeout(r, 20));
+  feed.backfilled = true;
+  // A real buy whose transfers the socket did not carry, and a fee conversion of a few hundredths of a cent.
+  feed.onLog(swapLog(KEYS_POOL, 7_000_000n * E18, -(E18 / 50n), true, block + 3, t0 + 3, "0xee02", 1));
+  feed.onLog(swapLog(KEYS_POOL, 992n * E18, -100_000_000_000n, true, block + 4, t0 + 8, "0xee03", 1));
+  feed.settle(Date.now() + 5_000);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(receipts, ["0xee02"]);
+  const t = tape.token(KEYS_MINT)!;
+  assert.equal(t.facts.buys, 1);
+  assert.equal(t.facts.buyers, 1);
+  assert.deepEqual((tape.earlyOf(KEYS_MINT) ?? []).map((e) => e.wallet), [SNIPER]);
+  assert.equal(feed.unnamed, 0);
+});
