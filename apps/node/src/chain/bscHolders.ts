@@ -42,6 +42,12 @@ export class PositionBook {
       .map(([w]) => w);
   }
 
+  /** A plain transfer between wallets: the sender's position falls, the receiver's grows. Curve and pool legs are not plain. */
+  move(token: string, from: string, to: string, tokens: number, now = Date.now()): void {
+    this.note(token, from, tokens, false, now);
+    this.note(token, to, tokens, true, now);
+  }
+
   has(token: string): boolean {
     return this.tokens.has(token);
   }

@@ -370,7 +370,7 @@ test("funders on BNB Chain: the creator's first incoming BNB names the funder; t
     if (address === SNIPER && sort === "asc") return body([{ from: "0x8894e0a0c962cb723c1976a4421c95949be2d4e3", to: SNIPER, value: String(1e18), timeStamp: String(t0), hash: "0xf4" }]);
     return body([]);
   }) as unknown as typeof fetch;
-  const lineage = new BscLineage(tape, f, () => "key");
+  const lineage = new BscLineage(tape, f, () => ({ etherscan: "key" }));
   assert.equal(lineage.view(CREATOR), undefined);
   const v = (await lineage.trace(CREATOR))!;
   assert.equal(v.funder, FUNDER);
@@ -440,4 +440,29 @@ test("the tape names its first buyers still holding, biggest first, as candidate
   tape.apply({ kind: "trade", mint: TOKEN, sol: 2, tokens: 30_000_000, isBuy: false, user: SNIPER, ts: t0 + 2000, curveSol: null }, t0 + 2000, "0xp3", 3);
   assert.deepEqual(tape.positionsOf(TOKEN), [CREATOR]);
   assert.deepEqual(tape.positionsOf("0x0000000000000000000000000000000000000009"), []);
+});
+
+test("a plain transfer between wallets moves positions in the book; a curve leg, a pool leg or a mint does not", async () => {
+  const { PositionBook } = await import("../src/chain/bscHolders.ts");
+  const { TRANSFER_TOPIC } = await import("../src/chain/bsc.ts");
+  const book = new PositionBook();
+  const tape = new PumpTape("BNB");
+  const feed = new BscFeed(tape, { quoteOf: async () => null, book });
+  const t0 = Math.floor(Date.now() / 1000) - 600;
+  feed.onLog(createLog(1, t0, "0xt1"));
+  feed.onLog(tradeLog(true, SNIPER, 80_000_000, 1, 2, t0 + 1, "0xt2"));
+  await new Promise((r) => setTimeout(r, 10));
+  const OTHER = "0x3333333333333333333333333333333333333333";
+  const xfer = (from: string, to: string, tokens: bigint, tx: string): EvmLog => ({ address: TOKEN, topics: [TRANSFER_TOPIC, pad(from.slice(2)), pad(to.slice(2))], data: `0x${wordOf(tokens * E18)}`, blockNumber: "0x3", transactionHash: tx, logIndex: "0x1" });
+  feed.onTransferLog(xfer(SNIPER, OTHER, 30_000_000n, "0xt3"));
+  assert.deepEqual(book.top(TOKEN), [SNIPER, OTHER]);
+  // The curve's own leg of a trade is skipped: already counted from the trade. So is a mint from the zero address.
+  feed.onTransferLog(xfer(TOKEN_MANAGER2, SNIPER, 10_000_000n, "0xt4"));
+  feed.onTransferLog(xfer("0x0000000000000000000000000000000000000000", OTHER, 99_000_000n, "0xt5"));
+  assert.deepEqual(book.top(TOKEN), [SNIPER, OTHER]);
+  // The same log twice is one move.
+  feed.onTransferLog(xfer(SNIPER, OTHER, 30_000_000n, "0xt3"));
+  assert.deepEqual(book.top(TOKEN), [SNIPER, OTHER]);
+  feed.onTransferLog(xfer(SNIPER, OTHER, 30_000_000n, "0xt6"));
+  assert.deepEqual(book.top(TOKEN), [OTHER, SNIPER]);
 });

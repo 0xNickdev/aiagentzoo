@@ -20,6 +20,9 @@ export const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
 /** PancakeSwap V2: where a four.meme token's liquidity goes when it graduates. */
 export const PANCAKE_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
 /** The pair's own events: reserves after every trade, and each swap. */
+/** ERC-20 Transfer(address indexed from, address indexed to, uint256 value). */
+export const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const ZERO = "0x0000000000000000000000000000000000000000";
 export const PAIR_TOPIC = {
   sync: "0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1", // Sync(uint112 reserve0, uint112 reserve1)
   swap: "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822", // Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
@@ -224,6 +227,9 @@ export class BscFeed {
   /** The PancakeSwap pairs of graduated tokens, followed on the socket next to TokenManager2. */
   readonly pairs = new Map<string, Pair>();
   private pairSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
+  /** The Transfer subscription over every token on the tape, renewed as launches come and go. */
+  private transferSub: { ws: WebSocket; id: string | null; wanted: number } | null = null;
+  private transferTimer: ReturnType<typeof setInterval> | null = null;
   private readonly book: PositionBook;
   private pruner: ReturnType<typeof setInterval> | null = null;
 
@@ -243,6 +249,37 @@ export class BscFeed {
     }
   }
 
+  /**
+   * A token's own Transfer in: a plain move between wallets changes who holds what. A leg of a curve trade or a pool
+   * swap (the curve, the pair or the mint itself on one side) is already counted from the trade.
+   */
+  onTransferLog(log: EvmLog, now = Date.now()): void {
+    if (log.removed || log.topics[0] !== TRANSFER_TOPIC || log.topics.length < 3) return;
+    const key = `${log.transactionHash}:${Number(log.logIndex)}`;
+    if (this.seen.has(key)) return;
+    this.seen.add(key);
+    const from = `0x${log.topics[1]!.slice(26)}`.toLowerCase();
+    const to = `0x${log.topics[2]!.slice(26)}`.toLowerCase();
+    const token = log.address.toLowerCase();
+    const leg = (w: string) => w === TOKEN_MANAGER2 || w === ZERO || w === token || this.pairs.has(w);
+    if (leg(from) || leg(to) || from === to) return;
+    const amount = num(log.data, 0);
+    if (amount > 0) this.book.move(token, from, to, amount, now);
+  }
+
+  /** The Transfer subscription follows every token the tape keeps; renewed when the count changes. */
+  private followTransfers(): void {
+    const sub = this.transferSub;
+    if (!sub || sub.ws.readyState !== 1) return;
+    const mints = this.tape.mints();
+    if (mints.length === sub.wanted) return;
+    sub.wanted = mints.length;
+    if (sub.id) sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 5, method: "eth_unsubscribe", params: [sub.id] }));
+    sub.id = null;
+    if (!mints.length) return;
+    sub.ws.send(JSON.stringify({ jsonrpc: "2.0", id: 4, method: "eth_subscribe", params: ["logs", { address: mints, topics: [TRANSFER_TOPIC] }] }));
+  }
+
   /** A pair's log in: reserves or a swap on a graduated token's pool. */
   onPairLog(log: EvmLog, now = Date.now()): void {
     const pair = this.pairs.get(log.address.toLowerCase());
@@ -251,7 +288,9 @@ export class BscFeed {
     if (this.seen.has(key)) return;
     this.seen.add(key);
     const ev = parsePairLog(log, pair);
-    if (ev) this.tape.apply(ev, now, log.transactionHash, Number(log.blockNumber));
+    if (!ev) return;
+    this.tape.apply(ev, now, log.transactionHash, Number(log.blockNumber));
+    this.book.note(pair.mint, ev.user, ev.tokens, ev.isBuy, now);
   }
 
   /** On a graduation: the pool from the factory, then the tape learns it and the socket follows it. */
@@ -413,6 +452,11 @@ export class BscFeed {
         clearInterval(stall);
         if (this.ws === ws) this.ws = null;
         if (this.pairSub?.ws === ws) this.pairSub = null;
+        if (this.transferSub?.ws === ws) this.transferSub = null;
+        if (this.transferTimer) {
+          clearInterval(this.transferTimer);
+          this.transferTimer = null;
+        }
         // A failed fill or subscribe must not leave the socket open behind the next one.
         try {
           ws.close();
@@ -437,12 +481,22 @@ export class BscFeed {
           if (!msg.error && this.pairSub?.ws === ws) this.pairSub.id = String(msg.result);
           return;
         }
-        if (msg.id === 3) return;
+        if (msg.id === 3 || msg.id === 5) return;
+        if (msg.id === 4) {
+          if (!msg.error && this.transferSub?.ws === ws) this.transferSub.id = String(msg.result);
+          else if (msg.error) this.opts.log(`[bsc] transfers not followed: ${msg.error.message}`);
+          return;
+        }
         if (msg.id === 1) {
           if (msg.error) return done(new Error(`subscribe: ${msg.error.message}`));
           subscribed = true;
           this.pairSub = { ws, id: null, wanted: "" };
           this.followPairs();
+          this.transferSub = { ws, id: null, wanted: -1 };
+          this.followTransfers();
+          if (this.transferTimer) clearInterval(this.transferTimer);
+          this.transferTimer = setInterval(() => this.followTransfers(), 60_000);
+          this.transferTimer.unref?.();
           void this.catchUp(session).then(() => {
             if (session !== this.sessions) return;
             const held = buffer ?? [];
@@ -461,6 +515,7 @@ export class BscFeed {
         const log = msg.params?.result;
         if (!log || !subscribed) return;
         if (this.pairs.has(log.address.toLowerCase())) return this.onPairLog(log);
+        if (log.topics[0] === TRANSFER_TOPIC && log.address.toLowerCase() !== TOKEN_MANAGER2) return this.onTransferLog(log);
         if (buffer) buffer.push(log);
         else this.onLog(log);
       };

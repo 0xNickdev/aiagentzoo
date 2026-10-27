@@ -9,7 +9,11 @@ import type { PumpTape } from "./pump.ts";
  */
 
 const API = "https://api.etherscan.io/v2/api";
-export const bscFundersEnabled = () => Boolean(process.env.BSCSCAN_API_KEY);
+const MORALIS = "https://deep-index.moralis.io/api/v2.2";
+/** Either key traces: Moralis's free tier covers BNB Chain, Etherscan's covers it on a paid plan only. */
+export const bscFundersEnabled = () => Boolean(process.env.MORALIS_API_KEY || process.env.BSCSCAN_API_KEY);
+export type FunderKeys = { moralis?: string; etherscan?: string };
+export const bscFunderKeys = (): FunderKeys | undefined => (process.env.MORALIS_API_KEY || process.env.BSCSCAN_API_KEY ? { moralis: process.env.MORALIS_API_KEY, etherscan: process.env.BSCSCAN_API_KEY } : undefined);
 const KEEP_MS = 6 * 3_600_000;
 /** A funder that moved this many transactions in a day is an exchange or a router, not a person. */
 const HOT_PER_DAY = 1_000;
@@ -42,8 +46,16 @@ interface Tx {
 
 type Fetch = typeof fetch;
 
-async function txlist(address: string, sort: "asc" | "desc", offset: number, key: string, f: Fetch): Promise<Tx[] | null> {
-  const url = `${API}?chainid=56&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=${offset}&sort=${sort}&apikey=${key}`;
+async function txlist(address: string, sort: "asc" | "desc", offset: number, keys: FunderKeys, f: Fetch): Promise<Tx[] | null> {
+  if (keys.moralis) {
+    const url = `${MORALIS}/${address}?chain=bsc&order=${sort.toUpperCase()}&limit=${Math.min(offset, 100)}`;
+    const r = await f(url, { headers: { "X-API-Key": keys.moralis, accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
+    if (!r.ok) return null;
+    const body = (await r.json()) as { result?: Array<{ from_address: string; to_address: string | null; value: string; block_timestamp: string; hash: string; receipt_status?: string }> };
+    if (!Array.isArray(body.result)) return null;
+    return body.result.map((t) => ({ from: t.from_address, to: t.to_address ?? "", value: t.value, timeStamp: String(Math.floor(new Date(t.block_timestamp).getTime() / 1000)), hash: t.hash, isError: t.receipt_status === "0" ? "1" : "0" }));
+  }
+  const url = `${API}?chainid=56&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=${offset}&sort=${sort}&apikey=${keys.etherscan}`;
   const r = await f(url, { signal: AbortSignal.timeout(10_000) });
   if (!r.ok) return null;
   const body = (await r.json()) as { status?: string; message?: string; result?: Tx[] | string };
@@ -67,9 +79,9 @@ export class BscLineage {
   private running = false;
   private readonly tape: PumpTape;
   private readonly f: Fetch;
-  private readonly keyOf: () => string | undefined;
+  private readonly keyOf: () => FunderKeys | undefined;
 
-  constructor(tape: PumpTape, f: Fetch = fetch, keyOf: () => string | undefined = () => process.env.BSCSCAN_API_KEY) {
+  constructor(tape: PumpTape, f: Fetch = fetch, keyOf: () => FunderKeys | undefined = bscFunderKeys) {
     this.tape = tape;
     this.f = f;
     this.keyOf = keyOf;
@@ -105,22 +117,24 @@ export class BscLineage {
 
   /** Traces now: two calls to BscScan. Null when there is no key or BscScan did not answer. */
   async trace(creator: string, now = Date.now()): Promise<LineageView | null> {
-    const key = this.keyOf();
-    if (!key) return null;
+    const keys = this.keyOf();
+    if (!keys) return null;
     const w = creator.toLowerCase();
     const kept = this.view(w, now);
     if (kept) return kept;
-    const first = await txlist(w, "asc", 25, key, this.f);
+    const first = await txlist(w, "asc", 25, keys, this.f);
     if (!first) return null;
     const incoming = first.find((tx) => tx.to.toLowerCase() === w && tx.from.toLowerCase() !== w && Number(tx.value) / WEI > 0 && tx.isError !== "1");
     const funder = incoming ? incoming.from.toLowerCase() : null;
     let hot = false;
     const paid: string[] = [];
     if (funder && !bscExchangeOf(funder)) {
-      const recent = await txlist(funder, "desc", HOT_PER_DAY, key, this.f);
+      // Moralis hands out a hundred a page: a funder with a hundred transactions in a day is busy enough to be a service.
+      const page = keys.moralis ? 100 : HOT_PER_DAY;
+      const recent = await txlist(funder, "desc", page, keys, this.f);
       if (recent) {
         const day = recent.filter((tx) => now / 1000 - Number(tx.timeStamp) < 86_400).length;
-        hot = day >= HOT_PER_DAY;
+        hot = day >= page;
         if (!hot) for (const tx of recent) if (tx.from.toLowerCase() === funder && Number(tx.value) / WEI > 0 && tx.to && !paid.includes(tx.to.toLowerCase())) paid.push(tx.to.toLowerCase());
       }
     }
