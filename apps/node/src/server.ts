@@ -480,8 +480,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           deep && (found || past) && !bsc && holdersEnabled()
             ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
             : // On BNB Chain the wallets the feed saw trade are asked for their balance on chain, the creator first.
-              deep && bsc && found && bscBook.has(mint)
-              ? within(bscHolderReport(mint, found.creator, bscBook.top(mint)))
+              deep && bsc && found
+              ? within(bscHolderReport(mint, found.creator, [...new Set([...bscBook.top(mint), ...bscTape.positionsOf(mint)])]))
               : Promise.resolve(undefined),
           deep && found && !bsc && fundersEnabled() && !lineage.view(found.creator)
             ? within(lineage.trace(found.creator))

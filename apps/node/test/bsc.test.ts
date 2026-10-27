@@ -430,3 +430,14 @@ test("a graduation finds its PancakeSwap pair, and the pair's swaps and reserves
   assert.equal(tape.token(TOKEN)!.facts.ammSells, 1);
   assert.equal(parsePairLog({ address: PAIR, topics: ["0x01"], data: "0x", blockNumber: "0x1", transactionHash: "0x", logIndex: "0x0" }, feed.pairs.get(PAIR)!), null);
 });
+
+test("the tape names its first buyers still holding, biggest first, as candidates for a holders read after a restart", () => {
+  const tape = new PumpTape("BNB");
+  const t0 = Date.now() - 60_000;
+  tape.apply({ kind: "create", name: "p", symbol: "P", mint: TOKEN, creator: CREATOR, ts: t0, venue: "fourmeme" }, t0, "0xp0", 1);
+  tape.apply({ kind: "trade", mint: TOKEN, sol: 1, tokens: 10_000_000, isBuy: true, user: CREATOR, ts: t0, curveSol: null }, t0, "0xp1", 1);
+  tape.apply({ kind: "trade", mint: TOKEN, sol: 2, tokens: 30_000_000, isBuy: true, user: SNIPER, ts: t0 + 1000, curveSol: null }, t0 + 1000, "0xp2", 2);
+  tape.apply({ kind: "trade", mint: TOKEN, sol: 2, tokens: 30_000_000, isBuy: false, user: SNIPER, ts: t0 + 2000, curveSol: null }, t0 + 2000, "0xp3", 3);
+  assert.deepEqual(tape.positionsOf(TOKEN), [CREATOR]);
+  assert.deepEqual(tape.positionsOf("0x0000000000000000000000000000000000000009"), []);
+});

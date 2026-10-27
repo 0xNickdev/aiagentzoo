@@ -1029,6 +1029,18 @@ export class PumpTape {
     return this.pools.get(pool) ?? null;
   }
 
+  /** The first buyers still holding, biggest position first, from the trades the tape saw: candidates for a holders read. */
+  positionsOf(mint: string, limit = 40): string[] {
+    const t = this.tokens.get(mint);
+    if (!t) return [];
+    return [...t.buyers.entries()]
+      .map(([w, b]) => [w, (b.tok ?? 0) - (b.sold ?? 0)] as const)
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([w]) => w);
+  }
+
   /** Life after the curve: trades on the PumpSwap pools of tokens we watched launch. */
   private swap(ev: Extract<PumpEvent, { kind: "swap" }>, now: number, tx?: string, slot?: number): void {
     const mint = this.pools.get(ev.pool);
