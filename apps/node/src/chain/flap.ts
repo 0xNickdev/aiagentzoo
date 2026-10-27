@@ -45,8 +45,9 @@ const STALL_MS = 5 * 60_000;
 const SETTLE_MS = 1_500;
 /** The live Transfer subscription follows this many of the newest Flap tokens; older ones fall back to receipts. */
 const FOLLOW_MAX = 4_000;
-/** Receipts asked in one batch. */
+/** Receipts asked in one batch, and at most this many batches a second: 48.club answers 429 past that. */
 const RECEIPTS_PER_BATCH = 20;
+const RECEIPT_BATCHES_PER_SEC = 1;
 
 /** A Flap launch, put together from the Portal's logs in its transaction. */
 export interface FlapLaunch {
@@ -199,6 +200,9 @@ export class FlapFeed {
   /** Flap's tokens on the tape, with what their launch said; newest last. */
   readonly tokens = new Map<string, { quote: string | null; taxBps: number; migrator: number; at: number }>();
   private transferSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
+  /** When the next receipts batch may go, and how long to hold off after a 429. */
+  private receiptsAt = 0;
+  private busy = false;
   private timers: Array<ReturnType<typeof setInterval>> = [];
   private readonly opts: Required<Pick<FlapFeedOptions, "wsUrl" | "rpcUrl" | "logsUrl" | "log" | "rpc" | "batch">> & Pick<FlapFeedOptions, "book" | "onPair" | "onLaunch" | "WebSocketImpl">;
   private readonly tape: PumpTape;
@@ -289,12 +293,19 @@ export class FlapFeed {
   private async receiptsOf(txs: string[]): Promise<Map<string, EvmLog[]>> {
     const out = new Map<string, EvmLog[]>();
     for (let i = 0; i < txs.length; i += RECEIPTS_PER_BATCH) {
+      // Paced: a burst past the endpoint's limit loses the batch anyway. Trades left over are read under their router.
+      const wait = this.receiptsAt - Date.now();
+      if (wait > 2_000) break;
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      this.receiptsAt = Date.now() + 1_000 / RECEIPT_BATCHES_PER_SEC;
       const part = txs.slice(i, i + RECEIPTS_PER_BATCH);
       try {
         const got = (await this.opts.batch(this.opts.logsUrl, part.map((tx) => ({ method: "eth_getTransactionReceipt", params: [tx] })))) as Array<{ logs?: EvmLog[] } | null>;
         got.forEach((r, k) => r?.logs && out.set(part[k]!, r.logs));
       } catch (error) {
-        this.opts.log(`[flap] receipts not read: ${(error as Error).message?.slice(0, 80)}`);
+        const msg = (error as Error).message ?? "";
+        if (/429/.test(msg)) this.receiptsAt = Date.now() + 10_000;
+        else this.opts.log(`[flap] receipts not read: ${msg.slice(0, 80)}`);
       }
     }
     return out;
@@ -405,7 +416,14 @@ export class FlapFeed {
 
   start(): () => void {
     void this.run();
-    const settle = setInterval(() => void this.settle().catch(() => {}), 500);
+    // Live only: during the backfill each chunk settles its own transactions once their transfers are in.
+    const settle = setInterval(() => {
+      if (!this.backfilled || this.busy) return;
+      this.busy = true;
+      void this.settle()
+        .catch(() => {})
+        .finally(() => (this.busy = false));
+    }, 500);
     settle.unref?.();
     // The tape's own pruner (run by the four.meme feed) lets old tokens go; their entries here go with them.
     const prune = setInterval(() => {
