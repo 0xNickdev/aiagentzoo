@@ -99,10 +99,18 @@ export interface Odds {
   why: Array<{ says: string; up: boolean }>;
   /** Read as it stood five minutes in, or from what there is so far for a younger launch. */
   at: "5min" | "early";
+  /**
+   * Once it ran, or an hour on: what happened instead of what might. `ran` with the highest cap (SOL) and when; or
+   * not yet, after `ageMin` minutes. The odds stay for the record of what they said.
+   */
+  settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number };
   fit: string;
 }
 
-export function oddsOf(i: OddsInputs, at: Odds["at"]): Odds {
+/** Past this age the odds are history: what happened is shown instead. */
+export const SETTLED_AFTER_MIN = 60;
+
+export function oddsOf(i: OddsInputs, at: Odds["at"], seen?: { peak: { sol: number; afterMin: number } | null; ageMin: number }): Odds {
   const x = vector(i);
   const run = score(RUN, x);
   // A younger launch is trading by definition, so that is no reason; Mayhem's double supply skews caps, so it is none either.
@@ -121,5 +129,6 @@ export function oddsOf(i: OddsInputs, at: Odds["at"]): Odds {
     why: pushes,
     at,
     fit: ODDS_FIT,
+    ...(seen?.peak ? { settled: { ran: true as const, peakSol: seen.peak.sol, afterMin: seen.peak.afterMin } } : seen && seen.ageMin >= SETTLED_AFTER_MIN ? { settled: { ran: false as const, ageMin: seen.ageMin } } : {}),
   };
 }

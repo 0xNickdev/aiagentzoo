@@ -42,13 +42,22 @@ export interface Odds {
   why: Array<{ says: string; up: boolean }>;
   at: "5min" | "early";
   fit: string;
+  settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number };
 }
+
+const hoursOf = (min: number) => (min < 120 ? t("{m} min", { m: min }) : t("{h} h", { h: Math.round(min / 60) }));
 
 const pctOdds = (p: number) => (p >= 0.1 ? `${Math.round(p * 100)}%` : p >= 0.01 ? `${(p * 100).toFixed(1)}%` : p > 0 ? "<1%" : "0%");
 const timesAvg = (x: number) => (x < 0.1 ? "<0.1×" : `${x}×`);
 
 /** The run odds as a pill: moss when it beats the average launch twice over, plain otherwise. */
 function OddsPill({ o }: { o: Odds }) {
+  if (o.settled)
+    return o.settled.ran ? (
+      <span className="tabular-nums inline-flex items-center rounded-full border border-[#a6e3b44d] px-3 py-1 text-[12.5px] text-[#a6e3b4]">{t("ran to {s} SOL cap", { s: o.settled.peakSol })}</span>
+    ) : (
+      <span className="tabular-nums inline-flex items-center rounded-full border border-white/[0.12] px-3 py-1 text-[12.5px] text-fg-3">{t("has not run in {h}", { h: hoursOf(o.settled.ageMin) })}</span>
+    );
   const good = o.vsAverage >= 2;
   return (
     <span className="tabular-nums inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px]" title={t("Chance the market cap climbs past 85 SOL after minute five. The average launch: 2.7%.")} style={{ color: good ? "#a6e3b4" : "#d9dddb", borderColor: good ? "#a6e3b44d" : "rgba(255,255,255,0.12)" }}>
@@ -66,11 +75,23 @@ function OddsCard({ o }: { o: Odds }) {
         <span className="text-[12px] text-fg-4">{o.at === "5min" ? t("as it stood five minutes in") : t("early read: under five minutes old")}</span>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/[0.06]">
-        <div className="bg-night-surface px-4 py-3.5">
-          <p className="text-[12.5px] text-fg-3">{t("Climbs past 85 SOL cap")}</p>
-          <p className="tabular-nums mt-1 text-[22px] text-fg" style={{ color: o.vsAverage >= 2 ? "#a6e3b4" : undefined }}>{pctOdds(o.run)}</p>
-          <p className="tabular-nums mt-0.5 text-[13px] text-fg-3">{t("{x} the average launch (2.7%)", { x: timesAvg(o.vsAverage) })}</p>
-        </div>
+        {o.settled ? (
+          <div className="bg-night-surface px-4 py-3.5">
+            <p className="text-[12.5px] text-fg-3">{t("Climbed past 85 SOL cap")}</p>
+            <p className="tabular-nums mt-1 text-[22px]" style={{ color: o.settled.ran ? "#a6e3b4" : undefined }}>
+              {o.settled.ran ? t("yes, to {s} SOL", { s: o.settled.peakSol }) : t("not in {h}", { h: hoursOf(o.settled.ageMin) })}
+            </p>
+            <p className="tabular-nums mt-0.5 text-[13px] text-fg-3">
+              {o.settled.ran ? t("{m} min in · the odds at five minutes: {p}", { m: o.settled.afterMin, p: pctOdds(o.run) }) : t("the odds at five minutes: {p}", { p: pctOdds(o.run) })}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-night-surface px-4 py-3.5">
+            <p className="text-[12.5px] text-fg-3">{t("Climbs past 85 SOL cap")}</p>
+            <p className="tabular-nums mt-1 text-[22px] text-fg" style={{ color: o.vsAverage >= 2 ? "#a6e3b4" : undefined }}>{pctOdds(o.run)}</p>
+            <p className="tabular-nums mt-0.5 text-[13px] text-fg-3">{t("{x} the average launch (2.7%)", { x: timesAvg(o.vsAverage) })}</p>
+          </div>
+        )}
         <div className="bg-night-surface px-4 py-3.5">
           <p className="text-[12.5px] text-fg-3">{t("The dev still dumps")}</p>
           <p className="tabular-nums mt-1 text-[22px]" style={{ color: o.devDumps !== null && o.devDumps >= 0.5 ? "#ff8a7e" : undefined }}>{o.devDumps === null ? t("already did") : pctOdds(o.devDumps)}</p>

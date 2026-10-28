@@ -327,7 +327,7 @@ export interface XRayReply {
     verdict: "avoid" | "caution" | "pass" | "unknown";
     /** Risk 0..100 inside the verdict's band; null when the tape never saw the token. */
     score?: number | null;
-    odds?: { run: number; vsAverage: number; devDumps: number | null } | null;
+    odds?: OddsLite | null;
     reasons: string[];
     notes: string[];
     facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
@@ -336,10 +336,13 @@ export interface XRayReply {
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
-/** The run odds in one line: "runs 21% · 7.9x the average launch · dev still dumps 62%". */
-const oddsLine = (o: { run: number; vsAverage: number; devDumps: number | null } | null | undefined) => {
+type OddsLite = { run: number; vsAverage: number; devDumps: number | null; settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number } };
+/** The run odds in one line: "runs 21% · 7.9x the average launch · dev still dumps 62%"; once settled, what happened. */
+const oddsLine = (o: OddsLite | null | undefined) => {
   if (!o) return "";
   const p = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x >= 0.01 ? `${(x * 100).toFixed(1)}%` : "<1%");
+  if (o.settled?.ran) return T("Ran to {s} SOL cap, {m} min in (odds at five minutes: {p})", { s: o.settled.peakSol, m: o.settled.afterMin, p: p(o.run) });
+  if (o.settled) return T("Has not run in {h} h (odds at five minutes: {p})", { h: Math.max(1, Math.round(o.settled.ageMin / 60)), p: p(o.run) });
   const dev = o.devDumps === null ? "" : ` · ${T("dev still dumps {p}", { p: p(o.devDumps) })}`;
   return `${T("Odds it runs: {p} · {x}× the average launch", { p: p(o.run), x: o.vsAverage < 0.1 ? "<0.1" : o.vsAverage })}${dev}`;
 };

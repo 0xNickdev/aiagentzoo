@@ -611,7 +611,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           const funder = lineage.funderOf(found.creator) ?? null;
           const read = tape.oddsInputs(mint, { social: linked.length > 0, funderExchange: exchangeOf(funder) != null, funderMany: funder ? lineage.devsOf(funder).size >= 3 : false });
           if (read) {
-            const odds = oddsOf(read.inputs, read.at);
+            const odds = oddsOf(read.inputs, read.at, read);
             check.odds = (found.facts.creatorSold ?? 0) >= 0.5 ? { ...odds, devDumps: null } : odds;
           }
         }

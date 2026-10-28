@@ -189,6 +189,8 @@ export const BOT_ZH: Record<string, string> = {
   "risk {n}/100": "风险 {n}/100",
   "Odds it runs: {p} · {x}× the average launch": "上涨概率：{p} · 普通发币的 {x} 倍",
   "dev still dumps {p}": "开发者之后还砸 {p}",
+  "Ran to {s} SOL cap, {m} min in (odds at five minutes: {p})": "第 {m} 分钟涨到 {s} SOL 市值（第五分钟时的概率：{p}）",
+  "Has not run in {h} h (odds at five minutes: {p})": "{h} 小时内没有上涨（第五分钟时的概率：{p}）",
   "KOL wallets {n}": "KOL 钱包 {n}",
   "smart money {n}": "聪明钱 {n}",
   "known ruggers {n}": "已知跑路钱包 {n}",

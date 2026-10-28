@@ -1269,7 +1269,7 @@ export class PumpTape {
    * What the odds model reads, as the token stood five minutes in (or now, for a younger one): the same numbers the
    * model was fitted on. Socials and the funder come from outside the tape. pump.fun only: null elsewhere.
    */
-  oddsInputs(mint: string, outside: { social: boolean; funderExchange: boolean; funderMany: boolean }, now = Date.now()): { inputs: OddsInputs; at: "5min" | "early" } | null {
+  oddsInputs(mint: string, outside: { social: boolean; funderExchange: boolean; funderMany: boolean }, now = Date.now()): { inputs: OddsInputs; at: "5min" | "early"; peak: { sol: number; afterMin: number } | null; ageMin: number } | null {
     const t = this.tokens.get(mint);
     if (!t || t.quote || t.venue) return null;
     const at = Math.min(now, t.createdAt + 5 * 60_000);
@@ -1286,8 +1286,12 @@ export class PumpTape {
       if (b.at <= at) b5++;
     }
     const crew = young ? this.crewOf(t, now) : null;
+    // What the odds are about, once it has happened: the highest cap after minute five.
+    const ranAfter5 = (t.capPeak ?? 0) >= CURVE_ALIVE_SOL && (t.capPeakAt ?? 0) > t.createdAt + 5 * 60_000;
     return {
       at: young ? "early" : "5min",
+      ageMin: Math.round((now - t.createdAt) / 60_000),
+      peak: ranAfter5 ? { sol: Math.round(t.capPeak!), afterMin: Math.round((t.capPeakAt! - t.createdAt) / 60_000) } : null,
       inputs: {
         // A younger launch is still trading by definition: it is being checked while trades come in.
         still5: young || a5 !== null,

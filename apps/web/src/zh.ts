@@ -1,5 +1,13 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "ran to {s} SOL cap": "涨到了 {s} SOL 市值",
+  "has not run in {h}": "{h} 内没有上涨",
+  "Climbed past 85 SOL cap": "市值涨过了 85 SOL",
+  "yes, to {s} SOL": "是的，到了 {s} SOL",
+  "not in {h}": "{h} 内没有",
+  "{m} min in · the odds at five minutes: {p}": "第 {m} 分钟 · 第五分钟时的概率：{p}",
+  "the odds at five minutes: {p}": "第五分钟时的概率：{p}",
+  "{h} h": "{h} 小时",
   "Chance the market cap climbs past 85 SOL after minute five. The average launch: 2.7%.": "第五分钟后市值涨过 85 SOL 的概率。普通发币：2.7%。",
   "runs {p}": "上涨 {p}",
   "{x} avg": "平均的 {x}",
