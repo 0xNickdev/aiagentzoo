@@ -84,7 +84,7 @@ export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
         return chain ? { ...toLaunch(c), chain } : toLaunch(c);
       });
     } catch (error) {
-      if (tape.live()) return tape.launches(limit);
+      if (tape.live()) return tape.launches(limit).map((l) => ({ ...l, chain: factsWithOdds(l.mint, l.hasSocials ?? false) ?? l.chain }));
       throw error;
     }
   },

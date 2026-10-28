@@ -506,7 +506,7 @@ function Answer({ a }: { a: Ask }) {
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="px-5 pb-6 sm:px-8">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
+        <div className="min-w-0 bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="min-w-0">
               <p className="tabular-nums flex flex-wrap items-center gap-2 text-[12.5px] text-fg-4">
@@ -619,8 +619,8 @@ function CouncilBlock({ c, outcome }: { c: Council; outcome: "dead" | "alive" | 
                 {t(TONE[v.verdict].label)}
               </span>
               <p className="min-w-0 text-[12.5px] font-normal leading-snug text-fg-4">{v.why}</p>
-              <span className="tabular-nums self-start pt-0.5 text-right text-[11.5px] text-fg-4" title={t("Balanced accuracy above a coin flip")}>
-                {max > 0 ? (v.weight > 0 ? t("weight {w}", { w: Math.round((v.weight / max) * 100) }) : t("no weight yet")) : ""}
+              <span className="tabular-nums self-start pt-0.5 text-right text-[11.5px] text-fg-4" title={t("Balanced accuracy above a coin flip; a judge no better than a coin flip weighs nothing")}>
+                {max > 0 ? (v.weight > 0 ? t("weight {w}", { w: Math.round((v.weight / max) * 100) }) : t("no weight")) : ""}
               </span>
             </li>
           );
