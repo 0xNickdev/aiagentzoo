@@ -46,7 +46,7 @@ Built and shipped live on mainnet during the hackathon (353 commits since 12 Oct
 
 Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days: 535 users, 10,400 X-Rays, 25,000 checks ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
 
-**Team**: John Buz, lead developer ([X](https://x.com/Johnnny_0x), [GitHub](https://github.com/0xNickdev)) · Priince, backend developer ([X](https://x.com/_oxwale)) · 0xSerik.
+**Team**: John Buz, lead developer ([X](https://x.com/Johnnny_0x), [GitHub](https://github.com/0xNickdev)) · Priince, backend developer ([X](https://x.com/_oxwale)) · 0xSerik, marketing and partnerships.
 
 ## How Solana powers it
 
