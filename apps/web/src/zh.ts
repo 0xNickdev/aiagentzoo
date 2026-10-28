@@ -1,5 +1,6 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "The balance is read again when the night is graded, the next morning. A wallet under 500,000 by then gets nothing for that night: one bag cannot answer from several wallets, and selling right after answering does not work.": "第二天早上评分时会再读一次余额。到那时持仓低于 500,000 的钱包，这一晚不计分：同一笔币不能用多个钱包答题，答完就卖也没用。",
   "what minute five said, and what happened": "第五分钟时的判断，和后来发生的事",
   "Odds it runs past 85 SOL cap": "市值涨过 85 SOL 的概率",
   "ran to {s} SOL, {m} min in": "第 {m} 分钟涨到了 {s} SOL",

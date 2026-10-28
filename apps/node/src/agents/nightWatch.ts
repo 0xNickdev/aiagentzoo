@@ -25,6 +25,7 @@ import {
   VERDICTS,
 } from "./judgement.ts";
 import { EVO, type EvolutionConfig, type Exam, evolutionAgent, FOLLOWUP, type Followup } from "./evolution.ts";
+import { snapshotHolding } from "../holders.ts";
 import { KOI, koiAgent, type KoiPick } from "./koi.ts";
 
 /**
@@ -542,6 +543,9 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
         await ctx.state.set(`score:${yesterday}`, score);
         // Keep what the re-check found, so others who judged these tokens (the nursery) can be scored too.
         await ctx.state.set(FOLLOWUP(yesterday), Object.fromEntries(merged.map((o) => [o.mint, { symbol: o.symbol, outcome: outcomeOf(o) }])) satisfies Followup);
+        // The humans who answered that night: read what each wallet holds now, so a bag sold after answering, or
+        // passed from wallet to wallet through the night, earns nothing.
+        await snapshotHolding(ctx.state, yesterday).catch(() => null);
         await ctx.trace("calls.scored", { night: yesterday, hits: score.hits, misses: score.misses, accuracy: score.accuracy, guests: score.guests });
         // Guests earn a track record from the same checks: one ledger of hits and misses per guest.
         const ledger = (await ctx.state.get<Record<string, GuestTally>>(GUEST_SCORES)) ?? {};

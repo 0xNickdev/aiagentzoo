@@ -113,6 +113,8 @@ export const EVO = {
 
 /** What the hedgehog found when it re-checked a night's tokens, kept by the beaver for everyone who judged them. */
 export const FOLLOWUP = (night: string) => `followup:${night}`;
+/** Humans vs the beaver: a night's answers by wallet, and the balance each answering wallet held when the night was graded. */
+export const HUMANS = { answers: (night: string) => `humans:${night}`, held: (night: string) => `humans:held:${night}` };
 
 /** What holders and the week's best human hand the nursery: a rule for the next newborn, and its name (see gene.ts). */
 export const GENE = {

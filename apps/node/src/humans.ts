@@ -1,5 +1,6 @@
 import type { StateStore } from "@aiagentzoo/sdk";
-import { EVO, type Exam, FOLLOWUP, type Followup, type NightResults } from "./agents/evolution.ts";
+import { EVO, type Exam, FOLLOWUP, type Followup, HUMANS, type NightResults } from "./agents/evolution.ts";
+import { HOLDER_MIN } from "./holders.ts";
 import { skillOf, type Verdict, VERDICTS } from "./agents/judgement.ts";
 import { nightOf } from "./agents/nightWatch.ts";
 import { weekOf } from "./stats.ts";
@@ -9,7 +10,7 @@ import { weekOf } from "./stats.ts";
  * day the same re-check grades both. Weekly standings put people and the best AI judge on one honest scale.
  */
 
-const key = (night: string) => `humans:${night}`;
+const key = HUMANS.answers;
 /** A week's rank needs this many graded answers, with dead and living tokens among them. */
 export const HUMAN_MIN_GRADED = 15;
 export const HUMAN_MIN_SIDE = 2;
@@ -54,7 +55,10 @@ async function weekTallies(store: StateStore, start: string) {
     const night = addDays(start, i);
     const followup = await store.get<Followup>(FOLLOWUP(night));
     if (!followup) continue;
+    // The balance each wallet held when the night was graded; a wallet under the line that morning sat the night for nothing.
+    const held = (await store.get<Record<string, number>>(HUMANS.held(night))) ?? {};
     for (const [wallet, answers] of Object.entries((await store.get<Record<string, Answers>>(key(night))) ?? {})) {
+      if (wallet in held && held[wallet]! < HOLDER_MIN) continue;
       const t = humans.get(wallet) ?? { dead: 0, deadRight: 0, alive: 0, aliveRight: 0 };
       for (const [mint, verdict] of Object.entries(answers)) {
         const outcome = followup[mint]?.outcome;
@@ -101,7 +105,7 @@ export async function humansView(store: StateStore, briefAt: string, wallet: str
     night,
     exam: exam?.tokens ?? [],
     mine,
-    rules: { minGraded: HUMAN_MIN_GRADED, minSide: HUMAN_MIN_SIDE },
+    rules: { minGraded: HUMAN_MIN_GRADED, minSide: HUMAN_MIN_SIDE, holdMin: HOLDER_MIN, heldAtGrading: true },
     week: { start, end: addDays(start, 6), endsAt: `${addDays(start, 7)}T00:00:00Z` },
     bestJudge,
     standings: week.humans.slice(0, 25).map((r) => ({ ...r, id: short(r.id), you: r.id === wallet })),

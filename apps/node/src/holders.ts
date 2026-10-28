@@ -1,3 +1,5 @@
+import type { StateStore } from "@aiagentzoo/sdk";
+import { HUMANS } from "./agents/evolution.ts";
 /**
  * Holder perks: a wallet holding enough $ZOOAGENCY gets more of the zoo (more questions to the beaver, more tokens
  * under watch). No contract, no staking: the balance is read from Solana and cached for a few minutes.
@@ -37,4 +39,26 @@ export async function balanceOf(owner: string, fetchFn: typeof fetch = fetch, no
 
 export async function isHolder(owner: string, fetchFn: typeof fetch = fetch): Promise<boolean> {
   return ((await balanceOf(owner, fetchFn)) ?? 0) >= HOLDER_MIN;
+}
+
+/**
+ * The holder snapshot behind the humans' contest. Answers are accepted from a wallet that holds at the moment it
+ * answers; this reads each answering wallet's balance again when the night is graded and keeps it. One bag cannot
+ * sit in two wallets at once, and a bag sold right after answering is not there the next morning, so the night does
+ * not count for that wallet. Idempotent: a wallet already read is not read again when the re-check arrives in batches.
+ */
+export async function snapshotHolding(store: StateStore, night: string, balance: (wallet: string) => Promise<number | null> = (w) => balanceOf(w, fetch, Date.now(), true)): Promise<{ checked: number; under: number }> {
+  const answers = (await store.get<Record<string, unknown>>(HUMANS.answers(night))) ?? {};
+  const held = (await store.get<Record<string, number>>(HUMANS.held(night))) ?? {};
+  let checked = 0;
+  for (const wallet of Object.keys(answers)) {
+    if (wallet in held) continue;
+    const b = await balance(wallet);
+    // A read that failed stays unknown: the wallet is not punished for our RPC.
+    if (b === null) continue;
+    held[wallet] = b;
+    checked++;
+  }
+  if (checked) await store.set(HUMANS.held(night), held);
+  return { checked, under: Object.values(held).filter((b) => b < HOLDER_MIN).length };
 }

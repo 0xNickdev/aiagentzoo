@@ -1055,8 +1055,13 @@ test("humans vs the beaver: answers to tonight's exam, graded by the same re-che
 
   // Yesterday's answers, graded by yesterday's re-check.
   const y = previousNight(night);
-  state.set(`humans:${y}`, { W1: { A: "suspicious", B: "promising" } });
+  state.set(`humans:${y}`, { W1: { A: "suspicious", B: "promising" }, W2: { A: "suspicious", B: "suspicious" } });
   state.set(`followup:${y}`, { A: { symbol: "A", outcome: "dead" }, B: { symbol: "B", outcome: "dead" } });
+  // The morning snapshot: W2 had sold its bag by the time the night was graded, so its perfect night does not count.
+  const { snapshotHolding } = await import("../src/holders.ts");
+  const snap = await snapshotHolding(store as never, y, async (w) => (w === "W1" ? 600_000 : 0));
+  assert.deepEqual(snap, { checked: 2, under: 1 });
+  assert.deepEqual(await snapshotHolding(store as never, y, async () => 1), { checked: 0, under: 1 }, "a wallet already read is not read again");
   const view = await humansView(store as never, "07:00", "W1", now);
   const me = view.standings.find((s) => s.you)!;
   // Yesterday may fall in last week on a Monday; then this week is empty and last week holds it.
@@ -1064,6 +1069,7 @@ test("humans vs the beaver: answers to tonight's exam, graded by the same re-che
     assert.equal(me.dead, 2);
     assert.equal(me.deadRight, 1);
   }
+  assert.ok(!view.standings.some((s) => s.id.startsWith("W2")), "the wallet that sold is out of the standings");
   assert.deepEqual(view.mine, { A: "suspicious" });
 });
 

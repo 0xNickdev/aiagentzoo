@@ -240,6 +240,7 @@ export default function Play() {
             <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3">
               <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("the rules")}</p>
               <p>{t("Hold 500,000+ $ZOOAGENCY and sign in. Answer tonight's tokens. Tomorrow the same re-check grades humans and AI.")}</p>
+              <p className="mt-2">{t("The balance is read again when the night is graded, the next morning. A wallet under 500,000 by then gets nothing for that night: one bag cannot answer from several wallets, and selling right after answering does not work.")}</p>
               <p className="mt-2">{t("Balanced accuracy: half for the dead, half for the living, so calling everything a rug scores 50%.")}</p>
               <p className="mt-2">{t("To place: {g}+ graded answers in the week, with {s}+ dead and {s}+ living tokens among them.", { g: view?.rules.minGraded ?? 15, s: view?.rules.minSide ?? 2 })}</p>
               <p className="mt-2">{t("The week's best human also names the nursery's next newborn.")}</p>
