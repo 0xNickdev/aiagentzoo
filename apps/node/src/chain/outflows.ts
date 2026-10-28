@@ -30,6 +30,8 @@ export interface Destination {
   dumped?: number;
   /** For a wallet that funds devs: how many the zoo saw it pay. */
   devs?: number;
+  /** The cabal this wallet belongs to, when the zoo has linked it to others. */
+  cabal?: number;
 }
 
 export interface Outflow extends Destination {

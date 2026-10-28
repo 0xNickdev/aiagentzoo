@@ -251,18 +251,22 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
 }
 
 type Kind = "exchange" | "funder" | "operation" | "dev" | "paymaster" | "kol" | "wallet";
-interface Flow {
+/** A wallet the SOL reached, as the zoo knows it. */
+interface Dest {
   to: string;
   sol: number;
-  from: string[];
   kind: Kind;
   label: string | null;
   launches?: number;
   dumped?: number;
   devs?: number;
+  cabal?: number;
   via?: "deposit";
   collectsFrom?: number;
-  then?: { to: string; sol: number; kind: Kind; label: string | null } | null;
+}
+interface Flow extends Dest {
+  from: string[];
+  then?: Dest | null;
 }
 interface OutflowReport {
   windowHours: number;
@@ -283,14 +287,39 @@ const KIND: Array<{ kind: Kind; label: string; color: string }> = [
 ];
 
 /** One line on what a destination is. */
-function about(f: Flow): string {
+function about(f: Dest): string {
   if (f.kind === "exchange") return f.via === "deposit" ? t("a deposit address at {x}", { x: f.label ?? t("an exchange") }) : (f.label ?? t("an exchange"));
   if (f.kind === "funder") return t("the wallet that paid the dev");
   if (f.kind === "dev") return t("launched {n}, dumped {d}", { n: f.launches ?? 0, d: f.dumped ?? 0 });
   if (f.kind === "paymaster") return t("paid {n} other devs", { n: f.devs ?? 0 });
-  if (f.kind === "kol") return t("{x} on Kolscan", { x: f.label ?? "KOL" });
+  if (f.kind === "kol")
+    return f.launches ? t("{x} on Kolscan, launched {n}, dumped {d}", { x: f.label ?? "KOL", n: f.launches, d: f.dumped ?? 0 }) : t("{x} on Kolscan", { x: f.label ?? "KOL" });
   if (f.collectsFrom) return t("{n} other devs pay into it", { n: f.collectsFrom });
   return t("no record with us");
+}
+
+/** Below this much SOL out, a trail is mostly a serial dev's float: the summary stays quiet. */
+const TRAIL_MIN_SOL = 5;
+
+/** Where the trail leads, a hop further included: the wallets the zoo already knows, said as transfers, never as owners. */
+function trail(flows: Flow[]): string[] {
+  const all = flows.filter((f) => f.kind !== "operation").flatMap((f) => (f.then ? [f, f.then] : [f]));
+  const uniq = (kind: Kind) => [...new Map(all.filter((d) => d.kind === kind).map((d) => [d.to, d])).values()];
+  const parts: string[] = [];
+  if (uniq("funder").length) parts.push(t("back to the wallet that paid the dev"));
+  const devs = uniq("dev");
+  if (devs.length) {
+    const n = devs.reduce((a, d) => a + (d.launches ?? 0), 0);
+    const d = devs.reduce((a, x) => a + (x.dumped ?? 0), 0);
+    parts.push(devs.length === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n, d }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: devs.length, n, d }));
+  }
+  const kols = uniq("kol");
+  if (kols.length) parts.push(t("KOL wallets on Kolscan: {x}", { x: kols.map((k) => k.label ?? short(k.to)).join(", ") }));
+  const pay = uniq("paymaster");
+  if (pay.length) parts.push(pay.length === 1 ? t("a wallet that paid {n} other devs", { n: pay[0]!.devs ?? 0 }) : t("{k} wallets that pay other devs", { k: pay.length }));
+  const cabals = new Set(all.map((d) => d.cabal).filter((c): c is number => c != null));
+  if (cabals.size) parts.push(cabals.size === 1 ? t("a wallet in cabal #{c}", { c: [...cabals][0]! }) : t("wallets in {n} cabals", { n: cabals.size }));
+  return parts;
 }
 
 /**
@@ -360,8 +389,18 @@ function Outflows({ r }: { r: XRayReport }) {
         : t("{n} wallets", { n: g.flows.length });
   const top = flows.filter((f) => f.kind !== "operation").slice(0, 8);
 
+  const leads = total >= TRAIL_MIN_SOL ? trail(flows) : [];
+
   return box(
     <>
+      {leads.length > 0 && (
+        <div className="mb-6 rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: RED }}>
+          <p className="text-[15px] leading-relaxed text-white">
+            {t("The trail leads to")} {leads.join("; ")}.
+          </p>
+          <p className="mt-1 text-[12.5px] text-fg-4">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
+        </div>
+      )}
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Where the SOL went")}>
         {groups.map((g, i) => (
           <Ribbon key={g.kind} id={`out-${g.kind}`} x1={26} y1={midY} x2={W - 26} y2={gy(i) + BH / 2} w={thick(g.sol)} color={g.color} speed={0.14} />
@@ -396,12 +435,20 @@ function Outflows({ r }: { r: XRayReport }) {
               <span style={{ color: k.color === WHITE ? undefined : k.color }} className={k.color === WHITE ? "text-fg-3" : ""}>
                 {about(f)}
               </span>
+              {f.cabal != null && <CabalChip id={f.cabal} />}
               {f.then && (
                 <span className="text-fg-4">
                   {t("then {s} SOL on to", { s: sol(f.then.sol) })}{" "}
                   <a href={explorer(f.then.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-white/20 underline-offset-4 hover:text-white">
                     {f.then.kind === "exchange" && f.then.label ? f.then.label : short(f.then.to)}
                   </a>
+                  {f.then.kind !== "exchange" && f.then.kind !== "wallet" && (
+                    <span style={{ color: KIND.find((x) => x.kind === f.then!.kind)?.color }}>
+                      {", "}
+                      {about(f.then)}
+                    </span>
+                  )}
+                  {f.then.cabal != null && <CabalChip id={f.then.cabal} />}
                 </span>
               )}
             </li>
@@ -417,5 +464,13 @@ function Outflows({ r }: { r: XRayReport }) {
         {missed > 0 && ` ${missed === 1 ? t("One of the wallets trades too much to read the whole day: only its first hours are counted.") : t("{n} of the wallets trade too much to read the whole day: only their first hours are counted.", { n: missed })}`}
       </p>
     </>,
+  );
+}
+
+function CabalChip({ id }: { id: number }) {
+  return (
+    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full px-1.5 py-px text-[11px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 hover:text-white" title={t("part of a cabal the memory ties together")}>
+      {t("cabal #{c}", { c: id })}
+    </a>
   );
 }

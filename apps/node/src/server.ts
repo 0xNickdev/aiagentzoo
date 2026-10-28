@@ -206,15 +206,19 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
     const name = (to: string): Destination => {
       const ex = exchangeOf(to) ?? launcherOf(to);
       if (ex) return { kind: "exchange", label: ex };
-      if (funder && to === funder) return { kind: "funder", label: null };
-      const kol = labels.kol(to);
-      if (kol) return { kind: "kol", label: kol.name ?? null };
+      const cabal = cabals?.of(to) ?? null;
+      const inCabal = cabal !== null ? { cabal } : {};
+      if (funder && to === funder) return { kind: "funder", label: null, ...inCabal };
       const rec = tape.creator(to);
       const kept = history?.wallet(to, 1);
-      if (rec || (kept && kept.launches > 0)) return { kind: "dev", label: null, launches: Math.max(rec?.launches48h ?? 0, kept?.launches ?? 0), dumped: Math.max(rec?.dumped ?? 0, kept?.dumped ?? 0) };
+      // A KOL who launches coins too: the trail should say both.
+      const launched = rec || (kept && kept.launches > 0) ? { launches: Math.max(rec?.launches48h ?? 0, kept?.launches ?? 0), dumped: Math.max(rec?.dumped ?? 0, kept?.dumped ?? 0) } : null;
+      const kol = labels.kol(to);
+      if (kol) return { kind: "kol", label: kol.name ?? null, ...(launched ?? {}), ...inCabal };
+      if (launched) return { kind: "dev", label: null, ...launched, ...inCabal };
       const devs = lineage.devsOf(to).size;
-      if (devs) return { kind: "paymaster", label: null, devs };
-      return { kind: "wallet", label: null };
+      if (devs) return { kind: "paymaster", label: null, devs, ...inCabal };
+      return { kind: "wallet", label: null, ...inCabal };
     };
     const isDev = (w: string) => w !== creator && (tape.creator(w) != null || (history?.wallet(w, 1)?.launches ?? 0) > 0);
     return traceOutflows(mint, createdAt, [{ wallet: creator, role: "dev" }, ...sellers], name, isDev, fetch, Date.now(), sold.filter(bot).length).catch(() => null);
