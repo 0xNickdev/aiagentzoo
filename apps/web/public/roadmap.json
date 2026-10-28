@@ -568,24 +568,27 @@
     },
     {
       "id": "operators",
-      "chapter": "2026-11",
-      "status": "building",
+      "chapter": "2026-10",
+      "status": "shipped",
       "title": "Money map",
-      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Where the SOL went after the dump comes next, now that the nodes run on our own servers.",
-      "why": "The first version is live as a tab in every X-Ray: who paid the dev, the dev, their own wallets and snipers, and what they already sold. Where the SOL went after the dump, and the alert when an operator comes back, come next, now that the nodes run on our own servers.",
+      "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Below it, where the SOL went after the dump: what the dev and its wallets sent out in the day after the launch, to an exchange, back to whoever paid the dev, to wallets that launch coins, or on to a wallet that collects from other devs.",
+      "why": "A dump is not the end of the story. Proceeds that go back to the wallet that paid the dev, or into a wallet other devs pay into, are one operator running many coins. Proceeds that go to an exchange deposit end there, on the record.",
       "zh": {
         "title": "资金流向图",
-        "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及谁已经卖出。砸盘后 SOL 流向哪里，会在节点迁到我们自己的服务器后加上。",
-        "why": "第一版已作为每个透视里的标签页上线：谁给开发者打的钱、开发者、他自己的钱包和狙击号，以及他们已经卖出了多少。砸盘后 SOL 的去向，以及团伙换名回来时的提醒，会在迁到我们自己的服务器后加上。",
-        "when": "进行中"
+        "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及谁已经卖出。下面是砸盘后 SOL 去了哪里：开发者和他的钱包在发币后一天内转出的钱，转进交易所、回到给开发者打钱的钱包、转给发币的钱包，或者转到另有其他开发者打钱进去的钱包。",
+        "why": "砸盘不是故事的结尾。回到给开发者打钱的钱包，或者转进其他开发者也往里打钱的钱包，说明是一个操盘手在跑很多币。转进交易所充值地址的钱，就停在那里，留在记录上。"
       },
-      "when": "Now",
       "proof": [
+        {
+          "label": "0144a52",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/0144a52"
+        },
         {
           "label": "X-Ray · Money map",
           "href": "/xray"
         }
-      ]
+      ],
+      "date": "2026-10-28"
     },
     {
       "id": "swap",
