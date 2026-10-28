@@ -1472,6 +1472,7 @@ export const ZH: Record<string, string> = {
   "{n} of the wallets trade too much to read back to the launch.": "其中 {n} 个钱包交易太多，读不回发币时。",
   "One of the wallets trades too much to read back to the launch.": "其中 1 个钱包交易太多，读不回发币时。",
   "by the dev": "开发者本人",
+  "Sniper bots that trade nonstop are left out: what they send on is their float, not this launch: {n}.": "不停交易的狙击机器人不计入，它们转出的是周转资金，不是这次发币的钱：{n} 个。",
   "1 wallet": "1 个钱包",
   "Open this dev's wallet": "打开这个开发者的钱包",
   "Track record": "良好记录",

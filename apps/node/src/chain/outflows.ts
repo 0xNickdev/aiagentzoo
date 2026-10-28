@@ -3,8 +3,8 @@
  * transfers out of each wallet in the day after the launch, and add them up by where they landed: an exchange, the
  * wallet that paid the dev, a wallet that launches coins itself, one that funds other devs, or a wallet with no record.
  *
- * Needs Helius (the enhanced transactions API parses native transfers and filters by type). On demand only, a few
- * pages a wallet, cached per token, so a lookup costs what one X-Ray tab costs.
+ * Needs Helius (the enhanced transactions API parses native transfers and filters by type and time, so it reads only
+ * the day after the launch however busy the wallet). On demand, cached per token, one trace at a time per token.
  */
 
 const RPC = process.env.SOLANA_RPC_URL ?? "";
@@ -16,7 +16,8 @@ const LAMPORTS = 1_000_000_000;
 const MIN_SOL = 0.1;
 /** How long after the launch a transfer out still counts as this launch's money moving on. */
 export const WINDOW_MS = 24 * 3_600_000;
-const CACHE_MS = 30 * 60_000;
+/** While the day after the launch still runs, a trace goes stale quickly. */
+const CACHE_MS = 10 * 60_000;
 
 export type OutflowKind = "exchange" | "funder" | "operation" | "dev" | "paymaster" | "kol" | "wallet";
 
@@ -48,6 +49,10 @@ export interface Outflow extends Destination {
 export interface OutflowReport {
   mint: string;
   windowHours: number;
+  /** Where the window closes, ms: the launch plus a day, or the moment of the trace while the day is still running. */
+  windowEnd: number;
+  /** First-seconds wallets left out as bots: they trade nonstop, and what they send on is their float, not this launch. */
+  botsSkipped: number;
   /** Each wallet read: its role, what it sent out in the window, and whether its history reached back to the launch. */
   wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean }>;
   flows: Outflow[];
@@ -62,16 +67,18 @@ interface EnhancedTx {
   nativeTransfers?: Array<{ fromUserAccount?: string; toUserAccount?: string; amount?: number }>;
 }
 
-/** One page of a wallet's transfers, newest first; `next` carries on when Helius stopped short of a full page. */
-async function pageOf(address: string, before: string | undefined, f: typeof fetch): Promise<{ txs: EnhancedTx[]; next?: string } | null> {
-  const u = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${KEY}&limit=100&type=TRANSFER${before ? `&before=${before}` : ""}`;
+/**
+ * One page of a wallet's plain transfers inside a time window, oldest first: Helius jumps straight to the window, so a
+ * busy wallet costs no more than a quiet one. Null when the call failed or Helius gave up searching (a bot whose
+ * history is all swaps); `next` carries on past a full page.
+ */
+async function pageOf(address: string, from: number, to: number, after: string | undefined, f: typeof fetch): Promise<{ txs: EnhancedTx[]; next?: string } | null> {
+  const u = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${KEY}&limit=100&type=TRANSFER&sort-order=asc&gte-time=${Math.floor(from / 1000)}&lte-time=${Math.ceil(to / 1000)}${after ? `&after-signature=${after}` : ""}`;
   try {
-    const r = await f(u, { signal: AbortSignal.timeout(12_000) });
+    const r = await f(u, { signal: AbortSignal.timeout(6_000) });
     const body = (await r.json()) as EnhancedTx[] | { error?: string };
-    if (Array.isArray(body)) return { txs: body, next: body[body.length - 1]?.signature };
-    // "Failed to find events within the search period. To continue search, query the API again with the `before` parameter set to <sig>."
-    const more = /`before` parameter set to ([1-9A-HJ-NP-Za-km-z]{60,90})/.exec(body.error ?? "")?.[1];
-    return more ? { txs: [], next: more } : null;
+    if (!Array.isArray(body)) return null;
+    return { txs: body, ...(body.length >= 100 ? { next: body[body.length - 1]?.signature } : {}) };
   } catch {
     return null;
   }
@@ -80,18 +87,13 @@ async function pageOf(address: string, before: string | undefined, f: typeof fet
 /** SOL that left `wallet` by plain transfer between `from` and `to` (ms), summed per destination. */
 async function sentBy(wallet: string, from: number, to: number, maxPages: number, f: typeof fetch) {
   const out = new Map<string, { sol: number; firstAt: number }>();
-  let before: string | undefined;
+  let after: string | undefined;
   let reached = false;
   for (let p = 0; p < maxPages; p++) {
-    const page = await pageOf(wallet, before, f);
+    const page = await pageOf(wallet, from, to, after, f);
     if (!page) break;
     for (const tx of page.txs) {
       const at = (tx.timestamp ?? 0) * 1000;
-      if (at < from) {
-        reached = true;
-        break;
-      }
-      if (at > to) continue;
       for (const t of tx.nativeTransfers ?? []) {
         if (t.fromUserAccount !== wallet || !t.toUserAccount || t.toUserAccount === wallet) continue;
         const sol = (t.amount ?? 0) / LAMPORTS;
@@ -102,18 +104,18 @@ async function sentBy(wallet: string, from: number, to: number, maxPages: number
         out.set(t.toUserAccount, o);
       }
     }
-    if (reached || !page.next) {
-      reached ||= !page.next;
+    if (!page.next) {
+      reached = true;
       break;
     }
-    before = page.next;
+    after = page.next;
   }
   return { out, reached };
 }
 
 /** Reads one page of a nameless destination: the biggest transfer on after the money arrived, and the known devs paying in. */
 async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
-  const page = await pageOf(flow.to, undefined, f);
+  const page = await pageOf(flow.to, flow.firstAt, flow.firstAt + WINDOW_MS, undefined, f);
   if (!page) return;
   const on = new Map<string, number>();
   const devsIn = new Set<string>();
@@ -139,6 +141,15 @@ async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: 
 }
 
 const cache = new Map<string, { at: number; report: OutflowReport }>();
+const running = new Map<string, Promise<OutflowReport | null>>();
+
+/** The trace already done for a token, or null. */
+export const cachedOutflows = (mint: string, now = Date.now()) => {
+  const hit = cache.get(mint);
+  return hit && now - hit.at < cacheMs(hit.report) ? hit.report : null;
+};
+/** Once the day after the launch is over nothing new can enter the window: the trace keeps for hours, not minutes. */
+const cacheMs = (r: OutflowReport) => (r.windowEnd < r.tracedAt ? 12 * 3_600_000 : CACHE_MS);
 
 /**
  * Traces where the dev and its selling wallets sent SOL in the day after the launch. `wallets` lists them with their
@@ -152,12 +163,31 @@ export async function traceOutflows(
   isDev: (wallet: string) => boolean = () => false,
   f: typeof fetch = fetch,
   now = Date.now(),
+  skipped = 0,
 ): Promise<OutflowReport | null> {
   if (!outflowsEnabled()) return null;
-  const hit = cache.get(mint);
-  if (hit && now - hit.at < CACHE_MS) return hit.report;
+  const hit = cachedOutflows(mint, now);
+  if (hit) return hit;
+  // Two people opening the same map at once share one trace.
+  const busy = running.get(mint);
+  if (busy) return busy;
+  const job = trace(mint, createdAt, wallets, name, isDev, f, now, skipped).finally(() => running.delete(mint));
+  running.set(mint, job);
+  return job;
+}
+
+async function trace(
+  mint: string,
+  createdAt: number,
+  wallets: Array<{ wallet: string; role: string }>,
+  name: (to: string) => Destination,
+  isDev: (wallet: string) => boolean,
+  f: typeof fetch,
+  now: number,
+  skipped: number,
+): Promise<OutflowReport> {
   const end = Math.min(now, createdAt + WINDOW_MS);
-  const sent = await Promise.all(wallets.map((w, i) => sentBy(w.wallet, createdAt, end, i === 0 ? 4 : 2, f)));
+  const sent = await Promise.all(wallets.map((w, i) => sentBy(w.wallet, createdAt, end, i === 0 ? 3 : 2, f)));
   const inside = new Set(wallets.map((w) => w.wallet));
   const byTo = new Map<string, Outflow>();
   sent.forEach(({ out }, i) => {
@@ -176,6 +206,8 @@ export async function traceOutflows(
   const report: OutflowReport = {
     mint,
     windowHours: WINDOW_MS / 3_600_000,
+    windowEnd: end,
+    botsSkipped: skipped,
     wallets: wallets.map((w, i) => ({ ...w, outSol: round([...sent[i]!.out.values()].reduce((n, o) => n + o.sol, 0)), reached: sent[i]!.reached })),
     // Money moved between the operation's own wallets is not money gone: it stays out of the total.
     flows: flows.slice(0, 40),
@@ -183,6 +215,6 @@ export async function traceOutflows(
     tracedAt: now,
   };
   cache.set(mint, { at: now, report });
-  if (cache.size > 1_000) for (const [k, v] of cache) if (now - v.at > CACHE_MS) cache.delete(k);
+  if (cache.size > 2_000) for (const [k, v] of cache) if (now - v.at > cacheMs(v.report)) cache.delete(k);
   return report;
 }

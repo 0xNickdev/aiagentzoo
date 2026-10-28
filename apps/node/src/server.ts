@@ -29,7 +29,9 @@ import { handleOf, type Mentions } from "./chain/mentions.ts";
 import { bscBook, bscHolderReport, evmHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
-import { traceOutflows, outflowsEnabled, type Destination } from "./chain/outflows.ts";
+import { traceOutflows, outflowsEnabled, cachedOutflows, type Destination } from "./chain/outflows.ts";
+/** A first-seconds wallet that sniped this many launches in two days is a bot: its transfers are its float, not a launch's proceeds. */
+const BOT_SNIPES = 150;
 import { replayMint } from "./chain/replay.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
@@ -182,6 +184,40 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       const tags = [...w.tags.filter((x) => x !== "new" || (!kol && !smart && !side)), ...(kol ? ["kol" as const] : []), ...(side ? ["kolside" as const] : []), ...(smart ? ["smart" as const] : [])];
       return { ...w, tags, ...(cabals ? { cabal: cabals.of(w.wallet) } : {}), ...(kol ? { kol } : {}), ...(side ? { kolSide: side } : {}), ...(smart ? { smart } : {}) };
     });
+  /**
+   * Where a Solana launch's dev and its selling wallets sent SOL in the day after it. The dev first, then the
+   * first-seconds wallets that sold most, the dev's own before strangers; sniper bots that trade nonstop are left out.
+   */
+  const outflowsOf = (mint: string) => {
+    if (!outflowsEnabled()) return Promise.resolve(null);
+    const cached = cachedOutflows(mint);
+    if (cached) return Promise.resolve(cached);
+    const found = tape.token(mint);
+    const past = !found && history ? history.report(mint) : null;
+    if (!found && !past) return Promise.resolve(null);
+    const { creator, createdAt } = (found ?? past)!;
+    const early = found ? (tape.earlyOf(mint) ?? []) : past!.early;
+    const roleOf = (e: { crew: boolean; serial: boolean; ring: boolean; bundle: boolean }) => (e.crew ? "crew" : e.serial || e.ring ? "snipers" : e.bundle ? "bundle" : null);
+    const sold = early.filter((e) => e.wallet !== creator && roleOf(e) && e.bought - e.held > 0.005).sort((a, b) => b.bought - b.held - (a.bought - a.held));
+    const bot = (e: { crew: boolean; snipes48h: number }) => !e.crew && e.snipes48h >= BOT_SNIPES;
+    const sellers = sold.filter((e) => !bot(e)).slice(0, 5).map((e) => ({ wallet: e.wallet, role: roleOf(e)! }));
+    const funder = lineage.funderOf(creator) ?? past?.funder ?? null;
+    const name = (to: string): Destination => {
+      const ex = exchangeOf(to) ?? launcherOf(to);
+      if (ex) return { kind: "exchange", label: ex };
+      if (funder && to === funder) return { kind: "funder", label: null };
+      const kol = labels.kol(to);
+      if (kol) return { kind: "kol", label: kol.name ?? null };
+      const rec = tape.creator(to);
+      const kept = history?.wallet(to, 1);
+      if (rec || (kept && kept.launches > 0)) return { kind: "dev", label: null, launches: Math.max(rec?.launches48h ?? 0, kept?.launches ?? 0), dumped: Math.max(rec?.dumped ?? 0, kept?.dumped ?? 0) };
+      const devs = lineage.devsOf(to).size;
+      if (devs) return { kind: "paymaster", label: null, devs };
+      return { kind: "wallet", label: null };
+    };
+    const isDev = (w: string) => w !== creator && (tape.creator(w) != null || (history?.wallet(w, 1)?.launches ?? 0) > 0);
+    return traceOutflows(mint, createdAt, [{ wallet: creator, role: "dev" }, ...sellers], name, isDev, fetch, Date.now(), sold.filter(bot).length).catch(() => null);
+  };
   const holderGate = new RateGate(HOLDER_PER_MIN);
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
@@ -779,38 +815,15 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       const outOf = /^\/v1\/chain\/outflows\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
       if (req.method === "GET" && outOf) {
         const mint = outOf[1]!;
-        const found = tape.token(mint);
-        const past = !found && history ? history.report(mint) : null;
-        if (!found && !past) return json(res, 404, { error: "not a launch the zoo kept" });
+        if (!tape.token(mint) && !history?.has(mint)) return json(res, 404, { error: "not a launch the zoo kept" });
         if (!outflowsEnabled()) return json(res, 200, { mint, flows: null, note: "no RPC configured for the trace" });
-        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
-        if (!fromPeer(req)) { const w = deepGate.take(caller); if (w > 0) return json(res, 429, { error: "slow down", retryAfterMs: w }); }
-        const creator = (found ?? past)!.creator;
-        const createdAt = (found ?? past)!.createdAt;
-        const early = found ? (tape.earlyOf(mint) ?? []) : past!.early;
-        // The dev first, then the first-seconds wallets that sold most, the dev's own and the snipers before strangers.
-        const roleOf = (e: { crew: boolean; serial: boolean; ring: boolean; bundle: boolean }) => (e.crew ? "crew" : e.serial || e.ring ? "snipers" : e.bundle ? "bundle" : null);
-        const sellers = early
-          .filter((e) => e.wallet !== creator && roleOf(e) && e.bought - e.held > 0.005)
-          .sort((a, b) => b.bought - b.held - (a.bought - a.held))
-          .slice(0, 5)
-          .map((e) => ({ wallet: e.wallet, role: roleOf(e)! }));
-        const funder = lineage.funderOf(creator) ?? past?.funder ?? null;
-        const name = (to: string): Destination => {
-          const ex = exchangeOf(to) ?? launcherOf(to);
-          if (ex) return { kind: "exchange", label: ex };
-          if (funder && to === funder) return { kind: "funder", label: null };
-          const kol = labels.kol(to);
-          if (kol) return { kind: "kol", label: kol.name ?? null };
-          const rec = tape.creator(to);
-          const kept = history?.wallet(to, 1);
-          if (rec || (kept && kept.launches > 0)) return { kind: "dev", label: null, launches: Math.max(rec?.launches48h ?? 0, kept?.launches ?? 0), dumped: Math.max(rec?.dumped ?? 0, kept?.dumped ?? 0) };
-          const devs = lineage.devsOf(to).size;
-          if (devs) return { kind: "paymaster", label: null, devs };
-          return { kind: "wallet", label: null };
-        };
-        const isDev = (w: string) => w !== creator && (tape.creator(w) != null || (history?.wallet(w, 1)?.launches ?? 0) > 0);
-        const report = await traceOutflows(mint, createdAt, [{ wallet: creator, role: "dev" }, ...sellers], name, isDev);
+        // A trace someone else already paid for answers free.
+        if (!cachedOutflows(mint) && !fromPeer(req)) {
+          const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+          const w = deepGate.take(caller);
+          if (w > 0) return json(res, 429, { error: "slow down", retryAfterMs: w });
+        }
+        const report = await outflowsOf(mint);
         res.setHeader("cache-control", "no-store");
         return json(res, 200, report ?? { mint, flows: null });
       }

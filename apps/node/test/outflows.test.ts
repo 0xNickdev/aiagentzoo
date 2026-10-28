@@ -8,7 +8,7 @@ const SOL = 1_000_000_000;
 const LAUNCH = 1_800_000_000_000;
 const t = (min: number) => (LAUNCH + min * 60_000) / 1000;
 
-// Each wallet's transfers, newest first, as Helius's enhanced API returns them.
+// Each wallet's transfers; the fake API below keeps the asked window and answers oldest first, as Helius does.
 const pages: Record<string, unknown[]> = {
   DEV: [
     { signature: "d3", timestamp: t(40), nativeTransfers: [{ fromUserAccount: "DEV", toUserAccount: "DEPOSIT", amount: 8 * SOL }] },
@@ -24,7 +24,10 @@ const pages: Record<string, unknown[]> = {
 };
 const fakeFetch = (async (url: string) => {
   const who = /addresses\/([A-Z]+)\//.exec(url)![1]!;
-  return new Response(JSON.stringify(url.includes("before=") ? [] : (pages[who] ?? [])));
+  const from = Number(/gte-time=(\d+)/.exec(url)![1]);
+  const to = Number(/lte-time=(\d+)/.exec(url)![1]);
+  const txs = ((pages[who] ?? []) as Array<{ timestamp: number }>).filter((x) => x.timestamp >= from && x.timestamp <= to).reverse();
+  return new Response(JSON.stringify(url.includes("after-signature=") ? [] : txs));
 }) as unknown as typeof fetch;
 
 test("adds up transfers out after the launch, follows a deposit to its exchange and a bank to the devs paying in", async () => {
