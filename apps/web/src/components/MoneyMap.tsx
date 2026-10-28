@@ -354,7 +354,9 @@ function Outflows({ r }: { r: XRayReport }) {
   const names = (g: (typeof groups)[number]) =>
     g.kind === "exchange"
       ? [...new Set(g.flows.map((f) => f.label ?? ""))].filter(Boolean).join(", ")
-      : t("{n} wallets", { n: g.flows.length });
+      : g.flows.length === 1
+        ? t("1 wallet")
+        : t("{n} wallets", { n: g.flows.length });
   const top = flows.filter((f) => f.kind !== "operation").slice(0, 8);
 
   return box(
@@ -364,7 +366,7 @@ function Outflows({ r }: { r: XRayReport }) {
           <Ribbon key={g.kind} id={`out-${g.kind}`} x1={26} y1={midY} x2={W - 26} y2={gy(i) + BH / 2} w={thick(g.sol)} color={g.color} speed={0.14} />
         ))}
         <g data-dust style={{ mixBlendMode: "screen" }} />
-        <Node x={24} y={midY - (BH + 14) / 2} h={BH + 14} title={t("{s} SOL sent out", { s: sol(total) })} sub={t("by the dev and {n} of its wallets", { n: rep.wallets.length - 1 })} left color={WHITE} />
+        <Node x={24} y={midY - (BH + 14) / 2} h={BH + 14} title={t("{s} SOL sent out", { s: sol(total) })} sub={rep.wallets.length > 1 ? t("by the dev and {n} of its wallets", { n: rep.wallets.length - 1 }) : t("by the dev")} left color={WHITE} />
         {groups.map((g, i) => (
           <Node key={g.kind} x={W - 24} y={gy(i)} h={BH} title={t(g.label)} sub={`${sol(g.sol)} SOL · ${names(g)}`} color={g.color} right />
         ))}
@@ -409,7 +411,7 @@ function Outflows({ r }: { r: XRayReport }) {
       <p className="mt-5 text-[13px] text-fg-4">
         {t("Plain SOL transfers out of the dev and the first-seconds wallets that sold, in the 24 hours after the launch. Swaps and dust under 0.1 SOL are left out.")}
         {inside > 0 && ` ${t("{s} SOL moved between their own wallets and is not counted.", { s: sol(inside) })}`}
-        {missed > 0 && ` ${t("{n} of the wallets trade too much to read back to the launch.", { n: missed })}`}
+        {missed > 0 && ` ${missed === 1 ? t("One of the wallets trades too much to read back to the launch.") : t("{n} of the wallets trade too much to read back to the launch.", { n: missed })}`}
       </p>
     </>,
   );
