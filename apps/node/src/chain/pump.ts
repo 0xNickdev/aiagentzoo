@@ -1629,7 +1629,9 @@ export class PumpTape {
       if (t.venue || t.quote || now - t.createdAt > DAY_MS) continue;
       if (t.graduated) {
         // A pool with next to nothing left in it is not a board a trader wants to see, drained or not.
-        if (t.pool && !t.drained && (t.poolSol ?? 0) >= 20) migrated.push([t.mint, t.createdAt]);
+        // Twenty different wallets on the curve at least: a coin one wallet bought out in a single go graduated with
+        // its whole supply in one hand, which is not what this board is for.
+        if (t.pool && !t.drained && (t.poolSol ?? 0) >= 20 && t.buyers.size + (t.moreBuyers?.size ?? 0) >= 20) migrated.push([t.mint, t.createdAt]);
       } else if ((t.curveSol ?? 0) >= 30) soon.push([t.mint, t.curveSol ?? 0]);
     }
     return {

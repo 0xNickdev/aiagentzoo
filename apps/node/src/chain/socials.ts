@@ -136,6 +136,25 @@ export class SocialsRegistry {
     this.queue = [{ mint, uri }, ...this.queue.filter((q) => q.mint !== mint)].slice(0, 2_000);
   }
 
+  /**
+   * Reads one launch's metadata now, outside the queue: for the few coins a page is showing this moment. A miss is
+   * tried again after a minute; at most a handful read at once.
+   */
+  private readonly lastTried = new Map<string, number>();
+  private inflightNow = 0;
+  fetchNow(mint: string, now = Date.now()): void {
+    if (this.images.has(mint) || this.inflightNow >= 6) return;
+    if (now - (this.lastTried.get(mint) ?? 0) < 60_000) return;
+    const uri = this.tape.metadataOf(mint);
+    if (!uri) return;
+    this.lastTried.set(mint, now);
+    if (this.lastTried.size > 5_000) this.lastTried.delete(this.lastTried.keys().next().value!);
+    this.inflightNow += 1;
+    void this.read(mint, uri)
+      .catch(() => false)
+      .finally(() => (this.inflightNow -= 1));
+  }
+
   /** The token's picture, once its metadata was read. */
   image(mint: string): string | undefined {
     return this.images.get(mint);

@@ -798,7 +798,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             if (check.verdict === "avoid" || check.verdict === "unknown") return null;
             const f = t.facts;
             const image = socials.image(mint);
-            if (!image) socials.want(mint);
+            // The coins on screen get their picture read now, not when the queue gets to them.
+            if (!image) socials.fetchNow(mint, now);
             // pump.fun's curve: 30 SOL and 1.073B tokens virtual at the start, so the cap in SOL follows from the SOL in it.
             const capSol = f.graduated ? null : Math.round(((30 + (f.curveSol ?? 0)) ** 2 / 32.19) * 10) / 10;
             return {
