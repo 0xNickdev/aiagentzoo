@@ -21,6 +21,7 @@ const Connect = lazy(() => import("./components/Connect"));
 const Stats = lazy(() => import("./components/Stats"));
 const RoadmapPage = lazy(() => import("./components/roadmap/RoadmapPage"));
 const Radar = lazy(() => import("./components/Radar"));
+const Feed = lazy(() => import("./components/Feed"));
 const Passport = lazy(() => import("./components/Passport"));
 
 function Home() {
@@ -51,6 +52,7 @@ const PAGES: Record<Route, React.ComponentType> = {
   "/stats": Stats,
   "/roadmap": RoadmapPage,
   "/radar": Radar,
+  "/feed": Feed,
 };
 
 export default function App() {

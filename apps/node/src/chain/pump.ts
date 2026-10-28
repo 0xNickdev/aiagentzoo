@@ -1609,6 +1609,35 @@ export class PumpTape {
    * Launches that passed the basic checks. `wide` is the koi's net: up to six hours old and a smaller crowd, because
    * the koi's own judgement does the strict part; the default is the stricter list people see.
    */
+  /**
+   * The live feed's candidates, pump.fun only, as pump.fun's own board sorts them: new (the last ten minutes, newest
+   * first), soon (still on the curve with half or more of the way done, closest to graduating first) and migrated
+   * (graduated in the last day, its pool not drained, newest first). The check decides which of them are shown.
+   */
+  feedCandidates(now = Date.now(), limit = 60): { fresh: string[]; soon: string[]; migrated: string[] } {
+    const fresh: string[] = [];
+    for (const mint of this.recent) {
+      const t = this.tokens.get(mint);
+      if (!t || t.venue || t.quote) continue;
+      if (now - t.createdAt > 10 * 60_000) break;
+      if (!t.graduated) fresh.push(mint);
+      if (fresh.length >= limit * 2) break;
+    }
+    const soon: Array<[string, number]> = [];
+    const migrated: Array<[string, number]> = [];
+    for (const t of this.tokens.values()) {
+      if (t.venue || t.quote || now - t.createdAt > DAY_MS) continue;
+      if (t.graduated) {
+        if (t.pool && !t.drained) migrated.push([t.mint, t.createdAt]);
+      } else if ((t.curveSol ?? 0) >= 40) soon.push([t.mint, t.curveSol ?? 0]);
+    }
+    return {
+      fresh,
+      soon: soon.sort((a, b) => b[1] - a[1]).slice(0, limit * 2).map(([m]) => m),
+      migrated: migrated.sort((a, b) => b[1] - a[1]).slice(0, limit * 2).map(([m]) => m),
+    };
+  }
+
   clean(limit = 20, now = Date.now(), wide = false): CleanLaunch[] {
     const out: CleanLaunch[] = [];
     for (const mint of this.recent) {

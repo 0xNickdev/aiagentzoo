@@ -16,6 +16,7 @@ import { lineage, type LineageView } from "./chain/lineage.ts";
 import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
+import { solUsd } from "./chain/price.ts";
 import { type Chain, CHAIN_NAME, checkToken, isEvm, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "./chain/base.ts";
@@ -186,6 +187,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   const keyGate = new RateGate(1);
   const holding = new HoldingCache((w) => isHolder(w));
   let checkRecord: { at: number; body: unknown } | null = null;
+  let feedCache: { at: number; body: unknown } | null = null;
   const guardianCooldown = new Cooldown(visitor?.guardianCooldownMs ?? 0);
   const streams = new Set<ServerResponse>();
   enclosure.log.subscribe((entry) => {
@@ -782,6 +784,48 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       }
       if (req.method === "GET" && path === "/v1/chain/ruggers") {
         return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+      }
+      // The live feed: pump.fun's new, soon and migrated boards with the known scams taken out (avoid never shown).
+      if (req.method === "GET" && path === "/v1/chain/feed") {
+        const now = Date.now();
+        if (!feedCache || now - feedCache.at > 3_000) {
+          const c = tape.feedCandidates(now);
+          const stream = { live: tape.live(now), lastEventSecAgo: Math.round((now - tape.lastEventAt) / 1000) };
+          const row = (mint: string) => {
+            const t = tape.token(mint);
+            if (!t) return null;
+            const check = checkToken(mint, t, { now, stream });
+            if (check.verdict === "avoid" || check.verdict === "unknown") return null;
+            const f = t.facts;
+            const image = socials.image(mint);
+            if (!image) socials.want(mint);
+            // pump.fun's curve: 30 SOL and 1.073B tokens virtual at the start, so the cap in SOL follows from the SOL in it.
+            const capSol = f.graduated ? null : Math.round(((30 + (f.curveSol ?? 0)) ** 2 / 32.19) * 10) / 10;
+            return {
+              mint,
+              symbol: t.symbol,
+              name: t.name,
+              createdAt: t.createdAt,
+              ...(image ? { image } : {}),
+              verdict: check.verdict,
+              score: check.score,
+              reason: check.reasons[0] ?? null,
+              buyers: f.buyers,
+              buys: f.buys,
+              sells: f.sells,
+              devSoldPct: f.creatorSold === null ? null : Math.round(f.creatorSold * 100),
+              curveSol: f.curveSol,
+              progress: f.graduated ? 1 : Math.min(1, Math.round(((f.curveSol ?? 0) / 85) * 100) / 100),
+              capSol,
+              poolSol: f.poolSol,
+              graduated: f.graduated,
+            };
+          };
+          const pick = (list: string[]) => list.map(row).filter(Boolean).slice(0, 40);
+          feedCache = { at: now, body: { stream, solUsd: solUsd(), new: pick(c.fresh), soon: pick(c.soon), migrated: pick(c.migrated) } };
+        }
+        res.setHeader("cache-control", "public, max-age=3");
+        return json(res, 200, feedCache.body);
       }
       if (req.method === "GET" && path === "/v1/chain/clean") {
         const wide = url.searchParams.get("wide") === "1";
