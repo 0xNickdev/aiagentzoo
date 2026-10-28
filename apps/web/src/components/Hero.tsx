@@ -208,7 +208,7 @@ export default function Hero() {
       <SiteNav overlay />
 
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center px-5 pb-16 pt-8 sm:px-8">
-        <div className="max-w-[640px]">
+        <div className="max-w-[780px]">
           <motion.div {...rise(0.1)} className="inline-flex items-center gap-2.5 rounded-md border border-white/[0.12] bg-[#0a0e0c]/90 px-3.5 py-2 text-[13px] text-[#eaeaea] backdrop-blur">
             <span className={`h-[7px] w-[7px] rounded-full ${chain?.live ? "animate-pulse bg-[#a6e3b4]" : "bg-[#ffc27a]"}`} />
             {chain ? (chain.live ? readingNow(chain) : t("stream reconnecting")) : t("connecting")}
@@ -216,7 +216,7 @@ export default function Hero() {
             <span className="tabular-nums">{chain ? full(tradesPerMinute(chain)) : "-"}</span> {t("trades a minute")}
           </motion.div>
 
-          <motion.h1 {...rise(0.2)} className="font-display mt-7 text-[46px] font-semibold leading-none tracking-[-0.045em] text-white sm:text-7xl lg:text-[92px]">
+          <motion.h1 {...rise(0.2)} className="font-display mt-7 text-[44px] font-semibold leading-none tracking-[-0.045em] text-white sm:text-[64px] lg:text-[80px]">
             {pick(
               <>
                 Who is behind it.
