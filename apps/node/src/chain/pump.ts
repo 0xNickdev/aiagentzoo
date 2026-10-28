@@ -1611,7 +1611,7 @@ export class PumpTape {
    */
   /**
    * The live feed's candidates, pump.fun only, as pump.fun's own board sorts them: new (the last ten minutes, newest
-   * first), soon (still on the curve with half or more of the way done, closest to graduating first) and migrated
+   * first), soon (still on the curve with a third or more of the way done, closest to graduating first) and migrated
    * (graduated in the last day, its pool not drained, newest first). The check decides which of them are shown.
    */
   feedCandidates(now = Date.now(), limit = 60): { fresh: string[]; soon: string[]; migrated: string[] } {
@@ -1628,8 +1628,9 @@ export class PumpTape {
     for (const t of this.tokens.values()) {
       if (t.venue || t.quote || now - t.createdAt > DAY_MS) continue;
       if (t.graduated) {
-        if (t.pool && !t.drained) migrated.push([t.mint, t.createdAt]);
-      } else if ((t.curveSol ?? 0) >= 40) soon.push([t.mint, t.curveSol ?? 0]);
+        // A pool with next to nothing left in it is not a board a trader wants to see, drained or not.
+        if (t.pool && !t.drained && (t.poolSol ?? 0) >= 20) migrated.push([t.mint, t.createdAt]);
+      } else if ((t.curveSol ?? 0) >= 30) soon.push([t.mint, t.curveSol ?? 0]);
     }
     return {
       fresh,

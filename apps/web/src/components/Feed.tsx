@@ -39,8 +39,8 @@ type Board = "new" | "soon" | "migrated";
 
 const BOARDS: Array<{ id: Board; title: string; note: string }> = [
   { id: "new", title: "New", note: "the last ten minutes" },
-  { id: "soon", title: "Soon", note: "half the curve or more" },
-  { id: "migrated", title: "Migrated", note: "on PumpSwap, pool not drained" },
+  { id: "soon", title: "Soon", note: "a third of the curve or more" },
+  { id: "migrated", title: "Migrated", note: "on PumpSwap, 20+ SOL in the pool" },
 ];
 
 const usd = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${Math.round(n)}`);
