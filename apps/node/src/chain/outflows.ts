@@ -185,7 +185,7 @@ async function sentBy(wallet: string, from: number, to: number, maxPages: number
 }
 
 /** Reads one page of a wallet after `since`: the biggest transfer on, and the known devs paying in. */
-async function onwardOf(wallet: string, since: number, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch) {
+async function onwardOf(wallet: string, since: number, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch, behind: ReadonlySet<string> = new Set()) {
   const page = await pageOf(wallet, since, since + WINDOW_MS, undefined, f);
   if (!page) return null;
   const on = new Map<string, number>();
@@ -196,7 +196,8 @@ async function onwardOf(wallet: string, since: number, name: (to: string) => Des
       const sol = (t.amount ?? 0) / LAMPORTS;
       if (sol < MIN_SOL) continue;
       if (t.toUserAccount === wallet && t.fromUserAccount && isDev(t.fromUserAccount)) devsIn.add(t.fromUserAccount);
-      if (t.fromUserAccount === wallet && t.toUserAccount && t.toUserAccount !== wallet && at >= since) on.set(t.toUserAccount, (on.get(t.toUserAccount) ?? 0) + sol);
+      // Money sent back down the trail is not money going on.
+      if (t.fromUserAccount === wallet && t.toUserAccount && t.toUserAccount !== wallet && !behind.has(t.toUserAccount) && at >= since) on.set(t.toUserAccount, (on.get(t.toUserAccount) ?? 0) + sol);
     }
   }
   const [to, sol] = [...on.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
@@ -205,7 +206,7 @@ async function onwardOf(wallet: string, since: number, name: (to: string) => Des
 
 /** One hop more from a nameless destination: where it sent the most SOL on. */
 async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
-  const read = await onwardOf(flow.to, flow.firstAt, name, isDev, f);
+  const read = await onwardOf(flow.to, flow.firstAt, name, isDev, f, new Set(flow.from));
   if (!read) return;
   flow.collectsFrom = read.devsIn;
   flow.then = read.next;
@@ -217,7 +218,7 @@ async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: 
 async function hopAgain(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
   const then = flow.then;
   if (!then) return;
-  const read = await onwardOf(then.to, flow.firstAt, name, isDev, f);
+  const read = await onwardOf(then.to, flow.firstAt, name, isDev, f, new Set([...flow.from, flow.to]));
   if (!read) return;
   then.collectsFrom = read.devsIn;
   then.then = read.next;
