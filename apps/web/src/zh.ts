@@ -1472,6 +1472,7 @@ export const ZH: Record<string, string> = {
   "{n} of the wallets trade too much to read the whole day: only their first hours are counted.": "其中 {n} 个钱包交易太多，读不完一整天：只计入最初几个小时。",
   "One of the wallets trades too much to read the whole day: only its first hours are counted.": "其中 1 个钱包交易太多，读不完一整天：只计入最初几个小时。",
   "by the dev": "开发者本人",
+  "This dev launched {n} coins in two days, so the day's transfers carry the other launches' money too.": "这个开发者两天内发了 {n} 个币，所以这一天的转账里也有其他币的钱。",
   "Sniper bots that trade nonstop are left out: what they send on is their float, not this launch: {n}.": "不停交易的狙击机器人不计入，它们转出的是周转资金，不是这次发币的钱：{n} 个。",
   "1 wallet": "1 个钱包",
   "Open this dev's wallet": "打开这个开发者的钱包",
