@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type AgentDefinition, defineAgent, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText } from "../guests.ts";
 import { type Call, CHAIN_NOTE, cleanPlaybook, compact, DEFAULT_PLAYBOOK, EXAM_FIELDS, type Outcome, outcomeOf, parseCalls, type Playbook, previousNight, scoreCall } from "./judgement.ts";
@@ -101,6 +102,9 @@ export interface EvoCase {
 }
 
 export type NightResults = Record<string, Tally & { cases: EvoCase[] }>;
+
+/** The night's calls as a sealed commitment: their hash goes in the public log now, the calls themselves once the night is graded. */
+const sealed = (calls: Array<{ mint: string; verdict: string }>) => createHash("sha256").update(JSON.stringify([...calls].sort((a, b) => a.mint.localeCompare(b.mint)).map((c) => [c.mint, c.verdict]))).digest("hex").slice(0, 16);
 
 export const EVO = {
   population: "evo:population",
@@ -648,7 +652,13 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
             ids: best ? [best[0]] : [],
           });
         }
-        await ctx.trace("evo.scored", { night: gradedNight, ...tally, results: Object.fromEntries(Object.entries(scored.results).map(([id, r]) => [id, { hits: r.hits, misses: r.misses }])) });
+        await ctx.trace("evo.scored", {
+          night: gradedNight,
+          ...tally,
+          results: Object.fromEntries(Object.entries(scored.results).map(([id, r]) => [id, { hits: r.hits, misses: r.misses }])),
+          // The sealed answers, opened: every creature's verdict per token, checkable against the hash it logged that night.
+          calls: Object.fromEntries(Object.entries(calls).map(([id, cs]) => [id, cs.map(({ mint, verdict, why }) => ({ mint, verdict, why }))])),
+        });
       }
 
       // 2. Every few nights, a generation turns.
@@ -778,7 +788,8 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
               continue;
             }
             answers[c.id] = parsed;
-            await ctx.trace("evo.answered", { id: c.id, name: c.name, calls: parsed.map(({ mint, verdict, why }) => ({ mint, verdict, why })) });
+            // Verdicts stay sealed while holders can still answer the same exam; the hash commits to them until grading.
+            await ctx.trace("evo.answered", { id: c.id, name: c.name, count: parsed.length, sealed: sealed(parsed) });
           } catch (error) {
             await ctx.trace("evo.answer.skipped", { id: c.id, reason: (error as Error).message.slice(0, 200) });
             break;

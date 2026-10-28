@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type Address, type AgentDefinition, defineAgent, type SignalValidator, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText, GUEST_PREFIX, type Guest, isGuestNode } from "../guests.ts";
 import { numberedLines, parseNumbered, ZH_SYSTEM } from "../translate.ts";
@@ -668,7 +669,8 @@ function canyonAgents(cfg: NightWatchConfig): AgentDefinition[] {
               count: fresh.length,
               by: fresh[0]!.by,
               playbook: playbook.version,
-              calls: fresh.map(({ mint, verdict, confidence, why }) => ({ mint, verdict, confidence, why })),
+              // Sealed until the brief at the end of the night: holders answer the same tokens until then.
+              sealed: createHash("sha256").update(JSON.stringify([...fresh].sort((a, b) => a.mint.localeCompare(b.mint)).map((c) => [c.mint, c.verdict]))).digest("hex").slice(0, 16),
             });
           }
         }
