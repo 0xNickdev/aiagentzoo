@@ -327,6 +327,7 @@ export interface XRayReply {
     verdict: "avoid" | "caution" | "pass" | "unknown";
     /** Risk 0..100 inside the verdict's band; null when the tape never saw the token. */
     score?: number | null;
+    odds?: { run: number; vsAverage: number; devDumps: number | null } | null;
     reasons: string[];
     notes: string[];
     facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
@@ -335,6 +336,14 @@ export interface XRayReply {
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
+/** The run odds in one line: "runs 21% · 7.9x the average launch · dev still dumps 62%". */
+const oddsLine = (o: { run: number; vsAverage: number; devDumps: number | null } | null | undefined) => {
+  if (!o) return "";
+  const p = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x >= 0.01 ? `${(x * 100).toFixed(1)}%` : "<1%");
+  const dev = o.devDumps === null ? "" : ` · ${T("dev still dumps {p}", { p: p(o.devDumps) })}`;
+  return `${T("Odds it runs: {p} · {x}× the average launch", { p: p(o.run), x: o.vsAverage < 0.1 ? "<0.1" : o.vsAverage })}${dev}`;
+};
+
 /** The x-ray as a Telegram message: the verdict with every reason, then the first seconds, the money, the churn. */
 export function xrayMessage(x: XRayReply): string {
   const c = x.check;
@@ -342,8 +351,7 @@ export function xrayMessage(x: XRayReply): string {
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
   const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora", fourmeme: "four.meme" }[f?.platform ?? f?.venue ?? ""] ?? (isBsc(x.mint) ? "four.meme" : "pump.fun");
-  const score = c.score === null || c.score === undefined ? "" : ` · ${T("risk {n}/100", { n: c.score })}`;
-  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>${score} · ${venue}`, ""];
+  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ...(c.odds ? [oddsLine(c.odds)] : []), ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
   if (f) {
@@ -684,8 +692,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-    const score = c.score === null || c.score === undefined ? "" : ` · ${T("risk {n}/100", { n: c.score })}`;
-    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>${score}`, ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
+    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ...(c.odds ? [oddsLine(c.odds)] : []), ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
     return void send(chat, lines.join("\n"), full(`x-${address}`), reply);
   };
 

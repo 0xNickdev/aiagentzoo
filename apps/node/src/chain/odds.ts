@@ -48,7 +48,7 @@ export const BASE_RUN = 0.027;
 /** What each input says when it pushes the run odds, up or down. */
 const SAYS: Record<string, [up: string, down: string]> = {
   still5: ["still trading five minutes in", "trading had stopped by minute five"],
-  dumped5: ["the dev has not dumped", "the dev dumped in the first five minutes"],
+  dumped5: ["the dev had not dumped by minute five", "the dev dumped in the first five minutes"],
   logPrior: ["the dev's first launch in two days", "the dev launched many coins before this one"],
   priorDumpShare: ["the dev's earlier coins were not dumped", "the dev dumped most of their earlier coins"],
   priorGrad: ["the dev graduated a coin before", ""],
@@ -57,7 +57,6 @@ const SAYS: Record<string, [up: string, down: string]> = {
   logB5: ["many wallets bought in the first five minutes", "few wallets bought in the first five minutes"],
   wash: ["little churn", "much of the volume is the same wallets churning"],
   social: ["links an X account or Telegram", "no X or Telegram linked"],
-  mayhem: ["a Mayhem Mode launch", ""],
   insiders: ["insiders still hold a quarter", ""],
 };
 
@@ -106,7 +105,9 @@ export interface Odds {
 export function oddsOf(i: OddsInputs, at: Odds["at"]): Odds {
   const x = vector(i);
   const run = score(RUN, x);
+  // A younger launch is trading by definition, so that is no reason; Mayhem's double supply skews caps, so it is none either.
   const pushes = Object.keys(SAYS)
+    .filter((k) => !(at === "early" && k === "still5"))
     .map((k) => ({ k, d: (RUN.coef[k] ?? 0) * ((x[k] ?? 0) - (MEAN[k] ?? 0)) }))
     .filter((p) => Math.abs(p.d) >= 0.15)
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))

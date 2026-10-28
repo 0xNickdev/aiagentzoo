@@ -187,6 +187,8 @@ export const BOT_ZH: Record<string, string> = {
   "Fresh coins with no red flags so far": "目前为止暂无危险信号的新币",
   "<b>First 5 seconds:</b> nobody bought before it was visible": "<b>前 5 秒：</b>在可见之前没有人买入",
   "risk {n}/100": "风险 {n}/100",
+  "Odds it runs: {p} · {x}× the average launch": "上涨概率：{p} · 普通发币的 {x} 倍",
+  "dev still dumps {p}": "开发者之后还砸 {p}",
   "KOL wallets {n}": "KOL 钱包 {n}",
   "smart money {n}": "聪明钱 {n}",
   "known ruggers {n}": "已知跑路钱包 {n}",

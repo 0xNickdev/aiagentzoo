@@ -35,10 +35,69 @@ export interface Early {
   cabal?: number | null;
 }
 
+export interface Odds {
+  run: number;
+  vsAverage: number;
+  devDumps: number | null;
+  why: Array<{ says: string; up: boolean }>;
+  at: "5min" | "early";
+  fit: string;
+}
+
+const pctOdds = (p: number) => (p >= 0.1 ? `${Math.round(p * 100)}%` : p >= 0.01 ? `${(p * 100).toFixed(1)}%` : p > 0 ? "<1%" : "0%");
+const timesAvg = (x: number) => (x < 0.1 ? "<0.1×" : `${x}×`);
+
+/** The run odds as a pill: moss when it beats the average launch twice over, plain otherwise. */
+function OddsPill({ o }: { o: Odds }) {
+  const good = o.vsAverage >= 2;
+  return (
+    <span className="tabular-nums inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px]" title={t("Chance the market cap climbs past 85 SOL after minute five. The average launch: 2.7%.")} style={{ color: good ? "#a6e3b4" : "#d9dddb", borderColor: good ? "#a6e3b44d" : "rgba(255,255,255,0.12)" }}>
+      {t("runs {p}", { p: pctOdds(o.run) })} <span className="text-fg-4">· {t("{x} avg", { x: timesAvg(o.vsAverage) })}</span>
+    </span>
+  );
+}
+
+/** The odds, with what moved them and how they were fitted. */
+function OddsCard({ o }: { o: Odds }) {
+  return (
+    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[15px] font-semibold text-fg">{t("The odds")}</p>
+        <span className="text-[12px] text-fg-4">{o.at === "5min" ? t("as it stood five minutes in") : t("early read: under five minutes old")}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/[0.06]">
+        <div className="bg-night-surface px-4 py-3.5">
+          <p className="text-[12.5px] text-fg-3">{t("Climbs past 85 SOL cap")}</p>
+          <p className="tabular-nums mt-1 text-[22px] text-fg" style={{ color: o.vsAverage >= 2 ? "#a6e3b4" : undefined }}>{pctOdds(o.run)}</p>
+          <p className="tabular-nums mt-0.5 text-[13px] text-fg-3">{t("{x} the average launch (2.7%)", { x: timesAvg(o.vsAverage) })}</p>
+        </div>
+        <div className="bg-night-surface px-4 py-3.5">
+          <p className="text-[12.5px] text-fg-3">{t("The dev still dumps")}</p>
+          <p className="tabular-nums mt-1 text-[22px]" style={{ color: o.devDumps !== null && o.devDumps >= 0.5 ? "#ff8a7e" : undefined }}>{o.devDumps === null ? t("already did") : pctOdds(o.devDumps)}</p>
+          <p className="mt-0.5 text-[13px] text-fg-3">{o.devDumps === null ? t("sold half the bag or more") : t("sells half the bag later")}</p>
+        </div>
+      </div>
+      {o.why.length > 0 && (
+        <ul className="mt-4 space-y-1.5 text-[14px] leading-snug">
+          {o.why.map((w) => (
+            <li key={w.says} className="flex items-start gap-2.5 text-fg-2">
+              <span className="mt-[1px] w-3 shrink-0 text-center" style={{ color: w.up ? "#a6e3b4" : "#ff8a7e" }}>{w.up ? "+" : "−"}</span>
+              {t(w.says)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-4 text-[12px] leading-relaxed text-fg-4">{t("Fitted on 34,183 pump.fun launches: what launches like this one went on to do. Odds, not advice: a 20% chance still fails four times in five.")}</p>
+    </div>
+  );
+}
+
 interface Check {
   verdict: Verdict;
   /** Risk 0..100 inside the verdict's band: pass 0..24, caution 25..59, avoid 60..100. Null when never seen. */
   score?: number | null;
+  /** pump.fun launches: the chance it climbs past 85 SOL after minute five, and that the dev still dumps. */
+  odds?: Odds | null;
   reasons: string[];
   notes: string[];
   /** Whether the node's chain stream is live and how long ago it last heard the chain. */
@@ -605,12 +664,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
           <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold tracking-[0.02em]" style={{ color: tone.color, borderColor: `${tone.color}4d`, background: `${tone.color}1f` }}>
             <i className="h-[7px] w-[7px] rounded-full" style={{ background: tone.color, boxShadow: `0 0 10px ${tone.color}` }} />
             {t(tone.label)}
-            {c.score !== null && c.score !== undefined && (
-              <span className="tabular-nums font-normal opacity-80" title={t("risk 0 to 100: no red flags up to 24, caution 25 to 59, avoid from 60")}>
-                · {c.score}
-              </span>
-            )}
           </span>
+          {c.odds && <OddsPill o={c.odds} />}
           <span className="tabular-nums ml-auto hidden items-center gap-2 text-[12px] text-fg-3 md:inline-flex">
             <i className={`h-[7px] w-[7px] rounded-full ${c.stream?.live ? "bg-[#a6e3b4] shadow-[0_0_10px_#a6e3b4]" : "bg-white/30"}`} />
             {c.stream?.live ? t("stream live · read {s} s ago", { s: c.stream.lastEventSecAgo }) : t("stream paused")}
@@ -670,6 +725,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
             <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
               {tab === "overview" && (
                 <>
+                  {c.odds && <OddsCard o={c.odds} />}
                   <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-[15px] font-semibold text-fg">{c.reasons.length ? t("Why {v}", { v: t(tone.label).toLowerCase() }) : head}</p>
