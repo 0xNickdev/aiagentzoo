@@ -29,6 +29,7 @@ import { handleOf, type Mentions } from "./chain/mentions.ts";
 import { bscBook, bscHolderReport, evmHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
+import { traceOutflows, outflowsEnabled, type Destination } from "./chain/outflows.ts";
 import { replayMint } from "./chain/replay.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache, issueKey, keyFrom, walletOfKey } from "./chain/keys.ts";
 import { linkCode, setWatch, verifyInitData } from "./telegram.ts";
@@ -773,6 +774,45 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (!devs.size) return json(res, 404, { error: "this wallet has not been seen funding any dev the zoo traced" });
         if (!loopEnabled()) return json(res, 200, { funder, devs: devs.size, loop: null, note: "no RPC configured for the reverse trace" });
         return json(res, 200, (await loopOf(funder, devs)) ?? { funder, devs: devs.size, loop: null });
+      }
+      // Where the SOL went after the dump: the dev's and its selling wallets' transfers out in the day after the launch.
+      const outOf = /^\/v1\/chain\/outflows\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+      if (req.method === "GET" && outOf) {
+        const mint = outOf[1]!;
+        const found = tape.token(mint);
+        const past = !found && history ? history.report(mint) : null;
+        if (!found && !past) return json(res, 404, { error: "not a launch the zoo kept" });
+        if (!outflowsEnabled()) return json(res, 200, { mint, flows: null, note: "no RPC configured for the trace" });
+        const caller = String(req.headers["x-forwarded-for"] ?? "").split(",")[0]?.trim() || clientIp(req);
+        if (!fromPeer(req)) { const w = deepGate.take(caller); if (w > 0) return json(res, 429, { error: "slow down", retryAfterMs: w }); }
+        const creator = (found ?? past)!.creator;
+        const createdAt = (found ?? past)!.createdAt;
+        const early = found ? (tape.earlyOf(mint) ?? []) : past!.early;
+        // The dev first, then the first-seconds wallets that sold most, the dev's own and the snipers before strangers.
+        const roleOf = (e: { crew: boolean; serial: boolean; ring: boolean; bundle: boolean }) => (e.crew ? "crew" : e.serial || e.ring ? "snipers" : e.bundle ? "bundle" : null);
+        const sellers = early
+          .filter((e) => e.wallet !== creator && roleOf(e) && e.bought - e.held > 0.005)
+          .sort((a, b) => b.bought - b.held - (a.bought - a.held))
+          .slice(0, 5)
+          .map((e) => ({ wallet: e.wallet, role: roleOf(e)! }));
+        const funder = lineage.funderOf(creator) ?? past?.funder ?? null;
+        const name = (to: string): Destination => {
+          const ex = exchangeOf(to) ?? launcherOf(to);
+          if (ex) return { kind: "exchange", label: ex };
+          if (funder && to === funder) return { kind: "funder", label: null };
+          const kol = labels.kol(to);
+          if (kol) return { kind: "kol", label: kol.name ?? null };
+          const rec = tape.creator(to);
+          const kept = history?.wallet(to, 1);
+          if (rec || (kept && kept.launches > 0)) return { kind: "dev", label: null, launches: Math.max(rec?.launches48h ?? 0, kept?.launches ?? 0), dumped: Math.max(rec?.dumped ?? 0, kept?.dumped ?? 0) };
+          const devs = lineage.devsOf(to).size;
+          if (devs) return { kind: "paymaster", label: null, devs };
+          return { kind: "wallet", label: null };
+        };
+        const isDev = (w: string) => w !== creator && (tape.creator(w) != null || (history?.wallet(w, 1)?.launches ?? 0) > 0);
+        const report = await traceOutflows(mint, createdAt, [{ wallet: creator, role: "dev" }, ...sellers], name, isDev);
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, report ?? { mint, flows: null });
       }
       if (req.method === "GET" && path === "/v1/chain/paymasters") {
         res.setHeader("cache-control", "public, max-age=60");

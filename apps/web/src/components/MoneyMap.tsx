@@ -1,10 +1,14 @@
-import { useEffect, useRef } from "react";
-import { explorer } from "../chain";
+import { useEffect, useRef, useState } from "react";
+import { chainOf, explorer } from "../chain";
+import { NODE_URLS } from "../sim/live";
 import type { Early, XRayReport } from "./XRay";
 import { t } from "../i18n";
 
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
+
+const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
+const sol = (x: number) => (x >= 100 ? Math.round(x).toLocaleString("en-US") : x >= 10 ? x.toFixed(1) : x.toFixed(2));
 
 const RED = "#ff8a7e";
 const AMBER = "#ffc27a";
@@ -140,8 +144,8 @@ function useFlow(svg: React.RefObject<SVGSVGElement | null>, key: string) {
 
 /**
  * The money map: one look at the whole operation, left to right. Who paid the dev, the dev, the wallets that took the
- * first five seconds grouped by who they turned out to be, and how much of what they took is already sold. Where the
- * SOL went after the dump joins once the nodes trace outgoing transfers.
+ * first five seconds grouped by who they turned out to be, and how much of what they took is already sold. Below it,
+ * where the SOL went after the dump.
  */
 export default function MoneyMap({ r }: { r: XRayReport }) {
   const svg = useRef<SVGSVGElement>(null);
@@ -238,11 +242,175 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
               </p>
             ))}
           </div>
-          <p className="mt-5 text-[13px] text-fg-4">
-            {t("Thickness is the share of supply. Where the SOL went after the sell comes once our nodes trace outgoing transfers.")}
-          </p>
+          <p className="mt-5 text-[13px] text-fg-4">{t("Thickness is the share of supply.")}</p>
         </>
       )}
+      <Outflows r={r} />
     </div>
+  );
+}
+
+type Kind = "exchange" | "funder" | "operation" | "dev" | "paymaster" | "kol" | "wallet";
+interface Flow {
+  to: string;
+  sol: number;
+  from: string[];
+  kind: Kind;
+  label: string | null;
+  launches?: number;
+  dumped?: number;
+  devs?: number;
+  via?: "deposit";
+  collectsFrom?: number;
+  then?: { to: string; sol: number; kind: Kind; label: string | null } | null;
+}
+interface OutflowReport {
+  windowHours: number;
+  wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean }>;
+  flows: Flow[] | null;
+  totalSol: number;
+}
+
+/** Where each kind of destination sits, the worst first, and how it reads. */
+const KIND: Array<{ kind: Kind; label: string; color: string }> = [
+  { kind: "funder", label: "Back to who paid the dev", color: RED },
+  { kind: "dev", label: "To wallets that launch coins", color: RED },
+  { kind: "paymaster", label: "To a wallet that funds devs", color: RED },
+  { kind: "exchange", label: "To an exchange", color: AMBER },
+  { kind: "kol", label: "To a KOL's wallet", color: AMBER },
+  { kind: "wallet", label: "To wallets with no record", color: WHITE },
+];
+
+/** One line on what a destination is. */
+function about(f: Flow): string {
+  if (f.kind === "exchange") return f.via === "deposit" ? t("a deposit address at {x}", { x: f.label ?? t("an exchange") }) : (f.label ?? t("an exchange"));
+  if (f.kind === "funder") return t("the wallet that paid the dev");
+  if (f.kind === "dev") return t("launched {n}, dumped {d}", { n: f.launches ?? 0, d: f.dumped ?? 0 });
+  if (f.kind === "paymaster") return t("paid {n} other devs", { n: f.devs ?? 0 });
+  if (f.kind === "kol") return t("{x} on Kolscan", { x: f.label ?? "KOL" });
+  if (f.collectsFrom) return t("{n} other devs pay into it", { n: f.collectsFrom });
+  return t("no record with us");
+}
+
+/**
+ * Where the SOL went after the dump: what the dev and its selling wallets sent out in the day after the launch, by
+ * where it landed. Read on demand when the tab opens: the trace costs a few seconds of RPC.
+ */
+function Outflows({ r }: { r: XRayReport }) {
+  const [rep, setRep] = useState<OutflowReport | null | "loading" | "error">("loading");
+  const solana = chainOf(r.mint) === "solana";
+  const svg = useRef<SVGSVGElement>(null);
+  useFlow(svg, rep && typeof rep === "object" ? `${r.mint}:out` : "");
+  useEffect(() => {
+    if (!solana) return;
+    let live = true;
+    setRep("loading");
+    fetch(`${NORTH}/v1/chain/outflows/${r.mint}`)
+      .then((x) => (x.ok ? (x.json() as Promise<OutflowReport>) : null))
+      .then((j) => live && setRep(j && j.flows ? j : "error"))
+      .catch(() => live && setRep("error"));
+    return () => {
+      live = false;
+    };
+  }, [r.mint, solana]);
+
+  const head = (
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      <h3 className="font-display text-xl text-fg">{t("Where the SOL went")}</h3>
+      <span className="tabular-nums text-[12.5px] text-fg-4">{t("the dev and its selling wallets · transfers out · first 24 h")}</span>
+    </div>
+  );
+  const box = (body: React.ReactNode) => (
+    <div className="mt-8 border-t border-white/[0.08] pt-7">
+      {head}
+      {body}
+    </div>
+  );
+  if (!solana) return box(<p className="text-[15px] text-fg-3">{t("Followed on Solana for now.")}</p>);
+  if (rep === "loading") return box(<p className="text-[15px] text-fg-3">{t("Following the SOL out of the dev's wallets…")}</p>);
+  if (rep === "error" || rep === null) return box(<p className="text-[15px] text-fg-3">{t("Could not follow the transfers right now. Open the tab again in a minute.")}</p>);
+
+  const flows = rep.flows ?? [];
+  const inside = flows.filter((f) => f.kind === "operation").reduce((n, f) => n + f.sol, 0);
+  const groups = KIND.map((k) => ({ ...k, flows: flows.filter((f) => f.kind === k.kind) }))
+    .map((g) => ({ ...g, sol: g.flows.reduce((n, f) => n + f.sol, 0) }))
+    .filter((g) => g.sol > 0);
+  const missed = rep.wallets.filter((w) => !w.reached).length;
+  if (!groups.length)
+    return box(
+      <p className="text-[15px] text-fg-3">
+        {t("No SOL left these wallets by plain transfer in the day after the launch.")} {inside > 0 && t("{s} SOL moved between their own wallets.", { s: sol(inside) })}
+      </p>,
+    );
+
+  const total = rep.totalSol;
+  const W = 1000;
+  const BH = 36;
+  const GAP = 44;
+  const H = Math.max(200, 70 + groups.length * (BH + GAP));
+  const midY = H / 2 + 14;
+  const gy = (i: number) => midY - (groups.length * (BH + GAP) - GAP) / 2 + i * (BH + GAP);
+  const thick = (x: number) => Math.max(3, Math.min(40, (x / total) * 40));
+  const names = (g: (typeof groups)[number]) =>
+    g.kind === "exchange"
+      ? [...new Set(g.flows.map((f) => f.label ?? ""))].filter(Boolean).join(", ")
+      : t("{n} wallets", { n: g.flows.length });
+  const top = flows.filter((f) => f.kind !== "operation").slice(0, 8);
+
+  return box(
+    <>
+      <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Where the SOL went")}>
+        {groups.map((g, i) => (
+          <Ribbon key={g.kind} id={`out-${g.kind}`} x1={26} y1={midY} x2={W - 26} y2={gy(i) + BH / 2} w={thick(g.sol)} color={g.color} speed={0.14} />
+        ))}
+        <g data-dust style={{ mixBlendMode: "screen" }} />
+        <Node x={24} y={midY - (BH + 14) / 2} h={BH + 14} title={t("{s} SOL sent out", { s: sol(total) })} sub={t("by the dev and {n} of its wallets", { n: rep.wallets.length - 1 })} left color={WHITE} />
+        {groups.map((g, i) => (
+          <Node key={g.kind} x={W - 24} y={gy(i)} h={BH} title={t(g.label)} sub={`${sol(g.sol)} SOL · ${names(g)}`} color={g.color} right />
+        ))}
+      </svg>
+
+      <ol className="grid gap-3 md:hidden">
+        {groups.map((g) => (
+          <li key={g.kind} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
+            <p className="text-[15px] text-white">{t(g.label)}</p>
+            <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">
+              {sol(g.sol)} SOL · {names(g)}
+            </p>
+          </li>
+        ))}
+      </ol>
+
+      <ul className="mt-6 divide-y divide-white/[0.06] text-[14px]">
+        {top.map((f) => {
+          const k = KIND.find((x) => x.kind === f.kind)!;
+          return (
+            <li key={f.to} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
+              <span className="tabular-nums w-20 shrink-0 text-white">{sol(f.sol)} SOL</span>
+              <a href={explorer(f.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-2 underline decoration-white/20 underline-offset-4 hover:text-white">
+                {short(f.to)}
+              </a>
+              <span style={{ color: k.color === WHITE ? undefined : k.color }} className={k.color === WHITE ? "text-fg-3" : ""}>
+                {about(f)}
+              </span>
+              {f.then && (
+                <span className="text-fg-4">
+                  {t("then {s} SOL on to", { s: sol(f.then.sol) })}{" "}
+                  <a href={explorer(f.then.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-white/20 underline-offset-4 hover:text-white">
+                    {f.then.kind === "exchange" && f.then.label ? f.then.label : short(f.then.to)}
+                  </a>
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="mt-5 text-[13px] text-fg-4">
+        {t("Plain SOL transfers out of the dev and the first-seconds wallets that sold, in the 24 hours after the launch. Swaps and dust under 0.1 SOL are left out.")}
+        {inside > 0 && ` ${t("{s} SOL moved between their own wallets and is not counted.", { s: sol(inside) })}`}
+        {missed > 0 && ` ${t("{n} of the wallets trade too much to read back to the launch.", { n: missed })}`}
+      </p>
+    </>,
   );
 }
