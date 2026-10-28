@@ -104,6 +104,8 @@ export interface Odds {
    * not yet, after `ageMin` minutes. The odds stay for the record of what they said.
    */
   settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number };
+  /** The dev's side, once known: they dumped after minute five, or an hour on they still had not. */
+  devSettled?: { dumped: boolean; ageMin: number };
   fit: string;
 }
 

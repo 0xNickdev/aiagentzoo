@@ -1,5 +1,13 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "what minute five said, and what happened": "第五分钟时的判断，和后来发生的事",
+  "Odds it runs past 85 SOL cap": "市值涨过 85 SOL 的概率",
+  "ran to {s} SOL, {m} min in": "第 {m} 分钟涨到了 {s} SOL",
+  "Odds the dev dumps later": "开发者之后砸盘的概率",
+  "sold half the bag in the first five minutes": "前五分钟就卖掉了一半",
+  "dumped later, as it said": "后来砸了，和判断一致",
+  "has not dumped in {h}": "{h} 内没有砸",
+  "The tick on the left ring is the average launch, 2.7%. Fitted on 34,183 pump.fun launches: what launches like this one went on to do. Odds, not advice: a 20% chance still fails four times in five.": "左边圆环上的刻度是普通发币的 2.7%。基于 34,183 个 pump.fun 发币拟合：和这个相似的币后来怎么样了。这是概率，不是建议：20% 的机会五次里仍有四次失败。",
   "Who is behind it?": "谁在背后？",
   "Where did the money go?": "钱去了哪里？",
   "Paste any token from Solana, BNB Chain or Base: the dev and their other launches, the wallets that sniped the first seconds, who paid for them, and where the SOL went after the dump. With the odds the first five minutes give. Free, read straight from the chain.": "粘贴 Solana、BNB Chain 或 Base 上的任意代币：开发者和他的其他币、前几秒狙击的钱包、谁给他们打的钱，以及砸盘后 SOL 去了哪里。再加上前五分钟给出的概率。免费，直接读自链上。",
