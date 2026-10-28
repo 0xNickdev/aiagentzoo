@@ -77,10 +77,19 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
     if (!Number.isFinite(sol) || sol <= 0) return onState(t("Set an amount in SOL first."));
     const w = walletProvider();
     if (!w) return onState(t("Install a Solana wallet such as Phantom, Jupiter or Solflare, then try again."));
-    setBusy(t("Connect…"));
+    // Not connected: a wallet that already trusts the site reconnects silently (after a reload); otherwise the reader
+    // connects first with the button at the top, and the buy works from then on.
+    if (!w.publicKey) {
+      try {
+        await withTimeout((w.connect as (o?: { onlyIfTrusted: boolean }) => Promise<unknown>)({ onlyIfTrusted: true }), 3_000);
+      } catch {
+        /* not trusted yet */
+      }
+      if (!w.publicKey) return onState(t("Connect your wallet first: the button at the top right."));
+    }
+    setBusy(t("Routing…"));
     try {
-      if (!w.publicKey) onState(t("Approve the connection in your wallet."));
-      const owner = w.publicKey?.toString() ?? (await withTimeout(w.connect(), 60_000)).publicKey.toString();
+      const owner = w.publicKey!.toString();
       setBusy(t("Routing…"));
       onState(t("Routing {s} SOL into ${sym}…", { s: amount, sym: coin.symbol }));
       const q = await quote(SOL_MINT, coin.mint, BigInt(Math.round(sol * 1e9)), 1500);
