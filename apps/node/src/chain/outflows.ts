@@ -75,18 +75,19 @@ interface EnhancedTx {
  */
 async function pageOf(address: string, from: number, to: number, after: string | undefined, f: typeof fetch): Promise<{ txs: EnhancedTx[]; next?: string } | null> {
   const u = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${KEY}&limit=100&type=TRANSFER&sort-order=asc&gte-time=${Math.floor(from / 1000)}&lte-time=${Math.ceil(to / 1000)}${after ? `&after-signature=${after}` : ""}`;
-  // Helius allows a few enhanced calls a second: wait for a slot, and back off when it says too many.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // Helius allows about seven enhanced calls a second on this key: wait for a slot, and back off when it says too many.
+  for (let attempt = 0; attempt < 4; attempt++) {
     await slot();
     try {
       const r = await f(u, { signal: AbortSignal.timeout(6_000) });
       if (r.status === 429) {
-        await new Promise((ok) => setTimeout(ok, 600 * (attempt + 1)));
+        await new Promise((ok) => setTimeout(ok, 400 * (attempt + 1) + Math.random() * 300));
         continue;
       }
       const body = (await r.json()) as EnhancedTx[] | { error?: string };
       if (!Array.isArray(body)) return null;
-      return { txs: body, ...(body.length >= 100 ? { next: body[body.length - 1]?.signature } : {}) };
+      // Helius filters after it reads a page, so a page that is nearly full may still have more behind it.
+      return { txs: body, ...(body.length >= 90 ? { next: body[body.length - 1]?.signature } : {}) };
     } catch {
       return null;
     } finally {
@@ -97,7 +98,7 @@ async function pageOf(address: string, from: number, to: number, after: string |
 }
 
 /** At most a few enhanced calls in flight at once, across every trace. */
-const MAX_IN_FLIGHT = 3;
+const MAX_IN_FLIGHT = 2;
 let inFlight = 0;
 const waiting: Array<() => void> = [];
 const slot = () => (inFlight < MAX_IN_FLIGHT ? (inFlight++, Promise.resolve()) : new Promise<void>((ok) => waiting.push(() => (inFlight++, ok()))));
