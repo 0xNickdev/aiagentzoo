@@ -5,6 +5,7 @@ import { t, tChain } from "../i18n";
 import { landed, quote, SOL_MINT, swap, swapEnabled } from "../swap";
 import { walletProvider } from "../zoo";
 import { Section } from "./ui";
+import NumberTicker from "./NumberTicker";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const EASE = [0.215, 0.61, 0.355, 1] as const;
@@ -98,7 +99,7 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
 
 function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; amount: string; onState: (m: string | null) => void }) {
   const pass = c.verdict === "pass";
-  const cap = c.capSol !== null && solUsd ? usd(c.capSol * solUsd) : null;
+  const capUsd = c.capSol !== null && solUsd ? c.capSol * solUsd : null;
   return (
     <motion.a
       layout
@@ -120,7 +121,12 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
             ${c.symbol.replace(/^\$/, "")} <span className="text-[12.5px] text-fg-4">{c.name}</span>
           </p>
           <p className="tabular-nums mt-0.5 truncate text-[12px] text-fg-3">
-            {age(c.createdAt)} · {cap ? `${cap} · ` : ""}
+            {age(c.createdAt)} · {capUsd !== null && (
+              <>
+                <NumberTicker value={capUsd} format={usd} className="text-fg-2" />
+                {" · "}
+              </>
+            )}
             {c.graduated && c.poolSol !== null ? `${t("pool {s} SOL", { s: c.poolSol < 10 ? c.poolSol.toFixed(1) : Math.round(c.poolSol) })} · ` : ""}
             {t("{n} buyers", { n: c.buyers })}
             {c.devSoldPct !== null ? ` · ${t("dev sold {p}%", { p: c.devSoldPct })}` : ""}
