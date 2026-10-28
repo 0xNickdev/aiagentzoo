@@ -287,6 +287,8 @@ export const ZH: Record<string, string> = {
   "The trail leads to": "资金最终流向",
   "Transfers we can see on chain: who received the SOL, not who owns the wallets.": "这是链上可见的转账：谁收到了 SOL，不代表谁拥有这些钱包。",
   "cabal #{c}": "团伙 #{c}",
+  "another dev pays into it": "另一个开发者往里打钱",
+  "the wallet of {x}, a KOL on Kolscan": "Kolscan 上 KOL {x} 的钱包",
   "Fresh launches": "新发币",
   "From the guest enclosures": "来自访客园区",
   "Federate": "联邦互联",

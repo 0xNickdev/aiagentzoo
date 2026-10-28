@@ -294,7 +294,7 @@ function about(f: Dest): string {
   if (f.kind === "paymaster") return t("paid {n} other devs", { n: f.devs ?? 0 });
   if (f.kind === "kol")
     return f.launches ? t("{x} on Kolscan, launched {n}, dumped {d}", { x: f.label ?? "KOL", n: f.launches, d: f.dumped ?? 0 }) : t("{x} on Kolscan", { x: f.label ?? "KOL" });
-  if (f.collectsFrom) return t("{n} other devs pay into it", { n: f.collectsFrom });
+  if (f.collectsFrom) return f.collectsFrom === 1 ? t("another dev pays into it") : t("{n} other devs pay into it", { n: f.collectsFrom });
   return t("no record with us");
 }
 
@@ -314,7 +314,7 @@ function trail(flows: Flow[]): string[] {
     parts.push(devs.length === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n, d }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: devs.length, n, d }));
   }
   const kols = uniq("kol");
-  if (kols.length) parts.push(t("KOL wallets on Kolscan: {x}", { x: kols.map((k) => k.label ?? short(k.to)).join(", ") }));
+  if (kols.length) parts.push(t(kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: kols.map((k) => k.label ?? short(k.to)).join(", ") }));
   const pay = uniq("paymaster");
   if (pay.length) parts.push(pay.length === 1 ? t("a wallet that paid {n} other devs", { n: pay[0]!.devs ?? 0 }) : t("{k} wallets that pay other devs", { k: pay.length }));
   const cabals = new Set(all.map((d) => d.cabal).filter((c): c is number => c != null));
