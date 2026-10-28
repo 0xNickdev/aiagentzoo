@@ -1283,7 +1283,13 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   assert.equal(serial.verdict, "avoid");
   assert.match(serial.reasons[0]!, /dumped 38 of their 40 launches in 48 hours, usually 0 min after launch/);
 
-  assert.equal(checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4 }), creatorRecord: rec() }).verdict, "avoid");
+  // A launch bundle is a fact, not a red flag, until it has sold what it took.
+  const kept = checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4, bundleKept: 0.9 }), creatorRecord: rec() });
+  assert.equal(kept.verdict, "pass");
+  assert.ok(kept.notes.some((n) => /6 wallets bought 40% of the supply in the launch block; they still hold 90%/.test(n)));
+  const sold = checkToken("M", { symbol: "B", facts: facts({ bundleWallets: 6, bundleShare: 0.4, bundleKept: 0.1 }), creatorRecord: rec() });
+  assert.equal(sold.verdict, "caution");
+  assert.match(sold.reasons[0]!, /launch block and have sold 90% of it/);
   assert.equal(checkToken("M", { symbol: "Z", facts: facts({ ageMin: 600, curveSol: 0.2 }), creatorRecord: rec() }).verdict, "avoid");
   // Paired with another token, the curve is not in SOL: no dead-curve call.
   assert.equal(checkToken("M", { symbol: "Q", facts: facts({ ageMin: 600, curveSol: null, quote: "Q1" }), creatorRecord: rec() }).verdict, "pass");

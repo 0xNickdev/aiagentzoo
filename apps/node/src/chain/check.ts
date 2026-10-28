@@ -244,9 +244,13 @@ export function checkToken(
     } else notes.push(`${they} the zoo has traced`);
   } else if (opts.lineage === null) notes.push("who funded the creator is not traced yet: it is queued");
 
-  // Wallets other than the creator buying in the launch block: the supply was split up before anyone could see it.
+  // Wallets other than the creator buying in the launch block. On its own that is no red flag: launches bundled like
+  // this ran four times as often as the rest (34,183 pump.fun launches, 2026-10-28). It is one once the bundle has sold
+  // what it took to whoever bought after it.
   if (f.bundleWallets !== null && f.bundleShare !== null && f.bundleWallets >= 3 && f.bundleShare >= 0.15) {
-    flag(avoid, `${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`, WEIGHT.launchBundle);
+    const said = `${f.bundleWallets} wallets bought ${pct(f.bundleShare)}% of the supply in the launch block`;
+    if (f.bundleKept != null && f.bundleKept < 1 / 3) flag(caution, `${said} and have sold ${Math.round((1 - f.bundleKept) * 100)}% of it`, WEIGHT.launchBundle);
+    else notes.push(f.bundleKept != null ? `${said}; they still hold ${pct(f.bundleKept)}% of it` : said);
   }
 
   // Bundles later in its life: blocks where four or more wallets bought at once, together holding much of the supply.

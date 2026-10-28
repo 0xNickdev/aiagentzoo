@@ -287,6 +287,8 @@ export interface ChainFacts {
   bundleWallets: number | null;
   /** Share of the whole supply those wallets took, 0..1. */
   bundleShare: number | null;
+  /** Of what the launch-block wallets bought, the share they still hold, 0..1; null without a launch bundle. */
+  bundleKept?: number | null;
   /** Wallets that bought it in blocks of four or more buyers, at any point of its life; what they hold now and held at most, of the supply. */
   bundlers?: number;
   bundlersHeld?: number;
@@ -1492,6 +1494,15 @@ export class PumpTape {
       trades15m: t.trades15m,
       bundleWallets: t.createSlot === null ? null : t.launchBuys.size,
       bundleShare: t.createSlot === null ? null : round([...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supplyOf(t)),
+      bundleKept: (() => {
+        const took = [...t.launchBuys.values()].reduce((a, b) => a + b, 0);
+        if (t.createSlot === null || took <= 0) return null;
+        const held = [...t.launchBuys.keys()].reduce((n, w) => {
+          const b = t.buyers.get(w);
+          return n + (b ? Math.max(0, (b.tok ?? 0) - (b.sold ?? 0)) : 0);
+        }, 0);
+        return round(Math.min(1, held / took));
+      })(),
       bundlers: t.bundlers?.size ?? 0,
       bundlersHeld: round(Math.min(1, (t.bundleHeld ?? 0) / supplyOf(t))),
       bundlersPeak: round(Math.min(1, (t.bundlePeak ?? 0) / supplyOf(t))),
@@ -1761,7 +1772,8 @@ export class PumpTape {
         x[outcome] += 1;
         if (outcome === "between" || outcome === "unread") x.unknown += 1;
       };
-      const s = dumpedEarly || serial || bundle ? flagged : clear;
+      // A launch bundle stopped being an avoid reason on 2026-10-28 (bundled launches ran more often, not less).
+      const s = dumpedEarly || serial ? flagged : clear;
       count(s);
       // Readings taken late (before this rule, a first trade a day in counted as "five minutes in") are not used.
       if (t.at5 && t.at5.at !== undefined && t.at5.at - t.createdAt < AT5_LATEST) {
