@@ -16,6 +16,8 @@ const LAMPORTS = 1_000_000_000;
 const MIN_SOL = 0.1;
 /** How long after the launch a transfer out still counts as this launch's money moving on. */
 export const WINDOW_MS = 24 * 3_600_000;
+/** A second-hop wallet holding at least this much of the money is followed a third time. */
+export const HOP_AGAIN_SOL = 1;
 /** While the day after the launch still runs, a trace goes stale quickly. */
 const CACHE_MS = 10 * 60_000;
 
@@ -42,10 +44,50 @@ export interface Outflow extends Destination {
   /** When the first of these transfers left, ms. */
   firstAt: number;
   /** One hop further, for a wallet with no name: where it sent the most SOL on, and how many devs the zoo knows pay into it. */
-  then?: (Destination & { to: string; sol: number }) | null;
+  then?: Onward | null;
   collectsFrom?: number;
   /** An exchange reached through a deposit address: the wallet itself is the user's deposit address. */
   via?: "deposit";
+}
+
+/** A wallet the SOL went on to; a nameless one with enough in it is followed one hop more (the third from the dev). */
+export type Onward = Destination & { to: string; sol: number; collectsFrom?: number; then?: (Destination & { to: string; sol: number }) | null };
+
+/** Below this much SOL out, a trail is mostly a serial dev's float: no summary. */
+export const TRAIL_MIN_SOL = 5;
+
+/** Where the money ended up, three hops deep, counted from what the zoo already knows. Transfers, never owners. */
+export interface Trail {
+  funderBack: boolean;
+  /** Distinct wallets that launch coins, with their launches and dumps added up. */
+  devs: number;
+  launches: number;
+  dumped: number;
+  kols: string[];
+  /** Wallets that pay other devs, and the most devs one of them paid. */
+  paymasters: number;
+  paidDevs: number;
+  cabals: number[];
+}
+
+export function trailOf(flows: Outflow[], totalSol: number): Trail | null {
+  if (totalSol < TRAIL_MIN_SOL) return null;
+  type Reached = Destination & { to: string };
+  const all: Reached[] = flows.filter((f) => f.kind !== "operation").flatMap((f) => [f, f.then, f.then?.then].filter((d) => !!d) as Reached[]);
+  const uniq = (kind: OutflowKind) => [...new Map(all.filter((d) => d.kind === kind).map((d) => [d.to, d])).values()];
+  const devs = uniq("dev");
+  const pay = uniq("paymaster");
+  const t: Trail = {
+    funderBack: uniq("funder").length > 0,
+    devs: devs.length,
+    launches: devs.reduce((a, d) => a + (d.launches ?? 0), 0),
+    dumped: devs.reduce((a, d) => a + (d.dumped ?? 0), 0),
+    kols: uniq("kol").map((k) => k.label ?? `${k.to.slice(0, 4)}…${k.to.slice(-4)}`),
+    paymasters: pay.length,
+    paidDevs: Math.max(0, ...pay.map((d) => d.devs ?? 0)),
+    cabals: [...new Set(all.map((d) => d.cabal).filter((c): c is number => c != null))],
+  };
+  return t.funderBack || t.devs || t.kols.length || t.paymasters || t.cabals.length ? t : null;
 }
 
 export interface OutflowReport {
@@ -60,6 +102,8 @@ export interface OutflowReport {
   wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean; read: boolean }>;
   flows: Outflow[];
   totalSol: number;
+  /** Where the money ended up, when enough went out and the zoo knows any of it. */
+  trail: Trail | null;
   tracedAt: number;
 }
 
@@ -140,10 +184,10 @@ async function sentBy(wallet: string, from: number, to: number, maxPages: number
   return { out, reached, read };
 }
 
-/** Reads one page of a nameless destination: the biggest transfer on after the money arrived, and the known devs paying in. */
-async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
-  const page = await pageOf(flow.to, flow.firstAt, flow.firstAt + WINDOW_MS, undefined, f);
-  if (!page) return;
+/** Reads one page of a wallet after `since`: the biggest transfer on, and the known devs paying in. */
+async function onwardOf(wallet: string, since: number, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch) {
+  const page = await pageOf(wallet, since, since + WINDOW_MS, undefined, f);
+  if (!page) return null;
   const on = new Map<string, number>();
   const devsIn = new Set<string>();
   for (const tx of page.txs) {
@@ -151,20 +195,33 @@ async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: 
     for (const t of tx.nativeTransfers ?? []) {
       const sol = (t.amount ?? 0) / LAMPORTS;
       if (sol < MIN_SOL) continue;
-      if (t.toUserAccount === flow.to && t.fromUserAccount && isDev(t.fromUserAccount)) devsIn.add(t.fromUserAccount);
-      if (t.fromUserAccount === flow.to && t.toUserAccount && t.toUserAccount !== flow.to && at >= flow.firstAt) on.set(t.toUserAccount, (on.get(t.toUserAccount) ?? 0) + sol);
+      if (t.toUserAccount === wallet && t.fromUserAccount && isDev(t.fromUserAccount)) devsIn.add(t.fromUserAccount);
+      if (t.fromUserAccount === wallet && t.toUserAccount && t.toUserAccount !== wallet && at >= since) on.set(t.toUserAccount, (on.get(t.toUserAccount) ?? 0) + sol);
     }
   }
-  flow.collectsFrom = devsIn.size;
   const [to, sol] = [...on.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
-  if (!to || sol === undefined) {
-    flow.then = null;
-    return;
-  }
-  const next = name(to);
-  flow.then = { to, sol: Math.round(sol * 1000) / 1000, ...next };
+  return { devsIn: devsIn.size, next: to && sol !== undefined ? { to, sol: Math.round(sol * 1000) / 1000, ...name(to) } : null };
+}
+
+/** One hop more from a nameless destination: where it sent the most SOL on. */
+async function hop(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
+  const read = await onwardOf(flow.to, flow.firstAt, name, isDev, f);
+  if (!read) return;
+  flow.collectsFrom = read.devsIn;
+  flow.then = read.next;
   // Swept on to an exchange's hot wallet: the first wallet was a deposit address at that exchange.
-  if (next.kind === "exchange" && flow.kind === "wallet") Object.assign(flow, { kind: "exchange", label: next.label, via: "deposit" as const });
+  if (read.next?.kind === "exchange" && flow.kind === "wallet") Object.assign(flow, { kind: "exchange", label: read.next.label, via: "deposit" as const });
+}
+
+/** The third hop from the dev: a nameless wallet that passed the money on is followed once more, where an operator's bank often sits. */
+async function hopAgain(flow: Outflow, name: (to: string) => Destination, isDev: (w: string) => boolean, f: typeof fetch): Promise<void> {
+  const then = flow.then;
+  if (!then) return;
+  const read = await onwardOf(then.to, flow.firstAt, name, isDev, f);
+  if (!read) return;
+  then.collectsFrom = read.devsIn;
+  then.then = read.next;
+  if (read.next?.kind === "exchange" && then.kind === "wallet") Object.assign(then, { kind: "exchange", label: read.next.label, via: "deposit" as const });
 }
 
 const cache = new Map<string, { at: number; report: OutflowReport }>();
@@ -230,6 +287,8 @@ async function trace(
   const flows = [...byTo.values()].map((o) => ({ ...o, sol: round(o.sol) })).sort((a, b) => b.sol - a.sol);
   // The biggest nameless destinations get one hop more: a deposit address, or the operator's own bank.
   await Promise.all(flows.filter((o) => (o.kind === "wallet" || o.kind === "paymaster") && o.sol >= 0.5).slice(0, 3).map((o) => hop(o, name, isDev, f)));
+  // And the biggest of those that landed on another nameless wallet, once more: at most three more pages.
+  await Promise.all(flows.filter((o) => o.then?.kind === "wallet" && o.then.sol >= HOP_AGAIN_SOL).slice(0, 3).map((o) => hopAgain(o, name, isDev, f)));
   const report: OutflowReport = {
     mint,
     windowHours: WINDOW_MS / 3_600_000,
@@ -239,8 +298,10 @@ async function trace(
     // Money moved between the operation's own wallets is not money gone: it stays out of the total.
     flows: flows.slice(0, 40),
     totalSol: round(flows.filter((o) => o.kind !== "operation").reduce((n, o) => n + o.sol, 0)),
+    trail: null,
     tracedAt: now,
   };
+  report.trail = trailOf(report.flows, report.totalSol);
   // The dev's own history unread is a failed trace, not an empty one: the next asker tries again.
   if (sent[0]?.read) cache.set(mint, { at: now, report });
   if (cache.size > 2_000) for (const [k, v] of cache) if (now - v.at > cacheMs(v.report)) cache.delete(k);

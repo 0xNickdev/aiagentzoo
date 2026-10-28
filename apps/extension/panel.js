@@ -177,6 +177,25 @@ var ZooPanel = (() => {
       fact("dev's own wallets", String(f.creatorCrew ?? 0), t("keep sniping this dev"), (f.creatorCrew ?? 0) >= 2),
       fact("rings · serial", `${f.ringWallets ?? 0} · ${f.serialSnipers ?? 0}`, t("snipers in the first seconds"), (f.ringWallets ?? 0) >= 3),
     );
+    // Where the dev's SOL went, once the dev has sold: filled in when the trace comes back, hidden when it leads nowhere known.
+    const trailBox = h("p", { class: "trail", hidden: true });
+    if (!/^0x/.test(r.mint) && (f.creatorSoldPct ?? 0) >= 50)
+      void ask({ type: "trail", mint: r.mint }).then((x) => {
+        if (!x?.trail || !trailBox.isConnected) return;
+        const tr = x.trail;
+        const parts = [];
+        if (tr.funderBack) parts.push(t("back to the wallet that paid the dev"));
+        if (tr.devs) parts.push(tr.devs === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n: tr.launches, d: tr.dumped }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: tr.devs, n: tr.launches, d: tr.dumped }));
+        if (tr.kols.length) parts.push(t(tr.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: tr.kols.join(", ") }));
+        if (tr.paymasters) parts.push(tr.paymasters === 1 ? t("a wallet that paid {n} other devs", { n: tr.paidDevs }) : t("{k} wallets that pay other devs", { k: tr.paymasters }));
+        if (tr.cabals.length) parts.push(tr.cabals.length === 1 ? t("a wallet in cabal #{c}", { c: tr.cabals[0] }) : t("wallets in {n} cabals", { n: tr.cabals.length }));
+        trailBox.replaceChildren(
+          h("b", {}, t("Where the SOL went: ")),
+          t("{x} SOL out, the trail leads to {p}.", { x: x.totalSol >= 100 ? Math.round(x.totalSol) : x.totalSol.toFixed(1), p: parts.join("; ") }),
+          h("span", { class: "trail-n" }, t("Transfers, not owners.")),
+        );
+        trailBox.hidden = false;
+      });
     // Who holds it, at a glance: the same shares as under the verdict on the site, red past the line where that share alone decides the price.
     const hd = c.holders;
     const held = [];
@@ -242,6 +261,7 @@ var ZooPanel = (() => {
         ...holdBlock,
         sec(holdBlock.length ? "03" : "02", "Who is behind it", "tap to open"),
         facts,
+        trailBox,
         ...five,
         h(
           "div",

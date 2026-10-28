@@ -85,6 +85,19 @@ export function TC(text: string): string {
 }
 
 export const BOT_ZH: Record<string, string> = {
+  "back to the wallet that paid the dev": "回到给开发者打钱的钱包",
+  "a wallet that launched {n} coins and dumped {d}": "一个发过 {n} 个币、砸了 {d} 个的钱包",
+  "{k} wallets that launched {n} coins and dumped {d}": "{k} 个钱包，共发过 {n} 个币、砸了 {d} 个",
+  "the wallet of {x}, a KOL on Kolscan": "Kolscan 上 KOL {x} 的钱包",
+  "KOL wallets on Kolscan: {x}": "Kolscan 上的 KOL 钱包：{x}",
+  "a wallet that paid {n} other devs": "一个给 {n} 个其他开发者打过钱的钱包",
+  "{k} wallets that pay other devs": "{k} 个给其他开发者打钱的钱包",
+  "a wallet in cabal #{c}": "团伙 #{c} 里的一个钱包",
+  "wallets in {n} cabals": "属于 {n} 个团伙的钱包",
+  "🧭 <b>${s}: where the SOL went</b>": "🧭 <b>${s}：SOL 去了哪里</b>",
+  "{x} SOL left the dev and its selling wallets in the day after launch. The trail leads to {p}.": "发币后一天内，{x} SOL 离开了开发者和卖出的钱包。资金最终流向：{p}。",
+  "Transfers we can see on chain: who received the SOL, not who owns the wallets.": "这是链上可见的转账：谁收到了 SOL，不代表谁拥有这些钱包。",
+  "Open the money map": "打开资金地图",
   "Stop radar pings": "关闭雷达提醒",
   "Ping me when one turns": "有币变脸时提醒我",
   "Radar pings are a holder perk: hold {h}+ $ZOOAGENCY and /link your wallet, then /radar on.": "雷达提醒是持币者福利：持有 {h}+ $ZOOAGENCY，用 /link 绑定钱包，然后 /radar on。",

@@ -84,6 +84,13 @@ async function xray(addr) {
   });
 }
 
+/** Where the dev's SOL went, three hops deep: one trace per token for ten minutes, null when it leads nowhere the zoo knows. */
+const trail = (mint) =>
+  cached(`trail:${mint}`, 600_000, async () => {
+    const { ok, body } = await getJson(`${NORTH}/v1/chain/outflows/${mint}`);
+    return ok && body?.trail ? { trail: body.trail, totalSol: body.totalSol } : null;
+  }).catch(() => null);
+
 /** A wallet's page: what it did as a dev, as a first-second buyer and as the one who pays for devs. */
 const wallet = (w) =>
   cached(`wallet:${w}`, 60_000, async () => {
@@ -141,6 +148,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === "tabMint") return { mint: tabMint.get(msg.tabId) ?? null };
     if (msg.type === "sniper") return cached(`sniper:${msg.wallet}`, 120_000, async () => (await getJson(`${NORTH}/v1/chain/sniper/${msg.wallet}`)).body);
     if (msg.type === "wallet") return wallet(msg.wallet);
+    if (msg.type === "trail") return trail(msg.mint);
     if (msg.type === "boards") return boards();
     if (msg.type === "watch") return watch(msg.mint, msg.symbol, msg.on);
     if (msg.type === "watching") {

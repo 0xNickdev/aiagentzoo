@@ -2066,3 +2066,23 @@ test("the nursery council weighs each vote by the judge's record", async () => {
   assert.equal(tally([votes[0]!, votes[1]!].map((v) => ({ ...v, weight: 0 }))).verdict, "watch");
   assert.equal(parseVotes("no json", [a!]).length, 0);
 });
+
+test("the trail names where a dev's SOL ended up, three hops deep, and stays quiet on small change", async () => {
+  const { trailOf } = await import("../src/chain/outflows.ts");
+  const { trailMessage } = await import("../src/telegram.ts");
+  const flows = [
+    { to: "A", sol: 16.9, from: ["dev"], firstAt: 0, kind: "wallet" as const, label: null, then: { to: "B", sol: 10, kind: "dev" as const, label: null, launches: 2, dumped: 2 } },
+    { to: "C", sol: 8.8, from: ["dev"], firstAt: 0, kind: "wallet" as const, label: null, then: { to: "D", sol: 9, kind: "wallet" as const, label: null, then: { to: "E", sol: 9, kind: "kol" as const, label: "Kev", cabal: 7 } } },
+    { to: "F", sol: 3, from: ["dev"], firstAt: 0, kind: "exchange" as const, label: "Binance" },
+  ];
+  const t = trailOf(flows, 28.7)!;
+  assert.equal(t.devs, 1);
+  assert.equal(t.launches, 2);
+  assert.deepEqual(t.kols, ["Kev"], "a KOL three hops away is on the trail");
+  assert.deepEqual(t.cabals, [7]);
+  assert.equal(trailOf(flows, 2), null, "under five SOL out, no summary");
+  assert.equal(trailOf([flows[2]!], 30), null, "an exchange alone leads nowhere the zoo knows");
+  const msg = trailMessage("SILK", 28.7, t);
+  assert.match(msg, /Kev, a KOL on Kolscan/);
+  assert.match(msg, /not who owns the wallets/);
+});

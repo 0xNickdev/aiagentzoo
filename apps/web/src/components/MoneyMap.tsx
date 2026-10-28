@@ -266,7 +266,7 @@ interface Dest {
 }
 interface Flow extends Dest {
   from: string[];
-  then?: Dest | null;
+  then?: (Dest & { then?: Dest | null }) | null;
 }
 interface OutflowReport {
   windowHours: number;
@@ -303,7 +303,7 @@ const TRAIL_MIN_SOL = 5;
 
 /** Where the trail leads, a hop further included: the wallets the zoo already knows, said as transfers, never as owners. */
 function trail(flows: Flow[]): string[] {
-  const all = flows.filter((f) => f.kind !== "operation").flatMap((f) => (f.then ? [f, f.then] : [f]));
+  const all = flows.filter((f) => f.kind !== "operation").flatMap((f) => [f, f.then, f.then?.then].filter((d): d is Dest => !!d));
   const uniq = (kind: Kind) => [...new Map(all.filter((d) => d.kind === kind).map((d) => [d.to, d])).values()];
   const parts: string[] = [];
   if (uniq("funder").length) parts.push(t("back to the wallet that paid the dev"));
@@ -449,6 +449,7 @@ function Outflows({ r }: { r: XRayReport }) {
                     </span>
                   )}
                   {f.then.cabal != null && <CabalChip id={f.then.cabal} />}
+                  {f.then.then && <Onward d={f.then.then} />}
                 </span>
               )}
             </li>
@@ -472,5 +473,26 @@ function CabalChip({ id }: { id: number }) {
     <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full px-1.5 py-px text-[11px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 hover:text-white" title={t("part of a cabal the memory ties together")}>
       {t("cabal #{c}", { c: id })}
     </a>
+  );
+}
+
+/** The third hop: where a nameless second wallet sent the money on. */
+function Onward({ d }: { d: Dest }) {
+  const color = KIND.find((x) => x.kind === d.kind)?.color;
+  return (
+    <>
+      {", "}
+      {t("then {s} SOL on to", { s: sol(d.sol) })}{" "}
+      <a href={explorer(d.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-white/20 underline-offset-4 hover:text-white">
+        {d.kind === "exchange" && d.label ? d.label : short(d.to)}
+      </a>
+      {d.kind !== "exchange" && d.kind !== "wallet" && (
+        <span style={{ color }}>
+          {", "}
+          {about(d)}
+        </span>
+      )}
+      {d.cabal != null && <CabalChip id={d.cabal} />}
+    </>
   );
 }

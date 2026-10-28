@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
 import type { Ask, AskDesk } from "./ask.ts";
+import type { Trail } from "./chain/outflows.ts";
 import type { CleanLaunch, CreatorRecord, LaunchOutcome, PulseEvent } from "./chain/pump.ts";
 import type { BoardRow } from "./stats.ts";
 import { HOLDER_MIN, isHolder as holds } from "./holders.ts";
@@ -331,7 +332,7 @@ export interface XRayReply {
     odds?: OddsLite | null;
     reasons: string[];
     notes: string[];
-    facts: { ageMin: number; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
+    facts: { ageMin: number; creatorSoldPct?: number | null; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
   early: Array<{ bought: number; tags?: string[] }>;
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
@@ -389,6 +390,25 @@ export function xrayMessage(x: XRayReply): string {
   else lines.push(T("<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h", { w: `${fu.funder.slice(0, 4)}…${fu.funder.slice(-4)}`, n: fu.siblings.length, d: fu.siblingDumped48h }));
   if (c.notes.length) lines.push("", `<i>${esc(c.notes.map(TC).join(" · "))}</i>`);
   return lines.join("\n");
+}
+
+/** The dev has sold at least this share of the bag before the bot follows the money: before that there is little to follow. */
+const TRAIL_SOLD_PCT = 50;
+
+/** Where the dev's SOL ended up, three hops deep, said as transfers and never as owners. */
+export function trailMessage(symbol: string, total: number, t: Trail): string {
+  const parts: string[] = [];
+  if (t.funderBack) parts.push(T("back to the wallet that paid the dev"));
+  if (t.devs) parts.push(t.devs === 1 ? T("a wallet that launched {n} coins and dumped {d}", { n: t.launches, d: t.dumped }) : T("{k} wallets that launched {n} coins and dumped {d}", { k: t.devs, n: t.launches, d: t.dumped }));
+  if (t.kols.length) parts.push(T(t.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: esc(t.kols.join(", ")) }));
+  if (t.paymasters) parts.push(t.paymasters === 1 ? T("a wallet that paid {n} other devs", { n: t.paidDevs }) : T("{k} wallets that pay other devs", { k: t.paymasters }));
+  if (t.cabals.length) parts.push(t.cabals.length === 1 ? T("a wallet in cabal #{c}", { c: t.cabals[0]! }) : T("wallets in {n} cabals", { n: t.cabals.length }));
+  return [
+    T("🧭 <b>${s}: where the SOL went</b>", { s: esc(symbol) }),
+    T("{x} SOL left the dev and its selling wallets in the day after launch. The trail leads to {p}.", { x: total >= 100 ? Math.round(total) : total.toFixed(1), p: parts.join("; ") }),
+    "",
+    `<i>${T("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</i>`,
+  ].join("\n");
 }
 
 function creatorLine(r: CreatorRecord): string {
@@ -533,8 +553,21 @@ export function startTelegram(opts: TelegramOptions): () => void {
           { text: T("Ask the beaver"), callback_data: `ask:${mint}` },
         ],
       ]);
+      // Once the dev has sold, follow the money: a second message, only when the trail leads somewhere the zoo knows.
+      if (!isBsc(mint) && (x.check.facts?.creatorSoldPct ?? 0) >= TRAIL_SOLD_PCT) void followTrail(chat, mint, x.symbol);
+      return;
     } catch {
       return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
+    }
+  };
+
+  const followTrail = async (chat: number, mint: string, symbol: string) => {
+    try {
+      const r = await f(`${opts.northUrl}/v1/chain/outflows/${mint}`, { signal: AbortSignal.timeout(45_000) });
+      const rep = r.ok ? ((await r.json()) as { totalSol?: number; trail?: Trail | null }) : null;
+      if (rep?.trail) await send(chat, trailMessage(symbol, rep.totalSol ?? 0, rep.trail), [[{ text: T("Open the money map"), url: `${SITE}/xray?mint=${mint}` }]]);
+    } catch {
+      // No trail is not worth a message.
     }
   };
 

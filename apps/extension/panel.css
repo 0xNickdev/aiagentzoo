@@ -49,6 +49,8 @@
 .zoo .reasons li:last-child { border-bottom: 0; padding-bottom: 0; }
 .zoo .reasons li b { font: 400 10px/1.9 ZooGeistMono, "Geist Mono", ui-monospace, monospace; color: var(--tone); opacity: .85; }
 .zoo .notes { margin-top: 9px; font-size: 11px; color: var(--tx3); }
+.zoo .trail { margin-top: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--tx); background: rgba(255,138,126,.06); box-shadow: inset 0 0 0 1px rgba(255,138,126,.2); border-radius: 2px; }
+.zoo .trail-n { display: block; margin-top: 4px; font-size: 11px; color: var(--tx3); }
 .zoo .track { margin-top: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--pass); background: rgba(157,243,176,.06); box-shadow: inset 0 0 0 1px rgba(157,243,176,.18); border-radius: 2px; }
 
 /* Section heads: 02 ── THE DEV ──────── aside */
