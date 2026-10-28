@@ -29,6 +29,7 @@ import { handleOf, type Mentions } from "./chain/mentions.ts";
 import { bscBook, bscHolderReport, evmHolderReport } from "./chain/bscHolders.ts";
 import { originOf } from "./chain/origin.ts";
 import { loopOf, loopEnabled } from "./chain/loop.ts";
+import { oddsOf } from "./chain/odds.ts";
 import { traceOutflows, outflowsEnabled, cachedOutflows, type Destination } from "./chain/outflows.ts";
 /** A first-seconds wallet that sniped this many launches in two days is a bot: its transfers are its float, not a launch's proceeds. */
 const BOT_SNIPES = 150;
@@ -605,6 +606,15 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (past && !evm) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
         const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
         const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        // The odds the first five minutes give, for pump.fun launches the tape still holds.
+        if (found && !evm) {
+          const funder = lineage.funderOf(found.creator) ?? null;
+          const read = tape.oddsInputs(mint, { social: linked.length > 0, funderExchange: exchangeOf(funder) != null, funderMany: funder ? lineage.devsOf(funder).size >= 3 : false });
+          if (read) {
+            const odds = oddsOf(read.inputs, read.at);
+            check.odds = (found.facts.creatorSold ?? 0) >= 0.5 ? { ...odds, devDumps: null } : odds;
+          }
+        }
         res.setHeader("cache-control", "no-store");
         const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
         const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : base ? (baseSocials.image(mint) ?? clanker.image(mint)) : socials.image(mint);

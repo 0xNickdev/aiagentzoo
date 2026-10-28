@@ -7,6 +7,7 @@
  * their bag, and once it graduates, how its PumpSwap pool is doing.
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
+import type { OddsInputs } from "./odds.ts";
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
 import { type Unit, unitUsd } from "./price.ts";
 import { isOnCurve } from "./curve.ts";
@@ -1262,6 +1263,51 @@ export class PumpTape {
     }
     t.crew = { at: now, counts: { creatorCrew: crewSet.size, ringWallets: inRing.size, serialSnipers: serialSet.size }, members: { crew: crewSet, ring: inRing, serial: serialSet } };
     return t.crew.counts;
+  }
+
+  /**
+   * What the odds model reads, as the token stood five minutes in (or now, for a younger one): the same numbers the
+   * model was fitted on. Socials and the funder come from outside the tape. pump.fun only: null elsewhere.
+   */
+  oddsInputs(mint: string, outside: { social: boolean; funderExchange: boolean; funderMany: boolean }, now = Date.now()): { inputs: OddsInputs; at: "5min" | "early" } | null {
+    const t = this.tokens.get(mint);
+    if (!t || t.quote || t.venue) return null;
+    const at = Math.min(now, t.createdAt + 5 * 60_000);
+    const supply = supplyOf(t);
+    const prior = (this.byCreator.get(t.creator) ?? []).map((m) => this.tokens.get(m)).filter((o): o is Tracked => !!o && o.mint !== mint && o.createdAt < at);
+    const a5 = t.at5 && t.at5.at !== undefined && t.at5.at - t.createdAt < AT5_LATEST ? t.at5 : null;
+    const young = now - t.createdAt < 5 * 60_000;
+    const live = young ? this.early(t) : null;
+    let b1 = 0;
+    let b5 = 0;
+    for (const b of t.buyers.values()) {
+      if (b.at === undefined) continue;
+      if (b.at <= t.createdAt + 60_000) b1++;
+      if (b.at <= at) b5++;
+    }
+    const crew = young ? this.crewOf(t, now) : null;
+    return {
+      at: young ? "early" : "5min",
+      inputs: {
+        // A younger launch is still trading by definition: it is being checked while trades come in.
+        still5: young || a5 !== null,
+        dumped5: t.dumped && t.dumpedAt !== null && t.dumpedAt <= at,
+        devSold5: t.devFirstSellAt !== undefined && t.devFirstSellAt <= at,
+        priorLaunches: prior.length,
+        priorDumped: prior.filter((o) => o.dumped && o.dumpedAt !== null && o.dumpedAt <= at).length,
+        priorGraduated: prior.filter((o) => o.graduated && o.createdAt < t.createdAt).length,
+        launchShare: [...t.launchBuys.values()].reduce((a, b) => a + b, 0) / supply,
+        devShare: t.devBought / supply,
+        buyers1m: b1,
+        buyers5: b5,
+        insiders: young ? live!.earlyWallets >= 2 && live!.earlyHeld >= 0.25 : !!a5 && a5.earlyWallets >= 2 && a5.earlyHeld >= 0.25,
+        wash: young ? live!.washShare : (a5?.washShare ?? 0),
+        crew2: (young ? crew!.creatorCrew : (a5?.creatorCrew ?? 0)) >= 2,
+        ring3: (young ? crew!.ringWallets : (a5?.ringWallets ?? 0)) >= 3,
+        mayhem: !!t.mayhem,
+        ...outside,
+      },
+    };
   }
 
   /** Every first-second wallet of a token: what it took, what it still holds, how often it snipes and whose launches. */

@@ -1,3 +1,4 @@
+import type { Odds } from "./odds.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
@@ -48,6 +49,11 @@ export interface TokenCheck {
   reasons: string[];
   /** Worth knowing, never a reason to refuse: "too early to tell", "holders not checked". */
   notes: string[];
+  /**
+   * pump.fun launches only: the odds the first five minutes give, fitted on what launches like it went on to do. The
+   * run odds rank launches far better than the verdict does; the verdict says who is behind it.
+   */
+  odds?: Odds | null;
   facts: {
     ageMin: number;
     buyers: number;
