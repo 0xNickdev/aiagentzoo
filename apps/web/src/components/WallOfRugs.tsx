@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t, tChain } from "../i18n";
+import { rememberChain } from "../chain";
 
 const goWallet = (w: string) => { window.history.pushState(null, "", `/xray?wallet=${w}`); window.dispatchEvent(new PopStateEvent("popstate")); };
 
@@ -13,7 +14,15 @@ interface Rugger {
   medianDumpMin: number | null;
   recent: Array<{ mint: string; symbol: string; dumpedAfterMin: number | null }>;
   lastDump: { symbol: string; text: string; tx?: string; at: number; mint: string } | null;
+  chain?: "solana" | "bsc" | "base";
 }
+const CHAINS: Array<{ id: "" | "solana" | "bsc" | "base"; label: string }> = [
+  { id: "", label: "All" },
+  { id: "solana", label: "Solana" },
+  { id: "bsc", label: "BNB Chain" },
+  { id: "base", label: "Base" },
+];
+const CHAIN_SHORT = { solana: "SOL", bsc: "BNB", base: "BASE" } as const;
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -22,25 +31,33 @@ const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 export default function WallOfRugs() {
   const [list, setList] = useState<Rugger[] | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [chain, setChain] = useState<"" | "solana" | "bsc" | "base">("");
 
   useEffect(() => {
     const load = () =>
-      fetch(`${NORTH}/v1/chain/ruggers?limit=25`)
+      fetch(`${NORTH}/v1/chain/ruggers?limit=25${chain ? `&chain=${chain}` : ""}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((b: { ruggers: Rugger[] } | null) => b && setList(b.ruggers))
         .catch(() => {});
     void load();
     const t = window.setInterval(load, 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [chain]);
 
   return (
     <Section className="overflow-x-clip !pt-32 sm:!pt-40" backdrop={{ glowAt: "70% 10%" }}>
       <SectionHead
-        eyebrow={t("Wall of rugs · last 48 hours · read from Solana")}
+        eyebrow={t("Wall of rugs · last 48 hours · Solana, BNB Chain and Base")}
         title={[t("The devs who dump"), t("their own tokens.")]}
-        text={t("Creator wallets ranked by how many of their own pump.fun launches they sold half or more of. Every row links to a real transaction. Check your dev before you buy.")}
+        text={t("Creator wallets ranked by how many of their own launches they sold half or more of, on pump.fun, four.meme, Flap and Clanker. Every row links to a real transaction. Check your dev before you buy.")}
       />
+      <div className="mb-4 flex flex-wrap gap-2">
+        {CHAINS.map((c) => (
+          <button key={c.id || "all"} type="button" onClick={() => (setList(null), setChain(c.id))} className={`rounded-full px-4 py-1.5 text-[13px] transition ${chain === c.id ? "bg-white text-black" : "border border-white/[0.12] text-fg-3 hover:text-white"}`}>
+            {t(c.label)}
+          </button>
+        ))}
+      </div>
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
         <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
@@ -57,14 +74,15 @@ export default function WallOfRugs() {
             key={r.wallet}
             role="link"
             tabIndex={0}
-            onClick={() => goWallet(r.wallet)}
-            onKeyDown={(e) => e.key === "Enter" && goWallet(r.wallet)}
+            onClick={() => (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
+            onKeyDown={(e) => e.key === "Enter" && (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
             title={t("Open this dev's wallet")}
             className="tabular-nums grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-fg underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
+              {r.chain && <span className="shrink-0 rounded-full border border-white/[0.12] px-1.5 text-[10.5px] text-fg-4">{CHAIN_SHORT[r.chain]}</span>}
               <button
                 type="button"
                 onClick={(e) => {

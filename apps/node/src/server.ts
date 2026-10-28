@@ -783,7 +783,16 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         return json(res, 200, lineage.funderStats());
       }
       if (req.method === "GET" && path === "/v1/chain/ruggers") {
-        return json(res, 200, { hours: 48, ruggers: tape.ruggers(clampInt(url.searchParams.get("limit"), 20, 1, 50)) });
+        // Every tape's worst devs in one list, each with its chain; ?chain= keeps one.
+        const limit = clampInt(url.searchParams.get("limit"), 20, 1, 50);
+        const only = url.searchParams.get("chain");
+        const tapes = [[tape, "solana"], [bscTape, "bsc"], [baseTape, "base"]] as const;
+        const ruggers = tapes
+          .filter(([, c]) => !only || only === c)
+          .flatMap(([tp, c]) => tp.ruggers(limit).map((r) => ({ ...r, chain: c })))
+          .sort((a, b) => b.dumped - a.dumped || b.launches48h - a.launches48h)
+          .slice(0, limit);
+        return json(res, 200, { hours: 48, ruggers });
       }
       // The live feed: pump.fun's new, soon and migrated boards with the known scams taken out (avoid never shown).
       if (req.method === "GET" && path === "/v1/chain/feed") {
