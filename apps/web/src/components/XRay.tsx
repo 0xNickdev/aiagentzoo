@@ -1168,6 +1168,7 @@ export default function XRay() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
+          <BackToFeed />
           <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme, Flap and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
@@ -1229,6 +1230,23 @@ function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
  * bundlers, the first-five-seconds wallets and the dev's crew, and what sits in the curve or pool. Red past the line
  * where that share alone can decide the price.
  */
+/** Back to the live feed, when the reader came from it. */
+function BackToFeed() {
+  const [back] = useState(() => {
+    try {
+      return sessionStorage.getItem("zoo-back");
+    } catch {
+      return null;
+    }
+  });
+  if (back !== "/feed") return null;
+  return (
+    <a href="/feed" className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] px-4 py-1.5 text-[13px] text-fg-2 transition hover:text-white">
+      <span aria-hidden>‹</span> {t("Back to the live feed")}
+    </a>
+  );
+}
+
 /** The trade terminals people actually use, each opening this mint straight away. Icons: their own favicons. */
 const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string; copies?: boolean }> => chainOf(mint) === "base" ? [
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/base/token/${mint}` },

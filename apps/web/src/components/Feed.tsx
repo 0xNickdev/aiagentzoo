@@ -65,8 +65,11 @@ const keep = (k: string, v: string) => {
 };
 
 /** The 1-click buy: a Jupiter route for the amount set above the boards, signed by the reader's wallet. */
+/** A wallet step that never answers (a request left open in the wallet) ends here instead of hanging the button. */
+const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> => Promise.race([p, new Promise<T>((_, no) => setTimeout(() => no(new Error("wallet-timeout")), ms))]);
+
 function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (m: string | null) => void }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const go = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -74,25 +77,38 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
     if (!Number.isFinite(sol) || sol <= 0) return onState(t("Set an amount in SOL first."));
     const w = walletProvider();
     if (!w) return onState(t("Install a Solana wallet such as Phantom, Jupiter or Solflare, then try again."));
-    setBusy(true);
+    setBusy(t("Connect…"));
     try {
-      const owner = w.publicKey?.toString() ?? (await w.connect()).publicKey.toString();
+      if (!w.publicKey) onState(t("Approve the connection in your wallet."));
+      const owner = w.publicKey?.toString() ?? (await withTimeout(w.connect(), 60_000)).publicKey.toString();
+      setBusy(t("Routing…"));
       onState(t("Routing {s} SOL into ${sym}…", { s: amount, sym: coin.symbol }));
       const q = await quote(SOL_MINT, coin.mint, BigInt(Math.round(sol * 1e9)), 1500);
-      const r = await swap(q, owner);
+      setBusy(t("Confirm in wallet"));
+      onState(t("Confirm the buy in your wallet."));
+      const r = await withTimeout(swap(q, owner), 90_000);
+      setBusy(t("Sent…"));
       onState(t("Sent. Waiting for the chain…"));
       const state = await landed(r.signature);
       onState(state === "confirmed" ? t("Bought ${sym}.", { sym: coin.symbol }) : state === "failed" ? t("The swap failed on chain. Nothing was bought.") : t("Sent, not confirmed yet. Check your wallet."));
     } catch (error) {
       const msg = (error as Error).message ?? "";
-      onState(/reject|denied|cancel/i.test(msg) ? t("Cancelled in the wallet.") : t("No route right now. Try again in a moment."));
+      onState(
+        msg === "wallet-timeout"
+          ? t("No answer from the wallet. Open it: a request may be waiting there.")
+          : /reject|denied|cancel/i.test(msg)
+            ? t("Cancelled in the wallet.")
+            : /route|COULD_NOT_FIND|no route/i.test(msg)
+              ? t("Jupiter has no route for this coin yet. Try again in a minute.")
+              : t("The buy did not go through: {m}", { m: msg.slice(0, 80) }),
+      );
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
   return (
-    <button type="button" onClick={go} disabled={busy} className="tabular-nums shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">
-      {busy ? "…" : t("Buy {s}", { s: amount })}
+    <button type="button" onClick={go} disabled={busy !== null} className="tabular-nums shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">
+      {busy ?? t("Buy {s}", { s: amount })}
     </button>
   );
 }
@@ -104,6 +120,13 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
     <motion.a
       layout
       href={`/xray?mint=${c.mint}`}
+      onClick={() => {
+        try {
+          sessionStorage.setItem("zoo-back", "/feed");
+        } catch {
+          /* no back link then */
+        }
+      }}
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
