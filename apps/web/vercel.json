@@ -119,6 +119,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/feed",
+      "destination": "/index.html"
+    },
+    {
       "source": "/xray",
       "destination": "/xray.html"
     }
