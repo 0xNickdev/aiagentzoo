@@ -44,6 +44,8 @@ Built and shipped live on mainnet during the hackathon (353 commits since 12 Oct
 - the same reading on BNB Chain (four.meme, Flap) and Base (Clanker)
 - **the finding**: we graded our own verdict against reality. On 34,183 launches, coins flagged "avoid" died 98.4% of the time and coins not flagged died 97.5%: the label named the people behind a coin but ranked nothing. So we froze every launch at minute five, found what the ones that ran had in common, and replaced the 0-100 risk score with calibrated odds. On held-out launches they rank far better than the verdict (AUC 0.89 against 0.59); the top tenth ran seven times as often as the average launch. Method and refit scripts: [`apps/node/scripts/calibrate`](apps/node/scripts/calibrate).
 
+**Demo video** (2:47, a real recording of the live site): [youtu.be/uFbsRP0uxns](https://youtu.be/uFbsRP0uxns) · **Deck**: [Google Slides](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing)
+
 Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days: 535 users, 10,400 X-Rays, 25,000 checks ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
 
 **Team**: John Buz, lead developer ([X](https://x.com/Johnnny_0x), [GitHub](https://github.com/0xNickdev)) · Priince, backend developer ([X](https://x.com/_oxwale)) · 0xSerik, marketing and partnerships.
