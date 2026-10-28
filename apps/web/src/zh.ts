@@ -289,6 +289,8 @@ export const ZH: Record<string, string> = {
   "cabal #{c}": "团伙 #{c}",
   "another dev pays into it": "另一个开发者往里打钱",
   "the wallet of {x}, a KOL on Kolscan": "Kolscan 上 KOL {x} 的钱包",
+  "a wallet that pays another dev": "一个给另一个开发者打钱的钱包",
+  "pays another dev": "给另一个开发者打钱",
   "Fresh launches": "新发币",
   "From the guest enclosures": "来自访客园区",
   "Federate": "联邦互联",

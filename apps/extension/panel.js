@@ -184,10 +184,10 @@ var ZooPanel = (() => {
         if (!x?.trail || !trailBox.isConnected) return;
         const tr = x.trail;
         const parts = [];
-        if (tr.funderBack) parts.push(t("back to the wallet that paid the dev"));
+        if (tr.funderBack) parts.push(t("the wallet that paid the dev"));
         if (tr.devs) parts.push(tr.devs === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n: tr.launches, d: tr.dumped }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: tr.devs, n: tr.launches, d: tr.dumped }));
         if (tr.kols.length) parts.push(t(tr.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: tr.kols.join(", ") }));
-        if (tr.paymasters) parts.push(tr.paymasters === 1 ? t("a wallet that paid {n} other devs", { n: tr.paidDevs }) : t("{k} wallets that pay other devs", { k: tr.paymasters }));
+        if (tr.paymasters) parts.push(tr.paymasters === 1 ? (tr.paidDevs === 1 ? t("a wallet that pays another dev") : t("a wallet that paid {n} other devs", { n: tr.paidDevs })) : t("{k} wallets that pay other devs", { k: tr.paymasters }));
         if (tr.cabals.length) parts.push(tr.cabals.length === 1 ? t("a wallet in cabal #{c}", { c: tr.cabals[0] }) : t("wallets in {n} cabals", { n: tr.cabals.length }));
         trailBox.replaceChildren(
           h("b", {}, t("Where the SOL went: ")),

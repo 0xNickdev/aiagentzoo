@@ -85,7 +85,8 @@ export function TC(text: string): string {
 }
 
 export const BOT_ZH: Record<string, string> = {
-  "back to the wallet that paid the dev": "回到给开发者打钱的钱包",
+  "a wallet that pays another dev": "一个给另一个开发者打钱的钱包",
+  "the wallet that paid the dev": "给开发者打钱的那个钱包",
   "a wallet that launched {n} coins and dumped {d}": "一个发过 {n} 个币、砸了 {d} 个的钱包",
   "{k} wallets that launched {n} coins and dumped {d}": "{k} 个钱包，共发过 {n} 个币、砸了 {d} 个",
   "the wallet of {x}, a KOL on Kolscan": "Kolscan 上 KOL {x} 的钱包",

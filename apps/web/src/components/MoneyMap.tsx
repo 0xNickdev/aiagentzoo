@@ -292,7 +292,7 @@ function about(f: Dest): string {
   if (f.kind === "exchange") return f.via === "deposit" ? t("a deposit address at {x}", { x: f.label ?? t("an exchange") }) : (f.label ?? t("an exchange"));
   if (f.kind === "funder") return t("the wallet that paid the dev");
   if (f.kind === "dev") return t("launched {n}, dumped {d}", { n: f.launches ?? 0, d: f.dumped ?? 0 });
-  if (f.kind === "paymaster") return t("paid {n} other devs", { n: f.devs ?? 0 });
+  if (f.kind === "paymaster") return f.devs === 1 ? t("pays another dev") : t("paid {n} other devs", { n: f.devs ?? 0 });
   if (f.kind === "kol")
     return f.launches ? t("{x} on Kolscan, launched {n}, dumped {d}", { x: f.label ?? "KOL", n: f.launches, d: f.dumped ?? 0 }) : t("{x} on Kolscan", { x: f.label ?? "KOL" });
   if (f.collectsFrom) return f.collectsFrom === 1 ? t("another dev pays into it") : t("{n} other devs pay into it", { n: f.collectsFrom });
@@ -313,10 +313,10 @@ interface Trail {
 
 function trailParts(x: Trail): string[] {
   const parts: string[] = [];
-  if (x.funderBack) parts.push(t("back to the wallet that paid the dev"));
+  if (x.funderBack) parts.push(t("the wallet that paid the dev"));
   if (x.devs) parts.push(x.devs === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n: x.launches, d: x.dumped }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: x.devs, n: x.launches, d: x.dumped }));
   if (x.kols.length) parts.push(t(x.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: x.kols.join(", ") }));
-  if (x.paymasters) parts.push(x.paymasters === 1 ? t("a wallet that paid {n} other devs", { n: x.paidDevs }) : t("{k} wallets that pay other devs", { k: x.paymasters }));
+  if (x.paymasters) parts.push(x.paymasters === 1 ? (x.paidDevs === 1 ? t("a wallet that pays another dev") : t("a wallet that paid {n} other devs", { n: x.paidDevs })) : t("{k} wallets that pay other devs", { k: x.paymasters }));
   if (x.cabals.length) parts.push(x.cabals.length === 1 ? t("a wallet in cabal #{c}", { c: x.cabals[0]! }) : t("wallets in {n} cabals", { n: x.cabals.length }));
   return parts;
 }

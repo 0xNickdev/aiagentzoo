@@ -398,10 +398,10 @@ const TRAIL_SOLD_PCT = 50;
 /** Where the dev's SOL ended up, three hops deep, said as transfers and never as owners. */
 export function trailMessage(symbol: string, t: Trail): string {
   const parts: string[] = [];
-  if (t.funderBack) parts.push(T("back to the wallet that paid the dev"));
+  if (t.funderBack) parts.push(T("the wallet that paid the dev"));
   if (t.devs) parts.push(t.devs === 1 ? T("a wallet that launched {n} coins and dumped {d}", { n: t.launches, d: t.dumped }) : T("{k} wallets that launched {n} coins and dumped {d}", { k: t.devs, n: t.launches, d: t.dumped }));
   if (t.kols.length) parts.push(T(t.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: esc(t.kols.join(", ")) }));
-  if (t.paymasters) parts.push(t.paymasters === 1 ? T("a wallet that paid {n} other devs", { n: t.paidDevs }) : T("{k} wallets that pay other devs", { k: t.paymasters }));
+  if (t.paymasters) parts.push(t.paymasters === 1 ? (t.paidDevs === 1 ? T("a wallet that pays another dev") : T("a wallet that paid {n} other devs", { n: t.paidDevs })) : T("{k} wallets that pay other devs", { k: t.paymasters }));
   if (t.cabals.length) parts.push(t.cabals.length === 1 ? T("a wallet in cabal #{c}", { c: t.cabals[0]! }) : T("wallets in {n} cabals", { n: t.cabals.length }));
   return [
     T("🧭 <b>${s}: where the SOL went</b>", { s: esc(symbol) }),
