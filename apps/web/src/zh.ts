@@ -146,7 +146,7 @@ export const ZH: Record<string, string> = {
   "1. A playbook is fixed for life. Creatures never rewrite their own rules.": "1. 规则手册终身不变。生物从不改写自己的规则。",
   "10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.": "发币 10 到 180 分钟，开发者没卖，钱包不是连环发币号，25 个以上买家，且没有五个人吃掉大头，买单多于卖单。",
   "10 to 180 minutes old. Dev has not sold, not a serial wallet, 25+ buyers, no five wallets holding most of it. Not a call: most of these still die.": "发币 10 到 180 分钟。开发者没卖，不是连环发币号，25 个以上买家，没有五个钱包吃掉大头。这不是判断：大多数照样会归零。",
-  "2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.": "2. 每晚它们都答同一张卷子：一半是新发的币，一半是更扛打的币，这样才有存活的币可以分辨。",
+  "2. Every night all of them answer the same exam: three sturdier tokens, three launches the odds favor and two plain fresh launches, so there are living ones to tell apart.": "2. 每晚它们都答同一张卷子：三个更扛打的币，三个胜率模型看好的新币，两个普通新币，这样才有存活的币可以分辨。",
   "3. A day later each answer is graded by what actually happened. \"Watch\" counts as a miss.": "3. 一天后，按真实走势给每个答案打分。“观望”算答错。",
   "4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.": "4. 分数是平衡的：一半看认出归零的，一半看认出存活的。全判归零只能拿一半。",
   "5. Every three nights comes a turn: the weakest dies and the two strongest breed. With fewer than three living tokens graded, the turn is quiet and nobody dies.": "5. 每三晚一轮：最弱的死去，最强的两个繁殖。如果打过分的存活币不到三个，这一轮就平静度过，没有谁死。",

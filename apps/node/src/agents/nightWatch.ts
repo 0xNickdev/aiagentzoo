@@ -231,7 +231,7 @@ function gatherer(name: string, cfg: NightWatchConfig): AgentDefinition {
       // Fresh chain facts where this node streams pump.fun; otherwise whatever the sentinel attached.
       let chain: Record<string, ChainFacts> = {};
       try {
-        chain = await ctx.use<Record<string, ChainFacts>>("chain.facts", { mints: launches.map((l) => l.mint) });
+        chain = await ctx.use<Record<string, ChainFacts>>("chain.facts", { mints: launches.map((l) => l.mint), social: Object.fromEntries(launches.map((l) => [l.mint, l.hasSocials])) });
       } catch {
         // No stream here, or the tool is unavailable: the launches keep their own snapshot.
       }

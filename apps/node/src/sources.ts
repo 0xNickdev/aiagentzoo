@@ -57,6 +57,15 @@ interface PumpCoin {
 }
 
 /** Newest pump.fun launches, newest first. */
+/** The tape's facts on a launch with the odds the first five minutes give, so every judge can weigh what 34,183 launches taught. */
+function factsWithOdds(mint: string, social: boolean): ChainFacts | null {
+  const facts = tape.facts(mint);
+  if (!facts) return null;
+  const read = tape.oddsInputs(mint, { social, funderExchange: false, funderMany: false });
+  const o = read ? oddsOf(read.inputs, read.at) : null;
+  return { ...facts, odds: o ? { run: o.run, devDumps: o.devDumps, vsAverage: o.vsAverage } : null };
+}
+
 export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
   name: "pump.latest",
   capability: "sources:read",
@@ -71,11 +80,7 @@ export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
         signal,
       );
       return coins.map((c) => {
-        const facts = tape.facts(c.mint);
-        // The odds the first five minutes give, so every judge can weigh what 34,183 launches taught.
-        const read = facts ? tape.oddsInputs(c.mint, { social: Boolean(c.twitter || c.telegram || c.website), funderExchange: false, funderMany: false }) : null;
-        const o = read ? oddsOf(read.inputs, read.at) : null;
-        const chain = facts ? { ...facts, odds: o ? { run: o.run, devDumps: o.devDumps, vsAverage: o.vsAverage } : null } : null;
+        const chain = factsWithOdds(c.mint, Boolean(c.twitter || c.telegram || c.website));
         return chain ? { ...toLaunch(c), chain } : toLaunch(c);
       });
     } catch (error) {
@@ -172,14 +177,14 @@ function toLaunch(c: PumpCoin): Launch {
 }
 
 /** Fresh chain facts for tokens the stream has seen; empty on nodes without a stream. */
-export const chainFacts = defineTool<{ mints: string[] }, Record<string, ChainFacts>>({
+export const chainFacts = defineTool<{ mints: string[]; social?: Record<string, boolean | null> }, Record<string, ChainFacts>>({
   name: "chain.facts",
   capability: "sources:read",
-  description: "On-chain trading picture of fresh pump.fun tokens: buys, sells, creator selling, serial launches",
-  async run({ mints }) {
+  description: "On-chain trading picture of fresh pump.fun tokens: buys, sells, creator selling, serial launches, and the odds",
+  async run({ mints, social = {} }) {
     const out: Record<string, ChainFacts> = {};
     for (const mint of mints.slice(0, 30)) {
-      const f = tape.facts(mint);
+      const f = factsWithOdds(mint, social[mint] ?? false);
       if (f) out[mint] = f;
     }
     return out;

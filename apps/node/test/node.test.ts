@@ -763,16 +763,31 @@ test("the leaderboard ranks only agents with enough graded calls, on balanced ac
   assert.equal(again.rows.find((r) => r.id === "guest:doomer")!.ranked, false);
 });
 
-test("the nursery exam draws half sturdy tokens, and a turn waits for living tokens", async () => {
-  const { drawExam, livingGraded, MIN_LIVING_FOR_TURN, fitness, foundPopulation } = await import("../src/agents/evolution.ts");
-  const tok = (i: number, liq: number, complete = false) => ({ mint: `m${String(i).padStart(3, "0")}`, complete, market: { liquidityUsd: liq } });
-  const pool = [...Array.from({ length: 40 }, (_, i) => tok(i, 2_000)), ...Array.from({ length: 6 }, (_, i) => tok(100 + i, 25_000)), tok(200, 500, true)];
+test("the nursery exam seats sturdy and lively tokens, and a turn waits for living tokens", async () => {
+  const { drawExam, examReady, EXAM_WAIT_MAX, livingGraded, MIN_LIVING_FOR_TURN, fitness, foundPopulation } = await import("../src/agents/evolution.ts");
+  const tok = (i: number, liq: number, complete = false, run = 0.02) => ({ mint: `m${String(i).padStart(3, "0")}`, complete, market: { liquidityUsd: liq }, chain: { odds: { run } } });
+  const sturdy = (t: ReturnType<typeof tok>) => t.complete || t.market.liquidityUsd >= 10_000;
+  const lively = (t: ReturnType<typeof tok>) => !sturdy(t) && t.chain.odds.run >= 0.1;
+  const pool = [
+    ...Array.from({ length: 40 }, (_, i) => tok(i, 2_000)),
+    ...Array.from({ length: 6 }, (_, i) => tok(100 + i, 25_000)),
+    tok(200, 500, true),
+    ...Array.from({ length: 5 }, (_, i) => tok(300 + i, 800, false, 0.3)),
+  ];
   const exam = drawExam(pool, 8, "2026-10-15");
   assert.equal(exam.length, 8);
-  assert.equal(exam.filter((t) => t.complete || t.market.liquidityUsd >= 10_000).length, 4);
+  assert.equal(exam.filter(sturdy).length, 3);
+  assert.equal(exam.filter(lively).length, 3);
   assert.deepEqual(drawExam(pool, 8, "2026-10-15"), exam, "anyone can recompute the draw from the night");
-  // Too few sturdy tokens: the fresh half fills the rest.
+  // No lively launches: their seats go to sturdy tokens first.
+  const plain = pool.filter((t) => !lively(t));
+  assert.equal(drawExam(plain, 8, "n").filter(sturdy).length, 6);
+  // Too few of everything special: fresh launches fill the rest.
   assert.equal(drawExam([...Array.from({ length: 10 }, (_, i) => tok(i, 2_000)), tok(99, 50_000)], 8, "n").length, 8);
+  // The exam waits for its seats, but not past the night's patience.
+  assert.equal(examReady(pool, 8, 40), true);
+  assert.equal(examReady([...Array.from({ length: 40 }, (_, i) => tok(i, 2_000)), tok(99, 50_000), tok(98, 800, false, 0.3)], 8, 40), false);
+  assert.equal(examReady(Array.from({ length: EXAM_WAIT_MAX }, (_, i) => tok(i, 2_000)), 8, 40), true);
 
   // On an exam with living tokens in it, calling everything a rug loses to telling them apart.
   const doomer = fitness({ hits: 8, misses: 4, dead: 8, deadRight: 8, alive: 4, aliveRight: 0 });

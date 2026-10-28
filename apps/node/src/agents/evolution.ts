@@ -299,20 +299,51 @@ export const livingGraded = (pop: Population) => Math.max(0, ...living(pop).map(
 
 /** Liquidity above which a token is counted sturdy for the exam draw. */
 export const STURDY_LIQUIDITY = 10_000;
+/** The odds model's chance of a run above which a fresh launch is counted lively: about four times the average launch. */
+export const LIVELY_ODDS = 0.1;
+/** Seats on each night's exam for sturdy and lively tokens; plain fresh launches take the rest. */
+export const EXAM_SEATS = { sturdy: 3, lively: 3 } as const;
+/** Scorable tokens after which the exam is set even if the sturdy or lively seats cannot all be filled. */
+export const EXAM_WAIT_MAX = 300;
 
-/**
- * Half the exam from fresh launches, half from sturdier tokens (deep liquidity or already graduated), each half a
- * seeded draw anyone can recompute from the night id. Fresh launches almost all die; the sturdy half gives the
- * nursery living tokens to tell apart, so calling everything a rug stops paying. Short halves borrow from the other.
- */
-export function drawExam<T extends { mint: string; complete: boolean; market: { liquidityUsd: number | null } | null }>(scorable: T[], size: number, night: string): T[] {
+type Drawable = { mint: string; complete: boolean; market: { liquidityUsd: number | null } | null; chain?: { odds?: { run: number } | null } | null };
+
+/** Splits the scorable tokens into sturdy (deep liquidity or graduated), lively (high odds of a run) and plain fresh launches. */
+export function examStrata<T extends Drawable>(scorable: T[]): { sturdy: T[]; lively: T[]; fresh: T[] } {
   const sorted = [...scorable].sort((x, y) => x.mint.localeCompare(y.mint));
   const sturdy = sorted.filter((o) => o.complete || (o.market?.liquidityUsd ?? 0) >= STURDY_LIQUIDITY);
-  const fresh = sorted.filter((o) => !sturdy.includes(o));
-  const half = Math.ceil(size / 2);
-  const a = sample(sturdy, Math.max(half, size - fresh.length), `${night}:sturdy`);
-  const b = sample(fresh, size - a.length, `${night}:fresh`);
-  return [...a, ...b].slice(0, size);
+  const lively = sorted.filter((o) => !sturdy.includes(o) && (o.chain?.odds?.run ?? 0) >= LIVELY_ODDS);
+  const fresh = sorted.filter((o) => !sturdy.includes(o) && !lively.includes(o));
+  return { sturdy, lively, fresh };
+}
+
+/** The exam is set once the sturdy and lively seats can be filled between them, or once the night has waited long enough. */
+export const examReady = <T extends Drawable>(scorable: T[], size: number, after: number) => {
+  const { sturdy, lively } = examStrata(scorable);
+  if (scorable.length < Math.max(after, size)) return false;
+  return sturdy.length + lively.length >= EXAM_SEATS.sturdy + EXAM_SEATS.lively || scorable.length >= EXAM_WAIT_MAX;
+};
+
+/**
+ * Three sturdy tokens, three lively launches and the rest plain fresh launches, each a seeded draw anyone can
+ * recompute from the night id. Plain launches almost all die (2 of 57 graded lived); sturdy ones lived 10 of 39, and
+ * the lively seats bring launches the odds model favours, so calling everything a rug stops paying.
+ * A short stratum's seats go to lively, then sturdy, then fresh.
+ */
+export function drawExam<T extends Drawable>(scorable: T[], size: number, night: string): T[] {
+  const strata = examStrata(scorable);
+  const count = {
+    sturdy: Math.min(EXAM_SEATS.sturdy, strata.sturdy.length),
+    lively: Math.min(EXAM_SEATS.lively, strata.lively.length),
+    fresh: Math.min(Math.max(0, size - EXAM_SEATS.sturdy - EXAM_SEATS.lively), strata.fresh.length),
+  };
+  let left = size - count.sturdy - count.lively - count.fresh;
+  for (const k of ["lively", "sturdy", "fresh"] as const) {
+    const add = Math.max(0, Math.min(left, strata[k].length - count[k]));
+    count[k] += add;
+    left -= add;
+  }
+  return (["sturdy", "lively", "fresh"] as const).flatMap((k) => sample(strata[k], count[k], `${night}:${k}`)).slice(0, size);
 }
 /** Plain accuracy of scored verdicts, for display. */
 export const accuracy = (t: Tally) => (t.hits + t.misses ? t.hits / (t.hits + t.misses) : null);
@@ -794,7 +825,7 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         // A fair draw: tokens with a market (so tomorrow can grade them) that are not already dead,
         // picked at random with the night as the seed, not the ones the rules already flag.
         const scorable = obs.filter((o) => o.market && outcomeOf(o) !== "dead" && o.source !== "followup");
-        if (scorable.length >= examAfter) {
+        if (examReady(scorable, EXAM_SIZE, examAfter)) {
           exam = { night, tokens: drawExam(scorable, EXAM_SIZE, night).map(compact) };
           await ctx.state.set(EVO.exam(night), exam);
           await ctx.trace("evo.exam", { night, mints: exam.tokens.map((t) => t.mint) });

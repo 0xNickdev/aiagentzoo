@@ -398,7 +398,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           <p className="text-[12.5px] text-fg-4">{t("The rules of the nursery")}</p>
           <ol className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-fg-3">
             <li>{t("1. A playbook is fixed for life. Creatures never rewrite their own rules.")}</li>
-            <li>{t("2. Every night all of them answer the same exam: half fresh launches, half sturdier tokens, so there are living ones to tell apart.")}</li>
+            <li>{t("2. Every night all of them answer the same exam: three sturdier tokens, three launches the odds favor and two plain fresh launches, so there are living ones to tell apart.")}</li>
             <li>{t("3. A day later each answer is graded by what actually happened. \"Watch\" counts as a miss.")}</li>
             <li>{t("4. The score is balanced: half for calling the dead, half for calling the living. Calling everything dead earns one half.")}</li>
             <li>{t("5. Every three nights comes a turn: the weakest dies and the two strongest breed. With fewer than three living tokens graded, the turn is quiet and nobody dies.")}</li>
