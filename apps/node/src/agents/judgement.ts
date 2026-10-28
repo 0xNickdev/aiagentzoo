@@ -260,12 +260,27 @@ export function ruleCalls(items: Observation[], now: number): Call[] {
 }
 
 /** How to read the on-chain facts, for every judge that sees them. */
+/**
+ * What the zoo's own record of 34,183 pump.fun launches taught (2026-10-28), handed to every judge. Facts, not rules:
+ * each judge still applies its own playbook, but it knows the base rates it plays against.
+ */
+export const FIELD_NOTES = [
+  "Field notes from 34,183 pump.fun launches the zoo graded:",
+  "- About 97% are dead within a day. 'suspicious' is right most nights; the skill is finding the few that live, so call 'promising' when the evidence is there, not never.",
+  "- The strongest sign of life is people: 100+ wallets buying in the first five minutes ran 21% of the time, under 20 wallets almost never.",
+  "- A dev's first launch in two days ran far more often than a dev with 20 before it. creatorLaunches24h above 10 is a factory.",
+  "- A dev who sold half the bag in the first five minutes (creatorSold >= 0.5 early) rarely leaves a coin alive.",
+  "- A launch-block bundle is not a death sign on its own: bundled launches ran more often. It turns bad once the bundle has sold.",
+  "- chain.odds.run is the zoo's calibrated chance this coin climbs past 85 SOL cap; the average launch is 0.027. chain.odds.devDumps is the chance the dev still sells half the bag.",
+  "- Answer 'watch' only when the facts you need are missing. A judge that watches everything starves.",
+].join("\n");
+
 export const CHAIN_NOTE =
   "Some tokens carry `chain`: facts read from Solana itself. creatorSold is the share of the creator's own bought tokens they already sold (0..1), creatorLaunches24h counts the creator's launches today, buys/sells/buyers count trades on the bonding curve, curveSol is the SOL still in it, top5Share is the share of SOL bought in by the five biggest buyers (0..1), repeatBuyers counts buyers who bought again, trades15m counts trades in the first 15 minutes, bundleWallets counts wallets other than the creator that bought in the launch block (a bundle), bundleShare is the share of the whole supply they took (0..1), earlyWallets counts wallets other than the creator that bought in the first 5 seconds (snipers and bundle), earlyHeld is the share of the supply they still hold (0..1), washShare is at least the share of trading volume from wallets selling back what they just bought (0..1), bumps counts a wallet buying and selling in the same transaction (a bump bot), creatorCrew counts first-second wallets that keep sniping this creator's other launches (the creator's own wallets), ringWallets counts first-second wallets that have sniped launches together before (one operator), serialSnipers counts first-second wallets that snipe ten or more launches in two days.";
 
 /** Every field a judge can see on an exam token: rules, and mutations, can only use these. */
 export const EXAM_FIELDS =
-  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.curveCapSol, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare, chain.poolSol, chain.ammBuys, chain.ammSells, chain.ammSolIn, chain.ammSolOut, chain.earlyWallets, chain.earlyHeld, chain.washShare, chain.bumps, chain.creatorCrew, chain.ringWallets, chain.serialSnipers";
+  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.curveCapSol, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare, chain.poolSol, chain.ammBuys, chain.ammSells, chain.ammSolIn, chain.ammSolOut, chain.earlyWallets, chain.earlyHeld, chain.washShare, chain.bumps, chain.creatorCrew, chain.ringWallets, chain.serialSnipers, chain.odds.run, chain.odds.devDumps";
 
 export function judgeSystem(playbook: Playbook): string {
   return [
@@ -276,6 +291,7 @@ export function judgeSystem(playbook: Playbook): string {
     playbook.text,
     "",
     "For every token decide: promising (likely still alive with real liquidity tomorrow), suspicious (likely dead or rugged by tomorrow), or watch (not enough evidence).",
+    FIELD_NOTES,
     CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 140 chars}.',
     "Facts and numbers, no hype, no investment advice.",

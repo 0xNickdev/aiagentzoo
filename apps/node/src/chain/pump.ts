@@ -252,6 +252,8 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
 
 /** What the chain says about a token, as of now. */
 export interface ChainFacts {
+  /** The odds model on this launch (see odds.ts): chance it runs past 85 SOL cap after minute five, chance the dev still dumps. */
+  odds?: { run: number; devDumps: number | null; vsAverage: number } | null;
   /** Minutes since launch. */
   ageMin: number;
   /** Launched in Mayhem Mode: pump.fun's bot trades it for its first 24 hours, so its volume and churn are partly that bot. */

@@ -1,3 +1,4 @@
+import { oddsOf } from "./chain/odds.ts";
 import { defineTool } from "@aiagentzoo/sdk";
 import { type ChainFacts, type CleanLaunch, tape } from "./chain/pump.ts";
 
@@ -70,7 +71,11 @@ export const pumpLatest = defineTool<{ limit?: number }, Launch[]>({
         signal,
       );
       return coins.map((c) => {
-        const chain = tape.facts(c.mint);
+        const facts = tape.facts(c.mint);
+        // The odds the first five minutes give, so every judge can weigh what 34,183 launches taught.
+        const read = facts ? tape.oddsInputs(c.mint, { social: Boolean(c.twitter || c.telegram || c.website), funderExchange: false, funderMany: false }) : null;
+        const o = read ? oddsOf(read.inputs, read.at) : null;
+        const chain = facts ? { ...facts, odds: o ? { run: o.run, devDumps: o.devDumps, vsAverage: o.vsAverage } : null } : null;
         return chain ? { ...toLaunch(c), chain } : toLaunch(c);
       });
     } catch (error) {

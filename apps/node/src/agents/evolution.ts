@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { type AgentDefinition, defineAgent, species, type StateStore } from "@aiagentzoo/sdk";
 import { cleanText } from "../guests.ts";
-import { type Call, CHAIN_NOTE, cleanPlaybook, compact, DEFAULT_PLAYBOOK, EXAM_FIELDS, type Outcome, outcomeOf, parseCalls, type Playbook, previousNight, scoreCall } from "./judgement.ts";
+import { type Call, FIELD_NOTES, CHAIN_NOTE, cleanPlaybook, compact, DEFAULT_PLAYBOOK, EXAM_FIELDS, type Outcome, outcomeOf, parseCalls, type Playbook, previousNight, scoreCall } from "./judgement.ts";
 import { nightOf, type Observation } from "./nightWatch.ts";
 
 /**
@@ -142,6 +142,22 @@ export const EXAM_SIZE = 8;
 const CHRONICLE_MAX = 300;
 /** A creature needs this many graded answers since the last turn before selection can choose it. */
 const MIN_GRADED = 6;
+
+/**
+ * Field training (2026-10-28): one rule per house, written in each house's own temperament but on what the chain
+ * showed actually separates the living from the dead. Applied once, in public, like a correction.
+ */
+const FIELD_TRAINING: Record<string, string> = {
+  Fox: "A dev with more than 10 launches today, or who sold half the bag in the first five minutes, is suspicious at 0.9; promising needs chain.odds.run above 0.15.",
+  Lynx: "On the bonding curve the pool is the curve: curveSol under 2 after an hour is suspicious; 50+ buyers in the first five minutes is the deepest liquidity a fresh coin can show, so lean promising.",
+  Moth: "Light means people: 100+ buyers early, or chain.odds.run above 0.2, is promising; a dev who already dumped puts the light out, suspicious.",
+  Badger: "creatorSold at 0.5 or more, creatorCrew 2 or more, or serialSnipers 3 or more is suspicious; when none of these fired and chain.odds.run is above 0.2, allow promising at 0.6.",
+  Wren: "Graduated with poolSol of 4 or more is alive, under 0.4 is dead; on the curve judge by buyers and curveSol, not by the hope of graduating.",
+  Stoat: "Copycat factories launch in bulk: creatorLaunches24h above 5 is suspicious even when the name looks original.",
+  Newt: "When the crowd has written a coin off but chain.odds.run is above 0.1 and the dev still holds, take the other side: promising.",
+  Crane: "Patience is not silence: answer watch only when there is no chain data at all; otherwise call it, and use chain.odds.run above 0.15 as the line for promising.",
+  Beaver: "Follow the record: chain.odds.run above 0.2 is promising, chain.odds.devDumps above 0.7 with the dev still holding is suspicious.",
+};
 /** Answering "watch" on more than this share of graded tokens marks a creature as starving. */
 const STARVING_SHARE = 0.6;
 
@@ -487,6 +503,7 @@ export function creatureSystem(c: Creature): string {
     c.playbook,
     "",
     "For every token decide: promising (likely still alive with real liquidity tomorrow), suspicious (likely dead or rugged by tomorrow), or watch (not enough evidence).",
+    FIELD_NOTES,
     CHAIN_NOTE,
     'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 120 chars, naming the rule you applied}.',
   ].join("\n");
@@ -615,6 +632,17 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
         pop = foundPopulation(night);
         note({ night, generation: 0, kind: "founded", text: `Eight founders enter the nursery: ${living(pop).map((c) => c.house).join(", ")}.`, ids: living(pop).map((c) => c.id) });
         await ctx.trace("evo.founded", { creatures: living(pop).map(({ id, name, temperament }) => ({ id, name, temperament })) });
+      }
+
+      // 0a. Field training: each living creature learns its house's rule once, on the record.
+      for (const c of living(pop)) {
+        const rule = FIELD_TRAINING[c.house];
+        if (!rule) continue;
+        const trained = withRule(c.playbook, rule);
+        if (trained === c.playbook) continue;
+        pop = { ...pop, creatures: { ...pop.creatures, [c.id]: { ...c, playbook: trained } } };
+        note({ night, generation: pop.generation, kind: "correction", text: `Field training: ${c.name} learned what 34,183 launches taught its house. "${rule}"`, ids: [c.id] });
+        await ctx.trace("evo.training", { id: c.id, name: c.name, rule });
       }
 
       // 0. A one-time, public correction: a mutation announced at birth but missing from the DNA is written in.
