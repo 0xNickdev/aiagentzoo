@@ -284,7 +284,7 @@ export const ZH: Record<string, string> = {
   "{k} wallets that pay other devs": "{k} 个给其他开发者打钱的钱包",
   "a wallet in cabal #{c}": "团伙 #{c} 里的一个钱包",
   "wallets in {n} cabals": "属于 {n} 个团伙的钱包",
-  "The trail leads to": "资金最终流向",
+  "The dev's SOL leads to": "开发者的 SOL 最终流向",
   "Transfers we can see on chain: who received the SOL, not who owns the wallets.": "这是链上可见的转账：谁收到了 SOL，不代表谁拥有这些钱包。",
   "cabal #{c}": "团伙 #{c}",
   "another dev pays into it": "另一个开发者往里打钱",

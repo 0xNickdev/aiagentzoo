@@ -63,7 +63,7 @@ var ZH = {
   "a wallet in cabal #{c}": "团伙 #{c} 里的一个钱包",
   "wallets in {n} cabals": "属于 {n} 个团伙的钱包",
   "Where the SOL went: ": "SOL 去了哪里：",
-  "{x} SOL out, the trail leads to {p}.": "转出 {x} SOL，最终流向：{p}。",
+  "the dev's SOL leads to {p}.": "开发者的 SOL 最终流向：{p}。",
   "Transfers, not owners.": "只是转账，不代表钱包归属。",
   // verdicts
   AVOID: "避开",

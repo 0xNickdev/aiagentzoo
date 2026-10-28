@@ -274,6 +274,7 @@ interface OutflowReport {
   wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean }>;
   flows: Flow[] | null;
   totalSol: number;
+  trail?: Trail | null;
 }
 
 /** Where each kind of destination sits, the worst first, and how it reads. */
@@ -298,27 +299,25 @@ function about(f: Dest): string {
   return t("no record with us");
 }
 
-/** Below this much SOL out, a trail is mostly a serial dev's float: the summary stays quiet. */
-const TRAIL_MIN_SOL = 5;
+/** Where the dev's own SOL ended up, from the node's summary: the wallets the zoo knows, said as transfers, never as owners. */
+interface Trail {
+  funderBack: boolean;
+  devs: number;
+  launches: number;
+  dumped: number;
+  kols: string[];
+  paymasters: number;
+  paidDevs: number;
+  cabals: number[];
+}
 
-/** Where the trail leads, a hop further included: the wallets the zoo already knows, said as transfers, never as owners. */
-function trail(flows: Flow[]): string[] {
-  const all = flows.filter((f) => f.kind !== "operation").flatMap((f) => [f, f.then, f.then?.then].filter((d): d is Dest => !!d));
-  const uniq = (kind: Kind) => [...new Map(all.filter((d) => d.kind === kind).map((d) => [d.to, d])).values()];
+function trailParts(x: Trail): string[] {
   const parts: string[] = [];
-  if (uniq("funder").length) parts.push(t("back to the wallet that paid the dev"));
-  const devs = uniq("dev");
-  if (devs.length) {
-    const n = devs.reduce((a, d) => a + (d.launches ?? 0), 0);
-    const d = devs.reduce((a, x) => a + (x.dumped ?? 0), 0);
-    parts.push(devs.length === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n, d }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: devs.length, n, d }));
-  }
-  const kols = uniq("kol");
-  if (kols.length) parts.push(t(kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: kols.map((k) => k.label ?? short(k.to)).join(", ") }));
-  const pay = uniq("paymaster");
-  if (pay.length) parts.push(pay.length === 1 ? t("a wallet that paid {n} other devs", { n: pay[0]!.devs ?? 0 }) : t("{k} wallets that pay other devs", { k: pay.length }));
-  const cabals = new Set(all.map((d) => d.cabal).filter((c): c is number => c != null));
-  if (cabals.size) parts.push(cabals.size === 1 ? t("a wallet in cabal #{c}", { c: [...cabals][0]! }) : t("wallets in {n} cabals", { n: cabals.size }));
+  if (x.funderBack) parts.push(t("back to the wallet that paid the dev"));
+  if (x.devs) parts.push(x.devs === 1 ? t("a wallet that launched {n} coins and dumped {d}", { n: x.launches, d: x.dumped }) : t("{k} wallets that launched {n} coins and dumped {d}", { k: x.devs, n: x.launches, d: x.dumped }));
+  if (x.kols.length) parts.push(t(x.kols.length === 1 ? "the wallet of {x}, a KOL on Kolscan" : "KOL wallets on Kolscan: {x}", { x: x.kols.join(", ") }));
+  if (x.paymasters) parts.push(x.paymasters === 1 ? t("a wallet that paid {n} other devs", { n: x.paidDevs }) : t("{k} wallets that pay other devs", { k: x.paymasters }));
+  if (x.cabals.length) parts.push(x.cabals.length === 1 ? t("a wallet in cabal #{c}", { c: x.cabals[0]! }) : t("wallets in {n} cabals", { n: x.cabals.length }));
   return parts;
 }
 
@@ -389,14 +388,14 @@ function Outflows({ r }: { r: XRayReport }) {
         : t("{n} wallets", { n: g.flows.length });
   const top = flows.filter((f) => f.kind !== "operation").slice(0, 8);
 
-  const leads = total >= TRAIL_MIN_SOL ? trail(flows) : [];
+  const leads = rep.trail ? trailParts(rep.trail) : [];
 
   return box(
     <>
       {leads.length > 0 && (
         <div className="mb-6 rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: RED }}>
           <p className="text-[15px] leading-relaxed text-white">
-            {t("The trail leads to")} {leads.join("; ")}.
+            {t("The dev's SOL leads to")} {leads.join("; ")}.
           </p>
           <p className="mt-1 text-[12.5px] text-fg-4">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
         </div>

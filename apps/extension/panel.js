@@ -191,7 +191,7 @@ var ZooPanel = (() => {
         if (tr.cabals.length) parts.push(tr.cabals.length === 1 ? t("a wallet in cabal #{c}", { c: tr.cabals[0] }) : t("wallets in {n} cabals", { n: tr.cabals.length }));
         trailBox.replaceChildren(
           h("b", {}, t("Where the SOL went: ")),
-          t("{x} SOL out, the trail leads to {p}.", { x: x.totalSol >= 100 ? Math.round(x.totalSol) : x.totalSol.toFixed(1), p: parts.join("; ") }),
+          t("the dev's SOL leads to {p}.", { p: parts.join("; ") }),
           h("span", { class: "trail-n" }, t("Transfers, not owners.")),
         );
         trailBox.hidden = false;

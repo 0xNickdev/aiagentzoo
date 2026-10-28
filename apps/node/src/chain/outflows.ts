@@ -70,10 +70,14 @@ export interface Trail {
   cabals: number[];
 }
 
-export function trailOf(flows: Outflow[], totalSol: number): Trail | null {
-  if (totalSol < TRAIL_MIN_SOL) return null;
+/** Roles whose money is the dev's: snipers' and bundlers' transfers are their own money, not the launch's trail. */
+export const TRAIL_ROLES = new Set(["dev", "crew"]);
+
+export function trailOf(flows: Outflow[], totalSol: number, own: ReadonlySet<string>): Trail | null {
+  const mine = flows.filter((f) => f.kind !== "operation" && f.from.some((w) => own.has(w)));
+  if (mine.reduce((n, f) => n + f.sol, 0) < TRAIL_MIN_SOL) return null;
   type Reached = Destination & { to: string };
-  const all: Reached[] = flows.filter((f) => f.kind !== "operation").flatMap((f) => [f, f.then, f.then?.then].filter((d) => !!d) as Reached[]);
+  const all: Reached[] = mine.flatMap((f) => [f, f.then, f.then?.then].filter((d) => !!d) as Reached[]);
   const uniq = (kind: OutflowKind) => [...new Map(all.filter((d) => d.kind === kind).map((d) => [d.to, d])).values()];
   const devs = uniq("dev");
   const pay = uniq("paymaster");
@@ -302,7 +306,7 @@ async function trace(
     trail: null,
     tracedAt: now,
   };
-  report.trail = trailOf(report.flows, report.totalSol);
+  report.trail = trailOf(report.flows, report.totalSol, new Set(wallets.filter((w) => TRAIL_ROLES.has(w.role)).map((w) => w.wallet)));
   // The dev's own history unread is a failed trace, not an empty one: the next asker tries again.
   if (sent[0]?.read) cache.set(mint, { at: now, report });
   if (cache.size > 2_000) for (const [k, v] of cache) if (now - v.at > cacheMs(v.report)) cache.delete(k);

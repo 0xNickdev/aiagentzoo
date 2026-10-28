@@ -396,7 +396,7 @@ export function xrayMessage(x: XRayReply): string {
 const TRAIL_SOLD_PCT = 50;
 
 /** Where the dev's SOL ended up, three hops deep, said as transfers and never as owners. */
-export function trailMessage(symbol: string, total: number, t: Trail): string {
+export function trailMessage(symbol: string, t: Trail): string {
   const parts: string[] = [];
   if (t.funderBack) parts.push(T("back to the wallet that paid the dev"));
   if (t.devs) parts.push(t.devs === 1 ? T("a wallet that launched {n} coins and dumped {d}", { n: t.launches, d: t.dumped }) : T("{k} wallets that launched {n} coins and dumped {d}", { k: t.devs, n: t.launches, d: t.dumped }));
@@ -405,7 +405,7 @@ export function trailMessage(symbol: string, total: number, t: Trail): string {
   if (t.cabals.length) parts.push(t.cabals.length === 1 ? T("a wallet in cabal #{c}", { c: t.cabals[0]! }) : T("wallets in {n} cabals", { n: t.cabals.length }));
   return [
     T("🧭 <b>${s}: where the SOL went</b>", { s: esc(symbol) }),
-    T("{x} SOL left the dev and its selling wallets in the day after launch. The trail leads to {p}.", { x: total >= 100 ? Math.round(total) : total.toFixed(1), p: parts.join("; ") }),
+    T("In the day after launch, the dev's SOL leads to {p}.", { p: parts.join("; ") }),
     "",
     `<i>${T("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</i>`,
   ].join("\n");
@@ -564,8 +564,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
   const followTrail = async (chat: number, mint: string, symbol: string) => {
     try {
       const r = await f(`${opts.northUrl}/v1/chain/outflows/${mint}`, { signal: AbortSignal.timeout(45_000) });
-      const rep = r.ok ? ((await r.json()) as { totalSol?: number; trail?: Trail | null }) : null;
-      if (rep?.trail) await send(chat, trailMessage(symbol, rep.totalSol ?? 0, rep.trail), [[{ text: T("Open the money map"), url: `${SITE}/xray?mint=${mint}` }]]);
+      const rep = r.ok ? ((await r.json()) as { trail?: Trail | null }) : null;
+      if (rep?.trail) await send(chat, trailMessage(symbol, rep.trail), [[{ text: T("Open the money map"), url: `${SITE}/xray?mint=${mint}` }]]);
     } catch {
       // No trail is not worth a message.
     }

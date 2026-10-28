@@ -95,7 +95,7 @@ export const BOT_ZH: Record<string, string> = {
   "a wallet in cabal #{c}": "团伙 #{c} 里的一个钱包",
   "wallets in {n} cabals": "属于 {n} 个团伙的钱包",
   "🧭 <b>${s}: where the SOL went</b>": "🧭 <b>${s}：SOL 去了哪里</b>",
-  "{x} SOL left the dev and its selling wallets in the day after launch. The trail leads to {p}.": "发币后一天内，{x} SOL 离开了开发者和卖出的钱包。资金最终流向：{p}。",
+  "In the day after launch, the dev's SOL leads to {p}.": "发币后一天内，开发者的 SOL 最终流向：{p}。",
   "Transfers we can see on chain: who received the SOL, not who owns the wallets.": "这是链上可见的转账：谁收到了 SOL，不代表谁拥有这些钱包。",
   "Open the money map": "打开资金地图",
   "Stop radar pings": "关闭雷达提醒",
