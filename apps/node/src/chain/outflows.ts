@@ -74,15 +74,36 @@ interface EnhancedTx {
  */
 async function pageOf(address: string, from: number, to: number, after: string | undefined, f: typeof fetch): Promise<{ txs: EnhancedTx[]; next?: string } | null> {
   const u = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${KEY}&limit=100&type=TRANSFER&sort-order=asc&gte-time=${Math.floor(from / 1000)}&lte-time=${Math.ceil(to / 1000)}${after ? `&after-signature=${after}` : ""}`;
-  try {
-    const r = await f(u, { signal: AbortSignal.timeout(6_000) });
-    const body = (await r.json()) as EnhancedTx[] | { error?: string };
-    if (!Array.isArray(body)) return null;
-    return { txs: body, ...(body.length >= 100 ? { next: body[body.length - 1]?.signature } : {}) };
-  } catch {
-    return null;
+  // Helius allows a few enhanced calls a second: wait for a slot, and back off when it says too many.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await slot();
+    try {
+      const r = await f(u, { signal: AbortSignal.timeout(6_000) });
+      if (r.status === 429) {
+        await new Promise((ok) => setTimeout(ok, 600 * (attempt + 1)));
+        continue;
+      }
+      const body = (await r.json()) as EnhancedTx[] | { error?: string };
+      if (!Array.isArray(body)) return null;
+      return { txs: body, ...(body.length >= 100 ? { next: body[body.length - 1]?.signature } : {}) };
+    } catch {
+      return null;
+    } finally {
+      release();
+    }
   }
+  return null;
 }
+
+/** At most a few enhanced calls in flight at once, across every trace. */
+const MAX_IN_FLIGHT = 3;
+let inFlight = 0;
+const waiting: Array<() => void> = [];
+const slot = () => (inFlight < MAX_IN_FLIGHT ? (inFlight++, Promise.resolve()) : new Promise<void>((ok) => waiting.push(() => (inFlight++, ok()))));
+const release = () => {
+  inFlight--;
+  waiting.shift()?.();
+};
 
 /** SOL that left `wallet` by plain transfer between `from` and `to` (ms), summed per destination. */
 async function sentBy(wallet: string, from: number, to: number, maxPages: number, f: typeof fetch) {
@@ -214,7 +235,8 @@ async function trace(
     totalSol: round(flows.filter((o) => o.kind !== "operation").reduce((n, o) => n + o.sol, 0)),
     tracedAt: now,
   };
-  cache.set(mint, { at: now, report });
+  // The dev's own history unread is a failed trace, not an empty one: the next asker tries again.
+  if (sent[0]?.reached || report.flows.length) cache.set(mint, { at: now, report });
   if (cache.size > 2_000) for (const [k, v] of cache) if (now - v.at > cacheMs(v.report)) cache.delete(k);
   return report;
 }
