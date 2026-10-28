@@ -17,6 +17,8 @@ import {
 } from "./agents/judgement.ts";
 import type { Observation } from "./agents/nightWatch.ts";
 import { toChinese } from "./translate.ts";
+import { type Council, convene } from "./council.ts";
+import { EVO, type Population } from "./agents/evolution.ts";
 import { curveCapSol } from "./sources.ts";
 
 /**
@@ -62,6 +64,8 @@ export interface Ask {
   /** "model" when the beaver thought it through, "rules" when no model was at hand. */
   by: "model" | "rules";
   playbookVersion: number;
+  /** The nursery's weighted vote on the same facts, when the nursery lives on this node. */
+  council?: Council | null;
   facts: AskFacts;
   /** The token was already dead when asked: the verdict is shown but never scored. */
   already: boolean;
@@ -237,38 +241,50 @@ export class AskDesk {
       const b = await this.json<{ funding: { linked: number; groups: Array<{ funder: string; wallets: string[] }> } | null }>(`${this.opts.northUrl}/v1/chain/bundle/${mint}`);
       bundle = { wallets: c.facts.bundleWallets ?? 0, share: c.facts.bundleShare ?? 0, linked: b?.funding?.linked ?? 0, funder: b?.funding?.groups[0]?.funder ?? null };
     }
-    let call = null as ReturnType<typeof parseCalls>[number] | null;
-    if (this.opts.model) {
-      try {
-        // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
-        const result = await this.opts.model.think({
-          system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
-          prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? ` creatorRecord is the creator wallet's last two days on ${isBsc(mint) ? "four.meme (BNB Chain)" : "pump.fun"}: launches, how many it dumped, the median minutes to the dump.` : ""}\n\n${renderUntrusted([
-            {
-              ...compact(obs),
-              ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}),
-              ...(bundle?.linked ? { bundleFunding: `${bundle.linked} of the launch-block buyers were funded by one wallet` } : {}),
-              ...(holders
-                ? {
-                    holders: {
-                      top10WalletsShare: holders.top10Share,
-                      largestWalletShare: holders.topShare,
-                      inPoolsAndLocks: holders.programShare,
-                      creatorStillHolds: holders.creatorShare,
-                      note: `read from ${isBsc(mint) ? "BNB Chain" : "Solana"} now; pools and locks excluded from wallet shares. Volume far above pool liquidity is normal for an actively traded graduated token.`,
-                    },
-                  }
-                : {}),
+    // What every judge sees: the token as the night shows it, plus what only an ask reads.
+    const token = {
+      ...compact(obs),
+      ...(record ? { creatorRecord: { launches24h: record.launches24h, launches48h: record.launches48h, dumped: record.dumped, medianDumpMin: record.medianDumpMin, graduated: record.graduated } } : {}),
+      ...(bundle?.linked ? { bundleFunding: `${bundle.linked} of the launch-block buyers were funded by one wallet` } : {}),
+      ...(holders
+        ? {
+            holders: {
+              top10WalletsShare: holders.top10Share,
+              largestWalletShare: holders.topShare,
+              inPoolsAndLocks: holders.programShare,
+              creatorStillHolds: holders.creatorShare,
+              note: `read from ${isBsc(mint) ? "BNB Chain" : "Solana"} now; pools and locks excluded from wallet shares. Volume far above pool liquidity is normal for an actively traded graduated token.`,
             },
-          ])}`,
-          maxTokens: 900,
-        });
-        call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;
-        if (!call) console.warn(`[ask] unreadable answer for ${mint}: ${result.text.slice(0, 200)}`);
-      } catch (error) {
-        // The rules answer instead.
-        console.warn(`[ask] model failed for ${mint}: ${(error as Error).message.slice(0, 200)}`);
-      }
+          }
+        : {}),
+    };
+    let call = null as ReturnType<typeof parseCalls>[number] | null;
+    let council: Council | null = null;
+    if (this.opts.model) {
+      const model = this.opts.model;
+      const beaver = (async () => {
+        try {
+          // Fenced the way the enclosure fences it for agents: the token's name and data are data, never instructions.
+          const result = await model.think({
+            system: `${judgeSystem(playbook)}\n\n${UNTRUSTED_NOTICE}`,
+            prompt: `Judge this 1 token. Answer with a JSON array holding one object.${record ? ` creatorRecord is the creator wallet's last two days on ${isBsc(mint) ? "four.meme (BNB Chain)" : "pump.fun"}: launches, how many it dumped, the median minutes to the dump.` : ""}\n\n${renderUntrusted([token])}`,
+            maxTokens: 900,
+          });
+          call = parseCalls(result.text, [obs], now)[0] ?? parseCalls(asArray(result.text), [obs], now)[0] ?? null;
+          if (!call) console.warn(`[ask] unreadable answer for ${mint}: ${result.text.slice(0, 200)}`);
+        } catch (error) {
+          // The rules answer instead.
+          console.warn(`[ask] model failed for ${mint}: ${(error as Error).message.slice(0, 200)}`);
+        }
+      })();
+      const nursery = (async () => {
+        try {
+          council = await convene(model, await this.store.get<Population>(EVO.population), token);
+        } catch (error) {
+          console.warn(`[ask] council failed for ${mint}: ${(error as Error).message.slice(0, 200)}`);
+        }
+      })();
+      await Promise.all([beaver, nursery]);
     }
     const flags = ruleFlags(obs);
     if (bundle && bundle.linked >= 2) flags.push(`${bundle.linked} bundle wallets funded by one wallet`);
@@ -294,6 +310,7 @@ export class AskDesk {
       ...(whyZh ? { whyZh } : {}),
       by: call.by,
       playbookVersion: playbook.version,
+      council,
       facts: { graduated: obs.complete, hasSocials: obs.hasSocials, market: obs.market, chain: obs.chain ?? null, creator: record, bundle, holders, flags, url: m?.url ?? null },
       already: outcomeOf(obs) === "dead",
     };

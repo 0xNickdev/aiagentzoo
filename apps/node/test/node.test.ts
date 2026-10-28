@@ -2043,3 +2043,26 @@ test("funderStats counts where traced creators got their first SOL, from the ind
   assert.equal(st.exchanges[0]?.name, "Binance");
   assert.equal(st.exchanges[0]?.devs, 2);
 });
+
+test("the nursery council weighs each vote by the judge's record", async () => {
+  const { parseVotes, tally, weightOf } = await import("../src/council.ts");
+  const { foundPopulation, living } = await import("../src/agents/evolution.ts");
+  const pop = foundPopulation("2026-10-10");
+  const [a, b, c] = living(pop);
+  // a has been right on both the dead and the living; b called everything a rug; c has no record yet.
+  a!.lifetime = { hits: 18, misses: 2, dead: 12, deadRight: 11, alive: 8, aliveRight: 6 };
+  b!.lifetime = { hits: 12, misses: 8, dead: 12, deadRight: 12, alive: 8, aliveRight: 0 };
+  assert.ok(weightOf(a!) > 0.2);
+  assert.ok(weightOf(b!) < 0.05);
+  assert.equal(weightOf(c!), 0);
+  const votes = parseVotes(
+    `Here: [{"id":"${a!.id}","verdict":"promising","why":"100 buyers"},{"id":"${b!.id}","verdict":"suspicious","why":"no socials"},{"id":"${c!.id}","verdict":"suspicious","why":"x"},{"id":"nobody","verdict":"promising"},{"id":"${a!.id}","verdict":"suspicious"}]`,
+    [a!, b!, c!],
+  );
+  assert.equal(votes.length, 3, "unknown judges and second answers are dropped");
+  assert.equal(tally(votes).verdict, "promising", "two loud votes without a record lose to one judge who has been right");
+  // Nobody has a record: every vote counts the same, and two of three is a call.
+  assert.equal(tally(votes.map((v) => ({ ...v, weight: 0 }))).verdict, "suspicious");
+  assert.equal(tally([votes[0]!, votes[1]!].map((v) => ({ ...v, weight: 0 }))).verdict, "watch");
+  assert.equal(parseVotes("no json", [a!]).length, 0);
+});

@@ -47,6 +47,13 @@ interface CleanLaunch {
   creatorSold: number | null;
 }
 
+/** The nursery's vote on the same facts: each judge by its own DNA, weighed by its graded record. */
+interface Council {
+  verdict: Verdict;
+  lean: number;
+  votes: Array<{ id: string; name: string; house: string; verdict: Verdict; why: string; weight: number }>;
+}
+
 interface Ask {
   id: string;
   mint: string;
@@ -59,6 +66,7 @@ interface Ask {
   whyZh?: string;
   by: "model" | "rules";
   playbookVersion: number;
+  council?: Council | null;
   already: boolean;
   facts: {
     graduated: boolean;
@@ -539,6 +547,7 @@ function Answer({ a }: { a: Ask }) {
               <CreatorBlock r={a.facts.creator} />
             </div>
           )}
+          {a.council && <CouncilBlock c={a.council} outcome={a.graded?.outcome ?? null} />}
           {!a.facts.chain && (
             <p className="mt-3 text-[12px] font-normal text-fg-4">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
           )}
@@ -579,6 +588,45 @@ function Answer({ a }: { a: Ask }) {
         </div>
       </div>
     </motion.section>
+  );
+}
+
+/** The nursery's judges on the same token, heaviest record first; once graded, each vote shows if it was right. */
+function CouncilBlock({ c, outcome }: { c: Council; outcome: "dead" | "alive" | "unknown" | null }) {
+  const tone = TONE[c.verdict];
+  const max = Math.max(...c.votes.map((v) => v.weight), 0);
+  const right = (v: Verdict) => (outcome === "dead" ? v === "suspicious" : outcome === "alive" ? v === "promising" : null);
+  return (
+    <div className="mt-6 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[15px] text-fg">
+          {t("The nursery votes:")} <span className={tone.text}>{t(tone.label)}</span>
+        </p>
+        <a href="/evolution" className="tabular-nums text-[12px] text-fg-4 underline decoration-white/20 underline-offset-4 hover:text-white">
+          {t("{n} judges, weighted by their record", { n: c.votes.length })}
+        </a>
+      </div>
+      <ul className="mt-4 divide-y divide-white/[0.06]">
+        {c.votes.map((v) => {
+          const hit = right(v.verdict);
+          return (
+            <li key={v.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 py-2.5">
+              <a href={`/evolution#${v.id}`} className="min-w-0 truncate text-[13.5px] text-fg-2 hover:text-white">
+                {v.name}
+              </a>
+              <span className={`tabular-nums text-right text-[12.5px] ${TONE[v.verdict].text}`}>
+                {hit === true ? "✓ " : hit === false ? "✗ " : ""}
+                {t(TONE[v.verdict].label)}
+              </span>
+              <p className="min-w-0 text-[12.5px] font-normal leading-snug text-fg-4">{v.why}</p>
+              <span className="tabular-nums self-start pt-0.5 text-right text-[11.5px] text-fg-4" title={t("Balanced accuracy above a coin flip")}>
+                {max > 0 ? (v.weight > 0 ? t("weight {w}", { w: Math.round((v.weight / max) * 100) }) : t("no weight yet")) : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
