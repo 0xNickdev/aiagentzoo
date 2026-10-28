@@ -207,7 +207,7 @@ export default function Stats() {
             </div>
           ))}
           <p className="mt-4 text-[12.5px] leading-relaxed text-fg-3">
-            {t("Read it honestly: on pump.fun almost every launch dies within two days, flagged or not. The check does not find the survivors. What it does is name the dev who dumps, the snipers and who paid for them, so you know who is on the other side before you buy.")}
+            {t("Read it honestly: on pump.fun almost every launch dies within two days, flagged or not. The verdict does not find the survivors: it names the dev who dumps, the snipers and who paid for them. The odds are what rank them: the launches they put in the top tenth climbed past 85 SOL seven times as often as the average one.")}
           </p>
         </Reveal>
 

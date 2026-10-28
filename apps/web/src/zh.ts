@@ -1,5 +1,10 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "Who is behind it?": "谁在背后？",
+  "Where did the money go?": "钱去了哪里？",
+  "Paste any token from Solana, BNB Chain or Base: the dev and their other launches, the wallets that sniped the first seconds, who paid for them, and where the SOL went after the dump. With the odds the first five minutes give. Free, read straight from the chain.": "粘贴 Solana、BNB Chain 或 Base 上的任意代币：开发者和他的其他币、前几秒狙击的钱包、谁给他们打的钱，以及砸盘后 SOL 去了哪里。再加上前五分钟给出的概率。免费，直接读自链上。",
+  "Who, and where the money went.": "是谁，钱又去了哪里。",
+  "Read it honestly: on pump.fun almost every launch dies within two days, flagged or not. The verdict does not find the survivors: it names the dev who dumps, the snipers and who paid for them. The odds are what rank them: the launches they put in the top tenth climbed past 85 SOL seven times as often as the average one.": "老实说：pump.fun 上几乎每个币两天内都会死，不管有没有被标记。判断找不到幸存者：它点名会砸盘的开发者、狙击手和给他们打钱的人。给它们排序的是概率：概率排在前十分之一的币，市值涨过 85 SOL 的次数是普通币的七倍。",
   "ran to {s} SOL cap": "涨到了 {s} SOL 市值",
   "has not run in {h}": "{h} 内没有上涨",
   "Climbed past 85 SOL cap": "市值涨过了 85 SOL",

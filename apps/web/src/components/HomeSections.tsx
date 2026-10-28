@@ -105,7 +105,7 @@ export function XRayShowcase() {
       <div className="mx-auto max-w-7xl">
         <p className="text-[15px] text-fg-3">{t("A real one, from the last few hours")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-[40px] font-semibold leading-[1.02] text-white sm:text-[64px]">
-          {t("This is what the X-Ray sees.")} <span className="accent">{t("Before you buy.")}</span>
+          {t("This is what the X-Ray sees.")} <span className="accent">{t("Who, and where the money went.")}</span>
         </h2>
         <motion.div
           initial={{ opacity: 0, y: 24 }}

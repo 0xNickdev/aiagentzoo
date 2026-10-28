@@ -591,6 +591,30 @@
       "date": "2026-10-28"
     },
     {
+      "id": "odds",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-28",
+      "title": "Odds instead of a label",
+      "text": "Every pump.fun X-Ray now gives two numbers from its first five minutes: the chance the coin climbs past 85 SOL market cap, and the chance the dev still dumps, each with what moved it. Once it ran, or an hour on, it shows what happened instead.",
+      "why": "Our own record showed that avoid and pass die at almost the same rate on pump.fun, so a label alone ranks nothing. Two models fitted on 34,183 launches do: the top tenth by these odds climbed past 85 SOL seven times as often as the average launch.",
+      "zh": {
+        "title": "用概率代替标签",
+        "text": "现在每个 pump.fun 透视都会根据前五分钟给出两个数字：市值涨过 85 SOL 的概率，以及开发者之后还会砸盘的概率，并说明是什么影响了它们。上涨之后或一小时后，显示实际发生了什么。",
+        "why": "我们自己的记录显示，在 pump.fun 上被标记回避和没有被标记的币死亡率几乎一样，所以只有标签排不出顺序。基于 34,183 个发币拟合的两个模型可以：概率排在前十分之一的币，市值涨过 85 SOL 的次数是普通币的七倍。"
+      },
+      "proof": [
+        {
+          "label": "8e45a1b",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/8e45a1b"
+        },
+        {
+          "label": "/xray",
+          "href": "/xray"
+        }
+      ]
+    },
+    {
       "id": "swap",
       "chapter": "2026-10",
       "status": "shipped",

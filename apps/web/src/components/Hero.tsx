@@ -219,19 +219,19 @@ export default function Hero() {
           <motion.h1 {...rise(0.2)} className="font-display mt-7 text-[46px] font-semibold leading-none tracking-[-0.045em] text-white sm:text-7xl lg:text-[92px]">
             {pick(
               <>
-                Know the dev
+                Who is behind it.
                 <br />
-                before you ape.
+                Where the money went.
               </>,
               <>
-                买之前，
+                谁在背后，
                 <br />
-                先看清开发者。
+                钱去了哪里。
               </>,
             )}
           </motion.h1>
           <motion.p {...rise(0.35)} className="mt-6 max-w-xl text-[17px] leading-relaxed text-[#d9dddb] sm:text-lg">
-            {t("Paste any token from Solana, BNB Chain or Base. In a second you see the dev's other launches, who sniped the first seconds, who paid for them and when they sold. Free, read straight from the chain.")}
+            {t("Paste any token from Solana, BNB Chain or Base: the dev and their other launches, the wallets that sniped the first seconds, who paid for them, and where the SOL went after the dump. With the odds the first five minutes give. Free, read straight from the chain.")}
           </motion.p>
 
           <motion.form

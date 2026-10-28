@@ -183,9 +183,9 @@ function AskTab({ seed }: { seed: Seed | null }) {
         <div className="zapp-intro px-1 pb-5">
           <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-warn">{tt("ask the beaver")}</p>
           <h1 className="font-display mt-2 text-[34px] leading-[1.02] tracking-tight">
-            {tt("Is it a rug?")}
+            {tt("Who is behind it?")}
             <br />
-            <span className="text-fg-4">{tt("Know before you ape.")}</span>
+            <span className="text-fg-4">{tt("Where did the money go?")}</span>
           </h1>
           <p className="mt-3 text-[13.5px] font-normal leading-relaxed text-fg-4">
             {tt("Read straight from Solana: did the dev sell, how many tokens this wallet launched, who did the buying. Graded by reality tomorrow.")}
