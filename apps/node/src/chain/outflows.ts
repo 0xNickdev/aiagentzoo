@@ -54,7 +54,8 @@ export interface OutflowReport {
   /** First-seconds wallets left out as bots: they trade nonstop, and what they send on is their float, not this launch. */
   botsSkipped: number;
   /** Each wallet read: its role, what it sent out in the window, and whether its history reached back to the launch. */
-  wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean }>;
+  /** `reached`: the whole window was read; `read`: at least its start was (false is a failed read). */
+  wallets: Array<{ wallet: string; role: string; outSol: number; reached: boolean; read: boolean }>;
   flows: Outflow[];
   totalSol: number;
   tracedAt: number;
@@ -110,9 +111,11 @@ async function sentBy(wallet: string, from: number, to: number, maxPages: number
   const out = new Map<string, { sol: number; firstAt: number }>();
   let after: string | undefined;
   let reached = false;
+  let read = false;
   for (let p = 0; p < maxPages; p++) {
     const page = await pageOf(wallet, from, to, after, f);
     if (!page) break;
+    read = true;
     for (const tx of page.txs) {
       const at = (tx.timestamp ?? 0) * 1000;
       for (const t of tx.nativeTransfers ?? []) {
@@ -131,7 +134,7 @@ async function sentBy(wallet: string, from: number, to: number, maxPages: number
     }
     after = page.next;
   }
-  return { out, reached };
+  return { out, reached, read };
 }
 
 /** Reads one page of a nameless destination: the biggest transfer on after the money arrived, and the known devs paying in. */
@@ -208,7 +211,7 @@ async function trace(
   skipped: number,
 ): Promise<OutflowReport> {
   const end = Math.min(now, createdAt + WINDOW_MS);
-  const sent = await Promise.all(wallets.map((w, i) => sentBy(w.wallet, createdAt, end, i === 0 ? 3 : 2, f)));
+  const sent = await Promise.all(wallets.map((w, i) => sentBy(w.wallet, createdAt, end, i === 0 ? 5 : 2, f)));
   const inside = new Set(wallets.map((w) => w.wallet));
   const byTo = new Map<string, Outflow>();
   sent.forEach(({ out }, i) => {
@@ -229,14 +232,14 @@ async function trace(
     windowHours: WINDOW_MS / 3_600_000,
     windowEnd: end,
     botsSkipped: skipped,
-    wallets: wallets.map((w, i) => ({ ...w, outSol: round([...sent[i]!.out.values()].reduce((n, o) => n + o.sol, 0)), reached: sent[i]!.reached })),
+    wallets: wallets.map((w, i) => ({ ...w, outSol: round([...sent[i]!.out.values()].reduce((n, o) => n + o.sol, 0)), reached: sent[i]!.reached, read: sent[i]!.read })),
     // Money moved between the operation's own wallets is not money gone: it stays out of the total.
     flows: flows.slice(0, 40),
     totalSol: round(flows.filter((o) => o.kind !== "operation").reduce((n, o) => n + o.sol, 0)),
     tracedAt: now,
   };
   // The dev's own history unread is a failed trace, not an empty one: the next asker tries again.
-  if (sent[0]?.reached || report.flows.length) cache.set(mint, { at: now, report });
+  if (sent[0]?.read) cache.set(mint, { at: now, report });
   if (cache.size > 2_000) for (const [k, v] of cache) if (now - v.at > cacheMs(v.report)) cache.delete(k);
   return report;
 }

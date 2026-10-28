@@ -413,7 +413,7 @@ function Outflows({ r }: { r: XRayReport }) {
         {t("Plain SOL transfers out of the dev and the first-seconds wallets that sold, in the 24 hours after the launch. Swaps and dust under 0.1 SOL are left out.")}
         {inside > 0 && ` ${t("{s} SOL moved between their own wallets and is not counted.", { s: sol(inside) })}`}
         {(rep.botsSkipped ?? 0) > 0 && ` ${t("Sniper bots that trade nonstop are left out: what they send on is their float, not this launch: {n}.", { n: rep.botsSkipped ?? 0 })}`}
-        {missed > 0 && ` ${missed === 1 ? t("One of the wallets trades too much to read back to the launch.") : t("{n} of the wallets trade too much to read back to the launch.", { n: missed })}`}
+        {missed > 0 && ` ${missed === 1 ? t("One of the wallets trades too much to read the whole day: only its first hours are counted.") : t("{n} of the wallets trade too much to read the whole day: only their first hours are counted.", { n: missed })}`}
       </p>
     </>,
   );

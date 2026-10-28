@@ -826,7 +826,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         const report = await outflowsOf(mint);
         res.setHeader("cache-control", "no-store");
         // The dev's own history unread is a failed trace, not "nothing sent": say so instead of showing an empty map.
-        if (report && !report.wallets[0]?.reached && !report.flows.length) return json(res, 200, { mint, flows: null, note: "the trace could not read the dev's transfers right now" });
+        if (report && !report.wallets[0]?.read) return json(res, 200, { mint, flows: null, note: "the trace could not read the dev's transfers right now" });
         return json(res, 200, report ?? { mint, flows: null });
       }
       if (req.method === "GET" && path === "/v1/chain/paymasters") {
