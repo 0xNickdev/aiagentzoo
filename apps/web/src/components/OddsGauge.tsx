@@ -1,5 +1,5 @@
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
  * A half-ring gauge for one probability, after 21st.dev's Animated Radial Chart (isaiahbjork), redrawn in the zoo's
@@ -16,20 +16,19 @@ export default function OddsGauge({ value, color, mark, markLabel, size = 220, d
   const path = `M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`;
   const v = useMotionValue(0);
   const offset = useTransform(v, [0, 1], [arc, 0]);
-  const [shown, setShown] = useState(0);
+  // The ring sweeps in; the number is the value itself, so it reads right even where animation never runs.
   useEffect(() => {
     const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
       v.set(value);
-      setShown(value);
       return;
     }
-    const c = animate(v, value, { duration, ease: [0.22, 1, 0.36, 1], onUpdate: setShown });
+    const c = animate(v, value, { duration, ease: [0.22, 1, 0.36, 1] });
     return c.stop;
   }, [value, v, duration]);
   // The reference tick sits across the ring at its share of the half circle.
   const at = (p: number, r: number) => [cx + Math.cos(Math.PI * (1 - p)) * r, cy - Math.sin(Math.PI * (1 - p)) * r] as const;
-  const label = shown >= 0.1 ? `${Math.round(shown * 100)}%` : shown >= 0.01 ? `${(shown * 100).toFixed(1)}%` : value > 0 ? "<1%" : "0%";
+  const label = value >= 0.1 ? `${Math.round(value * 100)}%` : value >= 0.01 ? `${(value * 100).toFixed(1)}%` : value > 0 ? "<1%" : "0%";
   return (
     <div className="relative mx-auto" style={{ width: size, height: h }}>
       <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`} className="overflow-visible" aria-hidden="true">
