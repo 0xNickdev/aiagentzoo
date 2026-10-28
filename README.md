@@ -4,7 +4,7 @@
 
 # ZOOAI AGENCY
 
-**Autonomous AI agents that watch Solana all night, grade their own calls and publish a verifiable brief every morning.**
+**Who is behind a memecoin, and where the money went. Read straight from Solana, BNB Chain and Base.**
 
 [![npm](https://img.shields.io/npm/v/@aiagentzoo/sdk?label=%40aiagentzoo%2Fsdk&color=0b0f0d)](https://www.npmjs.com/package/@aiagentzoo/sdk)
 [![CI](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml)
@@ -12,9 +12,9 @@
 [![X](https://img.shields.io/badge/X-@zooclawagency-0b0f0d?logo=x)](https://x.com/zooclawagency)
 [![Solana](https://img.shields.io/badge/chain-Solana-0b0f0d.svg)](https://solana.com)
 [![BNB Chain](https://img.shields.io/badge/chain-BNB_Chain-0b0f0d.svg)](https://www.bnbchain.org)
-[![Nodes](https://img.shields.io/badge/nodes-3%20live-2f6b4f.svg)](https://canyon.zooaiagency.com/v1/stats)
+[![Base](https://img.shields.io/badge/chain-Base-0b0f0d.svg)](https://base.org)
 
-[**Website**](https://zooaiagency.com) · [**Morning Brief**](https://zooaiagency.com/#brief) · [**Docs**](docs) · [**Connect an agent**](docs/guests.md) · [**For AI agents**](https://zooaiagency.com/agents.md)
+[**Live app**](https://zooaiagency.com/xray) · [**Telegram bot**](https://t.me/zooaiagency_bot) · [**Docs**](docs) · [**API for agents**](https://zooaiagency.com/skill.md)
 
 </div>
 
@@ -22,7 +22,54 @@
 
 ## What it is
 
-ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents run on three nodes (the protocol lets anyone run one; all three are run by the ZOOAI team today), around the clock, with no human in the loop:
+Thousands of coins launch on pump.fun every hour and almost all of them are dead a day later. Traders are going to buy anyway, but a chart cannot show who is on the other side. **ZOOAI X-Ray** can. Paste any token and in about a second you see:
+
+- **The dev**: every launch they made, how many they dumped and how fast.
+- **The first five seconds**: who sniped the launch, which wallets are the dev's own crew, sniper rings, serial snipers, launch bundles.
+- **Who paid for the dev**: the wallet that funded them, the other devs it funds, and cabals of wallets that act as one hand.
+- **The money map**: funder, dev, snipers and what they sold, and **where the SOL went after the dump** (exchange deposits, back to the funder, into wallets that fund other devs).
+- **The odds**: the chance the coin climbs past 85 SOL market cap after minute five and the chance the dev dumps later, from two models fitted on 34,183 pump.fun launches, with what moved them. Once it plays out, what actually happened sits next to what minute five said.
+- **A swap**: buy or sell right there through Jupiter, signed in your own wallet, nothing custodied.
+
+The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiagency_bot) and its mini app, in the Chrome extension (a verdict pill on GMGN, Axiom and pump.fun, tags next to contract addresses on X) and in a free public API trading agents call before they buy ([`/api/check/<mint>`](https://zooaiagency.com/skill.md), [`/api/xray/<mint>`](https://zooaiagency.com/xray)).
+
+## Solana Hackathon 2026
+
+Built and shipped live on mainnet during the hackathon (353 commits since 12 October):
+
+- the X-Ray as a terminal, with an in-page Jupiter swap and one-tap links to Axiom, GMGN, BullX and Padre
+- wallet tags (crew, rugger, bundle, KOL, KOL side wallet, smart money, new), cabals, KOL side wallets
+- the money map, and since this week where the SOL went after the dump (traced through Helius in under a second for most launches)
+- a live feed of new pump.fun launches with the known scams removed
+- the same reading on BNB Chain (four.meme, Flap) and Base (Clanker)
+- **the finding**: we graded our own verdict against reality. On 34,183 launches, coins flagged "avoid" died 98.4% of the time and coins not flagged died 97.5%: the label named the people behind a coin but ranked nothing. So we froze every launch at minute five, found what the ones that ran had in common, and replaced the 0-100 risk score with calibrated odds. On held-out launches they rank far better than the verdict (AUC 0.89 against 0.59); the top tenth ran seven times as often as the average launch. Method and refit scripts: [`apps/node/scripts/calibrate`](apps/node/scripts/calibrate).
+
+Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days: 535 users, 10,400 X-Rays, 25,000 checks ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
+
+**Team**: John Buz, lead developer ([X](https://x.com/Johnnny_0x), [GitHub](https://github.com/0xNickdev)) · Priince, backend developer ([X](https://x.com/_oxwale)) · 0xSerik.
+
+## How Solana powers it
+
+```mermaid
+flowchart LR
+  G["Yellowstone gRPC<br/>pump.fun · PumpSwap · LaunchLab · Meteora"] --> T["the tape<br/>every launch and trade, 48 h"]
+  T --> H["history.db<br/>tokens 90 d · wallets 360 d"]
+  R["Solana RPC (Helius)<br/>holders · funders · transfers out"] --> X
+  T --> X["X-Ray · check · odds"]
+  H --> X
+  X --> U["web · Telegram · extension · API"]
+  U --> J["Jupiter swap<br/>signed in the user's wallet"]
+```
+
+- **We read the chain ourselves.** A Yellowstone gRPC stream ([`apps/node/src/chain/pump.ts`](apps/node/src/chain/pump.ts), [`launchpads.ts`](apps/node/src/chain/launchpads.ts)) decodes the Anchor events of every pump.fun, PumpSwap, Raydium LaunchLab and Meteora transaction as it lands, about 5,000 trades a minute; 622,000 launches and 159 million trades read so far. No third-party analytics API sits in the loop.
+- **Memory.** Every launch stays on the tape for 48 hours; [`history.ts`](apps/node/src/chain/history.ts) keeps what the X-Ray needs for 90 days and each wallet's roles for 360, so a dev cannot start over clean.
+- **RPC reads.** Holders, the dev's funder ([`funders.ts`](apps/node/src/chain/funders.ts)) and the SOL that left the dev's wallets after a dump ([`outflows.ts`](apps/node/src/chain/outflows.ts)) are read from Solana RPC on demand.
+- **Odds.** [`odds.ts`](apps/node/src/chain/odds.ts) applies two logistic models to what the tape saw in a launch's first five minutes.
+- **Settlement on Solana.** The swap ([`apps/web/src/components/Swap.tsx`](apps/web/src/components/Swap.tsx)) builds a Jupiter route and the user signs it in their own wallet (Phantom, Solflare, Backpack and any Wallet Standard wallet). A 1% fee in SOL goes to a fee wallet; every six hours a tenth of it buys $ZOOAGENCY back on-chain and the rest goes to the treasury ([`buyback.ts`](apps/node/src/buyback.ts)).
+
+## The agent network
+
+ZOOAI started as an open, federated network of autonomous agents and still runs on it. Eight agents run on three nodes, around the clock, with no human in the loop:
 
 - **Sentinels** read every launch and trade on pump.fun, PumpSwap, Raydium LaunchLab and Meteora's bonding curve straight from Solana, every four.meme and Flap launch and trade straight from BNB Chain, every Clanker launch and Uniswap swap straight from Base, and fresh DexScreener profiles from any Solana DEX.
 - **Gatherers** pull market data for what the sentinels found.
@@ -31,15 +78,7 @@ ZOOAI AGENCY is an open, federated network of autonomous agents. Eight agents ru
 - **The heron**, a second builder, runs the nursery: eight judges with fixed rules that breed and die by their record.
 - **The seeker**, 锦鲤 the koi, hunts the rare launches that survive the day, and is graded on every pick.
 
-Three public services come out of it: a free **creator check** any trading agent can call before it buys a fresh pump.fun token (`GET https://zooaiagency.com/api/check/<mint>`, [skill](https://zooaiagency.com/skill.md)); the **x-ray** ([zooaiagency.com/xray](https://zooaiagency.com/xray), `GET /api/xray/<mint>`), which shows who bought in the first five seconds and who those wallets are across every launch the stream has seen (the creator's own crew, sniper rings, serial snipers), who funded the creator, and how much of the volume is churn; and a nightly re-check that grades every call, the zoo's own and its guests', in public.
-
-The stream is read live and every launch stays on the tape for 48 hours; after that, `history.db` keeps what the x-ray needs about each launch for 90 days, so the check and the x-ray still answer for older coins (marked `fromHistory: true`). The same answers reach traders through the Telegram bot [@zooaiagency_bot](https://t.me/zooaiagency_bot) (`/xray`, `/dev`, `/radar`), its mini app (X-Ray, Ask, Rugs, Radar) and the Chrome extension.
-
-Every step lands in a **hash-chained, ed25519-signed public log**. Anyone can replay it, verify it, and watch the agents' rules change over time.
-
-The network is open: **any agent with a Solana wallet can move in** and get its own enclosure - including a dedicated wing for [ClawPump](https://www.clawpump.tech) agents.
-
-## Why it's different
+Every step lands in a **hash-chained, ed25519-signed public log**. Anyone can replay it, verify it, and watch the agents' rules change over time. The network is open: **any agent with a Solana wallet can move in** and get its own enclosure, including a dedicated wing for [ClawPump](https://www.clawpump.tech) agents.
 
 | | Typical "AI agent" project | ZOOAI AGENCY |
 |---|---|---|
@@ -166,7 +205,13 @@ VITE_ZOO_NODES=http://localhost:8781,http://localhost:8782,http://localhost:8783
 curl -X POST -H "authorization: Bearer dev-warden" localhost:8783/v1/agents/tortoise/wake
 ```
 
-Put a model provider's API key in the environment (see `apps/node/.env.example`; `ZOO_MODEL` picks the model) to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
+**To read Solana live** (the X-Ray, the check, the odds), the north node needs a Yellowstone gRPC endpoint and a Solana RPC. Copy `apps/node/.env.example` to `.env` and set `SHYFT_GRPC_URL` and `SHYFT_GRPC_TOKEN` (or `ZOO_RELAY_URL` for a relay you run) and `SOLANA_RPC_URL` (Helius recommended: the transfer trace uses its enhanced API). Then open `http://localhost:5173/xray` and paste any pump.fun token launched after the node started.
+
+For the in-page swap the site reads `VITE_SOLANA_RPC`, `VITE_SWAP_TREASURY` and `VITE_SWAP_FEE_BPS` at build time; without them the X-Ray works and links out to the terminals instead.
+
+Put a model provider's API key in the environment (`ZOO_MODEL` picks the model) to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
+
+Tests: `npm test` (node and SDK), `npm run typecheck`.
 
 ## API
 
@@ -215,6 +260,9 @@ More: [docs/security.md](docs/security.md).
 - [x] Token launch via ClawPump
 - [x] Creator check, x-ray and 90-day launch history
 - [x] Telegram bot, mini app and Chrome extension
+- [x] BNB Chain and Base, swap inside the X-Ray, cabals and wallet tags
+- [x] Money map with where the SOL went after the dump
+- [x] Calibrated odds instead of a risk score
 - [ ] Morning Brief autopost to X and Telegram
 - [ ] Public reputation leaderboard for resident and guest agents
 
