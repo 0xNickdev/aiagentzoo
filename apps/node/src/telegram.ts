@@ -242,6 +242,7 @@ const HELP_LINES = () => [
   "/rugs · the latest creator dumps, with transactions",
   "/clean · fresh launches that passed the basic checks",
   T("/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to {n})", { n: WATCH_MAX }),
+  T("/radar on · holders: a ping the moment a coin with no red flags turns"),
   T("/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 }),
   "/unwatch &lt;token&gt; · /list",
   "/live · pump.fun right now: launches and trades a minute",
@@ -563,8 +564,19 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!list.length) lines.push(T("Nothing passes right now. On pump.fun that is a normal hour."));
     for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${T("{a} min · {b} buyers · top 5 {p}", { a: c.ageMin, b: c.buyersMore ? `${c.buyers}+` : c.buyers, p: pct(c.top5Share) })}\n<code>${c.mint}</code>`);
     const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: T("Ask about ${s}", { s: c.symbol }), callback_data: `ask:${c.mint}` }]);
-    keyboard.push([{ text: T("Refresh"), callback_data: "clean" }]);
+    const pinged = ((await opts.store.get<number[]>("tg:radar")) ?? []).includes(chat);
+    keyboard.push([{ text: T("Refresh"), callback_data: "clean" }, pinged ? { text: T("Stop radar pings"), callback_data: "radar:off" } : { text: T("Ping me when one turns"), callback_data: "radar:on" }]);
     return void send(chat, lines.join("\n"), keyboard);
+  };
+
+  /** Holders can have the radar come to them: a ping the moment a coin that passed turns. */
+  const radarPings = async (chat: number, on: boolean) => {
+    const list = new Set((await opts.store.get<number[]>("tg:radar")) ?? []);
+    if (on && !(await isHolderChat(chat))) return void send(chat, T("Radar pings are a holder perk: hold {h}+ $ZOOAGENCY and /link your wallet, then /radar on.", { h: HOLDER_MIN.toLocaleString("en-US") }));
+    if (on) list.add(chat);
+    else list.delete(chat);
+    await opts.store.set("tg:radar", [...list]);
+    return void send(chat, on ? T("Radar pings on. Coins with no red flags are re-checked every minute; the moment one turns, the dev sells, bundles leave, the pool drains, you hear first. /radar off to stop.") : T("Radar pings off."));
   };
 
   const live = async (chat: number) => {
@@ -748,7 +760,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return rugs(chat);
       case "/radar":
       case "/clean":
-        return clean(chat);
+        return arg === "on" || arg === "off" ? radarPings(chat, arg === "on") : clean(chat);
       case "/live":
         return live(chat);
       case "/nursery":
@@ -805,6 +817,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return prompt(chat, value === "dev" ? "dev" : value === "xray" ? "xray" : "ask");
       case "ask":
         return MINT_ONLY.test(value) ? ask(chat, `tg:${q.from.id}`, value) : undefined;
+      case "radar":
+        return radarPings(chat, value === "on");
       case "watch":
         return MINT_ONLY.test(value) ? watch(chat, value, true) : undefined;
       case "unwatch":
@@ -925,8 +939,35 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (sent) await saveLater();
   };
 
+  // The radar: every coin that passed the clean list is re-checked every minute until it turns or ages out.
+  const radar = new Map<string, { symbol: string; since: number }>();
+  let radarAt = 0;
+  const radarTick = async () => {
+    if (stopped || !opts.northUrl || Date.now() - radarAt < 60_000) return;
+    radarAt = Date.now();
+    const subs = (await opts.store.get<number[]>("tg:radar")) ?? [];
+    const fresh = await north<{ launches: CleanLaunch[] }>("/v1/chain/clean?limit=30");
+    for (const c of fresh?.launches ?? []) if (!radar.has(c.mint)) radar.set(c.mint, { symbol: c.symbol, since: Date.now() });
+    for (const [mint, t] of radar) {
+      if (Date.now() - t.since > 6 * 3_600_000) {
+        radar.delete(mint);
+        continue;
+      }
+      const c = await north<{ verdict: string; reasons: string[] }>(`/v1/check/${mint}`);
+      if (!c || c.verdict === "pass" || c.verdict === "unknown") continue;
+      radar.delete(mint);
+      if (!subs.length) continue;
+      const bad = c.verdict === "avoid";
+      for (const chat of subs) {
+        const l = await chatLang(opts.store, chat);
+        const text = inLang(l, () => `${bad ? "🔴" : "🟠"} <b>$${esc(t.symbol)}</b> ${T("turned: {v}", { v: T(bad ? "AVOID" : "CAUTION") })}\n• ${esc(TC(c.reasons[0] ?? ""))}\n<code>${mint}</code>`);
+        await send(chat, text, [[{ text: T("X-ray it"), url: `${SITE}/xray?mint=${mint}` }, { text: T("Ask the beaver now"), callback_data: `ask:${mint}` }]]);
+      }
+    }
+  };
+
   void poll();
-  const timer = setInterval(() => void restored.then(alerts).then(flush), 10_000);
+  const timer = setInterval(() => void restored.then(alerts).then(flush).then(radarTick), 10_000);
   timer.unref?.();
   return () => {
     stopped = true;

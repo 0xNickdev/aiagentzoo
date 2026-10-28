@@ -547,24 +547,27 @@
     },
     {
       "id": "radar",
-      "chapter": "2026-11",
-      "status": "building",
+      "chapter": "2026-10",
+      "status": "shipped",
       "title": "Holder radar",
       "text": "Fresh coins with no red flags so far, for holders. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and you are pinged first.",
-      "why": "The page is live: holders watch it now, and pings in the tab work. The Telegram ping when a coin turns is next, now that the nodes run on our own servers.",
+      "why": "Live on the site for holders and, since 28 October, in Telegram: /radar on in the bot, and every coin that passed is re-checked each minute until it turns or ages out; the ping names the reason.",
       "zh": {
         "title": "持有者雷达",
         "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。",
-        "why": "页面已上线：持有者现在就能看，标签页提醒也已可用。代币变化时的 Telegram 提醒，是下一步：节点已经跑在我们自己的服务器上。",
-        "when": "进行中"
+        "why": "已在网站上对持币者开放，自 10 月 28 日起也在 Telegram 里：在机器人里发 /radar on，每个通过检查的币每分钟重新检查，直到变脸或过期；提醒里写明原因。"
       },
-      "when": "Now",
       "proof": [
         {
           "label": "/radar",
           "href": "/radar"
+        },
+        {
+          "label": "t.me/zooaiagency_bot",
+          "href": "https://t.me/zooaiagency_bot"
         }
-      ]
+      ],
+      "date": "2026-10-28"
     },
     {
       "id": "operators",

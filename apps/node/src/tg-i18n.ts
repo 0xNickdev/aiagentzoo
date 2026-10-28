@@ -85,6 +85,14 @@ export function TC(text: string): string {
 }
 
 export const BOT_ZH: Record<string, string> = {
+  "Stop radar pings": "关闭雷达提醒",
+  "Ping me when one turns": "有币变脸时提醒我",
+  "Radar pings are a holder perk: hold {h}+ $ZOOAGENCY and /link your wallet, then /radar on.": "雷达提醒是持币者福利：持有 {h}+ $ZOOAGENCY，用 /link 绑定钱包，然后 /radar on。",
+  "Radar pings on. Coins with no red flags are re-checked every minute; the moment one turns, the dev sells, bundles leave, the pool drains, you hear first. /radar off to stop.": "雷达提醒已开。没有红旗的币每分钟重新检查；一旦变脸，开发者卖出、捆绑撤离、池子被抽干，你第一个知道。/radar off 关闭。",
+  "Radar pings off.": "雷达提醒已关。",
+  "turned: {v}": "变脸：{v}",
+  "X-ray it": "透视",
+  "/radar on · holders: a ping the moment a coin with no red flags turns": "/radar on · 持币者：没有红旗的币一变脸就提醒",
   "The koi is resting. Try again in a minute.": "锦鲤在休息，过一分钟再试。",
   "<b>锦鲤 the koi</b> · hunter of survivors": "<b>锦鲤</b> · 幸存者猎手",
   "On pump.fun about 1 in 270 tokens is still alive a day later. The koi only looks for those.": "在 pump.fun 上，大约 270 个币里只有 1 个能活过一天。锦鲤只找这一个。",

@@ -87,7 +87,7 @@ export default function Radar() {
               <Bell size={15} /> {notify ? t("Pings on in this tab") : t("Ping me in this tab when one turns")}
             </button>
           )}
-          <span className="text-[14px] text-fg-4">{t("Telegram pings are next.")}</span>
+          <span className="text-[14px] text-fg-4">{t("Holders get it in Telegram too: /radar on in @zooaiagency_bot pings you the moment one turns.")}</span>
         </div>
 
         <AnimatePresence>
