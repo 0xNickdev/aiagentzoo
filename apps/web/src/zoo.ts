@@ -126,8 +126,9 @@ function fromStandard(w: StandardWallet): SolanaProvider {
     get publicKey() {
       return account ? key() : null;
     },
-    async connect() {
-      const r = connect ? await connect() : { accounts: w.accounts };
+    async connect(opts?: { onlyIfTrusted?: boolean }) {
+      // A silent reconnect (Phantom's onlyIfTrusted) is the standard's `silent`: no window if the site is not trusted yet.
+      const r = connect ? await connect(opts?.onlyIfTrusted ? { silent: true } : undefined) : { accounts: w.accounts };
       account = r.accounts[0] ?? w.accounts[0];
       if (!account) throw new Error(`${w.name} gave no account`);
       return { publicKey: key() };
