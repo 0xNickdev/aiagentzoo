@@ -22,7 +22,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
     items: [
       // Most used first: the check itself, where traders already are, then what to watch, then the rest.
       { label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
-      { label: "Live feed", href: "/feed", note: "pump.fun's boards without the known scams" },
+      { label: "Live feed", href: "/feed", note: "new coins, minus the known scams" },
       { label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun, four.meme" },
       { label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
       { label: "Holder radar", href: "/radar", note: "know first when a coin turns" },

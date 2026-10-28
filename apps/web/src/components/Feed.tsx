@@ -191,10 +191,10 @@ export default function Feed() {
         <div className="max-w-2xl">
           <p className="tabular-nums flex items-center gap-2 text-[12.5px] text-fg-3">
             <span className={`h-[7px] w-[7px] rounded-full ${data?.stream.live ? "animate-pulse bg-[#a6e3b4]" : "bg-[#ffc27a]"}`} />
-            {t("Live feed · pump.fun · avoid is never shown")}
+            {t("Live feed · fresh Solana launches · avoid is never shown")}
           </p>
-          <h1 className="font-display mt-4 text-4xl leading-[1.05] sm:text-5xl">{t("pump.fun, without the known scams.")}</h1>
-          <p className="mt-4 text-[15px] font-normal leading-relaxed text-fg-3">{t("The same three boards as pump.fun. Every coin is checked as it trades: the dev's record, the first-second wallets, bundles, who already sold. Anything the check calls avoid never makes it here.")}</p>
+          <h1 className="font-display mt-4 text-4xl leading-[1.05] sm:text-5xl">{t("Every new coin. Minus the known scams.")}</h1>
+          <p className="mt-4 text-[15px] font-normal leading-relaxed text-fg-3">{t("New, almost graduated and migrated. Every coin is checked as it trades: the dev's record, the first-second wallets, bundles, who already sold. Anything the check calls avoid never makes it here.")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex rounded-full border border-white/[0.12] p-1 text-[13px]">
