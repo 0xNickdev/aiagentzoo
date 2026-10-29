@@ -26,13 +26,13 @@ export function factorsOf(r: XRayReport): Factor[] {
   const cabals = new Set(early.map((e) => e.cabal).filter((c): c is number => c != null));
   const out: Factor[] = [];
 
-  if (rec) out.push({ k: t("dev's launches, 48h"), v: t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }), d: rec.medianDumpMin !== null ? t("median dump after {m} min", { m: rec.medianDumpMin }) : t("none dumped yet"), bad: rec.dumped >= 2 });
-  else out.push({ k: t("dev's launches, 48h"), v: t("first launch"), d: t("no other launches on our stream"), bad: false });
+  if (rec) out.push({ k: t("dev dumped, 48h"), v: `${rec.dumped} / ${rec.launches48h}`, d: rec.medianDumpMin !== null ? t("of their launches, median after {m} min", { m: rec.medianDumpMin }) : t("of their launches"), bad: rec.dumped >= 2 });
+  else out.push({ k: t("dev dumped, 48h"), v: t("first launch"), d: t("no other launches on our stream"), bad: false });
   if (f.creatorSoldPct !== null && f.creatorSoldPct !== undefined) out.push({ k: t("dev sold"), v: `${f.creatorSoldPct}%`, d: t("of their own bag"), bad: f.creatorSoldPct >= 50 });
   if (hd?.creatorHoldsPct !== null && hd?.creatorHoldsPct !== undefined) out.push({ k: t("dev holds now"), v: `${hd.creatorHoldsPct}%`, d: t("of the supply"), bad: hd.creatorHoldsPct >= 10 });
   if (fund?.funder) {
-    const v = fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? fund.funderLabel : fund.funderIsHot ? t("an exchange") : t("{n} other devs", { n: fund.siblings.length });
-    const d = fund.funderService || fund.funderLabel || fund.funderIsHot ? t("pays everyone, ties no one together") : t("{d} dumps between them in 48h", { d: fund.siblingDumped48h });
+    const v = fund.funderService ? t("{x} launcher", { x: fund.funderService }) : fund.funderLabel ? fund.funderLabel : fund.funderIsHot ? t("an exchange") : fund.siblings.length ? t("{n} other devs", { n: fund.siblings.length }) : t("only this dev");
+    const d = fund.funderService || fund.funderLabel || fund.funderIsHot ? t("pays everyone, ties no one together") : fund.siblings.length ? t("{d} dumps between them in 48h", { d: fund.siblingDumped48h }) : t("paid no other dev we traced");
     out.push({ k: t("who paid the dev"), v, d, bad: !fund.funderIsHot && !fund.funderService && !fund.funderLabel && fund.siblingDumped48h >= 3 });
   }
   if (f.creatorCrew !== null) out.push({ k: t("dev's own wallets"), v: String(f.creatorCrew), d: f.crewHeldPct ? t("still hold {p}%", { p: f.crewHeldPct }) : t("snipe this dev's launches"), bad: f.creatorCrew >= 2 });
@@ -75,7 +75,7 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-[12px] leading-relaxed text-fg-4">{t("Read from the chain for this coin. The odds above say how launches like it went; these are the parts it is made of. Red marks a number we have seen go with rugs.")}</p>
+      <p className="mt-4 text-[12px] leading-relaxed text-fg-4">{r.check.odds ? t("Read from the chain for this coin. The odds above say how launches like it went; these are the parts it is made of. Red marks a number we have seen go with rugs.") : t("Read from the chain for this coin. Red marks a number we have seen go with rugs.")}</p>
     </div>
   );
 }
