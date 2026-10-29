@@ -8,7 +8,7 @@
  */
 
 const RPC = process.env.SOLANA_RPC_URL ?? "";
-const KEY = /api-key=([^&]+)/.exec(RPC)?.[1] ?? "";
+const KEY = process.env.HELIUS_API_KEY || (/api-key=([^&]+)/.exec(RPC)?.[1] ?? "");
 export const loopEnabled = () => KEY !== "";
 
 const LAMPORTS = 1_000_000_000;
