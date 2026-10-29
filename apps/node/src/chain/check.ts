@@ -104,7 +104,7 @@ export interface TokenCheck {
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
-  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number } | null;
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
   stream: { live: boolean; lastEventSecAgo: number | null };
   checkedAt: number;
@@ -313,7 +313,7 @@ export function checkToken(
     const h = opts.holders;
     // Shares of the supply to one decimal: a coin where everyone sold back shows 0.3%, not a misleading 0%.
     const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
-    holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null;
+    holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}) } : null;
     if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chain]} right now`);
     else {
       // Half the supply in one wallet: whoever holds it decides when the price goes to zero.
@@ -489,6 +489,6 @@ export function outsideCheck(
     reasons: [...avoid, ...caution],
     notes,
     facts: null,
-    ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)! } : null } : {}),
+    ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}) } : null } : {}),
   };
 }

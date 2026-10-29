@@ -10,6 +10,8 @@ const RPC = () => process.env.SOLANA_RPC_URL ?? (process.env.SHYFT_API_KEY ? `ht
 const PUMP_API = "https://frontend-api-v3.pump.fun";
 const CACHE_MS = 5 * 60_000;
 const SYSTEM = "11111111111111111111111111111111";
+/** Lockers that hold tokens until a date: Streamflow, Jupiter Lock, Raydium's LP locker. */
+const LOCKERS = new Set(["strmRqUCoQUgGUan5YhzUZa6KqdzwX5L6FpUxfmKg5m", "LocpQgucEQHbqNABEYvBvwoxCPsSbG91A1QaQhQQqjn", "LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE"]);
 
 export interface HolderReport {
   /** Share of supply in the ten largest wallets, pools and program accounts left out, 0..1. */
@@ -18,6 +20,8 @@ export interface HolderReport {
   topShare: number;
   /** Share the token sits in program accounts: the pool, locks, vaults. */
   programShare: number;
+  /** Share sitting in a locker program until its date; part of programShare. */
+  lockedShare?: number;
   /** The pump.fun creator, when pump.fun says. */
   creator: string | null;
   /** Share of supply the creator still holds; null when the creator is unknown. */
@@ -89,11 +93,14 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   // curve: a launchpad's vault is owned by an authority with no account of its own, but that authority is off the curve.
   const isWallet = new Map(uniq.map((o, i) => [o, onCurve(o) && (!ownerInfo?.value[i] || ownerInfo.value[i]!.owner === SYSTEM)]));
 
+  const isLock = new Map(uniq.map((o, i) => [o, LOCKERS.has(ownerInfo?.value[i]?.owner ?? "")]));
   let programAmount = 0;
+  let lockedAmount = 0;
   const byWallet = new Map<string, number>();
   accounts.forEach((a, i) => {
     const owner = owners[i];
     const amount = a.uiAmount ?? 0;
+    if (owner && isLock.get(owner)) lockedAmount += amount;
     if (!owner || !isWallet.get(owner)) programAmount += amount;
     else byWallet.set(owner, (byWallet.get(owner) ?? 0) + amount);
   });
@@ -113,6 +120,7 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
     top10Share: round(ranked.slice(0, 10).reduce((a, b) => a + b, 0) / total),
     topShare: round((ranked[0] ?? 0) / total),
     programShare: round(programAmount / total),
+    lockedShare: round(lockedAmount / total),
     creator,
     creatorShare: creatorShare === null ? null : round(creatorShare),
   };
