@@ -678,6 +678,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             funding: funding ?? null,
             bundle: { wallets: withCabal(tagAll(past.bundle, kept)), funding: bundle },
             socials: linked,
+            ticker: history ? history.ticker(past.symbol, mint) : null,
             ...memory,
             access: tier,
           });
@@ -702,6 +703,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
           funding: funding ?? null,
           bundle: { wallets: withCabal(tagAll(found.bundle, kept)), funding: bundle },
           socials: linked,
+          ticker: history ? history.ticker(found.symbol, mint) : null,
           access: tier,
         });
       }

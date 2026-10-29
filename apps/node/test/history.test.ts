@@ -252,3 +252,22 @@ test("cabals: wallets tied by a funder, by crew hits or by a repeated launch blo
     done();
   }
 });
+
+test("a recycled ticker: earlier launches under the same symbol, any case, this one left out", () => {
+  const { store, done } = tempStore();
+  try {
+    const t = new PumpTape();
+    const t0 = Date.now() - 10 * 60_000;
+    for (const m of ["A", "B", "C"]) launch(t, pad(`Mint${m}`), t0);
+    store.write(["A", "B", "C"].map((m) => ({ ...t.historyOf(pad(`Mint${m}`))!, funder: null })));
+    const r = store.ticker("silk", pad("MintA"))!;
+    assert.equal(r.launches, 2);
+    assert.equal(r.devs, 1);
+    assert.equal(r.dumped, 2);
+    assert.equal(store.ticker("WOOL", pad("MintA"))!.launches, 0);
+    assert.equal(store.ticker(" ", pad("MintA")), null);
+  } finally {
+    store.close();
+    done();
+  }
+});

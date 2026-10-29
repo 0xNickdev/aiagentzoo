@@ -18,6 +18,16 @@ const unitOfVenue = (venue: string | null | undefined) => UNIT_OF_CHAIN[CHAIN_OF
 export type HistoryRecord = NonNullable<ReturnType<PumpTape["historyOf"]>> & { funder?: string | null; scoreFirst?: number | null };
 
 export const HISTORY_KEEP_MS = 90 * 24 * 3_600_000;
+export const TICKER_DAYS = 30;
+
+export interface TickerRecord {
+  days: number;
+  launches: number;
+  devs: number;
+  dumped: number;
+  graduated: number;
+  firstAt: number | null;
+}
 const DAY_MS = 24 * 3_600_000;
 
 const ROLE = { dev: 0, early: 1, bundle: 2, crew: 3 } as const;
@@ -112,6 +122,7 @@ export class HistoryStore {
       );
       CREATE INDEX IF NOT EXISTS tokens_creator ON tokens (creator_id, created_at);
       CREATE INDEX IF NOT EXISTS tokens_created ON tokens (created_at);
+      CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens (symbol COLLATE NOCASE, created_at);
       CREATE TABLE IF NOT EXISTS wallet_tokens (
         wallet_id INTEGER NOT NULL,
         token_id INTEGER NOT NULL,
@@ -159,6 +170,8 @@ export class HistoryStore {
       roles: p(`SELECT wt.role, wt.took, wt.at, t.mint, t.symbol, t.created_at, t.dev_dumped_at, t.graduated_at, t.pool_drained_at, c.wallet AS creator
         FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id JOIN wallets c ON c.id = t.creator_id
         WHERE wt.wallet_id = ? ORDER BY wt.token_id DESC LIMIT ?`),
+      ticker: p(`SELECT count(*) AS n, count(DISTINCT creator_id) AS devs, sum(dev_dumped_at IS NOT NULL) AS dumped, sum(graduated_at IS NOT NULL) AS graduated, min(created_at) AS first
+        FROM tokens WHERE symbol = ? COLLATE NOCASE AND created_at > ? AND mint <> ?`),
       since: p("SELECT min(first_seen) AS at FROM tokens"),
       counts: p("SELECT (SELECT count(*) FROM tokens) AS tokens, (SELECT count(*) FROM wallets) AS wallets"),
       oldTokens: p("SELECT id FROM tokens WHERE created_at < ? LIMIT ?"),
@@ -366,6 +379,14 @@ export class HistoryStore {
       graduated: t.graduated_at !== null,
       ...capsFrom({ capFirst: t.cap_first, capPeak: t.cap_peak, capPeakAt: t.cap_peak_at, capDump: t.cap_dump, capLow: t.cap_low, capHigh: t.cap_high, devFirstSellAt: t.dev_first_sell_at, createdAt: t.created_at }, unitOfVenue(t.venue)),
     }));
+  }
+
+  /** Earlier launches under the same ticker in the last thirty days, this one left out: recycled tickers are a rug habit. */
+  ticker(symbol: string, mint: string, now = Date.now()): TickerRecord | null {
+    const sym = symbol.trim();
+    if (!sym) return null;
+    const r = this.s.ticker!.get(sym, now - TICKER_DAYS * 86_400_000, mint) as { n: number; devs: number; dumped: number | null; graduated: number | null; first: number | null };
+    return { days: TICKER_DAYS, launches: Number(r.n), devs: Number(r.devs), dumped: Number(r.dumped ?? 0), graduated: Number(r.graduated ?? 0), firstAt: r.first };
   }
 
   /** The wallet dossier: its counters and its last tokens, each with the roles it played there. */

@@ -49,6 +49,8 @@ export function factorsOf(r: XRayReport): Factor[] {
   if (f.bundlers) out.push({ k: t("bundle"), v: t("{n} wallets", { n: f.bundlers }), d: t("hold {p}% · peak {q}%", { p: f.bundlersHeldPct ?? 0, q: f.bundlersPeakPct ?? 0 }), bad: (f.bundlersHeldPct ?? 0) >= 20 });
   if (hd && hd.top10Pct > 0) out.push({ k: t("top 10 holders"), v: `${hd.top10Pct}%`, d: t("largest wallet {p}%", { p: hd.topWalletPct }), bad: hd.top10Pct >= 50 || hd.topWalletPct >= 20 });
   if (f.churnPct !== null) out.push({ k: t("churn"), v: `${f.churnPct}%`, d: f.bumps ? t("{n} bump bot trades", { n: f.bumps }) : t("volume sold back by the buyers"), bad: f.churnPct >= 30 });
+  const tk = r.ticker;
+  if (tk) out.push({ k: t("ticker used before"), v: tk.launches ? `${tk.launches}×` : t("first time"), d: tk.launches ? (tk.devs === 1 ? t("in {d} days, all by one dev, {x} dumped", { d: tk.days, x: tk.dumped }) : t("in {d} days by {n} devs, {x} dumped by their dev", { d: tk.days, n: tk.devs, x: tk.dumped })) : t("no other launch with this ticker in {d} days", { d: tk.days }), bad: tk.launches >= 3 && tk.dumped >= 2 });
   const reused = r.socials?.filter((s) => s.launches > 1) ?? [];
   if (reused.length) out.push({ k: t("socials reused"), v: String(Math.max(...reused.map((s) => s.launches))), d: t("launches with the same links, {n} fast dumps", { n: reused.reduce((a, s) => a + s.fastDumps, 0) }), bad: reused.some((s) => s.fastDumps >= 1) });
   return out;

@@ -200,6 +200,8 @@ export interface XRayReport {
   creatorRecord: ({ launches48h: number; dumped: number; medianDumpMin: number | null; recent?: Array<{ mint: string; symbol: string; createdAt: number } & LaunchOutcome> } & Habits) | null;
   /** The X account, X community or Telegram group the token links to, and its other launches. */
   socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
+  /** Earlier launches under the same ticker in the node's memory, this one left out. */
+  ticker?: { days: number; launches: number; devs: number; dumped: number; graduated: number; firstAt: number | null } | null;
   funding: Funding | null;
   bundle: { wallets: Array<{ wallet: string; share: number }>; funding: { groups: Array<{ funder: string; wallets: string[] }>; linked: number; checked: number } | null };
   /** Launched before the stream's window: no launch record, only who holds it now and the dev's kept record. */
