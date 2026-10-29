@@ -5,6 +5,7 @@ import { addressIn, chainName, chainOf, chart, rememberChains, unitOf, venueOfCh
 import { TagList, Tags, type WalletTag } from "./WalletTags";
 import MoneyMap from "./MoneyMap";
 import OddsGauge from "./OddsGauge";
+import FactorsCard from "./Factors";
 import { Check, X } from "lucide-react";
 import { Reveal, Section } from "./ui";
 import { lang, t, tChain } from "../i18n";
@@ -766,6 +767,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
               {tab === "overview" && (
                 <>
                   {c.odds && <OddsCard o={c.odds} />}
+                  <FactorsCard r={r} />
                   <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-[15px] font-semibold text-fg">{c.reasons.length ? t("Why {v}", { v: t(tone.label).toLowerCase() }) : head}</p>
