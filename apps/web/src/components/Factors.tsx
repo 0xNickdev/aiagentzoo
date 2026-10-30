@@ -37,7 +37,7 @@ export function factorsOf(r: XRayReport): Factor[] {
   }
   if (f.creatorCrew !== null) out.push({ k: t("dev's own wallets"), v: String(f.creatorCrew), d: f.crewHeldPct ? t("still hold {p}%", { p: f.crewHeldPct }) : t("snipe this dev's launches"), bad: f.creatorCrew >= 2 });
 
-  if (f.earlyWallets !== null) out.push({ k: t("first 5 seconds"), v: t("{n} wallets", { n: f.earlyWallets }), d: t("still hold {p}%", { p: f.earlyHeldPct ?? 0 }), bad: (f.earlyHeldPct ?? 0) >= 30 });
+  if (f.earlyWallets !== null) out.push({ k: t("first 5 seconds"), v: f.earlyWallets === 1 ? t("1 wallet") : t("{n} wallets", { n: f.earlyWallets }), d: t("still hold {p}%", { p: f.earlyHeldPct ?? 0 }), bad: (f.earlyHeldPct ?? 0) >= 30 });
   out.push({ k: t("known ruggers"), v: String(tagged("rugger")), d: t("wallets that rugged their own launches"), bad: tagged("rugger") >= 1 });
   out.push({ k: t("whales"), v: String(tagged("whale")), d: tagged("whale") ? t("took {p}% of the supply between them", { p: share("whale") }) : t("no first buyer took 2% or more"), bad: share("whale") >= 20 });
   out.push({ k: t("new wallets"), v: String(tagged("new")), d: t("never seen by the zoo before this launch"), bad: false });
