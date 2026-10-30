@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkToken, DEV_GONE_REASON } from "../src/chain/check.ts";
+import { checkToken, DEV_GONE_REASON, oddsRunNote } from "../src/chain/check.ts";
 
 // PHP as the x-ray saw it: a serial dumper's coin they fully left, graduated, its pool grown from 85 to 386 SOL.
 const php = (over: Record<string, unknown> = {}) =>
@@ -84,4 +84,18 @@ test("a wallet launching thirty or more tokens a day is launch spam: avoid, even
   const c = checkToken("LeLe", { symbol: "LeLe", facts: fresh, creatorRecord: spam });
   assert.equal(c.verdict, "avoid");
   assert.ok(c.reasons.some((r) => r === "this wallet launched 146 tokens in 24 hours: launch spam, not a project"));
+});
+
+test("dev gone counts a dev who sold 80% and kept under 1%, and an avoid with high odds says it may still run", () => {
+  const most = checkToken("DG", { symbol: "DG", facts: php({ creatorSold: 0.8 }), creatorRecord: serial }, { holders: spread({ creatorShare: 0.005 }) });
+  assert.equal(most.facts!.devGone, true);
+  assert.equal(most.verdict, "caution");
+  const kept = checkToken("DG", { symbol: "DG", facts: php({ creatorSold: 0.8 }), creatorRecord: serial }, { holders: spread({ creatorShare: 0.03 }) });
+  assert.equal(kept.facts!.devGone, false);
+  const little = checkToken("DG", { symbol: "DG", facts: php({ creatorSold: 0.6 }), creatorRecord: serial }, { holders: spread() });
+  assert.equal(little.facts!.devGone, false);
+
+  assert.match(oddsRunNote("avoid", 9.2)!, /^launches like this one ran 9x more often/);
+  assert.equal(oddsRunNote("avoid", 2), null);
+  assert.equal(oddsRunNote("caution", 9), null);
 });

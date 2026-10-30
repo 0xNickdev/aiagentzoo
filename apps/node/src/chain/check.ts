@@ -16,7 +16,7 @@ export const CHECK_VERSION = 6;
 /** A PumpSwap pool opens with about this much SOL when a pump.fun token graduates. */
 export const GRAD_POOL_SOL = 85;
 /** Dev gone, holders carry it: what a token must show before its dev's record stops being the reason to avoid it. */
-export const DEV_GONE = { soldPct: 0.99, poolGrowth: 2, top10: 0.3, topWallet: 0.1, bundlersHeld: 0.2, ageMin: 120, crewBack: 0.05 } as const;
+export const DEV_GONE = { soldPct: 0.8, devHeld: 0.01, poolGrowth: 2, top10: 0.3, topWallet: 0.1, bundlersHeld: 0.2, ageMin: 120, crewBack: 0.05 } as const;
 /** A dev who sells early but whose coins still run: enough priced launches, most past $20K. */
 export const RUNNER_DEV = { minLaunches: 5, reached20k: 0.5 } as const;
 /** Avoid reasons a runner dev's record may soften: their selling, their dump history, a bundle at launch. Nothing else. */
@@ -24,7 +24,12 @@ const SOFT_AVOID = [/^the creator sold \d+% of their own bag$/, /^this creator d
 const usdShort = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1e3)}K`);
 export const runnerReason = (p: NonNullable<CreatorRecord["pattern"]>) =>
   `this dev sells early, yet ${Math.round(p.reached20k! * 100)}% of their last ${p.launches} launches went past $20K${p.peakCapUsd ? ` (usual peak ${usdShort(p.peakCapUsd)})` : ""}: selling fast is their pattern, so the risk is getting out in time, not a rug`;
-export const DEV_GONE_REASON = "the dev who launched it dumps their launches and already sold everything; it runs on its holders now, so the risk is the market, not the dev";
+/** Odds this many times the average launch's make an avoid say the coin may still run. */
+export const ODDS_RUN_NOTE = 4;
+/** An avoid whose odds are well above average: the people around it do rug things, yet launches like it ran. */
+export const oddsRunNote = (verdict: CheckVerdict, vsAverage: number | null | undefined) =>
+  verdict === "avoid" && (vsAverage ?? 0) >= ODDS_RUN_NOTE ? `launches like this one ran ${Math.round(vsAverage!)}x more often than the average launch: the people around it do rug things, yet it may still run, so the risk is getting out in time` : null;
+export const DEV_GONE_REASON = "the dev who launched it dumps their launches and already sold their bag down to under 1%; it runs on its holders now, so the risk is the market, not the dev";
 /** Under this age a token has had no time to show anything but its creator's history: the check says so. */
 export const EARLY_MIN = 10;
 
@@ -409,14 +414,14 @@ export function checkToken(
 }
 
 /**
- * The dev has left and the holders carry it: the creator sold all they bought, it graduated, its pool holds at least twice
+ * The dev has left and the holders carry it: the creator sold most of what they bought and holds under 1%, it graduated, its pool holds at least twice
  * what it opened with and never drained, it is two hours old, and the holders read now are spread out with the bundlers mostly gone.
  * Unknown holders never qualify.
  */
 export function devGoneOf(f: ChainFacts, h: HolderReport | null | undefined): boolean {
   if (!h) return false;
   if (f.creatorSold === null || f.creatorSold < DEV_GONE.soldPct) return false;
-  if (h.creatorShare !== null && h.creatorShare >= 0.001) return false;
+  if (h.creatorShare !== null && h.creatorShare >= DEV_GONE.devHeld) return false;
   if (!f.graduated || f.quote || f.drained) return false;
   // What it opened with: the curve's last reading at graduation, never taken as less than a pool's usual 85 SOL.
   if (f.poolSol === null || f.poolSol < Math.max(GRAD_POOL_SOL, f.curveSol ?? 0) * DEV_GONE.poolGrowth) return false;

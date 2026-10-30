@@ -17,7 +17,7 @@ import { socials } from "./chain/socials.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { holderReport, holdersEnabled, poolSolOf } from "./chain/holders.ts";
 import { solUsd } from "./chain/price.ts";
-import { type Chain, CHAIN_NAME, checkToken, isEvm, outsideCheck, RateGate } from "./chain/check.ts";
+import { type Chain, CHAIN_NAME, checkToken, isEvm, oddsRunNote, outsideCheck, RateGate } from "./chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "./chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "./chain/base.ts";
 import { baseFundersEnabled, bscFundersEnabled } from "./chain/bscFunders.ts";
@@ -619,6 +619,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
             // What the dev did since: the odds stay, as the record of what minute five said.
             const dumped = (found.facts.creatorSold ?? 0) >= 0.5;
             check.odds = odds.devDumps !== null && (dumped || read.ageMin >= 60) ? { ...odds, devSettled: { dumped, ageMin: read.ageMin } } : odds;
+            const runs = oddsRunNote(check.verdict, odds.vsAverage);
+            if (runs) check.notes.unshift(runs);
           }
         }
         res.setHeader("cache-control", "no-store");
