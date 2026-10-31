@@ -219,7 +219,7 @@ export const BOT_ZH: Record<string, string> = {
   "KOL wallets {n}": "KOL 钱包 {n}",
   "smart money {n}": "聪明钱 {n}",
   "known ruggers {n}": "已知跑路钱包 {n}",
-  "whales {n}": "巨鲸 {n}",
+  "whales {n}, hold {h}": "巨鲸 {n}，现持有 {h}",
   "new wallets {n}": "新钱包 {n}",
   "creator's crew {n}": "开发者团伙 {n}",
   "sniper ring {n}": "狙击团伙 {n}",

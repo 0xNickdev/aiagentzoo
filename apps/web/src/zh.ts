@@ -306,7 +306,7 @@ export const ZH: Record<string, string> = {
   "known ruggers": "已知跑路者",
   "wallets that rugged their own launches": "砸过自己币的钱包",
   "whales": "鲸鱼 🐳",
-  "took {p}% of the supply between them": "合计拿了 {p}% 的总量",
+  "took {p}% of the supply between them, hold {h}% now": "合计拿了 {p}% 的总量，现在还持有 {h}%",
   "no first buyer took 2% or more": "没有早期买家拿到2%以上",
   "new wallets": "新钱包",
   "KOL wallets": "KOL 钱包",

@@ -334,7 +334,7 @@ export interface XRayReply {
     notes: string[];
     facts: { ageMin: number; creatorSoldPct?: number | null; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
-  early: Array<{ bought: number; tags?: string[] }>;
+  early: Array<{ bought: number; held?: number; tags?: string[] }>;
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
@@ -373,7 +373,7 @@ export function xrayMessage(x: XRayReply): string {
         count("rugger") ? T("known ruggers {n}", { n: count("rugger") }) : "",
         f.ringWallets ? T("sniper ring {n}", { n: f.ringWallets }) : "",
         f.serialSnipers ? T("serial snipers {n}", { n: f.serialSnipers }) : "",
-        count("whale") ? T("whales {n}", { n: count("whale") }) : "",
+        count("whale") ? T("whales {n}, hold {h}", { n: count("whale"), h: pct(x.early.filter((e) => e.tags?.includes("whale")).reduce((n, e) => n + (e.held ?? 0), 0)) }) : "",
         count("new") ? T("new wallets {n}", { n: count("new") }) : "",
       ].filter(Boolean);
       if (who.length) lines.push(who.join(" · "));
