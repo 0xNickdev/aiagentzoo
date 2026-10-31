@@ -40,7 +40,7 @@ export function factorsOf(r: XRayReport): Factor[] {
   if (f.earlyWallets !== null) out.push({ k: t("first 5 seconds"), v: f.earlyWallets === 1 ? t("1 wallet") : t("{n} wallets", { n: f.earlyWallets }), d: t("still hold {p}%", { p: f.earlyHeldPct ?? 0 }), bad: (f.earlyHeldPct ?? 0) >= 30 });
   out.push({ k: t("known ruggers"), v: String(tagged("rugger")), d: t("wallets that rugged their own launches"), bad: tagged("rugger") >= 1 });
   const whaleHold = Math.round(early.filter((e) => e.tags?.includes("whale" as never)).reduce((n, e) => n + e.held, 0) * 100);
-  out.push({ k: t("whales"), v: String(tagged("whale")), d: tagged("whale") ? t("took {p}% of the supply between them, hold {h}% now", { p: share("whale"), h: whaleHold }) : t("no first buyer took 2% or more"), bad: share("whale") >= 20 });
+  out.push({ k: t("whales"), v: String(tagged("whale")), d: tagged("whale") ? t("took {p}% between them, hold {h}% now", { p: share("whale"), h: whaleHold }) : t("no first buyer took 2% or more"), bad: share("whale") >= 20 });
   out.push({ k: t("new wallets"), v: String(tagged("new")), d: t("never seen by the zoo before this launch"), bad: false });
   if (tagged("kol") + tagged("kolside")) out.push({ k: t("KOL wallets"), v: String(tagged("kol") + tagged("kolside")), d: tagged("kolside") ? t("{n} of them side wallets", { n: tagged("kolside") }) : t("listed on Kolscan"), bad: false });
   if (tagged("smart")) out.push({ k: t("smart money"), v: String(tagged("smart")), d: t("wallets with a winning record"), bad: false, good: true });
