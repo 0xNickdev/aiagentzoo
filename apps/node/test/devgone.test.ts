@@ -108,3 +108,9 @@ test("a dev who never sold and whose bag sits in a locker gets a note, not the m
   assert.ok(locked.notes.some((n) => n.includes("3.4% of the supply is locked")));
   assert.equal(locked.holders!.lockedPct, 3.4);
 });
+
+test("a lock the creator signed is the creator's: the note names it", () => {
+  const c = checkToken("H", { symbol: "H", facts: php({ creatorSold: 0 }), creatorRecord: null }, { holders: spread({ creatorShare: 0, lockedShare: 0.042, creatorLockedShare: 0.042 }) });
+  assert.ok(c.notes.some((n) => n === "the creator never sold: they locked 4.2% of the supply in a token locker until its date"));
+  assert.equal(c.holders!.devLockedPct, 4.2);
+});

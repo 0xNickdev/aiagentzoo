@@ -23,6 +23,8 @@ export interface HolderReport {
   programShare: number;
   /** Share sitting in a locker program until its date; part of programShare. */
   lockedShare?: number;
+  /** Of that, the share the creator locked: the lock's own transaction was signed by the creator. */
+  creatorLockedShare?: number;
   /** The pump.fun creator, when pump.fun says. */
   creator: string | null;
   /** Share of supply the creator still holds; null when the creator is unknown. */
@@ -31,25 +33,27 @@ export interface HolderReport {
 
 const cache = new Map<string, { at: number; report: HolderReport | null }>();
 /** Self-owned token accounts already looked up: a locker's escrow stays one. */
-const escrows = new Map<string, boolean>();
+const escrows = new Map<string, { locker: boolean; signers: string[] }>();
 
 /**
- * Streamflow's escrow is a token account that owns itself, so its owner names no program. The transaction that made
- * it does: the oldest of its signatures, read once per account.
+ * The transaction that made a token account: whether a locker program took part, and who signed it. Streamflow's escrow
+ * owns itself, so its owner names no program; this does, and the signer says whose lock it is. Read once per account.
  */
-async function lockerEscrow(address: string, f: typeof fetch): Promise<boolean> {
+async function originOf(address: string, f: typeof fetch): Promise<{ locker: boolean; signers: string[] }> {
   const known = escrows.get(address);
-  if (known !== undefined) return known;
+  if (known) return known;
+  const none = { locker: false, signers: [] };
   const sigs = await historyRpc<Array<{ signature: string }>>("getSignaturesForAddress", [address, { limit: 50 }], f);
   const first = sigs?.at(-1)?.signature;
-  if (!first) return false;
-  const tx = await historyRpc<{ transaction: { message: { accountKeys: Array<string | { pubkey: string }> } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
-  if (!tx) return false;
-  const keys = tx.transaction.message.accountKeys.map((k) => (typeof k === "string" ? k : k.pubkey));
-  const yes = keys.some((k) => LOCKERS.has(k));
-  escrows.set(address, yes);
+  if (!first) return none;
+  type Key = string | { pubkey: string; signer?: boolean };
+  const tx = await historyRpc<{ transaction: { message: { accountKeys: Key[] } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
+  if (!tx) return none;
+  const keys = tx.transaction.message.accountKeys;
+  const got = { locker: keys.some((k) => LOCKERS.has(typeof k === "string" ? k : k.pubkey)), signers: keys.filter((k): k is { pubkey: string; signer: boolean } => typeof k !== "string" && Boolean(k.signer)).map((k) => k.pubkey) };
+  escrows.set(address, got);
   if (escrows.size > 20_000) escrows.clear();
-  return yes;
+  return got;
 }
 
 async function rpc<T>(method: string, params: unknown[], f: typeof fetch): Promise<T | null> {
@@ -116,20 +120,32 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   const isWallet = new Map(uniq.map((o, i) => [o, onCurve(o) && (!ownerInfo?.value[i] || ownerInfo.value[i]!.owner === SYSTEM)]));
 
   const isLock = new Map(uniq.map((o, i) => [o, LOCKERS.has(ownerInfo?.value[i]?.owner ?? "")]));
-  const selfOwned = accounts.filter((a, i) => owners[i] === a.address).slice(0, 5);
-  for (const a of selfOwned) if (await lockerEscrow(a.address, f)) isLock.set(a.address, true);
+  const creator = coin?.creator ?? null;
+  // Locks among the largest accounts: a locker's own account, or a self-owned one its transaction shows a locker made.
+  const lockedBy = new Map<string, string[]>();
+  for (const [i, a] of accounts.entries()) {
+    const owner = owners[i];
+    if (!owner || lockedBy.size >= 5) continue;
+    if (!isLock.get(owner) && owner !== a.address) continue;
+    const o = await originOf(a.address, f);
+    if (isLock.get(owner) || o.locker) {
+      isLock.set(owner, true);
+      lockedBy.set(a.address, o.signers);
+    }
+  }
   let programAmount = 0;
   let lockedAmount = 0;
+  let creatorLocked = 0;
   const byWallet = new Map<string, number>();
   accounts.forEach((a, i) => {
     const owner = owners[i];
     const amount = a.uiAmount ?? 0;
     if (owner && isLock.get(owner)) lockedAmount += amount;
+    if (creator && lockedBy.get(a.address)?.includes(creator)) creatorLocked += amount;
     if (!owner || !isWallet.get(owner)) programAmount += amount;
     else byWallet.set(owner, (byWallet.get(owner) ?? 0) + amount);
   });
   const ranked = [...byWallet.values()].sort((a, b) => b - a);
-  const creator = coin?.creator ?? null;
   let creatorShare: number | null = null;
   if (creator) {
     const mine = await rpc<{ value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } } } }> }>(
@@ -145,6 +161,7 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
     topShare: round((ranked[0] ?? 0) / total),
     programShare: round(programAmount / total),
     lockedShare: round(lockedAmount / total),
+    ...(creator ? { creatorLockedShare: round(creatorLocked / total) } : {}),
     creator,
     creatorShare: creatorShare === null ? null : round(creatorShare),
   };

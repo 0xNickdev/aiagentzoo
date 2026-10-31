@@ -151,6 +151,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^a bot bought and sold it in the same transaction (\d+) times to keep it on the front page$/, (m) => `机器人在同一笔交易里买了又卖 ${m[1]} 次，为了挂在首页`],
   [/^one wallet holds (\d+)% of the supply$/, (m) => `一个钱包持有 ${m[1]}% 的供应`],
   [/^the 10 largest wallets hold (\d+)% of the supply$/, (m) => `前十大钱包持有 ${m[1]}% 的供应`],
+  [/^the creator never sold: they locked ([\d.]+)% of the supply in a token locker until its date$/, (m) => `开发者从未卖出：他把 ${m[1]}% 的供应锁进了锁仓合约，直到解锁日`],
   [/^the creator never sold: the bag left their wallet, and ([\d.]+)% of the supply is locked in a token locker until its date$/, (m) => `开发者从未卖出：筹码离开了钱包，${m[1]}% 的供应锁在锁仓合约中直到解锁日`],
   [/^the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets$/, () => "开发者已经不持有，但从没在内盘卖过：筹码转去了别的钱包"],
   [/^this wallet launched (\d+) tokens in 24 hours: launch spam, not a project$/, (m) => `这个钱包 24 小时内发了 ${m[1]} 个币：批量刷币，不是项目`],
