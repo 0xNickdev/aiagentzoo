@@ -25,6 +25,8 @@ export interface HolderReport {
   lockedShare?: number;
   /** Of that, the share the creator locked: the lock's own transaction was signed by the creator. */
   creatorLockedShare?: number;
+  /** The supply left now, in whole tokens: what was minted, less what was burned. */
+  supply?: number;
   /** The pump.fun creator, when pump.fun says. */
   creator: string | null;
   /** Share of supply the creator still holds; null when the creator is unknown. */
@@ -162,6 +164,7 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
     programShare: round(programAmount / total),
     lockedShare: round(lockedAmount / total),
     ...(creator ? { creatorLockedShare: round(creatorLocked / total) } : {}),
+    supply: total,
     creator,
     creatorShare: creatorShare === null ? null : round(creatorShare),
   };

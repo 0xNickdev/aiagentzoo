@@ -174,7 +174,7 @@ interface Check {
     ringWallets: number | null;
     serialSnipers: number | null;
   } | null;
-  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number } | null;
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
 }
 
 interface Funding {

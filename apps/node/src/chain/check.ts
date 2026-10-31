@@ -24,6 +24,13 @@ const SOFT_AVOID = [/^the creator sold \d+% of their own bag$/, /^this creator d
 const usdShort = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1e3)}K`);
 export const runnerReason = (p: NonNullable<CreatorRecord["pattern"]>) =>
   `this dev sells early, yet ${Math.round(p.reached20k! * 100)}% of their last ${p.launches} launches went past $20K${p.peakCapUsd ? ` (usual peak ${usdShort(p.peakCapUsd)})` : ""}: selling fast is their pattern, so the risk is getting out in time, not a rug`;
+/** pump.fun mints a billion of every coin (Mayhem Mode two billion, left out: pump.fun's own bot works that supply). */
+const PUMP_SUPPLY = 1_000_000_000;
+/** What was burned since the mint: the billion less the supply left, for plain pump.fun coins only. */
+export const burnedOf = (mint: string, f: { mayhem?: boolean; venue?: string } | null | undefined, h: { supply?: number }) =>
+  mint.endsWith("pump") && !f?.mayhem && (f?.venue ?? "pump.fun") === "pump.fun" && h.supply !== undefined && h.supply > 0 && h.supply <= PUMP_SUPPLY
+    ? { burnedPct: Math.round(((PUMP_SUPPLY - h.supply) / PUMP_SUPPLY) * 1000) / 10 }
+    : {};
 /** Odds this many times the average launch's make an avoid say the coin may still run. */
 export const ODDS_RUN_NOTE = 4;
 /** An avoid whose odds are well above average: the people around it do rug things, yet launches like it ran. */
@@ -109,7 +116,7 @@ export interface TokenCheck {
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
-  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number } | null;
+  holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
   stream: { live: boolean; lastEventSecAgo: number | null };
   checkedAt: number;
@@ -318,7 +325,7 @@ export function checkToken(
     const h = opts.holders;
     // Shares of the supply to one decimal: a coin where everyone sold back shows 0.3%, not a misleading 0%.
     const pct1 = (x: number | null) => (x === null ? null : Math.round(x * 1000) / 10);
-    holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}), ...(h.creatorLockedShare !== undefined ? { devLockedPct: pct1(h.creatorLockedShare)! } : {}) } : null;
+    holders = h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}), ...(h.creatorLockedShare !== undefined ? { devLockedPct: pct1(h.creatorLockedShare)! } : {}), ...burnedOf(mint, f, h) } : null;
     if (!h) notes.push(`holders could not be read from ${CHAIN_NAME[chain]} right now`);
     else {
       // Half the supply in one wallet: whoever holds it decides when the price goes to zero.

@@ -114,3 +114,12 @@ test("a lock the creator signed is the creator's: the note names it", () => {
   assert.ok(c.notes.some((n) => n === "the creator never sold: they locked 4.2% of the supply in a token locker until its date"));
   assert.equal(c.holders!.devLockedPct, 4.2);
 });
+
+test("burned: a plain pump.fun coin's billion less the supply left; Mayhem Mode and other launchpads say nothing", () => {
+  const c = checkToken("Xpump", { symbol: "B", facts: php({ creatorSold: 0 }), creatorRecord: null }, { holders: spread({ supply: 947_707_738 }) });
+  assert.equal(c.holders!.burnedPct, 5.2);
+  const mayhem = checkToken("Xpump", { symbol: "B", facts: php({ mayhem: true }), creatorRecord: null }, { holders: spread({ supply: 900_000_000 }) });
+  assert.equal(mayhem.holders!.burnedPct, undefined);
+  const other = checkToken("Xbonk", { symbol: "B", facts: php(), creatorRecord: null }, { holders: spread({ supply: 900_000_000 }) });
+  assert.equal(other.holders!.burnedPct, undefined);
+});
