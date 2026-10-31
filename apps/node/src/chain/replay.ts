@@ -1,4 +1,4 @@
-import { fundersEnabled } from "./funders.ts";
+import { fundersEnabled, HISTORY_RPC } from "./funders.ts";
 import type { HistoryStore } from "./history.ts";
 import { parsePumpLogs, PumpTape } from "./pump.ts";
 
@@ -10,7 +10,7 @@ import { parsePumpLogs, PumpTape } from "./pump.ts";
  * On demand only, behind the warden token: thousands of RPC calls for one token. Needs Helius (the RPC in SOLANA_RPC_URL).
  */
 
-const RPC = process.env.SOLANA_RPC_URL ?? "";
+const RPC = HISTORY_RPC;
 
 export interface ReplayResult {
   mint: string;

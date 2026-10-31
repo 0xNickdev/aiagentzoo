@@ -1,4 +1,5 @@
 import { isOnCurve } from "./curve.ts";
+import { rpc as historyRpc } from "./funders.ts";
 import { fromBase58 } from "./pump.ts";
 /**
  * Eyes for tokens the stream did not see launch: anything already graduated to PumpSwap, or older than the tape.
@@ -39,10 +40,10 @@ const escrows = new Map<string, boolean>();
 async function lockerEscrow(address: string, f: typeof fetch): Promise<boolean> {
   const known = escrows.get(address);
   if (known !== undefined) return known;
-  const sigs = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [address, { limit: 50 }], f);
+  const sigs = await historyRpc<Array<{ signature: string }>>("getSignaturesForAddress", [address, { limit: 50 }], f);
   const first = sigs?.at(-1)?.signature;
   if (!first) return false;
-  const tx = await rpc<{ transaction: { message: { accountKeys: Array<string | { pubkey: string }> } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
+  const tx = await historyRpc<{ transaction: { message: { accountKeys: Array<string | { pubkey: string }> } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
   if (!tx) return false;
   const keys = tx.transaction.message.accountKeys.map((k) => (typeof k === "string" ? k : k.pubkey));
   const yes = keys.some((k) => LOCKERS.has(k));

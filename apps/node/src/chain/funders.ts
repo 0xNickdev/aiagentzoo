@@ -5,7 +5,11 @@
  * SHYFT_API_KEY, or any SOLANA_RPC_URL.
  */
 
-const RPC = process.env.SOLANA_RPC_URL ?? (process.env.SHYFT_API_KEY ? `https://rpc.shyft.to?api_key=${process.env.SHYFT_API_KEY}` : "");
+// Reading a wallet's past needs an RPC that keeps every signature: Helius when its key is set (Shyft's lists come back short).
+export const HISTORY_RPC = process.env.HELIUS_API_KEY
+  ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+  : (process.env.SOLANA_RPC_URL ?? (process.env.SHYFT_API_KEY ? `https://rpc.shyft.to?api_key=${process.env.SHYFT_API_KEY}` : ""));
+const RPC = HISTORY_RPC;
 const CACHE_MS = 10 * 60_000;
 
 export interface FundingReport {
