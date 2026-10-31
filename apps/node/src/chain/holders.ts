@@ -29,6 +29,27 @@ export interface HolderReport {
 }
 
 const cache = new Map<string, { at: number; report: HolderReport | null }>();
+/** Self-owned token accounts already looked up: a locker's escrow stays one. */
+const escrows = new Map<string, boolean>();
+
+/**
+ * Streamflow's escrow is a token account that owns itself, so its owner names no program. The transaction that made
+ * it does: the oldest of its signatures, read once per account.
+ */
+async function lockerEscrow(address: string, f: typeof fetch): Promise<boolean> {
+  const known = escrows.get(address);
+  if (known !== undefined) return known;
+  const sigs = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [address, { limit: 50 }], f);
+  const first = sigs?.at(-1)?.signature;
+  if (!first) return false;
+  const tx = await rpc<{ transaction: { message: { accountKeys: Array<string | { pubkey: string }> } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
+  if (!tx) return false;
+  const keys = tx.transaction.message.accountKeys.map((k) => (typeof k === "string" ? k : k.pubkey));
+  const yes = keys.some((k) => LOCKERS.has(k));
+  escrows.set(address, yes);
+  if (escrows.size > 20_000) escrows.clear();
+  return yes;
+}
 
 async function rpc<T>(method: string, params: unknown[], f: typeof fetch): Promise<T | null> {
   try {
@@ -94,6 +115,8 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   const isWallet = new Map(uniq.map((o, i) => [o, onCurve(o) && (!ownerInfo?.value[i] || ownerInfo.value[i]!.owner === SYSTEM)]));
 
   const isLock = new Map(uniq.map((o, i) => [o, LOCKERS.has(ownerInfo?.value[i]?.owner ?? "")]));
+  const selfOwned = accounts.filter((a, i) => owners[i] === a.address).slice(0, 5);
+  for (const a of selfOwned) if (await lockerEscrow(a.address, f)) isLock.set(a.address, true);
   let programAmount = 0;
   let lockedAmount = 0;
   const byWallet = new Map<string, number>();

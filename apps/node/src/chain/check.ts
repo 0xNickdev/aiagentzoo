@@ -327,7 +327,9 @@ export function checkToken(
       else if (h.top10Share >= 0.5) flag(caution, `the 10 largest wallets hold ${pct(h.top10Share)}% of the supply`, WEIGHT.top10);
       const bought = f.creatorSold !== null;
       if (bought && (f.creatorSold ?? 0) < 0.5 && h.creatorShare !== null && h.creatorShare < 0.001) {
-        flag(caution, "the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets", WEIGHT.bagMoved);
+        // Moved into a locker is the opposite of moved to sell: the dev's bag waits there until the lock's date.
+        if ((h.lockedShare ?? 0) >= 0.005) notes.push(`the creator never sold: the bag left their wallet, and ${pct1(h.lockedShare!)}% of the supply is locked in a token locker until its date`);
+        else flag(caution, "the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets", WEIGHT.bagMoved);
       }
     }
   }

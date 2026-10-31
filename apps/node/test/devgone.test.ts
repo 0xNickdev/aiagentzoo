@@ -99,3 +99,12 @@ test("dev gone counts a dev who sold 80% and kept under 1%, and an avoid with hi
   assert.equal(oddsRunNote("avoid", 2), null);
   assert.equal(oddsRunNote("caution", 9), null);
 });
+
+test("a dev who never sold and whose bag sits in a locker gets a note, not the moved-bag caution", () => {
+  const moved = checkToken("H", { symbol: "H", facts: php({ creatorSold: 0 }), creatorRecord: null }, { holders: spread({ creatorShare: 0 }) });
+  assert.ok(moved.reasons.some((r) => r.includes("the bag moved to other wallets")));
+  const locked = checkToken("H", { symbol: "H", facts: php({ creatorSold: 0 }), creatorRecord: null }, { holders: spread({ creatorShare: 0, lockedShare: 0.034 }) });
+  assert.ok(!locked.reasons.some((r) => r.includes("the bag moved to other wallets")));
+  assert.ok(locked.notes.some((n) => n.includes("3.4% of the supply is locked")));
+  assert.equal(locked.holders!.lockedPct, 3.4);
+});
