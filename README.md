@@ -35,8 +35,9 @@ The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiage
 
 ## Solana Hackathon 2026
 
-Built and shipped live on mainnet during the hackathon (353 commits since 12 October):
+Built and shipped live on mainnet during the hackathon (390 commits since 12 October):
 
+- **x402 on Solana**: trading agents pay per check in USDC over plain HTTP, no key and no account; the node is its own facilitator, settles only when there is a report to deliver, and logs every sale with the hash of the report sold ([details below](#x402-agents-pay-per-check), live at [zooaiagency.com/x402](https://zooaiagency.com/x402))
 - the X-Ray as a terminal, with an in-page Jupiter swap and one-tap links to Axiom, GMGN, BullX and Padre
 - wallet tags (crew, rugger, bundle, KOL, KOL side wallet, smart money, new), cabals, KOL side wallets
 - the money map, and since this week where the SOL went after the dump (traced through Helius in under a second for most launches)
@@ -61,6 +62,8 @@ flowchart LR
   H --> X
   X --> U["web · Telegram · extension · API"]
   U --> J["Jupiter swap<br/>signed in the user's wallet"]
+  X --> P["x402: 402 -> USDC transfer<br/>verified, settled on Solana"]
+  P --> A["trading agents"]
 ```
 
 - **We read the chain ourselves.** A Yellowstone gRPC stream ([`apps/node/src/chain/pump.ts`](apps/node/src/chain/pump.ts), [`launchpads.ts`](apps/node/src/chain/launchpads.ts)) decodes the Anchor events of every pump.fun, PumpSwap, Raydium LaunchLab and Meteora transaction as it lands, about 5,000 trades a minute; 622,000 launches and 159 million trades read so far. No third-party analytics API sits in the loop.
@@ -68,6 +71,34 @@ flowchart LR
 - **RPC reads.** Holders, the dev's funder ([`funders.ts`](apps/node/src/chain/funders.ts)) and the SOL that left the dev's wallets after a dump ([`outflows.ts`](apps/node/src/chain/outflows.ts)) are read from Solana RPC on demand.
 - **Odds.** [`odds.ts`](apps/node/src/chain/odds.ts) applies two logistic models to what the tape saw in a launch's first five minutes.
 - **Settlement on Solana.** The swap ([`apps/web/src/components/Swap.tsx`](apps/web/src/components/Swap.tsx)) builds a Jupiter route and the user signs it in their own wallet (Phantom, Solflare, Backpack and any Wallet Standard wallet). A 1% fee in SOL goes to a fee wallet; every six hours a tenth of it buys $ZOOAGENCY back on-chain and the rest goes to the treasury ([`buyback.ts`](apps/node/src/buyback.ts)).
+
+## x402: agents pay per check
+
+A trading agent should ask who is behind a coin before every swap, but an agent cannot fill in a sign-up form or wait for an API key. With [x402](https://x402.org) it does not have to: it calls the endpoint, gets `402 Payment Required`, pays a fraction of a cent in USDC on Solana and gets the report in the same HTTP exchange.
+
+| Route | Price | |
+|---|---|---|
+| `GET /v1/x402/check/<mint>` | 0.001 USDC | verdict, plain reasons, odds; call it before every swap |
+| `GET /v1/x402/xray/<mint>` | 0.01 USDC | the full X-Ray: dev history, who paid the dev, first-seconds wallets, holders, where the SOL went |
+| `GET /v1/x402` | free | the menu: network, USDC mint, payee, fee payer, prices |
+| `GET /v1/x402/receipts` | free | every sale, with its transaction and the sha256 of the report sold |
+
+How one request goes, on [`north.zooaiagency.com`](https://north.zooaiagency.com/v1/x402) (Solana devnet, USDC):
+
+1. The agent calls the route with no payment and gets `402` with a `PAYMENT-REQUIRED` header (x402 v2, `exact` scheme): amount, USDC mint, payee, fee payer.
+2. Its x402 client (the official `@x402/fetch` + `@x402/svm` work as they are) signs a USDC `TransferChecked` and retries with `PAYMENT-SIGNATURE`.
+3. The node **verifies** the transfer (amount, mint, payee, simulation) against its own price, never the one the client claims.
+4. Only then it **builds the report**. If there is nothing to sell (a token the zoo knows nothing about, a 404, a node error) the transfer is never submitted and expires with its blockhash: **the agent is not charged** (`x402-charged: false`).
+5. The node **settles**: it co-signs as fee payer, submits and waits for confirmation. The agent needs USDC only, no SOL. If settlement fails the report is withheld and the reason comes back in a `402`.
+6. `200` with the report, the Solana transaction in `PAYMENT-RESPONSE`, and `X-Report-Sha256`. The sale is appended to the node's signed, hash-chained public log (`x402.sale`), so what the zoo said for money can be checked later against what the coin did.
+
+The node is its own facilitator (the official `@x402/svm` facilitator scheme running in process): no third-party service sits between the agent's money and the report. Code: [`apps/node/src/x402.ts`](apps/node/src/x402.ts), tests for every failure path: [`apps/node/test/x402.test.ts`](apps/node/test/x402.test.ts). A ready agent that refuses the swap on `avoid`: [`examples/x402-agent`](examples/x402-agent). Every sale, live: [zooaiagency.com/x402](https://zooaiagency.com/x402).
+
+```bash
+cd examples/x402-agent && npm install
+npm run keygen                          # fund the printed address at faucet.circle.com (Solana Devnet USDC)
+npm run guard -- <mint> [<mint> ...]    # 0.001 USDC per check, refuses the swap on avoid
+```
 
 ## The agent network
 
@@ -213,6 +244,8 @@ For the in-page swap the site reads `VITE_SOLANA_RPC`, `VITE_SWAP_TREASURY` and 
 
 Put a model provider's API key in the environment (`ZOO_MODEL` picks the model) to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
 
+**To sell reports over x402**, give the north node a fee payer and a payee: `X402_FACILITATOR_KEY` (a Solana secret key, JSON byte array or base58, holding a little SOL for fees), `X402_PAY_TO` (the wallet that receives USDC; its USDC account must exist), optionally `X402_NETWORK=mainnet` (devnet by default), `X402_RPC_URL` and `X402_PUBLIC_URL`. Without them the x402 routes answer 404 and everything else runs.
+
 Tests: `npm test` (node and SDK), `npm run typecheck`.
 
 ## API
@@ -227,6 +260,8 @@ Tests: `npm test` (node and SDK), `npm run typecheck`.
 | `GET` | `/v1/guests` | guest agents, their wing and their score |
 | `POST` | `/v1/guests` | wallet-signed `guest.register` |
 | `POST` | `/v1/events` | signed signals and `guest.report` |
+| `GET` | `/v1/x402` · `/v1/x402/receipts` | the x402 menu and every sale |
+| `GET` | `/v1/x402/check/:mint` · `/v1/x402/xray/:mint` | paid per request in USDC over x402 |
 
 Full reference: [docs/protocol.md](docs/protocol.md).
 
