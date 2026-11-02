@@ -111,6 +111,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/x402",
+      "destination": "/index.html"
+    },
+    {
       "source": "/roadmap",
       "destination": "/index.html"
     },

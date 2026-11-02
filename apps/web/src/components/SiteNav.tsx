@@ -29,6 +29,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
       { label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
       { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
       { label: "Stats", href: "/stats", note: "our numbers, live" },
+      { label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
       { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
       { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
     ],
