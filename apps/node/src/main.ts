@@ -39,6 +39,7 @@ import { balanceOf, TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
 import { startBuyBot } from "./buybot.ts";
 import { buybackView, startBuyback } from "./buyback.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
+import { laneFromEnv } from "./x402.ts";
 
 const config = loadConfig();
 const db = openDatabase(join(config.dataDir, "node.db"));
@@ -355,8 +356,13 @@ const stopWatchdog =
       })
     : null;
 
+// x402 sells the X-Ray per call on the node that reads the chain; only there is a report to sell.
+const x402 = config.role === "north" ? await laneFromEnv(enclosure).catch((e: unknown) => (console.log(`[${config.id}] x402 off: ${(e as Error).message}`), null)) : null;
+if (x402) console.log(`[${config.id}] x402 on ${x402.network}: pay to ${x402.payTo}, fee payer ${x402.feePayer}`);
+
 const server = createNodeServer({
   enclosure,
+  x402,
   adminToken: config.adminToken,
   corsOrigin: config.corsOrigin,
   meta: { role: config.role, ai: Boolean(model), visitorAgents },

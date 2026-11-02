@@ -44,6 +44,7 @@ import { type GuestTally, skillOf } from "./agents/judgement.ts";
 import { CHAIN_OF_VENUE, type CreatorRecord, tape, type Venue } from "./chain/pump.ts";
 import type { HistoryStore } from "./chain/history.ts";
 import { type GuestHouse, isGuestNode, publicGuest } from "./guests.ts";
+import type { X402Lane } from "./x402.ts";
 
 export interface ServerOptions {
   enclosure: Enclosure;
@@ -84,6 +85,8 @@ export interface ServerOptions {
   sideWallets?: SideWallets;
   /** Where tokens were seen on X, as the extension reports it. */
   mentions?: Mentions;
+  /** Pay-per-report over HTTP 402 in USDC on Solana; absent when x402 is off. */
+  x402?: X402Lane | null;
 }
 
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -99,6 +102,7 @@ const ROUTE = {
   sniper: route("/v1/chain/sniper/ADDR"),
   wallet: route("/v1/wallet/ADDR"),
   bundle: route("/v1/chain/bundle/ADDR"),
+  x402: route("/v1/x402/(xray|check)/ADDR"),
 };
 /** EVM addresses are case-insensitive, so one spelling keys everything: lowercase. Solana addresses stay as they are. */
 const norm = (address: string) => (isEvm(address) ? address.toLowerCase() : address);
@@ -120,7 +124,7 @@ const STREAM_REPLAY = 150;
 /** Open SSE connections per node; beyond this new subscribers get 503. */
 const MAX_STREAMS = 500;
 
-export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks, cabals, sideWallets, mentions }: ServerOptions) {
+export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta = {}, passports, visitor, briefs, watchlist, guests, stats, board, beaverHistory, weekly, asks, evolution, history, buybacks, cabals, sideWallets, mentions, x402 }: ServerOptions) {
   const agentCooldown = new Cooldown(visitor?.agentCooldownMs ?? 0);
   const visitorCooldown = new Cooldown(visitor?.visitorCooldownMs ?? 0);
   // The creator check: generous per caller, since agents behind one proxy share an address.
@@ -287,7 +291,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
   const server = createServer(async (req, res) => {
     res.setHeader("access-control-allow-origin", corsOrigin);
-    res.setHeader("access-control-allow-headers", "content-type, authorization, solana-client");
+    res.setHeader("access-control-allow-headers", "content-type, authorization, solana-client, payment-signature");
+    res.setHeader("access-control-expose-headers", "payment-required, payment-response, x-report-sha256, x402-charged");
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
     if (req.method === "OPTIONS") return end(res, 204);
 
@@ -295,6 +300,28 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
     const path = url.pathname;
     try {
       if (req.method === "GET" && path === "/health") return json(res, 200, { ok: true });
+
+      // x402: pay per report in USDC on Solana, no key and no account. The paid route sells the same report the free
+      // one serves, fetched from this node over loopback (which carries the peer allowance), so free limits never apply.
+      if (req.method === "GET" && path === "/v1/x402") return x402 ? json(res, 200, x402.info()) : json(res, 404, { error: "x402 is off on this node" });
+      if (req.method === "GET" && path === "/v1/x402/receipts") {
+        if (!x402) return json(res, 404, { error: "x402 is off on this node" });
+        res.setHeader("cache-control", "no-store");
+        return json(res, 200, await x402.receipts(clampInt(url.searchParams.get("limit"), 50, 1, 200)));
+      }
+      const paid = ROUTE.x402.exec(path);
+      if (req.method === "GET" && paid) {
+        if (!x402) return json(res, 404, { error: "x402 is off on this node" });
+        const [, routeId, raw] = paid as unknown as [string, string, string];
+        const mint = norm(raw);
+        const at = server.address();
+        const port = at && typeof at === "object" ? at.port : 8787;
+        const chain = url.searchParams.get("chain");
+        return void (await x402.handle(req, res, routeId, mint, async () => {
+          const r = await fetch(`http://127.0.0.1:${port}/v1/${routeId}/${mint}${chain ? `?chain=${encodeURIComponent(chain)}` : ""}`, { signal: AbortSignal.timeout(20_000) });
+          return { status: r.status, body: await r.text() };
+        }));
+      }
 
       if (req.method === "GET" && path === "/v1/node") {
         const head = await enclosure.log.head();
