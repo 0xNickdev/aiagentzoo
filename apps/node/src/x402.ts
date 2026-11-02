@@ -138,7 +138,7 @@ export class X402Lane {
         description: r.description,
       })),
       guarantees: [
-        "you are charged only when a report is delivered: an unknown token or a node error never settles your payment",
+        "you are charged only when a report is delivered: a token the zoo knows nothing about, or a node error, never settles your payment",
         "every sale is a receipt in the node's signed public log, with the sha256 of the exact report you got",
       ],
       receipts: `${this.publicUrl}/v1/x402/receipts`,
@@ -203,6 +203,12 @@ export class X402Lane {
       await this.count("refusedBeforeSettle");
       res.writeHead(produced.status, { "content-type": "application/json", "x402-charged": "false" });
       return void res.end(withNote(produced.body, "not charged: your payment was verified but never settled, because there was no report to deliver"));
+    }
+    // A token the zoo knows nothing about is an answer, not a report: it goes out free and the payment never lands.
+    if (verdictOf(produced.body) === "unknown") {
+      await this.count("refusedBeforeSettle");
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store", "x402-charged": "false" });
+      return void res.end(withNote(produced.body, "not charged: the zoo has nothing on this token yet, so your payment was never settled"));
     }
 
     const settled = await this.facilitator.settle(payload, requirements).catch((e: unknown) => ({ success: false, errorReason: "settle_error", errorMessage: String((e as Error)?.message ?? e), transaction: "", network: requirements.network }) as SettleResponse);

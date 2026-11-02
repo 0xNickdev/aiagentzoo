@@ -149,6 +149,21 @@ test("a node error while building the report is not charged either", async () =>
   }
 });
 
+test("a token the zoo knows nothing about goes out free: verdict unknown never settles", async () => {
+  const { f, calls } = fakeFacilitator();
+  const unknown = JSON.stringify({ mint: MINT, verdict: "unknown", reasons: [] });
+  const { url, server } = await serve(laneWith(f), async () => ({ status: 200, body: unknown }));
+  try {
+    const r = await fetch(url, { headers: { "payment-signature": payment(laneWith(f)) } });
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get("x402-charged"), "false");
+    assert.equal(((await r.json()) as { verdict: string }).verdict, "unknown");
+    assert.equal(calls.settle, 0);
+  } finally {
+    server.close();
+  }
+});
+
 test("a settlement that fails withholds the report and says why", async () => {
   const { f } = fakeFacilitator({ settles: false });
   const { url, server } = await serve(laneWith(f), async () => ({ status: 200, body: REPORT }));

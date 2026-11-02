@@ -1,0 +1,19 @@
+{
+  "name": "zooai-x402-agent",
+  "private": true,
+  "type": "module",
+  "description": "A trading agent's seatbelt: before every swap it pays ZOOAI 0.001-0.01 USDC over x402 for a check of who is behind the coin, and refuses the trade on avoid",
+  "scripts": {
+    "guard": "node --disable-warning=ExperimentalWarning guard.ts",
+    "keygen": "node --disable-warning=ExperimentalWarning guard.ts --keygen"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "@solana/kit": "^8.6.0",
+    "@x402/core": "^2.29.0",
+    "@x402/fetch": "^2.29.0",
+    "@x402/svm": "^2.29.0"
+  }
+}
