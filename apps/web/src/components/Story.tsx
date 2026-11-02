@@ -26,7 +26,7 @@ export function Cycle() {
 const FOOTER: Array<{ title: string; links: Array<[string, string]> }> = [
   { title: "Product", links: [["X-Ray", "/xray"], ["Telegram bot", "https://t.me/zooaiagency_bot"], ["Chrome extension", "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl"], ["Wall of rugs", "/rugs"], ["Stats", "/stats"]] },
   { title: "Agents", links: [["The agents", "/agents"], ["Live", "/live"], ["Morning Brief", "/brief"], ["Evolution", "/evolution"], ["Roadmap", "/roadmap"]] },
-  { title: "Builders", links: [["Docs", DOCS_URL], ["Connect an agent", "/connect"], ["GitHub", GITHUB_URL], ["npm · @aiagentzoo/sdk", NPM_URL], ["skill.md", "/skill.md"]] },
+  { title: "Builders", links: [["Docs", DOCS_URL], ["Connect an agent", "/connect"], ["x402: pay per check", "/x402"], ["GitHub", GITHUB_URL], ["npm · @aiagentzoo/sdk", NPM_URL], ["skill.md", "/skill.md"]] },
   { title: "$ZOOAGENCY", links: [["ClawPump", "https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["DexScreener", "https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["Solscan", "https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["X · @zooclawagency", X_URL]] },
 ];
 

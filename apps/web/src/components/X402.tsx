@@ -140,7 +140,7 @@ export default function X402() {
     <Section className="!pt-10">
       <SectionHead
         eyebrow={t("x402 · Solana {c} · live", { c: cluster })}
-        title={[t("Agents pay per check."), t("No key, no account.")]}
+        title={[t("Pay per check."), t("No key, no account.")]}
         text={t("A trading agent asks who is behind a coin before it buys and pays for the answer in USDC over plain HTTP. The node verifies the payment, builds the report, and settles only when there is a report to deliver.")}
       />
 
