@@ -140,15 +140,15 @@ export interface PrintRecord {
 export const COMMON_WALLETS = 150;
 
 /**
- * The plain sentence the check adds when a fresh wallet launches with a print whose other launches mostly dumped.
+ * The plain sentence the check adds when a launch was built like the launches of a farm that mostly dumped.
  * Null when the print is common, too thin to say anything, or not bad.
  */
-export function printWarning(r: PrintRecord | null, creatorOwnLaunches: number, similar = false): string | null {
+export function printWarning(r: PrintRecord | null, similar = false): string | null {
   if (!r || r.common) return null;
   const others = r.wallets - 1;
   if (others < 3 || r.settled < 10) return null;
   const rate = r.dumped / r.settled;
   if (rate < 0.9) return null;
-  const fresh = creatorOwnLaunches <= 1 ? "a fresh wallet, but " : "";
-  return `${fresh}launched with ${similar ? "a tool setup built like that of" : "the same tool setup as"} ${others} other wallets in two days; their creators dumped ${r.dumped} of ${r.settled} of those launches`;
+  // Only the tool speaks here: the wallet's own record is the dev's line to tell, from 90 days of memory.
+  return `launched with ${similar ? "a tool setup built like that of" : "the same tool setup as"} ${others} other wallets in two days; their creators dumped ${r.dumped} of ${r.settled} of those launches`;
 }

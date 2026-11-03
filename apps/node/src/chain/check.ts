@@ -351,7 +351,7 @@ export function checkToken(
 
   // A new wallet tells nothing by itself; the way its launch was built can: a tool print whose other launches nearly all
   // dumped, shared by several wallets, is a farm swapping wallets, not a coincidence.
-  const toolSaid = printWarning(opts.tool ?? null, f.creatorLaunches24h) ?? printWarning(opts.toolShape ?? null, f.creatorLaunches24h, true);
+  const toolSaid = printWarning(opts.tool ?? null) ?? printWarning(opts.toolShape ?? null, true);
   if (toolSaid) flag(caution, toolSaid, WEIGHT.toolPrint);
 
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record

@@ -91,14 +91,13 @@ const record = (o: Partial<{ wallets: number; settled: number; dumped: number; c
 });
 
 test("the warning needs several wallets, enough settled launches and nearly all of them dumped, and never a common launcher", () => {
-  assert.match(printWarning(record({}), 1)!, /^a fresh wallet, but launched with the same tool setup as 7 other wallets/);
-  assert.match(printWarning(record({}), 4)!, /^launched with the same tool setup/);
-  assert.equal(printWarning(record({ wallets: 3 }), 1), null, "two other wallets is not a farm");
-  assert.equal(printWarning(record({ settled: 9, dumped: 9 }), 1), null, "too few launches to say");
-  assert.equal(printWarning(record({ dumped: 20 }), 1), null, "80% is not nearly all");
-  assert.equal(printWarning(record({ common: true }), 1), null, "pump.fun's own site is shared by everyone");
-  assert.equal(printWarning(null, 1), null);
-  assert.match(printWarning(record({}), 1, true)!, /a tool setup built like that of 7 other wallets/);
+  assert.match(printWarning(record({}))!, /^launched with the same tool setup as 7 other wallets/);
+  assert.equal(printWarning(record({ wallets: 3 })), null, "two other wallets is not a farm");
+  assert.equal(printWarning(record({ settled: 9, dumped: 9 })), null, "too few launches to say");
+  assert.equal(printWarning(record({ dumped: 20 })), null, "80% is not nearly all");
+  assert.equal(printWarning(record({ common: true })), null, "pump.fun's own site is shared by everyone");
+  assert.equal(printWarning(null), null);
+  assert.match(printWarning(record({}), true)!, /a tool setup built like that of 7 other wallets/);
 });
 
 test("the tape counts launches, wallets and dumps by print, and forgets a print when its launches age out", () => {
