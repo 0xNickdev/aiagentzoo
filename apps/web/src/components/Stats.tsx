@@ -159,7 +159,7 @@ export default function Stats() {
 
       <div className="mx-auto max-w-7xl space-y-4">
         <Reveal className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
-          <Tile k={t("full x-rays")} v={usage ? num(usage.last7.xrays) : "…"} sub={t("since the counter started, 19 Oct")} />
+          <Tile k={t("full x-rays")} v={usage ? num(usage.last7.xrays) : "…"} sub={t("last 7 days")} />
           <Tile k={t("verdict checks")} v={usage ? num(usage.last7.checks) : "…"} sub={t("most fired on their own by the extension and /xray")} />
           <Tile k={t("launches now")} v={chain ? `${chain.perMinute.launches}/min` : "…"} sub={chain ? (chain.live ? t("stream live") : t("stream behind")) : ""} />
           <Tile k={t("trades now")} v={chain ? `${num(chain.perMinute.trades)}/min` : "…"} sub={chain ? t("{n} tokens on the tape", { n: num(chain.tracked) }) : ""} />
