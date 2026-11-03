@@ -11,6 +11,7 @@ import type { OddsInputs } from "./odds.ts";
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
 import { type Unit, unitUsd } from "./price.ts";
 import { isOnCurve } from "./curve.ts";
+import { COMMON_WALLETS, type PrintableTx, type PrintRecord, type ToolPrint, toolPrintOf } from "./fingerprint.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 
 export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
@@ -67,6 +68,8 @@ export type PumpEvent =
       supply?: number;
       /** Where the token's metadata lives (its X, Telegram, website). */
       uri?: string;
+      /** How the launch transaction was built; read from the whole transaction by the stream. */
+      print?: ToolPrint;
     }
   | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
   | { kind: "complete"; mint: string }
@@ -396,6 +399,8 @@ interface Tracked {
   supply?: number;
   /** Where its metadata lives. */
   uri?: string;
+  /** The key of its launch transaction's tool print. */
+  print?: string;
   name: string;
   symbol: string;
   creator: string;
@@ -683,6 +688,9 @@ export class PumpTape {
   private followSeq = 0;
   /** Mints each creator launched, newest last, for as long as the tokens are kept. */
   private readonly byCreator = new Map<string, string[]>();
+  /** Launches by tool print, oldest first, and what each print is. */
+  private readonly byPrint = new Map<string, string[]>();
+  private readonly prints = new Map<string, ToolPrint>();
   /** PumpSwap pools of the tokens on the tape, pool to mint. */
   private readonly pools = new Map<string, string>();
   /** Every loud moment (not plain launches) of the last two days, oldest first. */
@@ -811,6 +819,7 @@ export class PumpTape {
         ...(ev.platform ? { platform: ev.platform } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
         ...(ev.uri ? { uri: ev.uri } : {}),
+        ...(ev.print ? { print: ev.print.key } : {}),
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -844,6 +853,12 @@ export class PumpTape {
       const mine = this.byCreator.get(ev.creator) ?? [];
       mine.push(ev.mint);
       this.byCreator.set(ev.creator, mine);
+      if (ev.print) {
+        this.prints.set(ev.print.key, ev.print);
+        const same = this.byPrint.get(ev.print.key) ?? [];
+        same.push(ev.mint);
+        this.byPrint.set(ev.print.key, same);
+      }
       const times = (this.launchesBy.get(ev.creator) ?? []).filter((t) => now - t < DAY_MS);
       times.push(createdAt);
       this.launchesBy.set(ev.creator, times);
@@ -1109,7 +1124,7 @@ export class PumpTape {
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince });
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)) });
   }
 
   load(json: string, now = Date.now()): number {
@@ -1121,8 +1136,10 @@ export class PumpTape {
         recent?: string[];
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
+        prints?: [string, ToolPrint][];
       };
       if (saved.v !== 1) return 0;
+      for (const [k, p] of saved.prints ?? []) this.prints.set(k, p);
       // A snapshot from before bundles were read: they are read from now on.
       this.bundleSince = saved.bundleSince ?? now;
       for (const s of saved.tokens ?? []) {
@@ -1148,7 +1165,13 @@ export class PumpTape {
         mine.push(t.mint);
         this.byCreator.set(t.creator, mine);
         if (t.pool) this.pools.set(t.pool, t.mint);
+        if (t.print) {
+          const same = this.byPrint.get(t.print) ?? [];
+          same.push(t.mint);
+          this.byPrint.set(t.print, same);
+        }
       }
+      for (const mints of this.byPrint.values()) mints.sort((a, b) => this.tokens.get(a)!.createdAt - this.tokens.get(b)!.createdAt);
       for (const mints of this.byCreator.values()) mints.sort((a, b) => this.tokens.get(a)!.createdAt - this.tokens.get(b)!.createdAt);
       // Who sniped what is in the buyers already: the per-wallet lists are rebuilt in launch order.
       this.earlyBy.clear();
@@ -1189,6 +1212,52 @@ export class PumpTape {
       else this.launchesBy.delete(creator);
     }
     this.recent = this.recent.filter((m) => this.tokens.has(m));
+    for (const [key, mints] of this.byPrint) {
+      const kept = mints.filter((m) => this.tokens.has(m));
+      if (kept.length) this.byPrint.set(key, kept);
+      else {
+        this.byPrint.delete(key);
+        this.prints.delete(key);
+      }
+    }
+  }
+
+  /**
+   * What the tape knows about the tool print a launch was made with: how many launches and wallets share it, and how
+   * many of those launches (ten minutes old or more) their creators dumped. Null for a launch with no print.
+   */
+  printOf(mint: string, now = Date.now()): PrintRecord | null {
+    const key = this.tokens.get(mint)?.print;
+    return key ? this.printRecord(key, now) : null;
+  }
+
+  printRecord(key: string, now = Date.now()): PrintRecord | null {
+    const print = this.prints.get(key);
+    const mints = this.byPrint.get(key);
+    if (!print || !mints) return null;
+    const wallets = new Set<string>();
+    let settled = 0;
+    let dumped = 0;
+    for (const m of mints) {
+      const t = this.tokens.get(m);
+      if (!t) continue;
+      wallets.add(t.creator);
+      if (now - t.createdAt < 10 * 60_000) continue;
+      settled += 1;
+      if (t.dumped) dumped += 1;
+    }
+    return { key, print, launches: mints.length, wallets: wallets.size, settled, dumped, common: wallets.size >= COMMON_WALLETS };
+  }
+
+  /** The launches made with one print, newest first: mint, symbol, creator, when, and whether the creator dumped. */
+  printLaunches(key: string, limit = 20): Array<{ mint: string; symbol: string; creator: string; createdAt: number; dumped: boolean }> {
+    const mints = this.byPrint.get(key) ?? [];
+    const out = [];
+    for (let i = mints.length - 1; i >= 0 && out.length < limit; i--) {
+      const t = this.tokens.get(mints[i]!);
+      if (t) out.push({ mint: t.mint, symbol: t.symbol, creator: t.creator, createdAt: t.createdAt, dumped: t.dumped });
+    }
+    return out;
   }
 
   private noteEarly(wallet: string, mint: string, now: number): void {
@@ -1930,11 +1999,25 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
     const tx = sig && sig.length ? base58(sig) : undefined;
     const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
     const at = Number.isFinite(slot) ? slot : undefined;
-    for (const ev of parsePumpLogs(logs)) t.apply(ev, Date.now(), tx, at);
+    for (const ev of parsePumpLogs(logs)) {
+      // A launch carries its tool print, read from the whole transaction; the relay passes it on with the event.
+      if (ev.kind === "create") {
+        const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
+        if (print) ev.print = print;
+      }
+      t.apply(ev, Date.now(), tx, at);
+    }
     // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
     if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
       const raw = fromYellowstone(update.transaction!.transaction!);
-      if (raw) for (const ev of parseLaunchpads(raw, Date.now())) t.apply(ev, Date.now(), tx, at);
+      if (raw)
+        for (const ev of parseLaunchpads(raw, Date.now())) {
+          if (ev.kind === "create") {
+            const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
+            if (print) ev.print = print;
+          }
+          t.apply(ev, Date.now(), tx, at);
+        }
     }
   };
 

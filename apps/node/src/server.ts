@@ -531,6 +531,14 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "GET" && path === "/v1/chain") {
         return json(res, 200, { ...tape.status(), bsc: bscTape.status(), base: baseTape.status() });
       }
+      // A tool print: what it is and the launches made with it, so a reader can see the farm behind a fresh wallet.
+      const toolKey = /^\/v1\/chain\/tool\/([0-9a-f]{6})$/.exec(path);
+      if (req.method === "GET" && toolKey) {
+        const record = tape.printRecord(toolKey[1]!);
+        if (!record) return json(res, 404, { error: "no launch with this tool print in the last two days" });
+        res.setHeader("cache-control", "public, max-age=30");
+        return json(res, 200, { ...record, recent: tape.printLaunches(toolKey[1]!, clampInt(url.searchParams.get("limit"), 20, 1, 100)) });
+      }
       const chainToken = ROUTE.chainToken.exec(path);
       if (req.method === "GET" && chainToken) {
         const a = norm(chainToken[1]!);
@@ -640,7 +648,7 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         }
         if (past && !evm) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
         const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
-        const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked });
+        const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint) } : {}) });
         // The odds the first five minutes give, for pump.fun launches the tape still holds.
         if (found && !evm) {
           const funder = lineage.funderOf(found.creator) ?? null;

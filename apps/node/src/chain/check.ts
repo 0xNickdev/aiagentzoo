@@ -1,4 +1,5 @@
 import type { Odds } from "./odds.ts";
+import { printWarning, type PrintRecord } from "./fingerprint.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
@@ -66,6 +67,8 @@ export interface TokenCheck {
    * run odds rank launches far better than the verdict does; the verdict says who is behind it.
    */
   odds?: Odds | null;
+  /** The launch transaction's tool print and what the other launches made with it did; pump.fun, LaunchLab, Meteora. */
+  tool?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean } | null;
   facts: {
     ageMin: number;
     buyers: number;
@@ -130,6 +133,8 @@ const pct = (x: number | null | undefined) => (x === null || x === undefined ? n
  * thin trading weighs least. The score is the sum inside the verdict's band, so a verdict and its score never disagree.
  */
 export const WEIGHT = {
+  /** Launched the way a farm of dumping wallets launches: a caution, never more on its own. */
+  toolPrint: 20,
   creatorSold: 40,
   creatorSelling: 15,
   dumper: 30,
@@ -196,7 +201,7 @@ export interface CheckInput {
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -342,6 +347,11 @@ export function checkToken(
     }
   }
 
+  // A new wallet tells nothing by itself; the way its launch was built can: a tool print whose other launches nearly all
+  // dumped, shared by several wallets, is a farm swapping wallets, not a coincidence.
+  const toolSaid = printWarning(opts.tool ?? null, f.creatorLaunches24h);
+  if (toolSaid) flag(caution, toolSaid, WEIGHT.toolPrint);
+
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
   // still shows, but it no longer decides: whoever holds it now does. Only when the holders were read.
   const devGone = devGoneOf(f, opts.holders);
@@ -381,6 +391,7 @@ export function checkToken(
     proceed: verdict === "pass",
     reasons: [...avoid, ...caution],
     notes,
+    ...(opts.tool ? { tool: { key: opts.tool.key, launches: opts.tool.launches, wallets: opts.tool.wallets, settled: opts.tool.settled, dumped: opts.tool.dumped, common: opts.tool.common } } : {}),
     facts: {
       ageMin: Math.round(f.ageMin),
       buyers: f.buyers,
