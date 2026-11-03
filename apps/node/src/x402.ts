@@ -22,7 +22,7 @@ import { decodePaymentSignatureHeader, encodePaymentRequiredHeader, encodePaymen
 
 export const NETWORKS = {
   devnet: { caip2: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", usdc: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", rpc: "https://api.devnet.solana.com", cluster: "devnet" },
-  mainnet: { caip2: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", usdc: "EPjFWdd5AufqSSqeM2qJ6CNvzWBaCnGkjjXxkz6sVhvQ", rpc: "https://api.mainnet-beta.solana.com", cluster: "mainnet-beta" },
+  mainnet: { caip2: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", usdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", rpc: "https://api.mainnet-beta.solana.com", cluster: "mainnet-beta" },
 } as const;
 export type NetworkName = keyof typeof NETWORKS;
 
