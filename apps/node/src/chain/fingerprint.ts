@@ -79,6 +79,13 @@ export interface PrintableTx {
 const u32 = (d: Uint8Array, at: number) => (d.length >= at + 4 ? Buffer.from(d.buffer, d.byteOffset, d.byteLength).readUInt32LE(at) : null);
 const u64 = (d: Uint8Array, at: number) => (d.length >= at + 8 ? Number(Buffer.from(d.buffer, d.byteOffset, d.byteLength).readBigUInt64LE(at)) : null);
 
+/** The wallets that signed a transaction: the first numRequiredSignatures account keys. */
+export function signersOf(tx: PrintableTx): string[] {
+  const m = tx.transaction?.message;
+  const n = m?.header?.numRequiredSignatures ?? 0;
+  return (m?.accountKeys ?? []).slice(0, n).map((k) => base58(k));
+}
+
 export function hostOf(uri: string | undefined | null): string | null {
   if (!uri) return null;
   try {

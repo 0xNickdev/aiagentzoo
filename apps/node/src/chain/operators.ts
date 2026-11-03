@@ -1,8 +1,7 @@
 /**
  * Operators: wallets that signed the same transaction.
  *
- * Every buyer and seller on pump.fun and PumpSwap signs their own trade, so a transaction carrying trades from two
- * wallets was signed by both. Short of a stolen key, one hand holds both keys: a launch that buys from five wallets
+ * A transaction signed by two wallets was signed with both keys, and the chain records every signature. Short of a stolen key, one hand holds both keys: a launch that buys from five wallets
  * inside its own create transaction, a bundled sell that empties ten wallets at once. Wallets joined this way stay
  * joined, so a rugger who moves to a fresh wallet is still the same operator the moment that wallet signs next to an
  * old one. This is the strongest link the zoo draws, and the only one it calls "one operator".
@@ -25,8 +24,6 @@ export class Operators {
   private readonly members = new Map<string, Set<string>>();
   private readonly size = new Map<string, number>();
   private evidence: CoSign[] = [];
-  /** The transaction being read and the wallets seen signing in it so far. */
-  private current: { tx: string; wallets: Set<string> } | null = null;
 
   find(w: string): string {
     let root = w;
@@ -68,20 +65,10 @@ export class Operators {
     this.members.delete(rb);
   }
 
-  /**
-   * Reads one signer of a transaction. Events of one transaction arrive together, so a new signature closes the last
-   * one; each new wallet in the same transaction is joined to the first.
-   */
-  signer(wallet: string, tx: string | undefined, at: number): void {
-    if (!tx) return;
-    if (this.current?.tx !== tx) {
-      this.current = { tx, wallets: new Set([wallet]) };
-      return;
-    }
-    if (this.current.wallets.has(wallet)) return;
-    const first = this.current.wallets.values().next().value as string;
-    this.current.wallets.add(wallet);
-    this.join(first, wallet, tx, at);
+  /** The wallets that signed one transaction: each is joined to the first. */
+  cosigned(wallets: string[], tx: string, at: number): void {
+    const [first, ...rest] = [...new Set(wallets)];
+    if (first) for (const w of rest) this.join(first, w, tx, at);
   }
 
   /** The operator a wallet belongs to: every wallet joined to it, and how many there are. Null when it stands alone. */

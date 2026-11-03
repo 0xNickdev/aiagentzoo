@@ -3,7 +3,7 @@
  * PumpSwap, or a relay that reads them where the stream runs at full speed.
  */
 import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
-import { type PrintableTx, toolPrintOf } from "./fingerprint.ts";
+import { type PrintableTx, signersOf, toolPrintOf } from "./fingerprint.ts";
 import { base58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent } from "./pumpParse.ts";
 import type { PumpTape } from "./pump.ts";
 
@@ -51,7 +51,18 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
     const tx = sig && sig.length ? base58(sig) : undefined;
     const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
     const at = Number.isFinite(slot) ? slot : undefined;
+    // Wallets that signed together share an owner. The event's "user" is not always a signer (a program can trade for
+    // an account), so only the transaction's own signatures count; a new mint's keypair signs its create and is no wallet.
+    let signers = signersOf(update.transaction!.transaction! as PrintableTx);
+    let cosigned = false;
+    const mark = (ev: PumpEvent) => {
+      if (ev.kind === "create") signers = signers.filter((s) => s !== ev.mint);
+      if (cosigned || signers.length < 2 || (ev.kind !== "create" && ev.kind !== "trade" && ev.kind !== "swap")) return;
+      ev.signers = signers;
+      cosigned = true;
+    };
     for (const ev of parsePumpLogs(logs)) {
+      mark(ev);
       // A launch carries its tool print, read from the whole transaction; the relay passes it on with the event.
       if (ev.kind === "create") {
         const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
@@ -64,6 +75,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
       const raw = fromYellowstone(update.transaction!.transaction!);
       if (raw)
         for (const ev of parseLaunchpads(raw, Date.now())) {
+          mark(ev);
           if (ev.kind === "create") {
             const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
             if (print) ev.print = print;

@@ -44,13 +44,15 @@ export type PumpEvent =
       uri?: string;
       /** How the launch transaction was built; read from the whole transaction by the stream. */
       print?: ToolPrint;
+      /** Every wallet that signed the transaction, when more than one did; the mint's own keypair left out. */
+      signers?: string[];
     }
-  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
+  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[] }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
   | { kind: "pool"; mint: string; pool: string }
   /** A buy or sell on a PumpSwap pool. Its event names only the pool, so the tape maps it back to a token. */
-  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number };
+  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number; signers?: string[] };
 
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 

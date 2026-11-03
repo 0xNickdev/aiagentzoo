@@ -807,7 +807,7 @@
       "status": "shipped",
       "date": "2026-11-03",
       "title": "The operator",
-      "text": "Wallets that signed one transaction together share an owner: every trader signs their own trade. A launch buying from its own wallets, a bundled sell, and they stay joined, so a dev on a fresh wallet is caught the moment it signs next to an old one. The transactions are the proof.",
+      "text": "Wallets whose signatures sit on one transaction share an owner, read from the signatures, not from the accounts a transaction names. A launch buying from its own wallets, a bundled sell, and they stay joined, so a dev on a fresh wallet is caught the moment it signs next to an old one. The transactions are the proof.",
       "why": "The strongest link there is short of a confession. We call it one operator only when the chain shows the signatures.",
       "proof": [
         {
@@ -817,7 +817,7 @@
       ],
       "zh": {
         "title": "操盘者",
-        "text": "在同一笔交易里一起签名的钱包属于同一个主人：每个交易者都要为自己的交易签名。发币时用自己的钱包买入、打包卖出，这些钱包就被连在一起，开发者换新钱包，只要和旧钱包一起签名就会被认出。交易本身就是证据。",
+        "text": "签名同在一笔交易上的钱包属于同一个主人：只看交易本身的签名，不看交易里提到的账户。发币时用自己的钱包买入、打包卖出，这些钱包就被连在一起，开发者换新钱包，只要和旧钱包一起签名就会被认出。交易本身就是证据。",
         "why": "除了认罪之外最强的关联。只有链上出现签名时，我们才称为同一个操盘者。"
       }
     },

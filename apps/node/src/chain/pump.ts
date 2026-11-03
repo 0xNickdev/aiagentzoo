@@ -353,7 +353,7 @@ export class PumpTape {
   private readonly byCreator = new Map<string, string[]>();
   /** Launches by tool print, oldest first, and what each print is. */
   private readonly byPrint = new Map<string, string[]>();
-  /** Wallets that signed one transaction together; on Solana only, where every trader signs their own trade. */
+  /** Wallets that signed one transaction together, read from its signatures; Solana only. */
   readonly operators = new Operators();
   private readonly prints = new Map<string, ToolPrint>();
   /** PumpSwap pools of the tokens on the tape, pool to mint. */
@@ -474,7 +474,7 @@ export class PumpTape {
   apply(ev: PumpEvent, now = Date.now(), tx?: string, slot?: number): void {
     this.lastEventAt = now;
     // On BNB Chain and Base the event names a recipient, not the signer: no co-signing there.
-    if (this.unit === "SOL" && (ev.kind === "create" || ev.kind === "trade" || ev.kind === "swap")) this.operators.signer(ev.kind === "create" ? ev.creator : ev.user, tx, now);
+    if (this.unit === "SOL" && tx && (ev.kind === "create" || ev.kind === "trade" || ev.kind === "swap") && ev.signers && ev.signers.length > 1) this.operators.cosigned(ev.signers, tx, now);
     if (ev.kind === "create") {
       if (this.tokens.has(ev.mint)) return;
       const createdAt = ev.ts ?? now;
@@ -795,7 +795,7 @@ export class PumpTape {
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosign: this.operators.snapshot() });
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosigners: this.operators.snapshot() });
   }
 
   load(json: string, now = Date.now()): number {
@@ -808,11 +808,12 @@ export class PumpTape {
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
         prints?: [string, ToolPrint][];
-        cosign?: Parameters<Operators["load"]>[0];
+        cosigners?: Parameters<Operators["load"]>[0];
       };
       if (saved.v !== 1) return 0;
       for (const [k, p] of saved.prints ?? []) this.prints.set(k, p);
-      this.operators.load(saved.cosign);
+      // "cosign" in older snapshots read event users as signers, which they are not always: those links are dropped.
+      this.operators.load(saved.cosigners);
       // A snapshot from before bundles were read: they are read from now on.
       this.bundleSince = saved.bundleSince ?? now;
       for (const s of saved.tokens ?? []) {
