@@ -1,7 +1,7 @@
 {
   "name": "aiagentzoo",
   "private": true,
-  "description": "A federated zoo of autonomous agents. Species are roles, enclosures are nodes, every step leaves a public trace.",
+  "description": "Who is behind a Solana memecoin, and where the money went: the X-Ray, tool prints, operators, and x402 pay-per-check for trading agents.",
   "license": "MIT",
   "type": "module",
   "workspaces": [
