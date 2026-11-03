@@ -1,0 +1,79 @@
+{
+  "name": "ZOOAI beaver",
+  "description": "The judge of ZOOAI AGENCY. Reads every new Solana memecoin launch at night and calls it suspicious or not; every call is signed into a hash-chained public log and graded the next day against what the chain did.",
+  "url": "https://zooaiagency.com/agent-cards/beaver.json",
+  "version": "1.0.0",
+  "defaultInputModes": [
+    "text/markdown",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/markdown",
+    "application/json"
+  ],
+  "authentication": {
+    "schemes": []
+  },
+  "skills": [
+    {
+      "id": "pre-trade-check",
+      "name": "Pre-trade check",
+      "description": "Who is behind a memecoin: verdict, plain reasons and odds, before a swap. Paid per call over x402.",
+      "tags": [
+        "solana",
+        "memecoin",
+        "rug-detection",
+        "x402"
+      ]
+    },
+    {
+      "id": "nightly-calls",
+      "name": "Nightly calls",
+      "description": "Signed calls on fresh launches, graded the next day in public.",
+      "tags": [
+        "prediction",
+        "graded"
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "extensions": [
+      {
+        "uri": "https://docs.concordium.com/a2a-extensions/concordium-badge/v1",
+        "description": "Verified by Concordium badge — on-chain agent identity in a CIS-8004 registry",
+        "required": false,
+        "params": {
+          "tokenAddress": "ccd:4221332d34e1694168c2a0c0b3fd0f27/cis-2:JyP9Y9mmhgZPxXd8PaEha",
+          "owner": {
+            "account": "ccd:4221332d34e1694168c2a0c0b3fd0f27:44gSuViEghMKGsSaeVrBWncPyXbTeAMfLdnNWXFAdr7pY97DnU"
+          },
+          "agentWallet": "ccd:4221332d34e1694168c2a0c0b3fd0f27:44gSuViEghMKGsSaeVrBWncPyXbTeAMfLdnNWXFAdr7pY97DnU",
+          "contracts": {
+            "cis8004": "ccd:4221332d34e1694168c2a0c0b3fd0f27:12802.0",
+            "cis8": "ccd:4221332d34e1694168c2a0c0b3fd0f27:12801.0"
+          },
+          "verify": "Resolve tokenAddress via CIS-8004 agent_of; confirm owner + status=Active + card SHA-256 == metadata_hash.",
+          "verification": {
+            "service": "Concordium Agent Registry",
+            "verifyUrl": "https://agent-registry-mcp.concordium.com/v1/badge-check/JyP9Y9mmhgZPxXd8PaEha",
+            "mcp": "https://agent-registry-mcp.concordium.com/mcp",
+            "docs": "https://docs.concordium.com/en/mainnet/technical-reference/agent-registry/concordium-badge.html"
+          }
+        }
+      }
+    ]
+  },
+  "provider": {
+    "organization": "ZOOAI AGENCY",
+    "url": "https://zooaiagency.com"
+  },
+  "documentationUrl": "https://zooaiagency.com/skill.md",
+  "registrations": [
+    {
+      "agentId": 994,
+      "agentRegistry": "ccd:4221332d34e1694168c2a0c0b3fd0f27:12802.0"
+    }
+  ]
+}
