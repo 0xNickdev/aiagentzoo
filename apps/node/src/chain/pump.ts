@@ -9,6 +9,7 @@
  */
 import type { OddsInputs } from "./odds.ts";
 import type { Unit } from "./price.ts";
+import { type OperatorRecord, Operators } from "./operators.ts";
 import { COMMON_WALLETS, type PrintRecord, type ToolPrint } from "./fingerprint.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { PumpEvent, Venue } from "./pumpParse.ts";
@@ -352,6 +353,8 @@ export class PumpTape {
   private readonly byCreator = new Map<string, string[]>();
   /** Launches by tool print, oldest first, and what each print is. */
   private readonly byPrint = new Map<string, string[]>();
+  /** Wallets that signed one transaction together; on Solana only, where every trader signs their own trade. */
+  readonly operators = new Operators();
   private readonly prints = new Map<string, ToolPrint>();
   /** PumpSwap pools of the tokens on the tape, pool to mint. */
   private readonly pools = new Map<string, string>();
@@ -470,6 +473,8 @@ export class PumpTape {
 
   apply(ev: PumpEvent, now = Date.now(), tx?: string, slot?: number): void {
     this.lastEventAt = now;
+    // On BNB Chain and Base the event names a recipient, not the signer: no co-signing there.
+    if (this.unit === "SOL" && (ev.kind === "create" || ev.kind === "trade" || ev.kind === "swap")) this.operators.signer(ev.kind === "create" ? ev.creator : ev.user, tx, now);
     if (ev.kind === "create") {
       if (this.tokens.has(ev.mint)) return;
       const createdAt = ev.ts ?? now;
@@ -790,7 +795,7 @@ export class PumpTape {
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)) });
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosign: this.operators.snapshot() });
   }
 
   load(json: string, now = Date.now()): number {
@@ -803,9 +808,11 @@ export class PumpTape {
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
         prints?: [string, ToolPrint][];
+        cosign?: Parameters<Operators["load"]>[0];
       };
       if (saved.v !== 1) return 0;
       for (const [k, p] of saved.prints ?? []) this.prints.set(k, p);
+      this.operators.load(saved.cosign);
       // A snapshot from before bundles were read: they are read from now on.
       this.bundleSince = saved.bundleSince ?? now;
       for (const s of saved.tokens ?? []) {
@@ -896,6 +903,30 @@ export class PumpTape {
   printOf(mint: string, now = Date.now()): PrintRecord | null {
     const key = this.tokens.get(mint)?.print;
     return key ? this.printRecord(key, now) : null;
+  }
+
+  /**
+   * The operator behind a wallet: the wallets it signed transactions with, and what those other wallets launched on
+   * the tape and dumped. Null when the wallet never signed next to another.
+   */
+  operatorOf(wallet: string, now = Date.now()): (OperatorRecord & { root: string; members: string[] }) | null {
+    const op = this.operators.of(wallet);
+    if (!op) return null;
+    let launches = 0;
+    let settled = 0;
+    let dumped = 0;
+    for (const m of op.members) {
+      if (m === wallet) continue;
+      for (const mint of this.byCreator.get(m) ?? []) {
+        const t = this.tokens.get(mint);
+        if (!t) continue;
+        launches += 1;
+        if (now - t.createdAt < 10 * 60_000) continue;
+        settled += 1;
+        if (t.dumped) dumped += 1;
+      }
+    }
+    return { root: op.root, wallets: op.wallets, members: op.members, launches, settled, dumped };
   }
 
   /** The same for the launch's tool shape: the build without its fee amounts. */

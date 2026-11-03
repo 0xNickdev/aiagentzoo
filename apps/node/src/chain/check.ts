@@ -1,5 +1,6 @@
 import type { Odds } from "./odds.ts";
 import { printWarning, type PrintRecord } from "./fingerprint.ts";
+import { operatorWarning, type OperatorRecord } from "./operators.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
@@ -68,6 +69,8 @@ export interface TokenCheck {
    */
   odds?: Odds | null;
   /** The launch transaction's tool print and what the other launches made with it did; pump.fun, LaunchLab, Meteora. */
+  /** Wallets that signed a transaction with the dev, and what they launched and dumped in two days. Solana only. */
+  operator?: { wallets: number; launches: number; settled: number; dumped: number } | null;
   tool?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean; shape?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean } } | null;
   facts: {
     ageMin: number;
@@ -135,6 +138,8 @@ const pct = (x: number | null | undefined) => (x === null || x === undefined ? n
 export const WEIGHT = {
   /** Launched the way a farm of dumping wallets launches: a caution, never more on its own. */
   toolPrint: 20,
+  /** The dev co-signed with wallets that launched and dumped: near proof of one owner. */
+  operator: 35,
   creatorSold: 40,
   creatorSelling: 15,
   dumper: 30,
@@ -203,7 +208,7 @@ const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: 
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -353,6 +358,9 @@ export function checkToken(
   // dumped, shared by several wallets, is a farm swapping wallets, not a coincidence.
   const toolSaid = printWarning(opts.tool ?? null) ?? printWarning(opts.toolShape ?? null, true);
   if (toolSaid) flag(caution, toolSaid, WEIGHT.toolPrint);
+  // Wallets that signed one transaction with the dev share its keys' owner: their launches are the dev's record too.
+  const op = operatorWarning(opts.operator ?? null);
+  if (op) flag(op.avoid ? avoid : caution, op.text, WEIGHT.operator);
 
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
   // still shows, but it no longer decides: whoever holds it now does. Only when the holders were read.
@@ -393,6 +401,7 @@ export function checkToken(
     proceed: verdict === "pass",
     reasons: [...avoid, ...caution],
     notes,
+    ...(opts.operator ? { operator: { wallets: opts.operator.wallets, launches: opts.operator.launches, settled: opts.operator.settled, dumped: opts.operator.dumped } } : {}),
     ...(opts.tool ? { tool: { ...brief(opts.tool), ...(opts.toolShape ? { shape: brief(opts.toolShape) } : {}) } } : {}),
     facts: {
       ageMin: Math.round(f.ageMin),

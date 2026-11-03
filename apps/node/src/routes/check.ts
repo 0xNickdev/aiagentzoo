@@ -125,7 +125,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     }
     if (past && !evm) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
     const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
-    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint) } : {}) });
+    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found && !evm) {
       const funder = lineage.funderOf(found.creator) ?? null;

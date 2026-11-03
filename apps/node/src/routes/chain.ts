@@ -30,6 +30,15 @@ export async function chainReadRoutes(ctx: RouteContext, req: IncomingMessage, r
     res.setHeader("cache-control", "public, max-age=30");
     return json(res, 200, { ...record, recent: tape.printLaunches(toolKey[1]!, clampInt(url.searchParams.get("limit"), 20, 1, 100)) });
   }
+  // An operator: the wallets a wallet signed transactions with, what they launched, and the transactions that prove it.
+  const operator = /^\/v1\/chain\/operator\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+  if (req.method === "GET" && operator) {
+    const record = tape.operatorOf(operator[1]!);
+    if (!record) return json(res, 404, { error: "this wallet has not signed a transaction together with another wallet the stream saw" });
+    res.setHeader("cache-control", "public, max-age=30");
+    const { members, root, ...counts } = record;
+    return json(res, 200, { ...counts, members: members.slice(0, clampInt(url.searchParams.get("limit"), 50, 1, 500)), proof: tape.operators.proof(root, 5), joinedPairs: tape.operators.joined });
+  }
   const chainToken = ROUTE.chainToken.exec(path);
   if (req.method === "GET" && chainToken) {
     const a = norm(chainToken[1]!);
