@@ -3,6 +3,7 @@ import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t, tChain } from "../i18n";
 import { rememberChain } from "../chain";
+import { short } from "../format";
 
 const goWallet = (w: string) => { window.history.pushState(null, "", `/xray?wallet=${w}`); window.dispatchEvent(new PopStateEvent("popstate")); };
 
@@ -25,7 +26,6 @@ const CHAINS: Array<{ id: "" | "solana" | "bsc" | "base"; label: string }> = [
 const CHAIN_SHORT = { solana: "SOL", bsc: "BNB", base: "BASE" } as const;
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
 /** The devs who dump the most of their own launches, read from the chain, each with a transaction to check. */
 export default function WallOfRugs() {

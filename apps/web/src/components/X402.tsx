@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
+import { shortFit } from "../format";
+import { useLive } from "../hooks";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-const short = (a: string, n = 4) => (a.length > n * 2 + 1 ? `${a.slice(0, n)}…${a.slice(-n)}` : a);
 const when = (at: number) => new Date(at).toISOString().slice(5, 16).replace("T", " ");
 
 interface Menu {
@@ -27,25 +28,6 @@ interface Receipt {
 interface Receipts {
   totals: { paid: number; usdc: number; refusedBeforeSettle: number; settleFailed: number };
   receipts: Receipt[];
-}
-
-function useLive<T>(path: string, every = 15_000): T | null {
-  const [v, setV] = useState<T | null>(null);
-  useEffect(() => {
-    let dead = false;
-    const load = () =>
-      fetch(`${NORTH}${path}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((b: T | null) => b && !dead && setV(b))
-        .catch(() => {});
-    void load();
-    const id = window.setInterval(load, every);
-    return () => {
-      dead = true;
-      clearInterval(id);
-    };
-  }, [path, every]);
-  return v;
 }
 
 const VERDICT: Record<string, string> = { avoid: "text-[#ff8a7e]", caution: "text-[#f3c97a]", pass: "text-[#a6e3b4]" };
@@ -133,8 +115,8 @@ function Probe() {
 
 /** x402 on Solana: what an agent pays for, how the payment flows, and every sale so far, live. */
 export default function X402() {
-  const menu = useLive<Menu>("/v1/x402", 300_000);
-  const sales = useLive<Receipts>("/v1/x402/receipts?limit=30");
+  const menu = useLive<Menu>(`${NORTH}/v1/x402`, 300_000);
+  const sales = useLive<Receipts>(`${NORTH}/v1/x402/receipts?limit=30`);
   const cluster = menu?.cluster ?? "devnet";
   const tx = (s: string) => `https://explorer.solana.com/tx/${s}?cluster=${cluster}`;
   const acct = (a: string) => `https://explorer.solana.com/address/${a}?cluster=${cluster}`;
@@ -175,11 +157,11 @@ export default function X402() {
                 <p className="mt-5 text-[12px] text-fg-4">
                   {t("paid to")}{" "}
                   <a href={acct(menu.payTo)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {short(menu.payTo)}
+                    {shortFit(menu.payTo)}
                   </a>{" "}
                   · {t("network fee paid by the node")}{" "}
                   <a href={acct(menu.feePayer)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {short(menu.feePayer)}
+                    {shortFit(menu.feePayer)}
                   </a>
                 </p>
               )}
@@ -228,18 +210,18 @@ export default function X402() {
                       <td className="py-2 pr-4">{r.route === "xray" ? "X-Ray" : t("check")}</td>
                       <td className="py-2 pr-4">
                         <a href={`/xray?mint=${r.mint}`} className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                          {short(r.mint)}
+                          {shortFit(r.mint)}
                         </a>
                       </td>
                       <td className={`py-2 pr-4 ${VERDICT[r.verdict ?? ""] ?? "text-fg-4"}`}>{r.verdict ?? "-"}</td>
                       <td className="py-2 pr-4">
                         <a href={acct(r.payer)} target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                          {short(r.payer)}
+                          {shortFit(r.payer)}
                         </a>
                       </td>
                       <td className="py-2 pr-4">
                         <a href={tx(r.transaction)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                          {short(r.transaction, 6)} ↗
+                          {shortFit(r.transaction, 6)} ↗
                         </a>
                       </td>
                       <td className="py-2 text-fg-4">{r.reportSha256.slice(0, 12)}</td>

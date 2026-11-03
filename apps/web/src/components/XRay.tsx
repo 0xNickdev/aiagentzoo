@@ -17,6 +17,7 @@ import { type LaunchOutcome, launchOutcome } from "../outcome";
 import DevHabits, { type Habits } from "./DevHabits";
 import NetworkMap from "./NetworkMap";
 import { base, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
+import { minAgo, pctFine, short } from "../format";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -223,13 +224,11 @@ const venueLabel = (f: { venue?: string; platform?: string } | null | undefined)
   if (p && VENUE[p]) return VENUE[p];
   return p ? `${VENUE[v] ?? v} · ${p}` : (VENUE[v] ?? v);
 };
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 /** How old the token is: from the stream's facts, or from its launch time when it is older than the stream. */
 const ageOf = (r: XRayReport) => {
   const m = r.check.facts?.ageMin ?? Math.max(0, Math.round((Date.now() - r.createdAt) / 60_000));
   return m < 120 ? t("{m} min old", { m }) : m < 2_880 ? t("{h} h old", { h: Math.round(m / 60) }) : t("{d} days old", { d: Math.round(m / 1_440) });
 };
-const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 const mintIn = addressIn;
 
 export const TONE: Record<Verdict, { label: string; color: string }> = {
@@ -368,7 +367,7 @@ async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void>
       ]
     : [
     [t("wallets in the first 5 s"), String(r.early.length), r.early.length >= 5],
-    [t("supply they took"), pct(took), took >= 0.25],
+    [t("supply they took"), pctFine(took), took >= 0.25],
     f && (f.creatorCrew ?? 0) > 0 ? [t("the creator's own crew"), String(f.creatorCrew), true] : [t("serial snipers"), String(f?.serialSnipers ?? 0), (f?.serialSnipers ?? 0) >= 3],
   ];
   const top = 520;
@@ -505,8 +504,8 @@ function Dossier({ e, creator, onPick, onClose }: { e: Early; creator: string; o
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
           ["in at", `${e.afterSec}s`, false],
-          ["took", pct(e.bought), e.bought >= 0.05],
-          ["holds now", pct(e.held), e.held >= 0.05],
+          ["took", pctFine(e.bought), e.bought >= 0.05],
+          ["holds now", pctFine(e.held), e.held >= 0.05],
           ["sold out", e.exitSec === null ? t("not yet") : secs(e.exitSec), false],
           ["snipes 48h", String(e.snipes48h), e.snipes48h >= 10],
           ["sold out of", s ? `${s.soldOut}` : "…", false],
@@ -582,7 +581,7 @@ function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void }) {
       id: "xr-five",
       k: "The first 5 seconds",
       v: old ? "-" : r.early.length ? t("{n} wallets", { n: r.early.length }) : t("nobody"),
-      sub: old ? t("before our stream") : r.early.length ? t("took {a} · hold {b}", { a: pct(took), b: pct(holds) }) : t("no one bought before it was visible"),
+      sub: old ? t("before our stream") : r.early.length ? t("took {a} · hold {b}", { a: pctFine(took), b: pctFine(holds) }) : t("no one bought before it was visible"),
       bad: took >= 0.25 || (f?.creatorCrew ?? 0) >= 2,
     },
     {
@@ -669,7 +668,7 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
     { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : old ? t("only holders read") : t("no red flags") },
     { id: "network", k: "Network", sub: t("who is behind it, on one map") },
     { id: "dev", k: "The dev", sub: old ? (r.devHistory ? t("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches }) : t("before our stream")) : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
-    { id: "five", k: "First 5 seconds", sub: old ? t("before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pct(took) }) : t("nobody"), bad: fiveBad },
+    { id: "five", k: "First 5 seconds", sub: old ? t("before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pctFine(took) }) : t("nobody"), bad: fiveBad },
     ...(early.length ? [{ id: "map" as Tab, k: "Money map", sub: t("who paid, who sold") }] : []),
     { id: "bundles", k: "Bundles & volume", sub: old ? t("before our stream") : f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
     { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
@@ -921,8 +920,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                     <h3 className="font-display text-xl text-fg">{t("Insiders")}</h3>
                     <div className="mt-3">
                       <Stat k="wallets in the first 5 seconds" v={String(early.length)} />
-                      <Stat k="supply they took" v={pct(took)} bad={took >= 0.25} />
-                      <Stat k="supply they still hold" v={pct(holds)} bad={holds >= 0.25} />
+                      <Stat k="supply they took" v={pctFine(took)} bad={took >= 0.25} />
+                      <Stat k="supply they still hold" v={pctFine(holds)} bad={holds >= 0.25} />
                       <Stat k="the creator's own crew" v={String(f?.creatorCrew ?? 0)} bad={(f?.creatorCrew ?? 0) >= 2} />
                       <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
                       <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
@@ -1028,8 +1027,8 @@ function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }
                   <span className="hidden truncate sm:block" style={{ color: k.color }}>
                     {t(k.label)}
                   </span>
-                  <span className="text-right text-fg-3">{pct(e.bought)}</span>
-                  <span className={`text-right ${e.held >= 0.05 ? "text-[#ff8a7e]" : "text-fg-3"}`}>{pct(e.held)}</span>
+                  <span className="text-right text-fg-3">{pctFine(e.bought)}</span>
+                  <span className={`text-right ${e.held >= 0.05 ? "text-[#ff8a7e]" : "text-fg-3"}`}>{pctFine(e.held)}</span>
                   <span className="hidden text-right text-fg-4 sm:block">{e.afterSec}s</span>
                   <span className="text-right text-fg-4">{secs(e.exitSec)}</span>
                   <span className={`hidden text-right sm:block ${e.snipes48h >= 10 ? "text-[#ffc27a]" : "text-fg-4"}`}>{e.snipes48h}</span>
@@ -1112,10 +1111,6 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
     const timer = window.setInterval(load, 30_000);
     return () => clearInterval(timer);
   }, []);
-  const ago = (at: number) => {
-    const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
-    return m < 1 ? t("now") : t("{m} min ago", { m });
-  };
   return (
     <Section className="!pt-2">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -1133,7 +1128,7 @@ function Start({ onPick }: { onPick: (mint: string) => void }) {
           >
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
-              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{ago(m.at)}</span>
+              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{minAgo(m.at)}</span>
             </div>
             <p className="mt-1.5 truncate text-[12.5px] font-normal text-fg-4">{tChain(m.text)}</p>
             <div className="mt-2.5 flex items-center justify-between gap-2">

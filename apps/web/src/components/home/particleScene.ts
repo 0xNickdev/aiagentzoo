@@ -9,10 +9,10 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { short } from "../../format";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 let N = 32000;
-const short = (a: string) => a.slice(0, 4) + "…" + a.slice(-4);
 
 export function webglOk(): boolean {
   try {

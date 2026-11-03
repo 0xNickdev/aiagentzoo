@@ -7,6 +7,7 @@ import { GITHUB_URL } from "../links";
 import { nodeOf, shortAddress } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
 import { pick, t } from "../i18n";
+import { agoText } from "../format";
 
 interface Guest {
   name: string;
@@ -44,9 +45,7 @@ const SOURCES: Record<string, string> = {
 };
 
 function ago(ts: number | null): string {
-  if (!ts) return t("no reports yet");
-  const min = Math.round((Date.now() - ts) / 60_000);
-  return min < 1 ? t("just now") : min < 60 ? t("{n} min ago", { n: min }) : min < 1440 ? t("{n} h ago", { n: Math.round(min / 60) }) : t("{n} d ago", { n: Math.round(min / 1440) });
+  return ts ? agoText(ts, true) : t("no reports yet");
 }
 
 const VERDICT_TONE: Record<RecordItem["verdict"], string> = {

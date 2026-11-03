@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGuardian } from "../zoo";
 import { t, tChain } from "../i18n";
 import WalletButton, { useHolder } from "./Wallet";
-import { ago, useRadar, type Watched } from "./radarCore";
+import { useRadar, type Watched } from "./radarCore";
+import { agoText } from "../format";
 
 const EASE = [0.215, 0.61, 0.355, 1] as const;
 
@@ -32,7 +33,7 @@ function Row({ w, locked }: { w: Watched; locked: boolean }) {
       <p className="flex items-center justify-end gap-2 text-right text-[14px] sm:justify-start sm:text-left" style={{ color }}>
         <span className={`h-2 w-2 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
         {status}
-        {turned && w.turnedAt && <span className="text-fg-4">· {ago(w.turnedAt)}</span>}
+        {turned && w.turnedAt && <span className="text-fg-4">· {agoText(w.turnedAt)}</span>}
       </p>
     </motion.a>
   );

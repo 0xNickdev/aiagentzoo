@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { chart, explorer, explorerTx } from "../chain";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { type Ask, ago, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
+import { type Ask, ask, type BoardRow, CANYON, type CleanLaunch, type CreatorRecord, type Evolution, get, type Moment, mintIn, NORTH, pct, usd, watch } from "./api";
 import { haptic, inTelegram, openLink, share, tg } from "./tg";
 import { lang, pick, setLang, t as tt, tChain } from "../i18n";
 import { TONE as XTONE, type XRayReport } from "../components/XRay";
@@ -10,6 +10,7 @@ import XRayRadar, { secs } from "../components/XRayRadar";
 import { Tags } from "../components/WalletTags";
 import { useRadar, type Watched } from "../components/radarCore";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
+import { agoCompact, short } from "../format";
 
 type Tab = "xray" | "ask" | "rugs" | "radar";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
@@ -250,7 +251,7 @@ function AskTab({ seed }: { seed: Seed | null }) {
                 <span className="min-w-0">
                   <span className="font-display block truncate text-[15px]">${sym(a.symbol)}</span>
                   <span className="tabular-nums block text-[11px] text-fg-4">
-                    {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: ago(a.at) })}
+                    {a.graded ? tt(a.graded.hit === null ? "graded · not scored" : a.graded.hit ? "graded · beaver was right" : "graded · beaver was wrong") : tt("{t} ago · grading in 24h", { t: agoCompact(a.at) })}
                   </span>
                 </span>
                 <VerdictChip v={a.verdict} />
@@ -410,7 +411,6 @@ function DevCard({ r }: { r: CreatorRecord }) {
 
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 const BOT = "https://t.me/zooaiagency_bot";
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const openWalletMini = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet-mini", { detail: w }));
 const share1 = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 
@@ -922,7 +922,7 @@ function RugsTab() {
                   <span className="font-display block truncate text-[15px]">${sym(e.symbol)}</span>
                   <span className="block text-[12px] font-normal text-[#ff8a7e]">{tChain(e.text)}</span>
                 </span>
-                <span className="tabular-nums shrink-0 text-[11.5px] text-fg-4">{ago(e.at)}</span>
+                <span className="tabular-nums shrink-0 text-[11.5px] text-fg-4">{agoCompact(e.at)}</span>
               </motion.button>
             ))}
           </AnimatePresence>
@@ -1085,7 +1085,7 @@ function Ticker() {
           <span className="truncate text-fg-2">
             <b className="font-medium text-white">${sym(e.symbol)}</b> · {tChain(e.text)}
           </span>
-          <span className="shrink-0 text-fg-4">{ago(e.at)}</span>
+          <span className="shrink-0 text-fg-4">{agoCompact(e.at)}</span>
         </motion.button>
       </AnimatePresence>
     </div>

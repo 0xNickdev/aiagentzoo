@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t } from "../i18n";
 import type { XRayReport } from "./XRay";
+import { short } from "../format";
 
 /**
  * The network around a token: the dev, his crew and regulars, the launch block, the serial snipers, who paid for him
@@ -44,7 +45,6 @@ interface DevProfile {
 
 // The brand's four: danger for the dev and his people, warn for the regulars and the block, moss for money's source, white for the rest.
 const COLOR: Record<Kind, string> = { dev: "#ff8a7e", crew: "#ff8a7e", ring: "#ffc27a", bundle: "#ffc27a", serial: "#d9dddb", early: "#e6e9e7", funder: "#a6e3b4", sibling: "#ff8a7e", coin: "#ff8a7e" };
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const rgba = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;

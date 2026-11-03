@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { t } from "../i18n";
+import { numOrDash } from "../format";
 
 interface Numbers {
   launchesSeen: number | null;
@@ -18,7 +19,6 @@ interface Numbers {
   nextTurnIn: number | null;
 }
 
-const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "-" : n.toLocaleString("en-US"));
 
 /** The numbers each door shows, read live from the nodes; any that fail stay as dashes. */
 function useDoorNumbers(): Numbers | null {
@@ -90,8 +90,8 @@ export default function Doors() {
       focus: "50% 24%",
       live: n?.chainLive,
       stats: [
-        ["launches read from the chain", fmt(n?.launchesSeen)],
-        ["tokens watched tonight", fmt(n?.tokensTonight)],
+        ["launches read from the chain", numOrDash(n?.launchesSeen)],
+        ["tokens watched tonight", numOrDash(n?.tokensTonight)],
       ],
       cta: "Watch live",
     },
@@ -103,7 +103,7 @@ export default function Doors() {
       image: "/doors/brief.webp",
       focus: "50% 64%",
       stats: [
-        ["calls made tonight", fmt(n?.callsTonight)],
+        ["calls made tonight", numOrDash(n?.callsTonight)],
         ["balanced accuracy", accuracyLabel(n?.accuracy, n?.scored ?? 0)],
       ],
       cta: "Read today's brief",

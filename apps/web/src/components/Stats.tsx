@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
+import { num, short } from "../format";
+import { useLive } from "../hooks";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
-const num = (n: number) => n.toLocaleString("en-US");
 const pctOf = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "-");
 
 interface Day {
@@ -50,26 +50,6 @@ interface Dev {
   dumped: number;
   graduated: number;
   medianDumpMin?: number | null;
-}
-
-/** Fetches one public endpoint every minute; null until it answers. */
-function useLive<T>(path: string): T | null {
-  const [v, setV] = useState<T | null>(null);
-  useEffect(() => {
-    let dead = false;
-    const load = () =>
-      fetch(`${NORTH}${path}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((b: T | null) => b && !dead && setV(b))
-        .catch(() => {});
-    void load();
-    const id = window.setInterval(load, 60_000);
-    return () => {
-      dead = true;
-      clearInterval(id);
-    };
-  }, [path]);
-  return v;
 }
 
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
@@ -143,11 +123,11 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
 
 /** Every number the zoo has about itself, live from its public endpoints, with what each one does and does not count. */
 export default function Stats() {
-  const usage = useLive<Usage>("/v1/usage");
-  const chain = useLive<Chain>("/v1/chain");
-  const record = useLive<CheckRecord>("/v1/check/record");
-  const ruggers = useLive<{ ruggers: Dev[] }>("/v1/chain/ruggers?limit=10");
-  const builders = useLive<{ builders: Dev[] }>("/v1/chain/builders?limit=10");
+  const usage = useLive<Usage>(`${NORTH}/v1/usage`, 60_000);
+  const chain = useLive<Chain>(`${NORTH}/v1/chain`, 60_000);
+  const record = useLive<CheckRecord>(`${NORTH}/v1/check/record`, 60_000);
+  const ruggers = useLive<{ ruggers: Dev[] }>(`${NORTH}/v1/chain/ruggers?limit=10`, 60_000);
+  const builders = useLive<{ builders: Dev[] }>(`${NORTH}/v1/chain/builders?limit=10`, 60_000);
   // The counter started on 19 October: days before it are not zero, they were not counted.
   const days = (usage?.days ?? []).filter((d) => d.day >= "2026-10-19");
   const a = record?.flaggedAvoid;
@@ -275,7 +255,6 @@ function FeeLoop() {
   }, []);
   if (!b?.hot) return null;
   const sol = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 4 });
-  const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
   return (
     <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">

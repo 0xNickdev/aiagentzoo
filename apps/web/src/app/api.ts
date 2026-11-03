@@ -134,8 +134,4 @@ export async function watch(initData: string, mint: string): Promise<{ ok: boole
 export const pct = (x: number | null | undefined) => (x === null || x === undefined ? "-" : `${Math.round(x * 100)}%`);
 export const usd = (n: number | null | undefined) =>
   n === null || n === undefined ? "-" : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${Math.round(n)}`;
-export const ago = (t: number) => {
-  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
-  return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`;
-};
 export const mintIn = addressIn;

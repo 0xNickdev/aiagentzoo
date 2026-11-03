@@ -48,11 +48,6 @@ function save(w: Record<string, Watched>) {
   }
 }
 
-export const ago = (at: number) => {
-  const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
-  return m < 1 ? t("just now") : m < 60 ? t("{n} min ago", { n: m }) : t("{n} h ago", { n: Math.round(m / 60) });
-};
-
 /**
  * The radar: fresh coins that passed our checks, watched in the open. It never says buy; it says which ones have
  * stopped looking clean, the moment they do. Everything runs in this tab against public node data, so it costs the
