@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-26",
+  "updated": "2026-11-03",
   "repo": "https://github.com/0xNickdev/aiagentzoo",
   "chapters": [
     {
@@ -17,22 +17,22 @@
       "id": "2026-11",
       "label": "Nov 2026",
       "name": "Own ground",
-      "line": "Our own machines, the holder radar and the money map, a swap and a pro tier that pay for the zoo, and the first vote.",
+      "line": "Our own machines, the radar and the money map, the swap, x402 for agents, and a way to see the same rugger behind fresh wallets: tool prints and operators.",
       "zh": {
         "label": "2026 年 11 月",
         "name": "自己的地盘",
-        "line": "自己的服务器，持有者雷达和资金流向图，让项目自给自足的兑换和专业版，以及第一次投票。"
+        "line": "自己的服务器，雷达和资金流向图，兑换，给智能体的 x402，以及在新钱包背后认出同一个跑路者的方法：工具指纹和操盘者。"
       }
     },
     {
       "id": "2026-12",
       "label": "Dec 2026",
       "name": "Guard",
-      "line": "A seatbelt for agents that trade alone, and two builds in the order holders choose.",
+      "line": "Guard inside the tools agents already use, and two builds in the order holders choose.",
       "zh": {
         "label": "2026 年 12 月",
         "name": "守卫",
-        "line": "给独自交易的智能体系上安全带，以及按持有者选定顺序完成的两个项目。"
+        "line": "把守卫放进智能体已经在用的工具里，以及按持有者选定顺序完成的两个项目。"
       }
     },
     {
@@ -706,6 +706,142 @@
       ]
     },
     {
+      "id": "factors",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-29",
+      "title": "Every factor, counted",
+      "text": "Under the odds, every number behind them: the dev's launches and dumps, who paid the dev, first-seconds wallets, known ruggers, whales, KOLs, rings, cabals, bundles, churn, reused socials. Red where it goes with rugs.",
+      "why": "A holder asked for the factors behind the percentage. Now nothing is a black box.",
+      "proof": [
+        {
+          "label": "e55f3fe",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/e55f3fe"
+        }
+      ],
+      "zh": {
+        "title": "每个因素都算出来",
+        "text": "在概率下面列出背后的每个数字：开发者的发币和砸盘、谁给开发者打钱、头几秒的钱包、已知跑路者、巨鲸、KOL、狙击圈、阴谋集团、捆绑、换手、重复使用的社交账号。和跑路相关的标红。",
+        "why": "一位持币者想看百分比背后的因素。现在没有黑箱。"
+      }
+    },
+    {
+      "id": "base-flap",
+      "chapter": "2026-10",
+      "status": "shipped",
+      "date": "2026-10-27",
+      "title": "Base and Flap",
+      "text": "Clanker launches on Base and Flap launches on BNB Chain, read straight from the chain like the rest: the dev, the first buyers, bundles, the pool from the first second.",
+      "why": "Wherever memecoins launch, the same question: who is behind it. We add a chain only when we can read it ourselves.",
+      "proof": [
+        {
+          "label": "d9600cb",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/d9600cb"
+        },
+        {
+          "label": "99dc5dc",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/99dc5dc"
+        }
+      ],
+      "zh": {
+        "title": "Base 和 Flap",
+        "text": "Base 上的 Clanker 发币和 BNB 链上的 Flap 发币，和其他一样直接从链上读取：开发者、第一批买家、捆绑、从第一秒起的池子。",
+        "why": "哪里发币，问题都一样：背后是谁。只有我们能自己读的链才会加。"
+      }
+    },
+    {
+      "id": "guard",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "title": "ZOO Guard for agents",
+      "text": "One call before every swap: who is behind this coin. Agents pay per check over x402, 0.001 USDC a check and 0.01 a full x-ray, no key and no account. Charged only when a report is delivered. Real USDC on Solana mainnet, test USDC on devnet.",
+      "why": "Shipped a month early. AI agents trade real money with nobody watching, and they cannot fill in a sign-up form. Every sale is public with its transaction and the hash of the report sold.",
+      "zh": {
+        "title": "ZOO 守卫 · 给智能体",
+        "text": "每次兑换前调用一次：这个币背后是谁。智能体通过 x402 按次付费，每次检查 0.001 USDC，完整透视 0.01 USDC，无需密钥和账户。只有交付了报告才扣费。Solana 主网收真实 USDC，开发网收测试 USDC。",
+        "why": "提前一个月上线。AI 智能体用真钱交易无人看管，也没法填注册表。每一笔销售都公开，附交易和所售报告的哈希。"
+      },
+      "date": "2026-11-02",
+      "proof": [
+        {
+          "label": "6947fe2",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/6947fe2"
+        },
+        {
+          "label": "b8cb5f5",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/b8cb5f5"
+        },
+        {
+          "label": "every sale",
+          "href": "https://zooaiagency.com/x402"
+        }
+      ]
+    },
+    {
+      "id": "tool-print",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-03",
+      "title": "Tool prints",
+      "text": "A rugger swaps wallets every launch, not the tool. Every launch transaction is read for how it was built: compute budget, the tip and to whom, the programs in order, signers, lookup tables, metadata host. A fresh wallet launching the way a farm of dumping wallets launches gets flagged with no history of its own.",
+      "why": "No tool we know of reads this. On day one it found 33 fresh wallets launching with one setup, 92% of their launches dumped.",
+      "proof": [
+        {
+          "label": "a139b78",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/a139b78"
+        },
+        {
+          "label": "live list",
+          "href": "https://north.zooaiagency.com/v1/chain/tools"
+        }
+      ],
+      "zh": {
+        "title": "工具指纹",
+        "text": "跑路者每次发币都换钱包，但不换工具。我们读取每笔发币交易的构造方式：计算预算、小费及收款方、程序顺序、签名者、查找表、元数据主机。新钱包如果和一批砸盘钱包用同样的方式发币，即使没有历史也会被标记。",
+        "why": "据我们所知没有别的工具读这个。第一天就发现 33 个新钱包用同一套设置发币，92% 被砸盘。"
+      }
+    },
+    {
+      "id": "cosign",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-03",
+      "title": "The operator",
+      "text": "Wallets that signed one transaction together share an owner: every trader signs their own trade. A launch buying from its own wallets, a bundled sell, and they stay joined, so a dev on a fresh wallet is caught the moment it signs next to an old one. The transactions are the proof.",
+      "why": "The strongest link there is short of a confession. We call it one operator only when the chain shows the signatures.",
+      "proof": [
+        {
+          "label": "30b802b",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/30b802b"
+        }
+      ],
+      "zh": {
+        "title": "操盘者",
+        "text": "在同一笔交易里一起签名的钱包属于同一个主人：每个交易者都要为自己的交易签名。发币时用自己的钱包买入、打包卖出，这些钱包就被连在一起，开发者换新钱包，只要和旧钱包一起签名就会被认出。交易本身就是证据。",
+        "why": "除了认罪之外最强的关联。只有链上出现签名时，我们才称为同一个操盘者。"
+      }
+    },
+    {
+      "id": "radar-fix",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-03",
+      "title": "Radar pings only real turns",
+      "text": "A ping now means a coin that read pass on the full check and then turned. Before, coins entered the radar already at caution and every ping said they turned.",
+      "why": "A holder noticed every ping was a caution. They were right.",
+      "proof": [
+        {
+          "label": "c471c49",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/c471c49"
+        }
+      ],
+      "zh": {
+        "title": "雷达只推送真正的转变",
+        "text": "现在推送意味着币在完整检查中曾经是通过，然后变了。之前有些币进入雷达时就已经是谨慎，每次推送都说它变了。",
+        "why": "一位持币者发现每条推送都是谨慎。他说得对。"
+      }
+    },
+    {
       "id": "pro",
       "chapter": "2026-11",
       "status": "next",
@@ -734,19 +870,6 @@
         "when": "11 月底"
       },
       "when": "End of Nov"
-    },
-    {
-      "id": "guard",
-      "chapter": "2026-12",
-      "status": "next",
-      "title": "ZOO Guard for agents",
-      "text": "One call before every swap: who is behind this coin. If the answer is avoid, the swap does not go through. Agents pay per check, a fraction of a cent, through x402.",
-      "why": "AI agents trade real money with nobody watching. To a bundler they are the easiest buyers on the chain. Agents pay per call without thinking twice, so checks stay free for people.",
-      "zh": {
-        "title": "ZOO 守卫 · 给智能体",
-        "text": "每次兑换前调用一次：这个币背后是谁。如果结论是避开，交易就不会执行。智能体通过 x402 按次付费，每次不到一美分。",
-        "why": "AI 智能体在无人看管的情况下用真钱交易。对捆绑者来说，它们是链上最好收割的买家。智能体按次付费不会犹豫，所以对人的检查可以一直免费。"
-      }
     },
     {
       "id": "brief-everywhere",
