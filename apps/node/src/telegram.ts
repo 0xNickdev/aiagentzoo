@@ -973,21 +973,29 @@ export function startTelegram(opts: TelegramOptions): () => void {
   };
 
   // The radar: every coin that passed the clean list is re-checked every minute until it turns or ages out.
-  const radar = new Map<string, { symbol: string; since: number }>();
+  // armed: the full check has read the coin as pass at least once. Only an armed coin can "turn": the clean list is
+  // looser than the check, so a coin can enter it already at caution, and pinging that would be no news.
+  const radar = new Map<string, { symbol: string; since: number; armed: boolean }>();
   let radarAt = 0;
   const radarTick = async () => {
     if (stopped || !opts.northUrl || Date.now() - radarAt < 60_000) return;
     radarAt = Date.now();
     const subs = (await opts.store.get<number[]>("tg:radar")) ?? [];
     const fresh = await north<{ launches: CleanLaunch[] }>("/v1/chain/clean?limit=30");
-    for (const c of fresh?.launches ?? []) if (!radar.has(c.mint)) radar.set(c.mint, { symbol: c.symbol, since: Date.now() });
+    for (const c of fresh?.launches ?? []) if (!radar.has(c.mint)) radar.set(c.mint, { symbol: c.symbol, since: Date.now(), armed: false });
     for (const [mint, t] of radar) {
-      if (Date.now() - t.since > 6 * 3_600_000) {
+      // A coin that never read pass in half an hour is not one the radar watches.
+      if (Date.now() - t.since > 6 * 3_600_000 || (!t.armed && Date.now() - t.since > 30 * 60_000)) {
         radar.delete(mint);
         continue;
       }
       const c = await north<{ verdict: string; reasons: string[] }>(`/v1/check/${mint}`);
-      if (!c || c.verdict === "pass" || c.verdict === "unknown") continue;
+      if (!c || c.verdict === "unknown") continue;
+      if (c.verdict === "pass") {
+        t.armed = true;
+        continue;
+      }
+      if (!t.armed) continue;
       radar.delete(mint);
       if (!subs.length) continue;
       const bad = c.verdict === "avoid";
