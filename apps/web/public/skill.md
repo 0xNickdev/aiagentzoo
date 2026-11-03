@@ -182,6 +182,15 @@ The free tier is enough for any single agent, and it stays free. A bot that chec
 - If there is no answer within 5 seconds, treat it as `unknown`.
 - `404` means the request reached a node that does not read the chain; use the address above.
 
+## Who is behind it when the wallet is new
+
+A rugger swaps wallets every launch. Two reads see through that, and both answer in the check and the x-ray:
+
+- `tool`: how the launch transaction was built (compute budget, the tip and to whom, the programs in order, signers, lookup tables, metadata host). `wallets` other wallets launched with the same build in two days, `dumped` of `settled` of those launches dumped. A build shared by a public launcher's crowd has `common: true` and says nothing. `shape` is the same build without its fee amounts, for bots that price each launch. Reason: `launched with the same tool setup as N other wallets ...`, a caution.
+- `operator`: wallets that signed a transaction together with the dev (a launch buying from its own wallets, a bundled sell). Each trader signs their own trade, so one hand holds those keys. Reason: `the dev signed transactions together with N other wallets: one operator ...`, an avoid when nearly all of their launches dumped. Groups past 100 wallets read as a custodial trading bot and say nothing.
+
+`GET https://north.zooaiagency.com/v1/chain/tools` lists the builds behind the most dumping launches; `/v1/chain/tool/<key>` one build and its launches; `/v1/chain/operator/<wallet>` an operator's wallets with the transactions that prove the link.
+
 ## Pay per call with x402 (no key, no limits)
 
 An agent that needs more than the free tier, or does not want to wait, pays per call in USDC on Solana over [x402](https://x402.org) v2. No key, no account, no subscription.

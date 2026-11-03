@@ -57,6 +57,16 @@ export function factorsOf(r: XRayReport): Factor[] {
   if (f.churnPct !== null) out.push({ k: t("churn"), v: `${f.churnPct}%`, d: f.bumps ? t("{n} bump bot trades", { n: f.bumps }) : t("volume sold back by the buyers"), bad: f.churnPct >= 30 });
   const tk = r.ticker;
   if (tk) out.push({ k: t("ticker used before"), v: tk.launches ? `${tk.launches}×` : t("first time"), d: tk.launches ? (tk.devs === 1 ? t("in {d} days, all by one dev, {x} dumped", { d: tk.days, x: tk.dumped }) : t("in {d} days by {n} devs, {x} dumped by their dev", { d: tk.days, n: tk.devs, x: tk.dumped })) : t("no other launch with this ticker in {d} days", { d: tk.days }), bad: tk.launches >= 3 && tk.dumped >= 2 });
+  // Co-signers: wallets that signed one transaction with the dev share its keys' owner.
+  const op = r.check.operator;
+  if (op && op.wallets <= 100) {
+    out.push({
+      k: t("dev's co-signers"),
+      v: t("{n} wallets", { n: op.wallets - 1 }),
+      d: op.launches ? t("signed with the dev; launched {l} in 2 days, {x} of {n} dumped", { l: op.launches, x: op.dumped, n: op.settled }) : t("signed transactions with the dev, no launches of their own"),
+      bad: op.settled >= 3 && op.dumped / op.settled >= 0.8,
+    });
+  }
   // The tool print: the exact build when other wallets share it, else its shape (the build without fee amounts).
   const tool = r.check.tool;
   const tp = tool && tool.wallets > 1 ? tool : (tool?.shape ?? tool);

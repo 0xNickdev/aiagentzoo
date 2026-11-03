@@ -49,6 +49,8 @@ export interface Check {
   odds?: Odds | null;
   reasons: string[];
   notes: string[];
+  /** Wallets that signed a transaction together with the dev, and what they launched and dumped in two days. */
+  operator?: { wallets: number; launches: number; settled: number; dumped: number } | null;
   /** How the launch transaction was built, and what the other launches built the same way did (exact and by shape). */
   tool?: (ToolStat & { shape?: ToolStat }) | null;
   /** Whether the node's chain stream is live and how long ago it last heard the chain. */
