@@ -2,6 +2,10 @@
 
 Using the zoo is free: the site, the Telegram bot, the extension and the API. No token is spent on a check, an x-ray or a question to the beaver. A trader who needs an answer in a second should not have to pay for it first.
 
+## Agents pay per call
+
+Trading bots and AI agents can pay for a check per request over [x402](https://zooaiagency.com/x402), in USDC on Solana: 0.001 USDC a check, 0.01 USDC a full x-ray, no key and no account. Real USDC on mainnet, test USDC on devnet. They are charged only when a report is delivered, and every sale is public with its transaction. The free tier stays free for people; paying lifts the per-minute limit for one call.
+
 ## The token
 
 **$ZOOAGENCY** launched on [ClawPump](https://www.clawpump.tech).

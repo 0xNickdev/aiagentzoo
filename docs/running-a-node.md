@@ -71,6 +71,8 @@ The same setup works on any host that runs docker: build the image from the repo
 
 The site reads the public URLs from `VITE_ZOO_NODES` in the Vercel project, and proxies north's API at `https://zooaiagency.com/api/north/<path>` (e.g. `/api/north/v1/stats`); `/api/check/<mint>` and `/api/xray/<mint>` are short forms of north's `/v1/check` and `/v1/xray`.
 
+On north, x402 needs a fee payer and a payee per network: `X402_MAINNET_KEY` and `X402_MAINNET_PAY_TO` for real USDC (offered first), `X402_FACILITATOR_KEY` and `X402_PAY_TO` for devnet. Each fee payer holds a little SOL; each payee's USDC account must exist. Without them the x402 routes answer 404.
+
 ## Operating
 
 - **Watch:** `curl localhost:8783/v1/stream`

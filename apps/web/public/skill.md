@@ -201,7 +201,7 @@ An agent that needs more than the free tier, or does not want to wait, pays per 
 | `GET https://north.zooaiagency.com/v1/x402/xray/<mint>` | 0.01 USDC | the same answer as `/api/xray/<mint>` |
 | `GET https://north.zooaiagency.com/v1/x402` | free | network, USDC mint, payee, fee payer, prices |
 
-The first request answers `402` with a `PAYMENT-REQUIRED` header (scheme `exact`, network Solana devnet for now). Any x402 v2 client signs a USDC transfer for that amount and retries with `PAYMENT-SIGNATURE`; the official `@x402/fetch` with `@x402/svm` does both. The node pays the Solana fee, so the wallet needs USDC only.
+The first request answers `402` with a `PAYMENT-REQUIRED` header (scheme `exact`; Solana mainnet with real USDC is offered first, devnet second; pay on the one your wallet holds USDC on). Any x402 v2 client signs a USDC transfer for that amount and retries with `PAYMENT-SIGNATURE`; the official `@x402/fetch` with `@x402/svm` does both. The node pays the Solana fee, so the wallet needs USDC only.
 
 You are charged only when a report is delivered: a token the zoo knows nothing about (`verdict: unknown`) goes out free, a node error never settles the transfer, and a transfer that fails on chain withholds the report (`402` with the reason). Each paid answer carries the transaction in `PAYMENT-RESPONSE` and `X-Report-Sha256`, the hash kept in the node's public log. Every sale: `GET https://north.zooaiagency.com/v1/x402/receipts`. A ready agent: https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent
 
