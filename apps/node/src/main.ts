@@ -363,7 +363,7 @@ const stopWatchdog =
 
 // x402 sells the X-Ray per call on the node that reads the chain; only there is a report to sell.
 const x402 = config.role === "north" ? await laneFromEnv(enclosure).catch((e: unknown) => (console.log(`[${config.id}] x402 off: ${(e as Error).message}`), null)) : null;
-if (x402) console.log(`[${config.id}] x402 on ${x402.network}: pay to ${x402.payTo}, fee payer ${x402.feePayer}`);
+if (x402) for (const n of x402.networks) console.log(`[${config.id}] x402 on ${n.network}: pay to ${n.payTo}, fee payer ${n.feePayer}`);
 
 const server = createNodeServer({
   enclosure,

@@ -64,10 +64,16 @@ export interface Produced {
   body: string;
 }
 
-export interface LaneOptions {
+/** One network the lane takes USDC on: who receives it and which node wallet pays the fee there. */
+export interface Lane {
   network: NetworkName;
   payTo: string;
   feePayer: string;
+}
+
+export interface LaneOptions {
+  /** Offered in this order: a client that can pay on several takes the first it supports. */
+  networks: Lane[];
   facilitator: Facilitator;
   enclosure?: Pick<Enclosure, "store" | "log" | "node">;
   /** Public base URL the 402 names as the resource (e.g. https://north.zooaiagency.com). */
@@ -83,9 +89,7 @@ const KEEP = 1000;
 const atomicToUsdc = (a: string | number) => Number(a) / 1e6;
 
 export class X402Lane {
-  readonly network: NetworkName;
-  readonly payTo: string;
-  readonly feePayer: string;
+  readonly networks: Lane[];
   private readonly facilitator: Facilitator;
   private readonly enclosure: LaneOptions["enclosure"];
   private readonly publicUrl: string;
@@ -93,12 +97,12 @@ export class X402Lane {
   private readonly now: () => number;
   /** Receipts kept in memory too, so a burst of sales does not race the store. */
   private recent: Receipt[] | null = null;
-  private totals: { paid: number; usdc: number; refusedBeforeSettle: number; settleFailed: number } | null = null;
+  /** paid and usdc add up every network; byNetwork keeps real USDC apart from devnet's. */
+  private totals: { paid: number; usdc: number; refusedBeforeSettle: number; settleFailed: number; byNetwork: Record<string, { paid: number; usdc: number }> } | null = null;
 
   constructor(o: LaneOptions) {
-    this.network = o.network;
-    this.payTo = o.payTo;
-    this.feePayer = o.feePayer;
+    if (!o.networks.length) throw new Error("x402 needs at least one network");
+    this.networks = o.networks;
     this.facilitator = o.facilitator;
     this.enclosure = o.enclosure;
     this.publicUrl = o.publicUrl.replace(/\/$/, "");
@@ -106,9 +110,12 @@ export class X402Lane {
     this.now = o.now ?? Date.now;
   }
 
-  requirements(route: PaidRoute): PaymentRequirements {
-    const net = NETWORKS[this.network];
-    return { scheme: "exact", network: net.caip2, asset: net.usdc, amount: route.amount, payTo: this.payTo, maxTimeoutSeconds: 60, extra: { feePayer: this.feePayer } };
+  /** What this route costs on each network, in the order offered. */
+  requirements(route: PaidRoute): PaymentRequirements[] {
+    return this.networks.map((n) => {
+      const net = NETWORKS[n.network];
+      return { scheme: "exact", network: net.caip2, asset: net.usdc, amount: route.amount, payTo: n.payTo, maxTimeoutSeconds: 60, extra: { feePayer: n.feePayer } };
+    });
   }
 
   paymentRequired(route: PaidRoute, mint: string, error?: string): PaymentRequired {
@@ -116,20 +123,15 @@ export class X402Lane {
       x402Version: 2,
       ...(error ? { error } : {}),
       resource: { url: `${this.publicUrl}/v1/x402/${route.id}/${mint}`, description: route.description, mimeType: "application/json" },
-      accepts: [this.requirements(route)],
+      accepts: this.requirements(route),
     };
   }
 
   /** The machine-readable menu: what is for sale, at what price, paid how. */
   info() {
-    const net = NETWORKS[this.network];
     return {
       x402Version: 2,
-      network: net.caip2,
-      cluster: net.cluster,
-      asset: { symbol: "USDC", mint: net.usdc, decimals: 6 },
-      payTo: this.payTo,
-      feePayer: this.feePayer,
+      networks: this.networks.map((n) => ({ network: NETWORKS[n.network].caip2, cluster: NETWORKS[n.network].cluster, asset: { symbol: "USDC", mint: NETWORKS[n.network].usdc, decimals: 6 }, payTo: n.payTo, feePayer: n.feePayer })),
       facilitator: "built in: the node verifies, co-signs as fee payer and settles itself",
       resources: Object.values(this.routes).map((r) => ({
         url: `${this.publicUrl}/v1/x402/${r.id}/{mint}`,
@@ -149,7 +151,10 @@ export class X402Lane {
   private async load(): Promise<void> {
     if (this.recent && this.totals) return;
     this.recent = (await this.enclosure?.store.get<Receipt[]>(RECEIPTS)) ?? [];
-    this.totals = (await this.enclosure?.store.get<NonNullable<X402Lane["totals"]>>(TOTALS)) ?? { paid: 0, usdc: 0, refusedBeforeSettle: 0, settleFailed: 0 };
+    const saved = await this.enclosure?.store.get<Partial<NonNullable<X402Lane["totals"]>>>(TOTALS);
+    // Totals from before networks were counted apart were all devnet sales.
+    const byNetwork = saved?.byNetwork ?? (saved?.paid ? { [NETWORKS.devnet.caip2]: { paid: saved.paid, usdc: saved.usdc ?? 0 } } : {});
+    this.totals = { paid: saved?.paid ?? 0, usdc: saved?.usdc ?? 0, refusedBeforeSettle: saved?.refusedBeforeSettle ?? 0, settleFailed: saved?.settleFailed ?? 0, byNetwork };
   }
 
   async receipts(limit = 50) {
@@ -169,6 +174,9 @@ export class X402Lane {
     if (this.recent!.length > KEEP) this.recent!.length = KEEP;
     this.totals!.paid += 1;
     this.totals!.usdc = Math.round((this.totals!.usdc + atomicToUsdc(r.amount)) * 1e6) / 1e6;
+    const net = (this.totals!.byNetwork[r.network] ??= { paid: 0, usdc: 0 });
+    net.paid += 1;
+    net.usdc = Math.round((net.usdc + atomicToUsdc(r.amount)) * 1e6) / 1e6;
     await this.enclosure?.store.set(RECEIPTS, this.recent);
     await this.enclosure?.store.set(TOTALS, this.totals);
     const e = this.enclosure;
@@ -192,8 +200,10 @@ export class X402Lane {
     } catch {
       return this.ask(res, route, mint, "invalid_payload: PAYMENT-SIGNATURE is not a base64 x402 payment payload");
     }
-    // The requirements are always ours: whatever the client says it accepted, it pays what this route costs.
-    const requirements = this.requirements(route);
+    // The requirements are always ours: whatever the client says it accepted, it pays what this route costs, on the
+    // network it chose among the ones offered.
+    const requirements = this.requirements(route).find((q) => q.network === payload.accepted?.network);
+    if (!requirements) return this.ask(res, route, mint, `unsupported_network: pay on ${this.networks.map((n) => NETWORKS[n.network].caip2).join(" or ")}`);
     const verified = await this.facilitator.verify(payload, requirements).catch((e: unknown) => ({ isValid: false, invalidReason: "verify_error", invalidMessage: String((e as Error)?.message ?? e) }) as VerifyResponse);
     if (!verified.isValid) return this.ask(res, route, mint, [verified.invalidReason, verified.invalidMessage].filter(Boolean).join(": ") || "invalid payment");
 
@@ -284,22 +294,30 @@ export function secretKeyBytes(raw: string): Uint8Array {
 }
 
 /**
- * The lane from the environment, or null when x402 is off. X402_FACILITATOR_KEY (the fee payer's secret key) and
- * X402_PAY_TO (the wallet that receives USDC) turn it on; X402_NETWORK picks devnet (default) or mainnet.
+ * The lane from the environment, or null when x402 is off. Each network has its own fee payer and payee:
+ * X402_MAINNET_KEY + X402_MAINNET_PAY_TO for real USDC (offered first), and X402_FACILITATOR_KEY + X402_PAY_TO for the
+ * second, devnet unless X402_NETWORK says mainnet. Either pair alone is enough.
  */
 export async function laneFromEnv(enclosure: LaneOptions["enclosure"], env = process.env): Promise<X402Lane | null> {
-  const key = env.X402_FACILITATOR_KEY;
-  const payTo = env.X402_PAY_TO;
-  if (!key || !payTo) return null;
-  const network: NetworkName = env.X402_NETWORK === "mainnet" ? "mainnet" : "devnet";
+  const wanted: Array<{ network: NetworkName; key: string; payTo: string; rpc: string }> = [];
+  if (env.X402_MAINNET_KEY && env.X402_MAINNET_PAY_TO) wanted.push({ network: "mainnet", key: env.X402_MAINNET_KEY, payTo: env.X402_MAINNET_PAY_TO, rpc: env.X402_MAINNET_RPC_URL || env.SOLANA_RPC_URL || NETWORKS.mainnet.rpc });
+  if (env.X402_FACILITATOR_KEY && env.X402_PAY_TO) {
+    const network: NetworkName = env.X402_NETWORK === "mainnet" ? "mainnet" : "devnet";
+    if (!wanted.some((w) => w.network === network)) wanted.push({ network, key: env.X402_FACILITATOR_KEY, payTo: env.X402_PAY_TO, rpc: env.X402_RPC_URL || NETWORKS[network].rpc });
+  }
+  if (!wanted.length) return null;
   const [{ createKeyPairSignerFromBytes }, { x402Facilitator }, { toFacilitatorSvmSigner }, { registerExactSvmScheme }] = await Promise.all([
     import("@solana/kit"),
     import("@x402/core/facilitator"),
     import("@x402/svm"),
     import("@x402/svm/exact/facilitator"),
   ]);
-  const signer = await createKeyPairSignerFromBytes(secretKeyBytes(key));
   const facilitator = new x402Facilitator();
-  registerExactSvmScheme(facilitator, { signer: toFacilitatorSvmSigner(signer, { defaultRpcUrl: env.X402_RPC_URL || NETWORKS[network].rpc }), networks: NETWORKS[network].caip2 });
-  return new X402Lane({ network, payTo, feePayer: signer.address, facilitator, enclosure, publicUrl: env.X402_PUBLIC_URL || "https://north.zooaiagency.com" });
+  const networks: Lane[] = [];
+  for (const w of wanted) {
+    const signer = await createKeyPairSignerFromBytes(secretKeyBytes(w.key));
+    registerExactSvmScheme(facilitator, { signer: toFacilitatorSvmSigner(signer, { defaultRpcUrl: w.rpc }), networks: NETWORKS[w.network].caip2 });
+    networks.push({ network: w.network, payTo: w.payTo, feePayer: signer.address });
+  }
+  return new X402Lane({ networks, facilitator, enclosure, publicUrl: env.X402_PUBLIC_URL || "https://north.zooaiagency.com" });
 }

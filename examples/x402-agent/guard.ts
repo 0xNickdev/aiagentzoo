@@ -21,7 +21,10 @@ import { ExactSvmScheme } from "@x402/svm/exact/client";
 
 const NODE = process.env.ZOO_NODE ?? "https://north.zooaiagency.com";
 const KEY_FILE = process.env.AGENT_KEY_FILE ?? "agent.json";
-const RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+/** Which network the agent pays on: devnet by default (free test USDC), mainnet with X402_NETWORK=mainnet. */
+const MAINNET = process.env.X402_NETWORK === "mainnet";
+const NETWORK = MAINNET ? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" : "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
+const RPC = process.env.SOLANA_RPC_URL ?? (MAINNET ? "https://api.mainnet-beta.solana.com" : "https://api.devnet.solana.com");
 
 interface Check {
   verdict: "avoid" | "caution" | "pass" | "unknown";
@@ -85,9 +88,17 @@ async function main(): Promise<void> {
   }
 
   const signer = await loadSigner();
-  const client = new x402Client().register("solana:*", new ExactSvmScheme(toClientSvmSigner(signer), { rpcUrl: RPC }));
+  // Registered for one network only, so the client pays where this wallet holds USDC, whatever the node offers first.
+  const client = new x402Client().register(NETWORK, new ExactSvmScheme(toClientSvmSigner(signer), { rpcUrl: RPC }));
   const paidFetch = wrapFetchWithPayment(fetch, client);
-  const menu = (await (await fetch(`${NODE}/v1/x402`)).json()) as { cluster: string; asset: { mint: string }; resources: Array<{ url: string; price: { usdc: number } }> };
+  const offered = (await (await fetch(`${NODE}/v1/x402`)).json()) as { networks: Array<{ network: string; cluster: string; asset: { mint: string } }>; resources: Array<{ url: string; price: { usdc: number } }> };
+  const net = offered.networks.find((n) => n.network === NETWORK);
+  if (!net) {
+    console.log(`the node does not take payment on ${NETWORK}; it offers ${offered.networks.map((n) => n.cluster).join(", ")}`);
+    process.exit(1);
+  }
+  const menu = { ...net, resources: offered.resources };
+  const explorer = MAINNET ? "" : "?cluster=devnet";
   // Paying from an empty wallet only gets a refusal back: say how to fund it instead.
   const price = menu.resources.find((r) => r.url.includes(xray ? "/xray/" : "/check/"))?.price.usdc ?? 0;
   const balance = await usdcBalance(signer.address, menu.asset.mint).catch(() => null);
@@ -122,7 +133,7 @@ async function main(): Promise<void> {
     for (const r of (check.reasons ?? []).slice(0, 3)) console.log(`  - ${r}`);
     if (check.odds) console.log(`  odds it runs: ${pct(check.odds.run)} (${check.odds.vsAverage ?? "?"}x the average), dev still dumps: ${pct(check.odds.devDumps)}`);
     if ("trail" in body && body.trail?.says) console.log(`  money: ${body.trail.says}`);
-    console.log(`  paid ${paid.transaction.slice(0, 16)}... https://explorer.solana.com/tx/${paid.transaction}?cluster=${menu.cluster}`);
+    console.log(`  paid ${paid.transaction.slice(0, 16)}... https://explorer.solana.com/tx/${paid.transaction}${explorer}`);
     console.log(`  report sha256 ${res.headers.get("x-report-sha256")} (also in the node's public receipts) - ${ms} ms\n`);
   }
 }

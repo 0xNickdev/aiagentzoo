@@ -8,12 +8,15 @@ import { useLive } from "../hooks";
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const when = (at: number) => new Date(at).toISOString().slice(5, 16).replace("T", " ");
 
-interface Menu {
+interface Network {
   network: string;
   cluster: string;
   asset: { symbol: string; mint: string };
   payTo: string;
   feePayer: string;
+}
+interface Menu {
+  networks: Network[];
   resources: Array<{ url: string; price: { usdc: number }; description: string }>;
 }
 interface Receipt {
@@ -21,14 +24,18 @@ interface Receipt {
   route: string;
   mint: string;
   payer: string;
+  network: string;
   transaction: string;
   reportSha256: string;
   verdict: string | null;
 }
 interface Receipts {
-  totals: { paid: number; usdc: number; refusedBeforeSettle: number; settleFailed: number };
+  totals: { paid: number; usdc: number; refusedBeforeSettle: number; settleFailed: number; byNetwork?: Record<string, { paid: number; usdc: number }> };
   receipts: Receipt[];
 }
+
+const MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+const DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 
 const VERDICT: Record<string, string> = { avoid: "text-[#ff8a7e]", caution: "text-[#f3c97a]", pass: "text-[#a6e3b4]" };
 
@@ -117,30 +124,34 @@ function Probe() {
 export default function X402() {
   const menu = useLive<Menu>(`${NORTH}/v1/x402`, 300_000);
   const sales = useLive<Receipts>(`${NORTH}/v1/x402/receipts?limit=30`);
-  const cluster = menu?.cluster ?? "devnet";
-  const tx = (s: string) => `https://explorer.solana.com/tx/${s}?cluster=${cluster}`;
-  const acct = (a: string) => `https://explorer.solana.com/address/${a}?cluster=${cluster}`;
+  // Explorer links point at the cluster each payment was made on: mainnet has no cluster parameter.
+  const clusterOf = (caip2: string) => (caip2 === MAINNET ? "" : "?cluster=devnet");
+  const tx = (s: string, caip2: string) => `https://explorer.solana.com/tx/${s}${clusterOf(caip2)}`;
+  const acct = (a: string, caip2: string) => `https://explorer.solana.com/address/${a}${clusterOf(caip2)}`;
   const tot = sales?.totals;
+  const real = tot?.byNetwork?.[MAINNET];
+  const test = tot?.byNetwork?.[DEVNET];
+  const clusters = menu ? menu.networks.map((n) => (n.cluster === "mainnet-beta" ? "mainnet" : n.cluster)).join(" + ") : "";
 
   return (
     <Section className="!pt-10">
       <SectionHead
-        eyebrow={t("x402 · Solana {c} · live", { c: cluster })}
+        eyebrow={clusters ? t("x402 · Solana {c} · live", { c: clusters }) : t("x402 · Solana · live")}
         title={[t("Pay per check."), t("No key, no account.")]}
         text={t("A trading agent asks who is behind a coin before it buys and pays for the answer in USDC over plain HTTP. The node verifies the payment, builds the report, and settles only when there is a report to deliver.")}
       />
 
       <div className="mx-auto max-w-7xl space-y-4">
         <Reveal className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
-          <Tile k={t("paid reports")} v={tot ? String(tot.paid) : "…"} sub={t("settled on Solana")} />
-          <Tile k={t("USDC earned")} v={tot ? tot.usdc.toFixed(3) : "…"} sub={t("devnet USDC")} />
+          <Tile k={t("paid on mainnet")} v={tot ? String(real?.paid ?? 0) : "…"} sub={tot ? t("{u} real USDC", { u: (real?.usdc ?? 0).toFixed(3) }) : ""} />
+          <Tile k={t("paid on devnet")} v={tot ? String(test?.paid ?? 0) : "…"} sub={tot ? t("{u} test USDC", { u: (test?.usdc ?? 0).toFixed(3) }) : ""} />
           <Tile k={t("not charged")} v={tot ? String(tot.refusedBeforeSettle) : "…"} sub={t("verified, but nothing to sell")} />
           <Tile k={t("settlements failed")} v={tot ? String(tot.settleFailed) : "…"} sub={t("report withheld")} />
         </Reveal>
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <Reveal>
-            <Card title={t("The menu")} note={menu ? `${menu.asset.symbol} · ${menu.network}` : ""}>
+            <Card title={t("The menu")} note={menu ? t("USDC on {c}", { c: clusters }) : ""}>
               <ul className="space-y-4">
                 {(menu?.resources ?? []).map((r) => (
                   <li key={r.url} className="border-t border-white/[0.08] pt-4 first:border-t-0 first:pt-0">
@@ -153,18 +164,18 @@ export default function X402() {
                 ))}
                 {!menu && <li className="text-[13px] text-fg-4">{t("Reading the node…")}</li>}
               </ul>
-              {menu && (
-                <p className="mt-5 text-[12px] text-fg-4">
-                  {t("paid to")}{" "}
-                  <a href={acct(menu.payTo)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {shortFit(menu.payTo)}
+              {menu?.networks.map((n) => (
+                <p key={n.network} className="mt-3 text-[12px] text-fg-4 first-of-type:mt-5">
+                  {n.network === MAINNET ? t("mainnet") : t("devnet")}: {t("paid to")}{" "}
+                  <a href={acct(n.payTo, n.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                    {shortFit(n.payTo)}
                   </a>{" "}
                   · {t("network fee paid by the node")}{" "}
-                  <a href={acct(menu.feePayer)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {shortFit(menu.feePayer)}
+                  <a href={acct(n.feePayer, n.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                    {shortFit(n.feePayer)}
                   </a>
                 </p>
-              )}
+              ))}
             </Card>
           </Reveal>
           <Reveal delay={0.05}>
@@ -215,12 +226,13 @@ export default function X402() {
                       </td>
                       <td className={`py-2 pr-4 ${VERDICT[r.verdict ?? ""] ?? "text-fg-4"}`}>{r.verdict ?? "-"}</td>
                       <td className="py-2 pr-4">
-                        <a href={acct(r.payer)} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                        <a href={acct(r.payer, r.network)} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                           {shortFit(r.payer)}
                         </a>
                       </td>
                       <td className="py-2 pr-4">
-                        <a href={tx(r.transaction)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                        <a href={tx(r.transaction, r.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                          {r.network === MAINNET ? "" : "devnet · "}
                           {shortFit(r.transaction, 6)} ↗
                         </a>
                       </td>

@@ -52,7 +52,7 @@ async function serve(lane: X402Lane, produce: () => Promise<Produced>): Promise<
 }
 
 const payment = (lane: X402Lane): string => {
-  const accepted = lane.requirements(lane.routes.xray!);
+  const accepted = lane.requirements(lane.routes.xray!)[0]!;
   const p: PaymentPayload = { x402Version: 2, accepted, payload: { transaction: "base64tx" } };
   return encodePaymentSignatureHeader(p);
 };
@@ -61,7 +61,7 @@ const REPORT = JSON.stringify({ mint: MINT, check: { verdict: "avoid", reasons: 
 
 function laneWith(f: Facilitator, enclosure?: ReturnType<typeof fakeEnclosure>["enclosure"]) {
   // The fakes cover only what the lane touches.
-  return new X402Lane({ network: "devnet", payTo: PAY_TO, feePayer: FEE_PAYER, facilitator: f, publicUrl: "https://north.example", ...(enclosure ? { enclosure: enclosure as never } : {}) });
+  return new X402Lane({ networks: [{ network: "devnet", payTo: PAY_TO, feePayer: FEE_PAYER }], facilitator: f, publicUrl: "https://north.example", ...(enclosure ? { enclosure: enclosure as never } : {}) });
 }
 
 test("without a payment the route answers 402 with what to pay, in the header and the body", async () => {
@@ -105,7 +105,7 @@ test("a payment that does not verify gets 402 with the reason, no report and no 
 test("the client cannot name its own price: verification always runs against the route's requirements", async () => {
   const { f, calls } = fakeFacilitator();
   const lane = laneWith(f);
-  const cheap: PaymentPayload = { x402Version: 2, accepted: { ...lane.requirements(lane.routes.xray!), amount: "1" }, payload: { transaction: "x" } };
+  const cheap: PaymentPayload = { x402Version: 2, accepted: { ...lane.requirements(lane.routes.xray!)[0]!, amount: "1" }, payload: { transaction: "x" } };
   const { url, server } = await serve(lane, async () => ({ status: 200, body: REPORT }));
   try {
     await fetch(url, { headers: { "payment-signature": encodePaymentSignatureHeader(cheap) } });
@@ -144,6 +144,27 @@ test("a node error while building the report is not charged either", async () =>
     assert.equal(r.status, 502);
     assert.equal(r.headers.get("x402-charged"), "false");
     assert.equal(calls.settle, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test("two networks are offered in order, and a payment is checked against the network it chose", async () => {
+  const { f, calls } = fakeFacilitator();
+  const lane = new X402Lane({ networks: [{ network: "mainnet", payTo: "MAIN", feePayer: "FEEMAIN" }, { network: "devnet", payTo: PAY_TO, feePayer: FEE_PAYER }], facilitator: f, publicUrl: "https://north.example" });
+  const { url, server } = await serve(lane, async () => ({ status: 200, body: REPORT }));
+  try {
+    const asked = decodePaymentRequiredHeader((await fetch(url)).headers.get("payment-required")!);
+    assert.deepEqual(asked.accepts.map((a) => a.network), [NETWORKS.mainnet.caip2, NETWORKS.devnet.caip2]);
+    assert.equal(asked.accepts[0]!.asset, NETWORKS.mainnet.usdc);
+    const devnet = lane.requirements(lane.routes.xray!)[1]!;
+    await fetch(url, { headers: { "payment-signature": encodePaymentSignatureHeader({ x402Version: 2, accepted: devnet, payload: { transaction: "x" } }) } });
+    assert.equal(calls.requirements[0]!.payTo, PAY_TO, "verified against the devnet payee it chose");
+    const elsewhere = { ...devnet, network: "solana:unknown" as const };
+    const r = await fetch(url, { headers: { "payment-signature": encodePaymentSignatureHeader({ x402Version: 2, accepted: elsewhere, payload: { transaction: "x" } }) } });
+    assert.equal(r.status, 402);
+    assert.match(decodePaymentRequiredHeader(r.headers.get("payment-required")!).error!, /unsupported_network/);
+    assert.equal(calls.verify, 1);
   } finally {
     server.close();
   }
@@ -195,6 +216,7 @@ test("a paid request gets the report, the transaction, and a receipt hashed into
     const { totals, receipts } = await lane.receipts();
     assert.equal(totals.paid, 1);
     assert.equal(totals.usdc, 0.01);
+    assert.deepEqual(totals.byNetwork, { [NETWORKS.devnet.caip2]: { paid: 1, usdc: 0.01 } });
     assert.deepEqual({ ...receipts[0], at: 0 }, { at: 0, route: "xray", mint: MINT, amount: "10000", asset: NETWORKS.devnet.usdc, network: NETWORKS.devnet.caip2, payer: "AGENT", transaction: "SIG123", reportSha256: sha, verdict: "avoid" });
     assert.equal(logged.length, 1);
   } finally {
