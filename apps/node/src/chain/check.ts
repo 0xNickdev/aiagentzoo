@@ -68,7 +68,7 @@ export interface TokenCheck {
    */
   odds?: Odds | null;
   /** The launch transaction's tool print and what the other launches made with it did; pump.fun, LaunchLab, Meteora. */
-  tool?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean } | null;
+  tool?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean; shape?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean } } | null;
   facts: {
     ageMin: number;
     buyers: number;
@@ -198,10 +198,12 @@ export interface CheckInput {
   creatorRecord: CreatorRecord | null;
 }
 
+const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: r.wallets, settled: r.settled, dumped: r.dumped, common: r.common });
+
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -349,7 +351,7 @@ export function checkToken(
 
   // A new wallet tells nothing by itself; the way its launch was built can: a tool print whose other launches nearly all
   // dumped, shared by several wallets, is a farm swapping wallets, not a coincidence.
-  const toolSaid = printWarning(opts.tool ?? null, f.creatorLaunches24h);
+  const toolSaid = printWarning(opts.tool ?? null, f.creatorLaunches24h) ?? printWarning(opts.toolShape ?? null, f.creatorLaunches24h, true);
   if (toolSaid) flag(caution, toolSaid, WEIGHT.toolPrint);
 
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
@@ -391,7 +393,7 @@ export function checkToken(
     proceed: verdict === "pass",
     reasons: [...avoid, ...caution],
     notes,
-    ...(opts.tool ? { tool: { key: opts.tool.key, launches: opts.tool.launches, wallets: opts.tool.wallets, settled: opts.tool.settled, dumped: opts.tool.dumped, common: opts.tool.common } } : {}),
+    ...(opts.tool ? { tool: { ...brief(opts.tool), ...(opts.toolShape ? { shape: brief(opts.toolShape) } : {}) } } : {}),
     facts: {
       ageMin: Math.round(f.ageMin),
       buyers: f.buyers,

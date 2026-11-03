@@ -54,13 +54,16 @@ test("a launch's tool print reads the compute budget, the Jito tip and the progr
   assert.equal(p.lut, false);
   assert.equal(p.host, "ipfs.io");
   assert.match(p.key, /^[0-9a-f]{6}$/);
+  assert.match(p.shape, /^s[0-9a-f]{6}$/);
 });
 
 test("a fresh wallet with the same tool setup gets the same print; a different setup does not", () => {
   const a = toolPrintOf(launchTx(WALLET_A), "https://ipfs.io/ipfs/1")!;
   const b = toolPrintOf(launchTx(WALLET_B), "https://ipfs.io/ipfs/2")!;
   assert.equal(a.key, b.key, "the wallet is not part of the print");
-  assert.notEqual(toolPrintOf(launchTx(WALLET_B, { cuPrice: 999 }))!.key, a.key);
+  const repriced = toolPrintOf(launchTx(WALLET_B, { cuPrice: 999, tipLamports: 1_500_000 }), "https://ipfs.io/x")!;
+  assert.notEqual(repriced.key, a.key);
+  assert.equal(repriced.shape, a.shape, "a bot that prices each launch keeps its shape");
   assert.notEqual(toolPrintOf(launchTx(WALLET_B, { tipLamports: 2_000_000 }), "https://ipfs.io/x")!.key, a.key);
   assert.notEqual(toolPrintOf(launchTx(WALLET_B, { lut: true }), "https://ipfs.io/x")!.key, a.key);
   assert.notEqual(toolPrintOf(launchTx(WALLET_B), "https://meta.somebot.xyz/1")!.key, a.key);
@@ -95,6 +98,7 @@ test("the warning needs several wallets, enough settled launches and nearly all 
   assert.equal(printWarning(record({ dumped: 20 }), 1), null, "80% is not nearly all");
   assert.equal(printWarning(record({ common: true }), 1), null, "pump.fun's own site is shared by everyone");
   assert.equal(printWarning(null, 1), null);
+  assert.match(printWarning(record({}), 1, true)!, /a tool setup built like that of 7 other wallets/);
 });
 
 test("the tape counts launches, wallets and dumps by print, and forgets a print when its launches age out", () => {
@@ -118,6 +122,8 @@ test("the tape counts launches, wallets and dumps by print, and forgets a print 
   assert.equal(r.common, false);
   assert.equal(tape.printOf("Mint0pump1111111111111111111111111111111", later)!.key, print.key);
   assert.equal(tape.printLaunches(print.key, 2).length, 2);
+  assert.equal(tape.shapeOf("Mint0pump1111111111111111111111111111111", later)!.launches, 5);
+  assert.deepEqual(tape.topPrints(5, later).map((r) => r.key), [print.key], "the shape adds nothing over the print here");
   // The print survives a restart through the snapshot.
   const reborn = new PumpTape();
   reborn.load(tape.snapshot(), later);

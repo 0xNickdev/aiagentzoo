@@ -399,8 +399,9 @@ interface Tracked {
   supply?: number;
   /** Where its metadata lives. */
   uri?: string;
-  /** The key of its launch transaction's tool print. */
+  /** The keys of its launch transaction's tool print: the exact build and its shape. */
   print?: string;
+  shape?: string;
   name: string;
   symbol: string;
   creator: string;
@@ -819,7 +820,7 @@ export class PumpTape {
         ...(ev.platform ? { platform: ev.platform } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
         ...(ev.uri ? { uri: ev.uri } : {}),
-        ...(ev.print ? { print: ev.print.key } : {}),
+        ...(ev.print ? { print: ev.print.key, shape: ev.print.shape } : {}),
         name: ev.name,
         symbol: ev.symbol,
         creator: ev.creator,
@@ -855,9 +856,13 @@ export class PumpTape {
       this.byCreator.set(ev.creator, mine);
       if (ev.print) {
         this.prints.set(ev.print.key, ev.print);
-        const same = this.byPrint.get(ev.print.key) ?? [];
-        same.push(ev.mint);
-        this.byPrint.set(ev.print.key, same);
+        if (ev.print.shape) this.prints.set(ev.print.shape, ev.print);
+        for (const k of [ev.print.key, ev.print.shape]) {
+          if (!k) continue;
+          const same = this.byPrint.get(k) ?? [];
+          same.push(ev.mint);
+          this.byPrint.set(k, same);
+        }
       }
       const times = (this.launchesBy.get(ev.creator) ?? []).filter((t) => now - t < DAY_MS);
       times.push(createdAt);
@@ -1165,10 +1170,11 @@ export class PumpTape {
         mine.push(t.mint);
         this.byCreator.set(t.creator, mine);
         if (t.pool) this.pools.set(t.pool, t.mint);
-        if (t.print) {
-          const same = this.byPrint.get(t.print) ?? [];
+        for (const k of [t.print, t.shape]) {
+          if (!k) continue;
+          const same = this.byPrint.get(k) ?? [];
           same.push(t.mint);
-          this.byPrint.set(t.print, same);
+          this.byPrint.set(k, same);
         }
       }
       for (const mints of this.byPrint.values()) mints.sort((a, b) => this.tokens.get(a)!.createdAt - this.tokens.get(b)!.createdAt);
@@ -1229,6 +1235,27 @@ export class PumpTape {
   printOf(mint: string, now = Date.now()): PrintRecord | null {
     const key = this.tokens.get(mint)?.print;
     return key ? this.printRecord(key, now) : null;
+  }
+
+  /** The same for the launch's tool shape: the build without its fee amounts. */
+  shapeOf(mint: string, now = Date.now()): PrintRecord | null {
+    const key = this.tokens.get(mint)?.shape;
+    return key ? this.printRecord(key, now) : null;
+  }
+
+  /**
+   * The prints and shapes behind the most launches from several wallets, worst first by how many of their settled
+   * launches dumped: where the wallet-swapping farms are. Common launchers are left out.
+   */
+  topPrints(limit = 20, now = Date.now()): PrintRecord[] {
+    const out: PrintRecord[] = [];
+    for (const key of this.byPrint.keys()) {
+      const r = this.printRecord(key, now);
+      if (r && !r.common && r.wallets >= 3 && r.settled >= 5) out.push(r);
+    }
+    // A shape whose launches are all one exact print says nothing more than that print: keep the print.
+    const kept = out.filter((r) => !r.key.startsWith("s") || !out.some((o) => !o.key.startsWith("s") && o.print.shape === r.key && o.launches === r.launches));
+    return kept.sort((a, b) => b.dumped / b.settled - a.dumped / a.settled || b.wallets - a.wallets).slice(0, limit);
   }
 
   printRecord(key: string, now = Date.now()): PrintRecord | null {

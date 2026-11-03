@@ -13,8 +13,13 @@ import { base58 } from "./pump.ts";
  */
 
 export interface ToolPrint {
-  /** Short stable id of the build, e.g. "a3f91c". */
+  /** Short stable id of the exact build, e.g. "a3f91c". */
   key: string;
+  /**
+   * The build without its fee amounts, prefixed "s": many bots price compute and tips per transaction, so the exact
+   * key changes every launch while the shape (programs, limit, tip service, signers, tables, host) stays.
+   */
+  shape: string;
   cuLimit: number | null;
   /** Micro-lamports per compute unit. */
   cuPrice: number | null;
@@ -112,8 +117,10 @@ export function toolPrintOf(tx: PrintableTx, uri?: string | null): ToolPrint | n
   }
   const lut = (m.addressTableLookups?.length ?? 0) > 0;
   const host = hostOf(uri);
-  const key = createHash("sha256").update(JSON.stringify([programs, cuLimit, cuPrice, tip?.to ?? null, tip?.lamports ?? null, signers, lut, host])).digest("hex").slice(0, 6);
-  return { key, cuLimit, cuPrice, tip, programs, signers, lut, host };
+  const hash = (parts: unknown[]) => createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 6);
+  const key = hash([programs, cuLimit, cuPrice, tip?.to ?? null, tip?.lamports ?? null, signers, lut, host]);
+  const shape = `s${hash([programs, cuLimit, tip?.to ?? null, signers, lut, host])}`;
+  return { key, shape, cuLimit, cuPrice, tip, programs, signers, lut, host };
 }
 
 /** What the zoo says about a print, from the launches on the tape made with it. */
@@ -136,12 +143,12 @@ export const COMMON_WALLETS = 150;
  * The plain sentence the check adds when a fresh wallet launches with a print whose other launches mostly dumped.
  * Null when the print is common, too thin to say anything, or not bad.
  */
-export function printWarning(r: PrintRecord | null, creatorOwnLaunches: number): string | null {
+export function printWarning(r: PrintRecord | null, creatorOwnLaunches: number, similar = false): string | null {
   if (!r || r.common) return null;
   const others = r.wallets - 1;
   if (others < 3 || r.settled < 10) return null;
   const rate = r.dumped / r.settled;
   if (rate < 0.9) return null;
   const fresh = creatorOwnLaunches <= 1 ? "a fresh wallet, but " : "";
-  return `${fresh}launched with the same tool setup as ${others} other wallets in two days; their creators dumped ${r.dumped} of ${r.settled} of those launches`;
+  return `${fresh}launched with ${similar ? "a tool setup built like that of" : "the same tool setup as"} ${others} other wallets in two days; their creators dumped ${r.dumped} of ${r.settled} of those launches`;
 }
