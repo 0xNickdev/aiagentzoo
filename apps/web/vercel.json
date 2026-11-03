@@ -1,4 +1,4 @@
-{
+    {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npm run build",
@@ -42,6 +42,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/.well-known/x402",
+      "destination": "https://north.zooaiagency.com/v1/x402"
+    },
     {
       "source": "/api/usage",
       "destination": "https://north.zooaiagency.com/v1/usage"

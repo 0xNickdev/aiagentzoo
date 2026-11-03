@@ -10,6 +10,8 @@
 - Memory: launches stay on the live tape for 48 hours; history.db keeps what the X-Ray needs about each launch for 90 days, so check and x-ray answer for older coins with `fromHistory: true`
 - Read API: `https://zooaiagency.com/api/north/<path>` proxies the north node's API, e.g. `/api/north/v1/wallet/<wallet>`, `/api/north/v1/chain/creator/<wallet>`, `/api/north/v1/chain/clean` (coins with no red flags so far)
 
+- [Pay per check with x402](https://zooaiagency.com/x402): `GET https://north.zooaiagency.com/v1/x402/check/<mint>` answers 402, pay 0.001 USDC on Solana with any x402 v2 client and get the check; 0.01 USDC for the full x-ray. No key, no account, charged only when a report is delivered. Menu: `GET https://north.zooaiagency.com/v1/x402`
+
 ## For traders
 
 - [Telegram bot @zooaiagency_bot](https://t.me/zooaiagency_bot): `/xray <mint>`, `/dev <wallet>`, `/radar`; in groups only `/xray` and `/dev`, short answers, rate limited

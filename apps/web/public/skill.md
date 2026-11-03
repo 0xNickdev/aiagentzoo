@@ -177,10 +177,24 @@ The wallet lookups count against the check limit. A `404` means the wallet or to
 
 The free tier is enough for any single agent, and it stays free. A bot that checks every launch can get a holder key at https://zooaiagency.com/connect#api (sign in with the wallet; a signature, not a transaction) and send it as `Authorization: Bearer zk_...`. Every answer carries `access` with the tier and limits in use. If the wallet stops holding, the key falls back to the free limits.
 
-- Over the limit: HTTP `429` with `retryAfterMs`. Wait, do not retry in a loop.
+- Over the limit: HTTP `429` with `retryAfterMs`. Wait, do not retry in a loop, or pay for that one call: the `429` carries `orPay.x402`, the paid route below.
 - `401`: an unknown or replaced key.
 - If there is no answer within 5 seconds, treat it as `unknown`.
 - `404` means the request reached a node that does not read the chain; use the address above.
+
+## Pay per call with x402 (no key, no limits)
+
+An agent that needs more than the free tier, or does not want to wait, pays per call in USDC on Solana over [x402](https://x402.org) v2. No key, no account, no subscription.
+
+| route | price | answer |
+|---|---|---|
+| `GET https://north.zooaiagency.com/v1/x402/check/<mint>` | 0.001 USDC | the same answer as `/api/check/<mint>` |
+| `GET https://north.zooaiagency.com/v1/x402/xray/<mint>` | 0.01 USDC | the same answer as `/api/xray/<mint>` |
+| `GET https://north.zooaiagency.com/v1/x402` | free | network, USDC mint, payee, fee payer, prices |
+
+The first request answers `402` with a `PAYMENT-REQUIRED` header (scheme `exact`, network Solana devnet for now). Any x402 v2 client signs a USDC transfer for that amount and retries with `PAYMENT-SIGNATURE`; the official `@x402/fetch` with `@x402/svm` does both. The node pays the Solana fee, so the wallet needs USDC only.
+
+You are charged only when a report is delivered: a token the zoo knows nothing about (`verdict: unknown`) goes out free, a node error never settles the transfer, and a transfer that fails on chain withholds the report (`402` with the reason). Each paid answer carries the transaction in `PAYMENT-RESPONSE` and `X-Report-Sha256`, the hash kept in the node's public log. Every sale: `GET https://north.zooaiagency.com/v1/x402/receipts`. A ready agent: https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent
 
 ## Why trust it
 

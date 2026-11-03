@@ -1,4 +1,4 @@
-# zoo_feed — on-chain settlement
+# zoo_feed - on-chain settlement
 
 Anchor program that settles the zoo economy on Solana. Works with SPL Token and Token-2022 mints (pump.fun launches Token-2022).
 
@@ -10,7 +10,7 @@ Anchor program that settles the zoo economy on Solana. Works with SPL Token and 
 | `update_params(params)` | authority | the only thing governance may change |
 | `set_authority(key)` | authority | hand the warden role to a multisig |
 | `open_enclosure(node_id, operator)` | keeper | locks `enclosure_stake` in the vault |
-| `deposit_feed(amount)` | anyone | feeds an enclosure — the keeper or a patron |
+| `deposit_feed(amount)` | anyone | feeds an enclosure - the keeper or a patron |
 | `settle_cycles(cycles, model_tokens)` | enclosure operator | `operator_share_bps` to the operator, the rest is **burned** |
 | `settle_signal(accepted)` | sender's operator | accepted: `receiver_share_bps` to the receiving keeper; the rest burns. The spam rule slashes stake in code |
 | `retire()` | keeper **or** authority | returns stake + feed to the keeper. The kill-switch is free |
@@ -27,7 +27,7 @@ Invariant (tested): vault balance == Σ stake + Σ feed of all enclosures.
 | devnet | config | `3YRFQKbua7qpc36VPVdCFmPMzo6921GjdSA7XtAZ279p` |
 | devnet | test mint (Token-2022, 6 decimals) | `43uLtcNKWhzHXUQwC6vW2hMJvvwS9boGUfwFyCinjsNx` |
 | devnet | enclosures north / marsh / canyon | `6gDFLZk1XEMEJUa2M3VKB8fEckMHcR9rKKbmM9xy8Pcd` / `ApBV7MiqbuSdg8zd3qycUbDLymaL8hGpFarbmExMk4mS` / `6V2P1CAqu36TCHCWyLxrnGiRMnSkK3EDYLF3F8Tdnc8U` |
-| mainnet | — | after the token launch and review |
+| mainnet | - | after the token launch and review |
 
 `scripts/demo.ts` runs the whole economy against a deployed program: open the three enclosures, feed them, settle cycles and a signal.
 
@@ -40,12 +40,12 @@ anchor test        # builds, starts a local validator, runs 12 tests on Token-20
 
 ## Launch checklist
 
-1. **Token** — launch on ClawPump (pump.fun bonding curve, Token-2022, 6 decimals). Note the mint.
-2. **Fund the deployer** — about 3 SOL on the target cluster (program rent ≈ 2.04 SOL plus fees).
-3. **Deploy** — `anchor deploy --provider.cluster devnet` (or `mainnet`). Keep `target/deploy/zoo_feed-keypair.json` backed up: it is the upgrade key of the program id.
-4. **Initialize** — edit `scripts/params.json` (whole tokens), then
+1. **Token** - launch on ClawPump (pump.fun bonding curve, Token-2022, 6 decimals). Note the mint.
+2. **Fund the deployer** - about 3 SOL on the target cluster (program rent ≈ 2.04 SOL plus fees).
+3. **Deploy** - `anchor deploy --provider.cluster devnet` (or `mainnet`). Keep `target/deploy/zoo_feed-keypair.json` backed up: it is the upgrade key of the program id.
+4. **Initialize** - edit `scripts/params.json` (whole tokens), then
    `MINT=<mint> ANCHOR_PROVIDER_URL=<rpc> ANCHOR_WALLET=~/.config/solana/id.json npx ts-node scripts/init.ts`
-5. **Hand over** — `set_authority` to a multisig before any real value sits in the vault.
-6. **Open enclosures** — each node's keeper calls `open_enclosure` with `sha256("<node>.zoo")` and its operator key.
+5. **Hand over** - `set_authority` to a multisig before any real value sits in the vault.
+6. **Open enclosures** - each node's keeper calls `open_enclosure` with `sha256("<node>.zoo")` and its operator key.
 
 Operators self-report cycles in v2.0; the node's public log is the audit trail for every settled cycle.

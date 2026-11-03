@@ -231,6 +231,8 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
   const deepGate = new RateGate(FREE_DEEP_PER_MIN);
   const holderDeepGate = new RateGate(HOLDER_DEEP_PER_MIN);
   const keyGate = new RateGate(1);
+  // The swap's RPC reads: generous, since every site visitor may arrive through one proxy address.
+  const rpcGate = new RateGate(600);
   const holding = new HoldingCache((w) => isHolder(w));
   let checkRecord: { at: number; body: unknown } | null = null;
   let feedCache: { at: number; body: unknown } | null = null;
@@ -590,7 +592,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
         if (wait > 0) {
           res.setHeader("retry-after", String(Math.ceil(wait / 1000)));
           const what = deep ? `${tier.deepPerMinute} deep reads` : `${tier.perMinute} checks`;
-          return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }) });
+          // Over the free limit, an agent can simply pay for this one call over x402 instead of waiting.
+          const paidRoute = x402 && !evm ? x402.paymentRequired(x402.routes[deep ? "xray" : "check"]!, mint) : null;
+          return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }), ...(paidRoute ? { orPay: { x402: paidRoute.resource.url, price: paidRoute.accepts[0]!.amount, asset: "USDC", menu: paidRoute.resource.url.replace(/\/(xray|check)\/[^/]+$/, "") } } : {}) });
         }
         void usage.bump(deep, caller);
         // four.meme and Clanker go quiet for minutes at night where pump.fun never does: their streams count as live for longer.
@@ -1088,6 +1092,9 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
       if (req.method === "POST" && path === "/v1/rpc") {
         const RPC_URL = process.env.SOLANA_RPC_URL ?? "";
         if (!RPC_URL) return json(res, 404, { error: "no RPC on this node" });
+        // The node's own RPC quota is behind this route, so it has a gate of its own.
+        const rpcWait = fromPeer(req) ? 0 : rpcGate.take(clientIp(req));
+        if (rpcWait > 0) return json(res, 429, { error: "slow down", retryAfterMs: rpcWait });
         const body = (await readJson(req)) as { method?: unknown; params?: unknown; id?: unknown };
         const allowed = new Set(["getAddressLookupTable", "getTokenSupply", "getBalance", "getParsedTokenAccountsByOwner", "getTokenAccountsByOwner", "getSignatureStatuses", "getLatestBlockhash", "getAccountInfo", "getMultipleAccounts"]);
         if (typeof body?.method !== "string" || !allowed.has(body.method)) return json(res, 400, { error: "method not forwarded" });
@@ -1131,7 +1138,12 @@ export function createNodeServer({ enclosure, adminToken, corsOrigin = "*", meta
 
       return json(res, 404, { error: "not found" });
     } catch (error) {
-      return json(res, 400, { error: (error as Error).message });
+      // A malformed body is the caller's mistake; anything else is ours, and its details stay in the log.
+      const message = (error as Error).message;
+      if (message === "invalid JSON" || message === "body too large") return json(res, 400, { error: message });
+      console.error(`[server] ${req.method} ${path}: ${(error as Error).stack ?? message}`);
+      if (!res.headersSent) return json(res, 500, { error: "internal error" });
+      res.end();
     }
   });
 

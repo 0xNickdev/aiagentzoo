@@ -34,7 +34,7 @@ function base58(bytes: Uint8Array): string {
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
-    node: { type: "string", default: "https://canyon-production.up.railway.app" },
+    node: { type: "string", default: "https://canyon.zooaiagency.com" },
     key: { type: "string" },
     name: { type: "string" },
     species: { type: "string", default: "sentinel" },

@@ -12,7 +12,7 @@
  * The agent only needs USDC: the node pays the network fee. Devnet USDC: https://faucet.circle.com (Solana Devnet).
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { createKeyPairSignerFromBytes, generateKeyPairSigner } from "@solana/kit";
+import { createKeyPairSignerFromBytes } from "@solana/kit";
 import { x402Client } from "@x402/core/client";
 import { decodePaymentResponseHeader } from "@x402/core/http";
 import { wrapFetchWithPayment } from "@x402/fetch";
@@ -41,17 +41,35 @@ interface XRay {
 async function keygen(): Promise<void> {
   if (existsSync(KEY_FILE)) return console.log(`${KEY_FILE} exists; fund this address with devnet USDC:`, (await loadSigner()).address);
   const { webcrypto } = await import("node:crypto");
-  // An extractable key, so it can be written out the way solana-keygen writes one: 32 secret bytes then 32 public.
+  // An extractable key (kit's own generator makes non-extractable ones), so it can be written out the way solana-keygen writes one: 32 secret bytes then 32 public.
   const pair = (await webcrypto.subtle.generateKey("Ed25519", true, ["sign", "verify"])) as CryptoKeyPair;
   const pkcs8 = new Uint8Array(await webcrypto.subtle.exportKey("pkcs8", pair.privateKey));
   const raw = new Uint8Array(await webcrypto.subtle.exportKey("raw", pair.publicKey));
   writeFileSync(KEY_FILE, JSON.stringify([...pkcs8.slice(-32), ...raw]), { mode: 0o600 });
   console.log(`wrote ${KEY_FILE}. Fund it with devnet USDC at https://faucet.circle.com (Solana Devnet):`, (await loadSigner()).address);
-  void generateKeyPairSigner; // kit's own generator makes non-extractable keys, hence WebCrypto above
 }
 
 async function loadSigner() {
   return createKeyPairSignerFromBytes(Uint8Array.from(JSON.parse(readFileSync(KEY_FILE, "utf8")) as number[]));
+}
+
+/** The agent's USDC balance in whole USDC, read straight from Solana. */
+async function usdcBalance(owner: string, mint: string): Promise<number> {
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner", params: [owner, { mint }, { encoding: "jsonParsed" }] }),
+  });
+  const body = (await res.json()) as { result?: { value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }> } };
+  return (body.result?.value ?? []).reduce((sum, a) => sum + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
+}
+
+/** What the node's refusal means, in a sentence: the codes are x402's, the advice is ours. */
+function explain(reason: string): string {
+  if (/simulation_failed|insufficient/i.test(reason)) return "the USDC transfer would fail on chain: is the wallet funded with USDC on this network?";
+  if (/blockhash|expired/i.test(reason)) return "the signed transfer expired before it reached the node: run it again";
+  if (/duplicate/i.test(reason)) return "this exact payment was already used: each request needs a fresh one";
+  return reason;
 }
 
 const pct = (x: number | null | undefined) => (x == null ? "?" : `${Math.round(x * 100)}%`);
@@ -69,17 +87,30 @@ async function main(): Promise<void> {
   const signer = await loadSigner();
   const client = new x402Client().register("solana:*", new ExactSvmScheme(toClientSvmSigner(signer), { rpcUrl: RPC }));
   const paidFetch = wrapFetchWithPayment(fetch, client);
-  const menu = (await (await fetch(`${NODE}/v1/x402`)).json()) as { cluster: string; resources: Array<{ url: string; price: { usdc: number } }> };
+  const menu = (await (await fetch(`${NODE}/v1/x402`)).json()) as { cluster: string; asset: { mint: string }; resources: Array<{ url: string; price: { usdc: number } }> };
+  // Paying from an empty wallet only gets a refusal back: say how to fund it instead.
+  const price = menu.resources.find((r) => r.url.includes(xray ? "/xray/" : "/check/"))?.price.usdc ?? 0;
+  const balance = await usdcBalance(signer.address, menu.asset.mint).catch(() => null);
+  if (balance !== null && balance < price * mints.length) {
+    console.log(`agent ${signer.address} holds ${balance} USDC on ${menu.cluster}; ${mints.length} ${xray ? "x-ray" : "check"}(s) cost ${price * mints.length} USDC.`);
+    if (menu.cluster === "devnet") console.log("Fund it with devnet USDC at https://faucet.circle.com (pick Solana Devnet). No SOL needed: the node pays the network fee.");
+    process.exit(1);
+  }
   console.log(`agent ${signer.address} on ${menu.cluster}; prices: ${menu.resources.map((r) => `${r.url.split("/")[5]} ${r.price.usdc} USDC`).join(", ")}\n`);
 
   for (const mint of mints) {
     const started = Date.now();
     const res = await paidFetch(`${NODE}/v1/x402/${xray ? "xray" : "check"}/${mint}`);
     const ms = Date.now() - started;
+    if (res.status === 402) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      console.log(`${mint}: payment refused, not charged: ${explain(body.error ?? "unknown reason")}\n`);
+      continue;
+    }
     if (res.status !== 200 || res.headers.get("x402-charged") === "false") {
-      const body = await res.text();
-      const charged = res.headers.get("x402-charged");
-      console.log(`${mint}: ${res.status}${charged === "false" ? " (not charged)" : ""} ${body.slice(0, 200)}\n`);
+      const body = (await res.json().catch(() => ({}))) as { error?: string; verdict?: string };
+      const what = body.verdict === "unknown" ? "the zoo has nothing on this token yet" : (body.error ?? `HTTP ${res.status}`);
+      console.log(`${mint}: not charged: ${what}\n`);
       continue;
     }
     const paid = decodePaymentResponseHeader(res.headers.get("payment-response")!);

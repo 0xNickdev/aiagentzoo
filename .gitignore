@@ -3,6 +3,7 @@ dist
 *.tsbuildinfo
 .env
 .env.*
+*.env
 !.env.example
 .DS_Store
 data/

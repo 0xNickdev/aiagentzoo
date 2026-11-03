@@ -1,9 +1,0 @@
-# Only the node and the SDK are built on Railway; keep the upload small.
-onchain/
-art/
-apps/web/
-apps/node/data/
-examples/
-**/node_modules/
-**/dist/
-.planning/

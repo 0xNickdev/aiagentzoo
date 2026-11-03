@@ -1,6 +1,6 @@
 // The chain relay: reads pump.fun, LaunchLab, Meteora and PumpSwap from the Yellowstone stream on a server the stream
 // reaches at full speed, parses every transaction into the tape's events and hands them to north as lines of JSON.
-// The stream gave Railway a tenth of pump.fun; from a plain server it gives all of it.
+// The stream gave a cloud container a tenth of pump.fun; from a plain server it gives all of it.
 //
 //   SHYFT_GRPC_TOKEN=... ZOO_RELAY_TOKEN=... node scripts/relay.ts
 //   GET /events?after=<seq>   Authorization: Bearer <ZOO_RELAY_TOKEN>   one JSON line per event, kept open

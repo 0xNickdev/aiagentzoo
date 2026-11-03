@@ -17,7 +17,7 @@ import { createEvent, Identity, signEvent } from "@aiagentzoo/sdk";
 
 const { values } = parseArgs({
   options: {
-    node: { type: "string", default: "https://canyon-production.up.railway.app" },
+    node: { type: "string", default: "https://canyon.zooaiagency.com" },
     name: { type: "string", default: "clawpump-demo" },
     key: { type: "string" },
     max: { type: "string", default: "3" },
@@ -125,7 +125,7 @@ if (!raw && !values.dry) throw new Error("set ZOO_GUEST_KEY or pass --key <keypa
 
 // pump.fun's API refuses requests from cloud runners (403); the zoo's own chain stream lists the same launches.
 async function fromStream(): Promise<Coin[]> {
-  const res = await fetch("https://north-production-3f77.up.railway.app/v1/chain/pulse?after=0");
+  const res = await fetch("https://north.zooaiagency.com/v1/chain/pulse?after=0");
   if (!res.ok) throw new Error(`zoo stream responded ${res.status}`);
   const { events } = (await res.json()) as { events: Array<{ kind: string; mint: string; symbol: string; at: number }> };
   return events.filter((e) => e.kind === "launch" || e.kind === "serial").map((e) => ({ mint: e.mint, name: e.symbol, symbol: e.symbol, created_timestamp: e.at }));

@@ -41,6 +41,9 @@ import { buybackView, startBuyback } from "./buyback.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
 import { laneFromEnv } from "./x402.ts";
 
+// A forgotten promise must not take a live node down: log it and keep serving.
+process.on("unhandledRejection", (reason) => console.error(`unhandled rejection: ${(reason as Error)?.stack ?? String(reason)}`));
+
 const config = loadConfig();
 const db = openDatabase(join(config.dataDir, "node.db"));
 
@@ -53,10 +56,8 @@ if (process.env.OPENAI_API_KEY) {
   model = new ClaudeProvider({ model: process.env.ZOO_MODEL, effort: "low" });
 }
 
-// v1 feed runs on internal credits, granted to the keeper on every boot.
-// Settlement moves to the on-chain program once the token is live.
-// Free by default: no feed, no stake. Per-session budgets and visitor limits still cap the cost.
-// ZOO_FEED_MODE=credits switches on the v1 internal ledger; on-chain settlement lives in onchain/.
+// Free by default: no feed, no stake; per-session budgets and visitor limits cap the model cost.
+// ZOO_FEED_MODE=credits switches on the old internal credit ledger, kept for the agent network's tests.
 const ledger = config.feedMode === "credits" ? new FeedLedger() : undefined;
 ledger?.deposit(config.keeper, config.feedGrant, "boot-grant");
 
@@ -207,7 +208,7 @@ if (config.role === "north") {
     };
   }
   sideWallets.start(Number(process.env.ZOO_SIDE_GAP_MS ?? 500));
-  // One creator traced every 30 s by default: about 3 RPC calls each, a few hundred thousand a month.
+  // A creator traced every 250 ms by default, about 3 RPC calls each; ZOO_TRACE_GAP_MS slows it for a smaller RPC plan.
   lineage.start(Number(process.env.ZOO_TRACE_GAP_MS ?? 250));
   if (existsSync(socialsFile)) console.log(`[${config.id}] socials restored: ${socials.load(readFileSync(socialsFile, "utf8"))} launches`);
   // Each new launch's metadata, for the X accounts and Telegram groups it links to.
@@ -220,8 +221,12 @@ if (config.role === "north") {
     }
   }, 5 * 60_000).unref();
   setInterval(() => {
-    writeFileSync(`${momentsFile}.tmp`, tape.dump());
-    renameSync(`${momentsFile}.tmp`, momentsFile);
+    try {
+      writeFileSync(`${momentsFile}.tmp`, tape.dump());
+      renameSync(`${momentsFile}.tmp`, momentsFile);
+    } catch (error) {
+      console.log(`[${config.id}] moments not saved: ${(error as Error).message}`);
+    }
   }, 60_000).unref();
 }
 // The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
@@ -253,7 +258,7 @@ if (config.role === "north") {
   if (n) console.log(`[${config.id}] labels: ${n} wallets from the labels file`);
   stopLabels = labels.start((m) => console.log(`[${config.id}] ${m}`));
 }
-// North reads the chain from the relay when it has one (the stream gives Railway a tenth of pump.fun), else directly.
+// North reads the chain from the relay when it has one (a hosted gRPC endpoint gave a cloud container a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);
 const stopStream =
   config.role !== "north"

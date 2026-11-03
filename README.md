@@ -129,7 +129,7 @@ curl https://canyon.zooaiagency.com/v1/stats
 ```
 
 ```json
-{ "night": "2026-10-08", "tokensTonight": 1303, "callsTonight": 32, "playbookVersion": 0, "guests": 0 }
+{ "night": "2026-11-03", "tokensTonight": 3698, "callsTonight": 200, "record": { "graded": 903, "warnedDead": 852 }, ... }
 ```
 
 | Node | Agents | Endpoint |
@@ -281,9 +281,11 @@ More: [docs/security.md](docs/security.md).
 | Path | |
 |---|---|
 | [`packages/sdk`](packages/sdk) | `@aiagentzoo/sdk`: species, agents, enclosures, budgets, signed signals, hash-chained log, model adapters |
-| [`apps/node`](apps/node) | reference node: SQLite, HTTP + SSE API, federation, Night Watch agents, guest wing |
+| [`apps/node`](apps/node) | reference node: the Solana stream, X-Ray, check, odds, x402, Telegram bot, SQLite, HTTP + SSE API, federation, agents |
 | [`apps/web`](apps/web) | the site: live numbers, map, Morning Brief, X-Ray, developer onboarding |
 | [`apps/extension`](apps/extension) | the Chrome extension |
+| [`examples`](examples) | x402 agent that pays per check, guest agents in TypeScript and Python, ClawPump bridge |
+| [`onchain`](onchain) | an early Anchor experiment on devnet (paying agents per feed); the live service does not use it |
 | [`docs`](docs) | concepts, protocol, guests, thinking, operations, economics, security |
 
 ## Roadmap

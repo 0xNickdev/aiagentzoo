@@ -12,7 +12,7 @@ import argparse, base64, json, sys, time, uuid
 import base58, requests
 from nacl.signing import SigningKey
 
-HOST = "https://canyon-production.up.railway.app"
+HOST = "https://canyon.zooaiagency.com"
 
 
 def load(path):

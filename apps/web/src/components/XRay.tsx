@@ -1187,13 +1187,18 @@ export default function XRay() {
     return () => window.removeEventListener("zoo-wallet", on);
   }, []);
 
+  // Each run gets a number; an answer that comes back after a newer run started is dropped, not shown.
+  const runSeq = useRef(0);
   const run = async (mint: string) => {
+    const seq = ++runSeq.current;
+    const stale = () => seq !== runSeq.current;
     setBusy(true);
     setError(null);
     setRetry(null);
     setWallet(null);
     try {
       const r = await fetch(`${NORTH}/v1/xray/${mint}`).catch(() => null);
+      if (stale()) return;
       if (!r) {
         // The node did not answer: keep a report already on screen, say so plainly and offer to try again.
         setRetry(mint);
@@ -1201,6 +1206,7 @@ export default function XRay() {
         return;
       }
       const body = (await r.json().catch(() => ({}))) as XRayReport & { error?: string; chain?: string };
+      if (stale()) return;
       // A 0x address is BNB Chain or Base: the node says which, and every wallet in the report is on that chain too.
       rememberChains(body);
       if (r.ok && !body.check) {
@@ -1218,6 +1224,7 @@ export default function XRay() {
       // Not a token the stream saw: perhaps a wallet, a dev, a sniper or a funder.
       if (r.status === 404) {
         const w = await fetch(`${NORTH}/v1/wallet/${mint}`).then((x) => x.status).catch(() => 0);
+        if (stale()) return;
         if (w === 200) {
           setReport(null);
           setWallet(mint);
@@ -1230,10 +1237,11 @@ export default function XRay() {
       const keepTab = new URLSearchParams(window.location.search).get("tab");
       history.pushState(null, "", `/xray?mint=${mint}${keepTab ? `&tab=${encodeURIComponent(keepTab)}` : ""}`);
     } catch (err) {
+      if (stale()) return;
       setReport(null);
       setError((err as Error).message);
     } finally {
-      setBusy(false);
+      if (!stale()) setBusy(false);
     }
   };
 

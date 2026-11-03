@@ -2035,7 +2035,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
 
 /**
  * The same events, read from a relay instead of the stream: a small reader on a server the stream reaches at full
- * speed (it gave Railway a tenth of pump.fun), sending north the parsed events as lines of JSON. Picks up after the
+ * speed (it gave a cloud container a tenth of pump.fun), sending north the parsed events as lines of JSON. Picks up after the
  * last event it applied when the connection drops; a relay that restarted says so and is read from its start.
  */
 export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: Omit<StreamOptions, "allPools">): () => void {

@@ -56,14 +56,18 @@ interface Dev {
 function useLive<T>(path: string): T | null {
   const [v, setV] = useState<T | null>(null);
   useEffect(() => {
+    let dead = false;
     const load = () =>
       fetch(`${NORTH}${path}`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((b: T | null) => b && setV(b))
+        .then((b: T | null) => b && !dead && setV(b))
         .catch(() => {});
     void load();
     const id = window.setInterval(load, 60_000);
-    return () => clearInterval(id);
+    return () => {
+      dead = true;
+      clearInterval(id);
+    };
   }, [path]);
   return v;
 }
