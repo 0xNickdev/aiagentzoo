@@ -123,7 +123,8 @@ test("the feed holds a token's trades behind its create until the quote is read,
   assert.equal(check.facts!.venue, "fourmeme");
   // The moments speak in BNB on this tape.
   feed.onLog(tradeLog(true, SNIPER, 1_000, 12, block + 401, t0 + 301, "0xa4"));
-  assert.match(tape.momentsMatching({ mint: TOKEN, kind: "whale" })[0]!.text, /\+12\.0 BNB buy/);
+  // Asked at the trade's own time: moments age out after two days, and this fixture is dated.
+  assert.match(tape.momentsMatching({ mint: TOKEN, kind: "whale" }, (t0 + 301) * 1000)[0]!.text, /\+12\.0 BNB buy/);
 });
 
 test("quoteOf reads Helper3: WBNB and the zero address mean BNB, anything else is the quote token", async () => {
