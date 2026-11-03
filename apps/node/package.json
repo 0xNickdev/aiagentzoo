@@ -17,6 +17,7 @@
   "dependencies": {
     "@aiagentzoo/sdk": "*",
     "@anthropic-ai/sdk": "*",
+    "@concordium/web-sdk": "^12.0.2",
     "@solana/kit": "^8.6.0",
     "@solana/spl-token": "^0.4.15",
     "@solana/web3.js": "^1.99.0",
