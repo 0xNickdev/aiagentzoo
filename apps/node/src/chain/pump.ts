@@ -8,29 +8,17 @@
  * Without a stream configured, nothing here runs and the agents fall back to the pump.fun HTTP API.
  */
 import type { OddsInputs } from "./odds.ts";
-import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
-import { type Unit, unitUsd } from "./price.ts";
-import { isOnCurve } from "./curve.ts";
-import { COMMON_WALLETS, type PrintableTx, type PrintRecord, type ToolPrint, toolPrintOf } from "./fingerprint.ts";
+import type { Unit } from "./price.ts";
+import { COMMON_WALLETS, type PrintRecord, type ToolPrint } from "./fingerprint.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
+import type { PumpEvent, Venue } from "./pumpParse.ts";
+import { capsFrom, DAY_MS, devPattern, type DevPattern, hash32, type LaunchOutcome, ordinal, repeatsOf, supplyOf, tempoOf } from "./pumpHelpers.ts";
 
-export const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
-/** PumpSwap, where a token's pool lives once it graduates from the curve. */
-export const PUMP_AMM_PROGRAM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
-export const WSOL = "So11111111111111111111111111111111111111112";
+// The parser, the stream and the helpers live in their own modules; everything that imported them from here still can.
+export { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, Reader, type Venue, WSOL } from "./pumpParse.ts";
+export { capsFrom, devPattern, type DevPattern, type LaunchOutcome, repeatsOf, tempoOf } from "./pumpHelpers.ts";
+export { startPumpStream, startRelayFeed, type StreamOptions, type StreamSink } from "./stream.ts";
 
-const DISC = {
-  create: Buffer.from([27, 114, 169, 77, 222, 235, 99, 118]),
-  trade: Buffer.from([189, 219, 127, 211, 78, 230, 97, 238]),
-  complete: Buffer.from([95, 114, 97, 156, 212, 46, 152, 8]),
-  // PumpSwap events: a pool is created when a token graduates, then buys and sells on it.
-  pool: Buffer.from([177, 49, 12, 210, 160, 118, 167, 116]),
-  ammBuy: Buffer.from([103, 244, 82, 31, 44, 245, 119, 119]),
-  ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
-};
-
-/** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, four.meme on BNB Chain, or Clanker on Base. */
-export type Venue = "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
 /** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
 export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
 export const UNIT_OF_CHAIN: Record<"solana" | "bsc" | "base", Unit> = { solana: "SOL", bsc: "BNB", base: "ETH" };
@@ -47,210 +35,6 @@ export interface FollowedSwap {
   ts: number;
   poolSol: number;
   tx: string | null;
-}
-
-export type PumpEvent =
-  /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
-  | {
-      kind: "create";
-      name: string;
-      symbol: string;
-      mint: string;
-      creator: string;
-      ts: number | null;
-      quote?: string | null;
-      mayhem?: boolean;
-      /** Launched somewhere other than pump.fun: Raydium LaunchLab or Meteora's bonding curve. */
-      venue?: Venue;
-      /** The platform built on the launchpad, when it is one we know (StonkFun on LaunchLab). */
-      platform?: string;
-      /** The whole supply, when it is not pump.fun's billion. */
-      supply?: number;
-      /** Where the token's metadata lives (its X, Telegram, website). */
-      uri?: string;
-      /** How the launch transaction was built; read from the whole transaction by the stream. */
-      print?: ToolPrint;
-    }
-  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null }
-  | { kind: "complete"; mint: string }
-  /** A PumpSwap pool against SOL was created for this token: it graduated. */
-  | { kind: "pool"; mint: string; pool: string }
-  /** A buy or sell on a PumpSwap pool. Its event names only the pool, so the tape maps it back to a token. */
-  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number };
-
-const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-export function base58(bytes: Uint8Array): string {
-  let n = 0n;
-  for (const b of bytes) n = (n << 8n) | BigInt(b);
-  let out = "";
-  while (n > 0n) {
-    out = ALPHABET[Number(n % 58n)] + out;
-    n /= 58n;
-  }
-  for (const b of bytes) {
-    if (b !== 0) break;
-    out = `1${out}`;
-  }
-  return out;
-}
-
-export function fromBase58(s: string): Buffer {
-  let n = 0n;
-  for (const ch of s) {
-    const v = ALPHABET.indexOf(ch);
-    if (v < 0) throw new Error("not base58");
-    n = n * 58n + BigInt(v);
-  }
-  const bytes: number[] = [];
-  while (n > 0n) {
-    bytes.unshift(Number(n & 0xffn));
-    n >>= 8n;
-  }
-  for (const ch of s) {
-    if (ch !== "1") break;
-    bytes.unshift(0);
-  }
-  return Buffer.from(bytes);
-}
-
-const LAMPORTS = 1e9;
-/** pump.fun tokens have 6 decimals. */
-const TOKEN_UNITS = 1e6;
-
-export class Reader {
-  o = 0;
-  private readonly b: Buffer;
-  constructor(b: Buffer) {
-    this.b = b;
-  }
-  left = () => this.b.length - this.o;
-  str() {
-    const len = this.b.readUInt32LE(this.o);
-    this.o += 4;
-    if (len > 200 || this.o + len > this.b.length) throw new Error("bad string");
-    const s = this.b.toString("utf8", this.o, this.o + len);
-    this.o += len;
-    return s;
-  }
-  key() {
-    const k = this.b.subarray(this.o, this.o + 32);
-    if (k.length < 32) throw new Error("short key");
-    this.o += 32;
-    return k;
-  }
-  u64() {
-    const v = this.b.readBigUInt64LE(this.o);
-    this.o += 8;
-    return v;
-  }
-  i64() {
-    const v = this.b.readBigInt64LE(this.o);
-    this.o += 8;
-    return v;
-  }
-  skip(n: number) {
-    if (this.o + n > this.b.length) throw new Error("short");
-    this.o += n;
-  }
-  bool() {
-    return this.b[this.o++] === 1;
-  }
-  b8() {
-    if (this.o >= this.b.length) throw new Error("short");
-    return this.b[this.o++]!;
-  }
-}
-
-/**
- * Decodes the pump.fun events in a transaction's logs. Only the leading fields of each event are read,
- * so fields the program appends later do not break us. Malformed data is skipped, never thrown.
- */
-export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
-  const out: PumpEvent[] = [];
-  for (const line of logs) {
-    if (!line.startsWith("Program data: ")) continue;
-    let b: Buffer;
-    try {
-      b = Buffer.from(line.slice(14), "base64");
-    } catch {
-      continue;
-    }
-    if (b.length < 8) continue;
-    const head = b.subarray(0, 8);
-    try {
-      const r = new Reader(b.subarray(8));
-      if (head.equals(DISC.create)) {
-        const name = r.str();
-        const symbol = r.str();
-        const uri = r.str();
-        const mint = r.key();
-        r.key(); // bonding curve
-        const user = r.key();
-        // Newer versions add the creator and a timestamp; older ones stop at the user, who is the creator.
-        const named = r.left() >= 32 ? r.key() : user;
-        // A launch can name some other address as creator (a fee recipient, not a wallet anyone trades from); the
-        // signer is the one who buys and sells, so an off-curve name gives way to the signer.
-        const creator = !named.equals(user) && !isOnCurve(named) ? user : named;
-        const ts = r.left() >= 8 ? Number(r.i64()) * 1000 : null;
-        // CreateV2 goes on: four reserves, the token program, is_mayhem_mode, is_cashback_enabled, then the quote mint.
-        let quote: string | null = null;
-        let mayhem = false;
-        if (r.left() >= 4 * 8 + 32 + 2 + 32) {
-          for (let i = 0; i < 4; i++) r.u64();
-          r.key(); // token program
-          mayhem = r.bool();
-          r.skip(1);
-          const q = base58(r.key());
-          if (q !== WSOL && !/^1+$/.test(q)) quote = q;
-        }
-        out.push({ kind: "create", name: name.slice(0, 64), symbol: symbol.slice(0, 32), mint: base58(mint), creator: base58(creator), ts, ...(quote ? { quote } : {}), ...(mayhem ? { mayhem } : {}), ...(uri ? { uri: uri.slice(0, 200) } : {}) });
-      } else if (head.equals(DISC.trade)) {
-        const mint = r.key();
-        const sol = Number(r.u64()) / LAMPORTS;
-        const tokens = Number(r.u64()) / TOKEN_UNITS;
-        const isBuy = r.bool();
-        const user = r.key();
-        const ts = Number(r.i64()) * 1000;
-        let curveSol: number | null = null;
-        if (r.left() >= 24) {
-          r.u64(); // virtual sol
-          r.u64(); // virtual tokens
-          curveSol = Number(r.u64()) / LAMPORTS; // real sol in the curve
-        }
-        out.push({ kind: "trade", mint: base58(mint), sol, tokens, isBuy, user: base58(user), ts, curveSol });
-      } else if (head.equals(DISC.complete)) {
-        r.key(); // user
-        out.push({ kind: "complete", mint: base58(r.key()) });
-      } else if (head.equals(DISC.pool)) {
-        r.i64(); // timestamp
-        r.skip(2); // index
-        r.key(); // creator
-        const mint = base58(r.key());
-        const quote = base58(r.key());
-        r.skip(2); // decimals
-        for (let i = 0; i < 7; i++) r.u64(); // amounts in, reserves, liquidity
-        r.skip(1); // bump
-        const pool = base58(r.key());
-        if (quote === WSOL) out.push({ kind: "pool", mint, pool });
-      } else if (head.equals(DISC.ammBuy) || head.equals(DISC.ammSell)) {
-        // timestamp, then 13 u64: base amount, quote limit, user and pool reserves, quote amount, fees, what the user paid or got.
-        // The reserves are read before the swap; what moves the pool's SOL is the quote amount with the LP fee (f[11]).
-        const ts = Number(r.i64()) * 1000;
-        const f: bigint[] = [];
-        for (let i = 0; i < 13; i++) f.push(r.u64());
-        const pool = base58(r.key());
-        const user = base58(r.key());
-        const isBuy = head.equals(DISC.ammBuy);
-        const [reserve, moved] = [f[5]!, f[11]!];
-        const poolSol = Math.max(0, Number(isBuy ? reserve + moved : reserve - moved) / LAMPORTS);
-        out.push({ kind: "swap", pool, isBuy, tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol, user, ts });
-      }
-    } catch {
-      // A truncated or unfamiliar event: skip it.
-    }
-  }
-  return out;
 }
 
 /** What the chain says about a token, as of now. */
@@ -329,25 +113,6 @@ export interface ChainFacts {
   drained?: boolean;
 }
 
-/** pump.fun mints a billion tokens. */
-const SUPPLY = 1_000_000_000;
-/** In Mayhem Mode pump.fun's own bot mints a second billion to trade with for the first 24 hours. */
-const supplyOf = (t: { mayhem?: boolean; supply?: number }) => t.supply ?? (t.mayhem ? 2 * SUPPLY : SUPPLY);
-/** A token's caps in dollars at today's price of the chain's coin, and how it moved after the dev's dump. */
-export function capsFrom(c: { capFirst?: number | null; capPeak?: number | null; capPeakAt?: number | null; capDump?: number | null; capLow?: number | null; capHigh?: number | null; devFirstSellAt?: number | null; createdAt: number }, unit: Unit = "SOL") {
-  const usd = unitUsd(unit);
-  const $ = (sol: number | null | undefined) => (usd && sol ? Math.round(sol * usd) : null);
-  const sec = (at: number | null | undefined) => (at === null || at === undefined ? null : Math.max(0, Math.round((at - c.createdAt) / 1000)));
-  return {
-    firstCapUsd: $(c.capFirst),
-    peakCapUsd: $(c.capPeak),
-    peakAfterSec: c.capPeak ? sec(c.capPeakAt) : null,
-    dumpCapUsd: $(c.capDump),
-    afterDumpLowPct: c.capDump && c.capLow ? Math.round((c.capLow / c.capDump - 1) * 100) / 100 : null,
-    afterDumpHighX: c.capDump && c.capHigh ? Math.round((c.capHigh / c.capDump) * 100) / 100 : null,
-    devFirstSellSec: sec(c.devFirstSellAt),
-  };
-}
 const capsOf = (t: Tracked, unit: Unit) => capsFrom(t, unit);
 
 /** How long after a dump the price is still watched: what buyers who stayed went through. */
@@ -493,97 +258,6 @@ export interface CreatorRecord {
   tempo?: { perDay: number; idleDays: number };
 }
 
-/** A dev's habits, medians over their launches with the number each rests on. Describes, never recommends. */
-export interface DevPattern {
-  /** Launches with a known peak: the ones the medians rest on. */
-  launches: number;
-  /** Market caps in dollars at today's SOL price. */
-  firstCapUsd: number | null;
-  peakCapUsd: number | null;
-  /** Peak over first-second cap. */
-  upsideX: number | null;
-  peakAfterSec: number | null;
-  /** Share of launches whose peak reached $20K, over those with a known peak. */
-  reached20k: number | null;
-  firstSellSec: number | null;
-  /** Of launches with a dev dump: cap where they dumped, how far it fell in the next 30 minutes, how often it doubled. */
-  dumpCapUsd: number | null;
-  afterDumpLowPct: number | null;
-  afterDumpDoubled: number | null;
-  dumps: number;
-}
-
-const median = (xs: number[]): number | null => {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.floor(s.length / 2)]!;
-};
-
-/** Medians over a dev's launches; needs at least two with prices to say anything. */
-export function devPattern(list: LaunchOutcome[]): DevPattern | null {
-  const priced = list.filter((x) => x.peakCapUsd !== null && x.peakCapUsd !== undefined);
-  if (priced.length < 2) return null;
-  const dumped = list.filter((x) => x.dumpCapUsd !== null && x.dumpCapUsd !== undefined && x.afterDumpLowPct !== null && x.afterDumpLowPct !== undefined);
-  const ups = priced.filter((x) => x.firstCapUsd).map((x) => x.peakCapUsd! / x.firstCapUsd!);
-  const round = (v: number | null, k = 1) => (v === null ? null : Math.round(v * k) / k);
-  return {
-    launches: priced.length,
-    firstCapUsd: round(median(priced.filter((x) => x.firstCapUsd).map((x) => x.firstCapUsd!))),
-    peakCapUsd: round(median(priced.map((x) => x.peakCapUsd!))),
-    upsideX: round(median(ups), 10),
-    peakAfterSec: median(priced.filter((x) => x.peakAfterSec !== null && x.peakAfterSec !== undefined).map((x) => x.peakAfterSec!)),
-    reached20k: round(priced.filter((x) => x.peakCapUsd! >= 20_000).length / priced.length, 100),
-    firstSellSec: median(list.filter((x) => x.devFirstSellSec !== null && x.devFirstSellSec !== undefined).map((x) => x.devFirstSellSec!)),
-    dumpCapUsd: round(median(dumped.map((x) => x.dumpCapUsd!))),
-    afterDumpLowPct: round(median(dumped.map((x) => x.afterDumpLowPct!)), 100),
-    afterDumpDoubled: dumped.length ? round(dumped.filter((x) => (x.afterDumpHighX ?? 0) >= 2).length / dumped.length, 100) : null,
-    dumps: dumped.length,
-  };
-}
-
-/** Tickers a dev used more than once, the most repeated first. */
-export function repeatsOf(list: Array<{ symbol: string }>): Array<{ symbol: string; n: number }> {
-  const n = new Map<string, number>();
-  for (const x of list) {
-    const k = x.symbol.replace(/^\$/, "").trim().toUpperCase();
-    if (k) n.set(k, (n.get(k) ?? 0) + 1);
-  }
-  return [...n].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([symbol, c]) => ({ symbol, n: c }));
-}
-
-/** Launches a day over the days they were active, and days since the last launch. */
-export function tempoOf(list: Array<{ createdAt: number }>, now = Date.now()): { perDay: number; idleDays: number } | undefined {
-  if (!list.length) return undefined;
-  const ts = list.map((x) => x.createdAt).sort((a, b) => a - b);
-  const days = new Set(ts.map((t) => Math.floor(t / DAY_MS))).size;
-  return { perDay: Math.round((ts.length / days) * 10) / 10, idleDays: Math.round(((now - ts[ts.length - 1]!) / DAY_MS) * 10) / 10 };
-}
-
-/** One of a creator's launches and how it went. Older records (from before these were counted) lack the optional ones. */
-export interface LaunchOutcome {
-  mint: string;
-  symbol: string;
-  createdAt: number;
-  dumpedAfterMin: number | null;
-  dumpedAfterSec?: number | null;
-  /** SOL the dev took out beyond what they put in; negative when they sold at a loss. */
-  devTookSol?: number | null;
-  /** Buyers still holding when the dev sold. */
-  leftHolding?: number | null;
-  /** Alive now (or when last recorded): a pool with enough SOL, or a curve near graduation. */
-  alive?: boolean | null;
-  graduated: boolean;
-  /** Market caps in dollars at today's SOL price: first second, peak, and where the dev dumped. */
-  firstCapUsd?: number | null;
-  peakCapUsd?: number | null;
-  peakAfterSec?: number | null;
-  dumpCapUsd?: number | null;
-  /** In the 30 minutes after the dump: the lowest it went (as a fraction, -0.34) and the most it rose (as a multiple). */
-  afterDumpLowPct?: number | null;
-  afterDumpHighX?: number | null;
-  devFirstSellSec?: number | null;
-}
-
 /** A fresh token that passed the basic checks the tape can make; not a judgement of its worth. */
 export interface CleanLaunch {
   mint: string;
@@ -618,11 +292,6 @@ const PULSE_KEEP = 300;
 const MOMENTS_KEEP_MS = 48 * 3_600_000;
 const MOMENTS_MAX = 50_000;
 
-const ordinal = (n: number) => {
-  const tens = n % 100;
-  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
-  return `${n}${suffix}`;
-};
 /** A pool that held at least this much SOL and fell below this share of it was drained. */
 const DRAIN_MIN_PEAK = 20;
 const DRAIN_SHARE = 0.2;
@@ -635,7 +304,6 @@ const KEEP_MS = 48 * 3_600_000;
  * which left the clean list and the koi looking at nothing older than that.
  */
 const RECENT_KEEP = 20_000;
-const DAY_MS = 24 * 3_600_000;
 /**
  * A ceiling for the tape, well above two days of launches (about 100,000). It was 30,000, under what two days hold, so
  * every launch ran a full prune over the whole tape that removed nothing: north fell minutes behind the chain.
@@ -654,13 +322,6 @@ const EARLY_KEEP = 300;
 const RING_TOGETHER = 3;
 /** Sniping this many launches in two days makes a wallet a serial sniper. */
 const SERIAL_SNIPES = 10;
-
-/** FNV-1a: a wallet as a 32-bit number. At 5,000 wallets two colliding is a few in a thousand. */
-const hash32 = (s: string): number => {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
-  return h >>> 0;
-};
 
 export class PumpTape {
   private readonly tokens = new Map<string, Tracked>();
@@ -1983,227 +1644,3 @@ export class PumpTape {
 
 /** The one tape per node process, shared by the tools that read it. */
 export const tape = new PumpTape();
-
-export interface StreamOptions {
-  url: string;
-  token: string;
-  log?: (message: string) => void;
-  /** Every PumpSwap transaction instead of the tape's pools: for the relay, which has no tape to ask. */
-  allPools?: boolean;
-}
-
-/** Where the stream's events go: the tape, or the relay's buffer. */
-export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean };
-
-const STREAM_STALL_MS = 90_000;
-// North runs in California and the stream comes from Europe: with the default HTTP/2 window a connection carries only
-// what fits in one window per round trip, far less than pump.fun writes. Big windows that grow with the link fix that.
-const CHANNEL = { grpcHttp2AdaptiveWindow: true, grpcInitialStreamWindowSize: 16 << 20, grpcInitialConnectionWindowSize: 32 << 20, grpcMaxDecodingMessageSize: 64 << 20 };
-
-type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown };
-
-/**
- * Keeps Yellowstone subscriptions open, reconnecting with backoff, feeding the tape. Two connections: launches and the
- * curves (pump.fun, LaunchLab, Meteora) on one, PumpSwap on the other, and that one only for the pools of tokens on the
- * tape. All of PumpSwap on one connection was more than the stream could carry: it fell minutes behind the chain and
- * took the launches down with it.
- */
-export async function startPumpStream(t: StreamSink, { url, token, log = console.log, allPools = false }: StreamOptions): Promise<() => void> {
-  type Yellowstone = typeof import("@triton-one/yellowstone-grpc");
-  const mod = (await import("@triton-one/yellowstone-grpc")) as unknown as Yellowstone & { default: Yellowstone["default"] | { default: Yellowstone["default"] } };
-  // A CommonJS package seen from ESM: the class is the default export, possibly wrapped once more.
-  const Client = ("default" in mod.default ? mod.default.default : mod.default) as Yellowstone["default"];
-  const CommitmentLevel = mod.CommitmentLevel ?? (mod.default as unknown as Yellowstone).CommitmentLevel;
-  let stopped = false;
-  const open = new Set<{ end(): void }>();
-  const filter = (accounts: string[]) => ({ vote: false, failed: false, accountInclude: accounts, accountExclude: [], accountRequired: [] });
-  const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
-
-  const onData = (update: StreamUpdate) => {
-    const logs = update.transaction?.transaction?.meta?.logMessages;
-    if (!logs) return;
-    const sig = update.transaction?.transaction?.signature;
-    const tx = sig && sig.length ? base58(sig) : undefined;
-    const slot = update.transaction?.slot !== undefined ? Number(update.transaction.slot) : undefined;
-    const at = Number.isFinite(slot) ? slot : undefined;
-    for (const ev of parsePumpLogs(logs)) {
-      // A launch carries its tool print, read from the whole transaction; the relay passes it on with the event.
-      if (ev.kind === "create") {
-        const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
-        if (print) ev.print = print;
-      }
-      t.apply(ev, Date.now(), tx, at);
-    }
-    // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
-    if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
-      const raw = fromYellowstone(update.transaction!.transaction!);
-      if (raw)
-        for (const ev of parseLaunchpads(raw, Date.now())) {
-          if (ev.kind === "create") {
-            const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
-            if (print) ev.print = print;
-          }
-          t.apply(ev, Date.now(), tx, at);
-        }
-    }
-  };
-
-  /**
-   * One connection, reopened whenever it ends, errors or goes quiet for `stallMs`. `filters` is read again on every
-   * open and every `refreshMs`; when it changes the new request goes down the same stream. No filters, no connection.
-   */
-  const lane = async (name: string, filters: () => Record<string, ReturnType<typeof filter>> | null, opts: { stallMs: number; refreshMs?: number; core?: boolean }) => {
-    let delay = 1_000;
-    while (!stopped) {
-      let wanted = filters();
-      if (!wanted) {
-        await new Promise((r) => setTimeout(r, 30_000));
-        continue;
-      }
-      try {
-        const client = new Client(url, token, CHANNEL);
-        await client.connect();
-        const stream = await client.subscribe();
-        open.add(stream);
-        let heard = Date.now();
-        let timer: ReturnType<typeof setInterval> | undefined;
-        let sentAt = Date.now();
-        let pings = 0;
-        await new Promise<void>((resolve, reject) => {
-          timer = setInterval(() => {
-            // A stream can go quiet without ending: silence on a busy program means reconnect.
-            if (Date.now() - heard >= opts.stallMs) {
-              reject(new Error(`no transactions for ${Math.round((Date.now() - heard) / 1000)} s, reconnecting`));
-              try {
-                stream.end();
-              } catch {
-                /* already closed */
-              }
-              return;
-            }
-            if (opts.refreshMs && Date.now() - sentAt >= opts.refreshMs) {
-              sentAt = Date.now();
-              const next = filters();
-              if (next && JSON.stringify(next) !== JSON.stringify(wanted)) {
-                wanted = next;
-                stream.write(request(next), (error: unknown) => error && reject(error));
-              }
-            }
-          }, 15_000);
-          stream.on("data", (update: StreamUpdate) => {
-            // The server asks if we are still here; a request with only a ping answers it and leaves the filters alone.
-            if (update.ping) {
-              pings += 1;
-              stream.write({ ...request({}), transactions: {}, ping: { id: pings } }, () => {});
-              return;
-            }
-            if (!update.transaction?.transaction?.meta?.logMessages) return;
-            heard = Date.now();
-            if (opts.core && !t.connected) {
-              t.connected = true;
-              delay = 1_000;
-              log("[chain] pump.fun, LaunchLab and Meteora stream live");
-            } else if (!opts.core && delay > 1_000) delay = 1_000;
-            onData(update);
-          });
-          stream.on("error", reject);
-          stream.on("end", resolve);
-          stream.on("close", resolve);
-          stream.write(request(wanted!), (error: unknown) => error && reject(error));
-        }).finally(() => {
-          clearInterval(timer);
-          open.delete(stream);
-        });
-      } catch (error) {
-        log(`[chain] ${name} stream error: ${(error as Error).message?.slice(0, 200)}`);
-      }
-      if (opts.core) t.connected = false;
-      if (stopped) break;
-      await new Promise((r) => setTimeout(r, delay));
-      delay = Math.min(delay * 2, 60_000);
-    }
-  };
-
-  void lane("launches", () => ({ pump: filter([PUMP_PROGRAM]), launchlab: filter([LAUNCHLAB_PROGRAM]), dbc: filter([DBC_PROGRAM]) }), { stallMs: STREAM_STALL_MS, core: true });
-  // Only the pools we follow: an empty list would mean every PumpSwap transaction, so no pools means no connection.
-  void lane(
-    "pools",
-    () => {
-      if (allPools) return { amm: filter([PUMP_AMM_PROGRAM]) };
-      const pools = t.poolAddresses();
-      return pools.length ? { amm: filter(pools) } : null;
-    },
-    { stallMs: 15 * 60_000, refreshMs: 60_000 },
-  );
-  const pruner = setInterval(() => t.prune(), 10 * 60_000);
-  return () => {
-    stopped = true;
-    clearInterval(pruner);
-    for (const s of open) s.end();
-  };
-}
-
-/**
- * The same events, read from a relay instead of the stream: a small reader on a server the stream reaches at full
- * speed (it gave a cloud container a tenth of pump.fun), sending north the parsed events as lines of JSON. Picks up after the
- * last event it applied when the connection drops; a relay that restarted says so and is read from its start.
- */
-export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: Omit<StreamOptions, "allPools">): () => void {
-  let stopped = false;
-  let ctl: AbortController | null = null;
-  let after = 0;
-  let epoch = "";
-  const run = async () => {
-    let delay = 1_000;
-    while (!stopped) {
-      ctl = new AbortController();
-      const c = ctl;
-      let heard = Date.now();
-      const stall = setInterval(() => Date.now() - heard > STREAM_STALL_MS && c.abort(new Error("relay quiet")), 15_000);
-      try {
-        const res = await fetch(`${url}/events?after=${after}`, { headers: { authorization: `Bearer ${token}` }, signal: c.signal });
-        if (!res.ok || !res.body) throw new Error(`relay responded ${res.status}`);
-        const dec = new TextDecoder();
-        let buf = "";
-        for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
-          heard = Date.now();
-          buf += dec.decode(chunk, { stream: true });
-          for (let i = buf.indexOf("\n"); i >= 0; i = buf.indexOf("\n")) {
-            const line = buf.slice(0, i);
-            buf = buf.slice(i + 1);
-            if (!line) continue;
-            const msg = JSON.parse(line) as [number, PumpEvent, string | null, number | null] | { hello: string };
-            if (!Array.isArray(msg)) {
-              if (msg.hello !== epoch) ((epoch = msg.hello), (after = 0));
-              continue;
-            }
-            const [seq, ev, tx, slot] = msg;
-            if (seq <= after) continue;
-            after = seq;
-            if (!t.connected) {
-              t.connected = true;
-              delay = 1_000;
-              log("[chain] relay live: pump.fun, LaunchLab and Meteora");
-            }
-            t.apply(ev, Date.now(), tx ?? undefined, slot ?? undefined);
-          }
-        }
-      } catch (error) {
-        if (!stopped) log(`[chain] relay error: ${(error as Error).message?.slice(0, 200)}`);
-      } finally {
-        clearInterval(stall);
-      }
-      t.connected = false;
-      if (stopped) break;
-      await new Promise((r) => setTimeout(r, delay));
-      delay = Math.min(delay * 2, 60_000);
-    }
-  };
-  void run();
-  const pruner = setInterval(() => t.prune(), 10 * 60_000);
-  return () => {
-    stopped = true;
-    clearInterval(pruner);
-    ctl?.abort();
-  };
-}
