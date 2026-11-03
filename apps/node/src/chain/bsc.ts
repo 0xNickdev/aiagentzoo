@@ -186,12 +186,13 @@ export function parsePairLog(log: EvmLog, pair: Pair): Extract<PumpEvent, { kind
   }
 }
 
-export const jsonRpc: Rpc = async (url, method, params) => {
+export const jsonRpc: Rpc = async <T>(url: string, method: string, params: unknown[]): Promise<T> => {
   const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(60_000) });
   if (!r.ok) throw new Error(`${method}: ${r.status}`);
-  const body = (await r.json()) as { result?: unknown; error?: { message?: string } };
+  // The node's JSON is trusted to carry what the method returns; the caller names that type.
+  const body = (await r.json()) as { result: T; error?: { message?: string } };
   if (body.error) throw new Error(`${method}: ${body.error.message ?? "rpc error"}`);
-  return body.result as never;
+  return body.result;
 };
 
 /** Helper3.getTokenInfo(token): the quote the token trades against is the third word. */

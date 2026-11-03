@@ -305,10 +305,10 @@ const stopTelegram =
         northUrl,
         log: (m) => console.log(`[${config.id}] ${m}`),
         data: {
-          board: leaderboard(enclosure, config.briefAt) as never,
-          stats: canyonStats(enclosure, config.briefAt, guests) as never,
-          evolution: (() => evolutionView(enclosure.store, config.briefAt)) as never,
-          koi: (() => koiView(enclosure.store, config.briefAt)) as never,
+          board: leaderboard(enclosure, config.briefAt),
+          stats: canyonStats(enclosure, config.briefAt, guests),
+          evolution: () => evolutionView(enclosure.store, config.briefAt),
+          koi: () => koiView(enclosure.store, config.briefAt),
           latestBrief: async () => {
             const ref = briefs.list(1)[0];
             if (!ref) return null;
