@@ -18,6 +18,12 @@
 
 </div>
 
+> **Solana Hackathon 2026 · Consumer App + x402.** [Demo video](https://youtu.be/uFbsRP0uxns) · [Deck](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing) · [Live X-Ray](https://zooaiagency.com/xray) · [x402, every sale live](https://zooaiagency.com/x402)
+>
+> Try the paid lane in one line, no wallet needed to see the handshake:
+> `curl -si https://north.zooaiagency.com/v1/x402/check/<any pump.fun mint> | grep -i payment-required`
+> then pay it with the ready agent in [`examples/x402-agent`](examples/x402-agent) (devnet USDC, the node pays the fee).
+
 ---
 
 ## What it is
@@ -28,6 +34,7 @@ Thousands of coins launch on pump.fun every hour and almost all of them are dead
 - **The first five seconds**: who sniped the launch, which wallets are the dev's own crew, sniper rings, serial snipers, launch bundles.
 - **Who paid for the dev**: the wallet that funded them, the other devs it funds, and cabals of wallets that act as one hand.
 - **The money map**: funder, dev, snipers and what they sold, and **where the SOL went after the dump** (exchange deposits, back to the funder, into wallets that fund other devs).
+- **The tool print**: a rugger swaps wallets, not tools. Every launch transaction is read for how it was built (compute budget, tip and to whom, programs in order, signers, lookup tables, metadata host). A fresh wallet launching the way a farm of dumping wallets launches gets flagged, even with no history of its own ([`fingerprint.ts`](apps/node/src/chain/fingerprint.ts), [`/v1/chain/tools`](https://north.zooaiagency.com/v1/chain/tools)).
 - **The odds**: the chance the coin climbs past 85 SOL market cap after minute five and the chance the dev dumps later, from two models fitted on 34,183 pump.fun launches, with what moved them. Once it plays out, what actually happened sits next to what minute five said.
 - **A swap**: buy or sell right there through Jupiter, signed in your own wallet, nothing custodied.
 
