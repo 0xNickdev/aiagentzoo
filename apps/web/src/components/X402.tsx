@@ -76,7 +76,8 @@ import { toClientSvmSigner } from "@x402/svm";
 import { ExactSvmScheme } from "@x402/svm/exact/client";
 
 const pay = wrapFetchWithPayment(fetch,
-  new x402Client().register("solana:*", new ExactSvmScheme(toClientSvmSigner(signer))));
+  new x402Client().register(DEVNET, new ExactSvmScheme(toClientSvmSigner(signer))));
+// DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"; mainnet: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 
 const check = await (await pay(\`https://north.zooaiagency.com/v1/x402/check/\${mint}\`)).json();
 if (check.verdict === "avoid") return; // the agent does not buy`;
@@ -143,7 +144,7 @@ function AgentPrompt() {
   return (
     <Card title={t("Paste this into your coding agent")} note={t("Claude Code, Cursor, Codex")}>
       <p className="text-[14px] leading-relaxed text-fg-3">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
-      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
+      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button onClick={() => void copy()} disabled={!text} className="rounded-xl bg-white px-5 py-2.5 text-[14px] font-medium text-black transition hover:bg-white/85 disabled:opacity-50">
           {copied ? t("Copied") : t("Copy the prompt")}
