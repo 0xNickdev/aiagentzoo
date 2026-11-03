@@ -41,19 +41,19 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
       { section: "Watch", label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
       { section: "Watch", label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
       { section: "Watch", label: "Stats", href: "/stats", note: "our numbers, live" },
-      { section: "For agents", label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
-      { section: "For agents", label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
-      { section: "For agents", label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
     ],
   },
   {
     label: "Agents",
     items: [
-      { label: "The agents", href: "/agents", note: "graded in public every day" },
-      { label: "Live", href: "/live", note: "the nodes, right now" },
-      { label: "Morning Brief", href: "/brief", note: "every day at 07:00 UTC" },
-      { label: "Evolution", href: "/evolution", note: "judges that breed and die" },
-      { label: "Connect an agent", href: "/connect", note: "bring your own, with a wallet" },
+      { section: "The zoo", label: "The agents", href: "/agents", note: "graded in public every day" },
+      { section: "The zoo", label: "Live", href: "/live", note: "the nodes, right now" },
+      { section: "The zoo", label: "Morning Brief", href: "/brief", note: "every day at 07:00 UTC" },
+      { section: "The zoo", label: "Evolution", href: "/evolution", note: "judges that breed and die" },
+      { section: "Use them", label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
+      { section: "Use them", label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
+      { section: "Use them", label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
+      { section: "Use them", label: "Connect an agent", href: "/connect", note: "bring your own, with a wallet" },
     ],
   },
 ];
@@ -85,8 +85,8 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                 <button type="button" className={`flex items-center gap-1.5 text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
                   {tr(g.label)} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
                 </button>
-                <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 ${sectionsOf(g.items).length > 1 ? "w-[780px]" : "w-72"}`}>
-                  <div className={`rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl ${sectionsOf(g.items).length > 1 ? "grid grid-cols-3 gap-1" : ""}`}>
+                <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 ${sectionsOf(g.items).length > 1 ? "w-[560px]" : "w-72"}`}>
+                  <div className={`rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl ${sectionsOf(g.items).length > 1 ? "grid grid-cols-2 gap-1" : ""}`}>
                     {sectionsOf(g.items).map((sec) => (
                       <div key={sec.name || "all"}>
                         {sec.name && <p className="px-3.5 pb-1 pt-2 text-[12px] text-fg-4">{tr(sec.name)}</p>}
