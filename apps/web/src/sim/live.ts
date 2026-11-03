@@ -20,18 +20,41 @@ const SPECIES_OF: Record<string, SpeciesId> = {
   koi: "seeker",
 };
 
+/** What an event carries. Each event type fills a few of these, and the site only shows them, so most stay unknown. */
+interface Payload {
+  note?: unknown;
+  launches?: unknown[];
+  mints?: unknown[];
+  items?: unknown[];
+  count?: unknown;
+  id?: unknown;
+  from?: { agent?: unknown };
+  reason?: unknown;
+  resource?: unknown;
+  amount?: unknown;
+  hits?: unknown;
+  version?: unknown;
+  name?: unknown;
+  cost?: unknown;
+}
+/** An artifact (the brief) always names itself and carries its text. */
+interface ArtifactPayload extends Payload {
+  id: string;
+  content?: { markdown?: string };
+}
+
+interface EventBase {
+  id: string;
+  type: string;
+  from: { node: string; agent: string };
+  to?: { node: string; agent: string };
+  ts: number;
+}
+
 interface Entry {
   seq: number;
   hash: string;
-  event: {
-    id: string;
-    kind: "signal" | "trace" | "artifact" | "system";
-    type: string;
-    from: { node: string; agent: string };
-    to?: { node: string; agent: string };
-    payload: any;
-    ts: number;
-  };
+  event: (EventBase & { kind: "signal" | "trace" | "system"; payload: Payload }) | (EventBase & { kind: "artifact"; payload: ArtifactPayload });
 }
 
 export interface LiveLine {
@@ -54,7 +77,7 @@ export interface LiveState {
 const ANIMATE_WINDOW_MS = 60_000;
 
 function describe(e: Entry["event"]): string | null {
-  const p = e.payload ?? {};
+  const p: Payload = e.payload ?? {};
   switch (e.type) {
     case "agent.woke": {
       const note = String(p.note ?? "");
@@ -69,13 +92,13 @@ function describe(e: Entry["event"]): string | null {
     case "observations":
       return t("sent {n} observations → {to}", { n: p.items?.length ?? 0, to: `${e.to?.agent} @${e.to?.node}` });
     case "gathered":
-      return t("gathered market data for {n} tokens", { n: p.count });
+      return t("gathered market data for {n} tokens", { n: String(p.count) });
     case "scan":
       return t("scanned, nothing new");
     case "artifact.drafted":
       return t("updated the brief draft");
     case "artifact.published":
-      return t("published {id}", { id: p.id });
+      return t("published {id}", { id: String(p.id) });
     case "signal.rejected":
       return `rejected a signal from ${p.from?.agent}: ${p.reason}`;
     case "budget.stop":
@@ -94,8 +117,8 @@ function describe(e: Entry["event"]): string | null {
 }
 
 /** The line an animal shows over its head for a real event, if the event is worth one. */
-function noteFor(e: { type: string; kind: string; from: { agent: string }; payload?: any }): [string, string] | null {
-  const p = e.payload ?? {};
+function noteFor(e: { type: string; kind: string; from: { agent: string }; payload?: Payload }): [string, string] | null {
+  const p: Payload = e.payload ?? {};
   const n = (v: unknown) => (Array.isArray(v) ? v.length : 0);
   switch (e.type) {
     case "launches.found":
