@@ -47,7 +47,7 @@ Built and shipped live on mainnet during the hackathon (390 commits since 12 Oct
 
 **Demo video** (2:47, a real recording of the live site): [youtu.be/uFbsRP0uxns](https://youtu.be/uFbsRP0uxns) · **Deck**: [Google Slides](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing)
 
-Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days: 535 users, 10,400 X-Rays, 25,000 checks ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
+Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days (to 3 November): 596 users, 21,150 X-Rays, 292,806 checks, most of them fired automatically by the extension ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
 
 **Team**: John Buz, lead developer ([X](https://x.com/Johnnny_0x), [GitHub](https://github.com/0xNickdev)) · Priince, backend developer ([X](https://x.com/_oxwale)) · 0xSerik, marketing and partnerships.
 
