@@ -57,6 +57,18 @@ export function factorsOf(r: XRayReport): Factor[] {
   if (f.churnPct !== null) out.push({ k: t("churn"), v: `${f.churnPct}%`, d: f.bumps ? t("{n} bump bot trades", { n: f.bumps }) : t("volume sold back by the buyers"), bad: f.churnPct >= 30 });
   const tk = r.ticker;
   if (tk) out.push({ k: t("ticker used before"), v: tk.launches ? `${tk.launches}×` : t("first time"), d: tk.launches ? (tk.devs === 1 ? t("in {d} days, all by one dev, {x} dumped", { d: tk.days, x: tk.dumped }) : t("in {d} days by {n} devs, {x} dumped by their dev", { d: tk.days, n: tk.devs, x: tk.dumped })) : t("no other launch with this ticker in {d} days", { d: tk.days }), bad: tk.launches >= 3 && tk.dumped >= 2 });
+  // The tool print: the exact build when other wallets share it, else its shape (the build without fee amounts).
+  const tool = r.check.tool;
+  const tp = tool && tool.wallets > 1 ? tool : (tool?.shape ?? tool);
+  if (tp) {
+    const farm = !tp.common && tp.wallets >= 3 && tp.settled >= 10 && tp.dumped / tp.settled >= 0.9;
+    out.push({
+      k: t("tool setup"),
+      v: tp.common ? t("public launcher") : tp.wallets > 1 ? t("{n} wallets", { n: tp.wallets }) : t("its own"),
+      d: tp.common ? t("built the way thousands launch, says nothing") : tp.wallets > 1 ? (tp.settled ? t("launched the same way in 2 days; {x} of {n} dumped", { x: tp.dumped, n: tp.settled }) : t("launched the same way in 2 days")) : t("no other wallet launched this way in 2 days"),
+      bad: farm,
+    });
+  }
   const reused = r.socials?.filter((s) => s.launches > 1) ?? [];
   if (reused.length) out.push({ k: t("socials reused"), v: String(Math.max(...reused.map((s) => s.launches))), d: t("launches with the same links, {n} fast dumps", { n: reused.reduce((a, s) => a + s.fastDumps, 0) }), bad: reused.some((s) => s.fastDumps >= 1) });
   return out;

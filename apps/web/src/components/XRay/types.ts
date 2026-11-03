@@ -32,6 +32,15 @@ export interface Odds {
   devSettled?: { dumped: boolean; ageMin: number };
 }
 
+export interface ToolStat {
+  key: string;
+  launches: number;
+  wallets: number;
+  settled: number;
+  dumped: number;
+  common: boolean;
+}
+
 export interface Check {
   verdict: Verdict;
   /** Risk 0..100 inside the verdict's band: pass 0..24, caution 25..59, avoid 60..100. Null when never seen. */
@@ -40,6 +49,8 @@ export interface Check {
   odds?: Odds | null;
   reasons: string[];
   notes: string[];
+  /** How the launch transaction was built, and what the other launches built the same way did (exact and by shape). */
+  tool?: (ToolStat & { shape?: ToolStat }) | null;
   /** Whether the node's chain stream is live and how long ago it last heard the chain. */
   stream?: { live: boolean; lastEventSecAgo: number };
   facts: {
