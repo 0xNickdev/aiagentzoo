@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
 import { CAPill } from "./TokenAddress";
+import { BOT_URL, CLAWPUMP_URL, EXTENSION_URL, ZOOAGENCY_CLAWPUMP_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../links";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-export const EXTENSION_URL = "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl";
-const BOT_URL = "https://t.me/zooaiagency_bot";
 const EASE = [0.215, 0.61, 0.355, 1] as const;
 
 const compact = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : n.toLocaleString("en-US"));
@@ -241,15 +240,15 @@ export function Holders() {
             <CAPill />
           </div>
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[14.5px]">
-            <a href="https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
+            <a href={ZOOAGENCY_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
               DexScreener ↗
             </a>
-            <a href="https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
+            <a href={ZOOAGENCY_SOLSCAN_URL} target="_blank" rel="noopener noreferrer" className="text-fg-3 hover:text-white">
               Solscan ↗
             </a>
           </div>
           <a
-            href="https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"
+            href={ZOOAGENCY_CLAWPUMP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-7 inline-flex items-center gap-2 text-[15px] text-white underline decoration-white/30 underline-offset-4 hover:decoration-white"
@@ -283,7 +282,7 @@ export function TrustStrip() {
           </span>
         ))}
         <span className="hidden h-5 w-px bg-white/15 md:block" />
-        <a href="https://clawpump.tech" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[14px] text-fg-4 hover:text-white">
+        <a href={CLAWPUMP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[14px] text-fg-4 hover:text-white">
           {t("Launched on")}
           <img src="/clawpump.png" alt="ClawPump" className="h-6 w-auto" />
         </a>

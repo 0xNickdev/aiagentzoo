@@ -11,6 +11,7 @@ import { Tags } from "../components/WalletTags";
 import { useRadar, type Watched } from "../components/radarCore";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 import { agoCompact, short } from "../format";
+import { BOT_URL } from "../links";
 
 type Tab = "xray" | "ask" | "rugs" | "radar";
 /** A token handed to a tab from elsewhere: a deep link, or another tab's button. The nonce re-runs the same token. */
@@ -410,7 +411,6 @@ function DevCard({ r }: { r: CreatorRecord }) {
 /* ---------- x-ray ---------- */
 
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
-const BOT = "https://t.me/zooaiagency_bot";
 const openWalletMini = (w: string) => window.dispatchEvent(new CustomEvent("zoo-wallet-mini", { detail: w }));
 const share1 = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 
@@ -602,7 +602,7 @@ function XRayCard({ r, onAsk, onPick }: { r: XRayReport; onAsk: (mint: string) =
 
   const follow = async () => {
     haptic.tap();
-    if (!inTelegram || !tg) return openLink(`${BOT}?start=w-${r.mint}`);
+    if (!inTelegram || !tg) return openLink(`${BOT_URL}?start=w-${r.mint}`);
     const res = await watch(tg.initData, r.mint);
     setWatching(tt(res.message));
     if (res.ok) haptic.verdict("promising");

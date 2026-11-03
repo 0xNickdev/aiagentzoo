@@ -5,6 +5,7 @@ import { NODE_URLS } from "../../sim/live";
 import { useLiveNumbers } from "../LiveStats";
 import { lang, t } from "../../i18n";
 import { num } from "../../format";
+import { BOT_URL } from "../../links";
 
 /** The roadmap is one file, /roadmap.json, so every change to the plan is a commit anyone can read. */
 type Status = "shipped" | "building" | "next" | "vote" | "exploring";
@@ -592,7 +593,7 @@ function Vote({ plan }: { plan: Plan }) {
           ))}
         </div>
         <a
-          href="https://t.me/zooaiagency_bot"
+          href={BOT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition hover:bg-white/90"

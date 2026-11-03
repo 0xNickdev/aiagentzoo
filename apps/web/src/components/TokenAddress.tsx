@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../i18n";
+import { DEXSCREENER_URL, SOLSCAN_URL } from "../links";
 
 /** The live token; VITE_TOKEN_MINT can override it per deployment. */
 export const TOKEN_MINT: string = (import.meta.env.VITE_TOKEN_MINT ?? "").trim() || "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -48,8 +49,8 @@ export function TokenAddress() {
 
   const links = [
     ["pump.fun", `https://pump.fun/coin/${TOKEN_MINT}`],
-    ["DexScreener", `https://dexscreener.com/solana/${TOKEN_MINT}`],
-    ["Solscan", `https://solscan.io/token/${TOKEN_MINT}`],
+    ["DexScreener", `${DEXSCREENER_URL}/solana/${TOKEN_MINT}`],
+    ["Solscan", `${SOLSCAN_URL}/token/${TOKEN_MINT}`],
   ];
 
   return (

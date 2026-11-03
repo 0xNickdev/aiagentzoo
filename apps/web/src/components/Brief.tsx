@@ -6,6 +6,7 @@ import { loadDirectory, shortAddress, useGuardian } from "../zoo";
 import { GuardianButton } from "./Guardian";
 import { Reveal, Section } from "./ui";
 import { lang, t as tr, tChain } from "../i18n";
+import { DEXSCREENER_URL } from "../links";
 
 interface Market {
   liquidityUsd: number | null;
@@ -90,7 +91,7 @@ function reviewOf(markdown: string): string | null {
   return clean(m[1]!.trim().replace(/^Night in review:\s*/i, "")) || null;
 }
 
-const dex = (o: { mint: string; market?: Market | null }) => o.market?.url ?? `https://dexscreener.com/solana/${o.mint}`;
+const dex = (o: { mint: string; market?: Market | null }) => o.market?.url ?? `${DEXSCREENER_URL}/solana/${o.mint}`;
 
 type TabKey = "topVolume" | "wentToZero" | "graduated" | "suspicious" | "promoted";
 const TABS: Array<{ key: TabKey; label: string }> = [
@@ -199,7 +200,7 @@ function Calls({ calls }: { calls: Call[] }) {
             <li key={c.mint} className="flex items-start gap-3 py-3">
               <span className={`tabular-nums mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
               <div className="min-w-0 flex-1">
-                <a href={`https://dexscreener.com/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-fg hover:text-white">
+                <a href={`${DEXSCREENER_URL}/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-fg hover:text-white">
                   {c.symbol}
                 </a>
                 <p className="mt-0.5 text-[12.5px] leading-relaxed text-fg-3">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>

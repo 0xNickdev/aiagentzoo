@@ -6,7 +6,7 @@ import SiteNav from "./SiteNav";
 import { pick, t } from "../i18n";
 import { compact, full, NORTH, picOf, SITE_WALLET, SITE_XRAY, ticker, useNorth, useTicker } from "./home/live";
 import type { NetInfo } from "./home/particleScene";
-import { EXTENSION_URL } from "./HomeSections";
+import { EXTENSION_URL } from "../links";
 
 import { addressIn as mintIn } from "../chain";
 import { shortOr } from "../format";

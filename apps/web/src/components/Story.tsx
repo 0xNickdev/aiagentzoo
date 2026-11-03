@@ -1,5 +1,5 @@
 import { CYCLE, DONTS } from "../data";
-import { DOCS_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon } from "../links";
+import { BOT_URL, DOCS_URL, EXTENSION_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon, ZOOAGENCY_CLAWPUMP_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../links";
 import StaggeredFade from "../StaggeredFade";
 import { TokenAddress } from "./TokenAddress";
 import { Reveal, Section, SectionHead } from "./ui";
@@ -24,10 +24,10 @@ export function Cycle() {
 }
 
 const FOOTER: Array<{ title: string; links: Array<[string, string]> }> = [
-  { title: "Product", links: [["X-Ray", "/xray"], ["Telegram bot", "https://t.me/zooaiagency_bot"], ["Chrome extension", "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl"], ["Wall of rugs", "/rugs"], ["Stats", "/stats"]] },
+  { title: "Product", links: [["X-Ray", "/xray"], ["Telegram bot", BOT_URL], ["Chrome extension", EXTENSION_URL], ["Wall of rugs", "/rugs"], ["Stats", "/stats"]] },
   { title: "Agents", links: [["The agents", "/agents"], ["Live", "/live"], ["Morning Brief", "/brief"], ["Evolution", "/evolution"], ["Roadmap", "/roadmap"]] },
   { title: "Builders", links: [["Docs", DOCS_URL], ["Connect an agent", "/connect"], ["x402: pay per check", "/x402"], ["GitHub", GITHUB_URL], ["npm · @aiagentzoo/sdk", NPM_URL], ["skill.md", "/skill.md"]] },
-  { title: "$ZOOAGENCY", links: [["ClawPump", "https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["DexScreener", "https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["Solscan", "https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"], ["X · @zooclawagency", X_URL]] },
+  { title: "$ZOOAGENCY", links: [["ClawPump", ZOOAGENCY_CLAWPUMP_URL], ["DexScreener", ZOOAGENCY_DEXSCREENER_URL], ["Solscan", ZOOAGENCY_SOLSCAN_URL], ["X · @zooclawagency", X_URL]] },
 ];
 
 /** The nodes' heartbeat, in words: how many of the three answer right now. */

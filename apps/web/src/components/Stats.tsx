@@ -4,6 +4,7 @@ import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
 import { num, short } from "../format";
 import { useLive } from "../hooks";
+import { SOLSCAN_URL, ZOOAGENCY_CLAWPUMP_URL } from "../links";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const pctOf = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "-");
@@ -214,7 +215,7 @@ export default function Stats() {
             {t("pump.fun pays a coin's creator fees to the creator wallet, with no split on chain. ClawPump splits ours after that: 61.5% buys $ZOOAGENCY back and burns it. Its page lists every buyback with its transaction and how much has been burned, so the proof is not our word.")}
           </p>
           <a
-            href="https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B"
+            href={ZOOAGENCY_CLAWPUMP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.12] px-5 py-2.5 text-[13.5px] text-fg-2 transition hover:text-white"
@@ -271,8 +272,8 @@ function FeeLoop() {
         <div><p className="text-fg">{b.totals.runs}</p><p className="text-[11.5px] text-fg-4">{t("runs")}</p></div>
       </div>
       <p className="tabular-nums mt-3 text-[12px] text-fg-4">
-        {t("hot wallet")} <a href={`https://solscan.io/account/${b.hot}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.hot)}</a>
-        {b.treasury && <> · {t("treasury")} <a href={`https://solscan.io/account/${b.treasury}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.treasury)}</a></>}
+        {t("hot wallet")} <a href={`${SOLSCAN_URL}/account/${b.hot}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.hot)}</a>
+        {b.treasury && <> · {t("treasury")} <a href={`${SOLSCAN_URL}/account/${b.treasury}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.treasury)}</a></>}
       </p>
       {b.runs.length > 0 && (
         <ul className="mt-4 divide-y divide-white/[0.06] border-t border-white/[0.08] text-[13px]">
@@ -285,9 +286,9 @@ function FeeLoop() {
                 <>
                   <span>{sol(r.feesSol)} SOL {t("in")}</span>
                   <span className="text-fg">{sol(r.buySol)} SOL → {r.tokens ? `${Math.round(r.tokens).toLocaleString("en-US")} ZOOAGENCY` : "ZOOAGENCY"}</span>
-                  {r.buyTx && <a href={`https://solscan.io/tx/${r.buyTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("buy")} ↗</a>}
+                  {r.buyTx && <a href={`${SOLSCAN_URL}/tx/${r.buyTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("buy")} ↗</a>}
                   <span>{sol(r.sweptSol)} SOL {t("to the treasury")}</span>
-                  {r.sweepTx && <a href={`https://solscan.io/tx/${r.sweepTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("sweep")} ↗</a>}
+                  {r.sweepTx && <a href={`${SOLSCAN_URL}/tx/${r.sweepTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{t("sweep")} ↗</a>}
                 </>
               )}
             </li>

@@ -18,6 +18,7 @@ import DevHabits, { type Habits } from "./DevHabits";
 import NetworkMap from "./NetworkMap";
 import { base, FG2, FG4, HAIR, header, loadFonts, small } from "./cardKit";
 import { minAgo, pctFine, short } from "../format";
+import { BOT_URL, DEXSCREENER_URL } from "../links";
 export { KIND, kindOf } from "./XRayRadar";
 
 export type Verdict = "avoid" | "caution" | "pass" | "unknown";
@@ -259,7 +260,6 @@ function Panel({ title, note, children }: { title: string; note?: string; childr
   );
 }
 
-const BOT = "https://t.me/zooaiagency_bot";
 
 /** The x-ray as a 1200x675 picture worth posting: verdict, the first reason, three numbers and the map of the first seconds. */
 async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void> {
@@ -413,7 +413,7 @@ function ShareBar({ r }: { r: XRayReport }) {
           {t("Watch it in Telegram and the bot tells you the moment the dev sells, the pool is drained or it graduates.")}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <a href={`${BOT}?start=w-${r.mint}`} target="_blank" rel="noopener noreferrer" className={`${btn} bg-white font-medium text-black hover:bg-white/90`}>
+          <a href={`${BOT_URL}?start=w-${r.mint}`} target="_blank" rel="noopener noreferrer" className={`${btn} bg-white font-medium text-black hover:bg-white/90`}>
             {t("Watch it in Telegram")}
           </a>
           <a href={`https://x.com/intent/post?text=${tweet}`} target="_blank" rel="noopener noreferrer" className={`${btn} bg-night-surface border border-white/[0.08] text-fg hover:text-white`}>
@@ -1356,14 +1356,14 @@ const TERMINALS = (mint: string): Array<{ k: string; icon: string; href: string;
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=8453&address=${mint}` },
   { k: "clanker.world", icon: "/terminals/clanker.png", href: `https://www.clanker.world/clanker/${mint}` },
   { k: "Uniswap", icon: "/terminals/uniswap.png", href: `https://app.uniswap.org/swap?chain=base&outputCurrency=${mint}` },
-  { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `https://dexscreener.com/base/${mint}` },
+  { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `${DEXSCREENER_URL}/base/${mint}` },
 ] : chainOf(mint) === "bsc" ? [
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/bsc/token/${mint}` },
   { k: "BullX", icon: "/terminals/bullx.png", href: `https://neo.bullx.io/terminal?chainId=56&address=${mint}` },
   { k: "four.meme", icon: "/terminals/fourmeme.png", href: `https://four.meme/token/${mint}` },
   { k: "Flap", icon: "/terminals/flap.png", href: `https://flap.sh/bnb/${mint}` },
   { k: "PancakeSwap", icon: "/terminals/pancake.png", href: `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc` },
-  { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `https://dexscreener.com/bsc/${mint}` },
+  { k: "DexScreener", icon: "/terminals/dexscreener.png", href: `${DEXSCREENER_URL}/bsc/${mint}` },
 ] : [
   { k: "Axiom", icon: "/terminals/axiom.png", href: `https://axiom.trade/t/${mint}` },
   { k: "GMGN", icon: "/terminals/gmgn.png", href: `https://gmgn.ai/sol/token/${mint}` },
