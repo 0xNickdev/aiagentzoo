@@ -22,7 +22,7 @@
 >
 > Try the paid lane in one line, no wallet needed to see the handshake:
 > `curl -si https://north.zooaiagency.com/v1/x402/check/<any pump.fun mint> | grep -i payment-required`
-> then pay it with the ready agent in [`examples/x402-agent`](examples/x402-agent) (devnet USDC, the node pays the fee).
+> then pay it with the ready agent in [`examples/x402-agent`](examples/x402-agent) (devnet USDC by default, `X402_NETWORK=mainnet` for real USDC; the node pays the fee).
 
 ---
 
@@ -43,9 +43,10 @@ The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiage
 
 ## Solana Hackathon 2026
 
-Built and shipped live on mainnet during the hackathon (390 commits since 12 October):
+Built and shipped live on mainnet during the hackathon (414 commits since 12 October):
 
-- **x402 on Solana**: trading agents pay per check in USDC over plain HTTP, no key and no account; the node is its own facilitator, settles only when there is a report to deliver, and logs every sale with the hash of the report sold ([details below](#x402-agents-pay-per-check), live at [zooaiagency.com/x402](https://zooaiagency.com/x402))
+- **x402 on Solana, mainnet and devnet**: trading agents pay per check in USDC over plain HTTP, no key and no account (real USDC on mainnet, test USDC on devnet); the node is its own facilitator, settles only when there is a report to deliver, and logs every sale with the hash of the report sold ([details below](#x402-agents-pay-per-check), live at [zooaiagency.com/x402](https://zooaiagency.com/x402))
+- **tool prints and the operator**: a rugger on a fresh wallet is still recognised, by how the launch transaction was built and by the wallets it signs together with ([below](#what-it-is))
 - the X-Ray as a terminal, with an in-page Jupiter swap and one-tap links to Axiom, GMGN, BullX and Padre
 - wallet tags (crew, rugger, bundle, KOL, KOL side wallet, smart money, new), cabals, KOL side wallets
 - the money map, and since this week where the SOL went after the dump (traced through Helius in under a second for most launches)
@@ -91,7 +92,7 @@ A trading agent should ask who is behind a coin before every swap, but an agent 
 | `GET /v1/x402` | free | the menu: network, USDC mint, payee, fee payer, prices |
 | `GET /v1/x402/receipts` | free | every sale, with its transaction and the sha256 of the report sold |
 
-How one request goes, on [`north.zooaiagency.com`](https://north.zooaiagency.com/v1/x402) (Solana devnet, USDC):
+How one request goes, on [`north.zooaiagency.com`](https://north.zooaiagency.com/v1/x402) (USDC on Solana mainnet, offered first, and devnet; the client pays on the network it supports):
 
 1. The agent calls the route with no payment and gets `402` with a `PAYMENT-REQUIRED` header (x402 v2, `exact` scheme): amount, USDC mint, payee, fee payer.
 2. Its x402 client (the official `@x402/fetch` + `@x402/svm` work as they are) signs a USDC `TransferChecked` and retries with `PAYMENT-SIGNATURE`.
@@ -105,6 +106,7 @@ The node is its own facilitator (the official `@x402/svm` facilitator scheme run
 ```bash
 cd examples/x402-agent && npm install
 npm run keygen                          # fund the printed address at faucet.circle.com (Solana Devnet USDC)
+X402_NETWORK=mainnet npm run guard -- <mint>   # the same with real USDC
 npm run guard -- <mint> [<mint> ...]    # 0.001 USDC per check, refuses the swap on avoid
 ```
 
@@ -252,7 +254,7 @@ For the in-page swap the site reads `VITE_SOLANA_RPC`, `VITE_SWAP_TREASURY` and 
 
 Put a model provider's API key in the environment (`ZOO_MODEL` picks the model) to let the agents think. Without a key the pipeline still runs end to end on rules. All settings: [docs/running-a-node.md](docs/running-a-node.md).
 
-**To sell reports over x402**, give the north node a fee payer and a payee: `X402_FACILITATOR_KEY` (a Solana secret key, JSON byte array or base58, holding a little SOL for fees), `X402_PAY_TO` (the wallet that receives USDC; its USDC account must exist), optionally `X402_NETWORK=mainnet` (devnet by default), `X402_RPC_URL` and `X402_PUBLIC_URL`. Without them the x402 routes answer 404 and everything else runs.
+**To sell reports over x402**, give the north node a fee payer and a payee: `X402_FACILITATOR_KEY` (a Solana secret key, JSON byte array or base58, holding a little SOL for fees), `X402_PAY_TO` (the wallet that receives USDC; its USDC account must exist), optionally `X402_NETWORK=mainnet` (devnet by default), `X402_RPC_URL` and `X402_PUBLIC_URL`. To take real USDC alongside, add `X402_MAINNET_KEY` and `X402_MAINNET_PAY_TO` (and `X402_MAINNET_RPC_URL`, else `SOLANA_RPC_URL`): mainnet is then offered first and devnet second. Without them the x402 routes answer 404 and everything else runs.
 
 Tests: `npm test` (node and SDK), `npm run typecheck`.
 
@@ -289,7 +291,7 @@ More: [docs/security.md](docs/security.md).
 | Path | |
 |---|---|
 | [`packages/sdk`](packages/sdk) | `@aiagentzoo/sdk`: species, agents, enclosures, budgets, signed signals, hash-chained log, model adapters |
-| [`apps/node`](apps/node) | reference node: the Solana stream, X-Ray, check, odds, x402, Telegram bot, SQLite, HTTP + SSE API, federation, agents |
+| [`apps/node`](apps/node) | reference node: the Solana stream ([`src/chain/stream.ts`](apps/node/src/chain/stream.ts)), the tape, X-Ray and check ([`check.ts`](apps/node/src/chain/check.ts)), odds, tool prints, operators, x402 ([`src/x402.ts`](apps/node/src/x402.ts)), the HTTP API by area ([`src/routes`](apps/node/src/routes)), Telegram bot, SQLite, federation, agents |
 | [`apps/web`](apps/web) | the site: live numbers, map, Morning Brief, X-Ray, developer onboarding |
 | [`apps/extension`](apps/extension) | the Chrome extension |
 | [`examples`](examples) | x402 agent that pays per check, guest agents in TypeScript and Python, ClawPump bridge |
@@ -301,7 +303,7 @@ More: [docs/security.md](docs/security.md).
 - [x] Runtime, species, budgets, signed federation, public log
 - [x] Night Watch on live pump.fun + DexScreener data, three nodes
 - [x] Daily Morning Brief with archive and hashes
-- [x] `@aiagentzoo/sdk` 0.2.0 on npm
+- [x] `@aiagentzoo/sdk` 0.2.1 on npm
 - [x] Agents that judge, re-check and rewrite their playbook
 - [x] Guest enclosures and the ClawPump wing
 - [x] Token launch via ClawPump
@@ -310,8 +312,16 @@ More: [docs/security.md](docs/security.md).
 - [x] BNB Chain and Base, swap inside the X-Ray, cabals and wallet tags
 - [x] Money map with where the SOL went after the dump
 - [x] Calibrated odds instead of a risk score
+- [x] Every factor behind the odds, counted
+- [x] x402: agents pay per check in USDC, on Solana mainnet and devnet
+- [x] Tool prints: the same launch setup behind fresh wallets
+- [x] The operator: wallets that signed one transaction together
+- [ ] Pro for active traders, holders' vote on the next build
+- [ ] Guard inside the tools agents already use (ClawPump agent tools, trading terminals)
 - [ ] Morning Brief autopost to X and Telegram
 - [ ] Public reputation leaderboard for resident and guest agents
+
+The full roadmap, with the commit behind every shipped card: [zooaiagency.com/roadmap](https://zooaiagency.com/roadmap)
 
 ## Token
 
