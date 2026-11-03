@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
@@ -116,6 +116,42 @@ function Probe() {
         </button>
       </form>
       {out && <pre className="mt-4 max-h-80 overflow-auto rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{out}</pre>}
+    </Card>
+  );
+}
+
+/** The prompt a builder pastes into a coding agent, which wires the paid check into their bot. Served as a file too. */
+function AgentPrompt() {
+  const [text, setText] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    fetch("/x402-agent-prompt.txt")
+      .then((r) => (r.ok ? r.text() : null))
+      .then(setText)
+      .catch(() => {});
+  }, []);
+  const copy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* the text stays on screen to select by hand */
+    }
+  };
+  return (
+    <Card title={t("Paste this into your coding agent")} note={t("Claude Code, Cursor, Codex")}>
+      <p className="text-[14px] leading-relaxed text-fg-3">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
+      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button onClick={() => void copy()} disabled={!text} className="rounded-xl bg-white px-5 py-2.5 text-[14px] font-medium text-black transition hover:bg-white/85 disabled:opacity-50">
+          {copied ? t("Copied") : t("Copy the prompt")}
+        </button>
+        <a href="/x402-agent-prompt.txt" target="_blank" rel="noopener noreferrer" className="text-[13px] text-fg-4 underline decoration-white/20 underline-offset-4 hover:text-white">
+          {t("or give your agent this link")}
+        </a>
+      </div>
     </Card>
   );
 }
@@ -245,6 +281,10 @@ export default function X402() {
               {!sales && <p className="py-6 text-center text-[13px] text-fg-4">{t("Reading the node…")}</p>}
             </div>
           </Card>
+        </Reveal>
+
+        <Reveal>
+          <AgentPrompt />
         </Reveal>
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">

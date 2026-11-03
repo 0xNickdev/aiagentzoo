@@ -1,0 +1,22 @@
+Add a pre-trade safety check to this trading bot using ZOOAI over x402 (pay per call in USDC on Solana, no API key, no account).
+
+What to build:
+1. Before every buy/swap of a token, call GET https://north.zooaiagency.com/v1/x402/check/<mint> through an x402 v2 client:
+   npm install @x402/core @x402/fetch @x402/svm @solana/kit
+   import { x402Client } from "@x402/core/client";
+   import { wrapFetchWithPayment } from "@x402/fetch";
+   import { toClientSvmSigner } from "@x402/svm";
+   import { ExactSvmScheme } from "@x402/svm/exact/client";
+   import { createKeyPairSignerFromBytes } from "@solana/kit";
+   Register the scheme for ONE network only, so the client pays where the wallet holds USDC:
+   devnet  "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1" (test USDC from https://faucet.circle.com), the default
+   mainnet "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" (real USDC) when X402_NETWORK=mainnet
+2. The paying wallet's secret key comes from an environment variable (e.g. X402_AGENT_KEY, a JSON byte array). Never print it, log it, commit it or hardcode it. Add the variable to .env.example with no value.
+3. Read the JSON answer: if verdict is "avoid", do not trade and log the first reason; if "caution", trade smaller or skip according to the bot's risk setting; "pass" means no red flags so far, not a buy signal.
+4. Handle failures without crashing: HTTP 402 means the payment was refused (not charged, usually no USDC on that network); the header x402-charged: false means no charge (unknown token or node error); on any network error, do not trade.
+5. Log the paid transaction from the PAYMENT-RESPONSE header and the X-Report-Sha256 header next to each decision.
+6. Price: 0.001 USDC per check (0.01 USDC for the full report at /v1/x402/xray/<mint>). The node pays the Solana fee; the wallet needs USDC only.
+
+Reference agent: https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent
+Menu and every sale: https://north.zooaiagency.com/v1/x402 and https://zooaiagency.com/x402
+Keep the change small and add a test or a dry-run flag that calls the check without trading.
