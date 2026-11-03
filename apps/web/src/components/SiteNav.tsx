@@ -11,7 +11,21 @@ interface Item {
   label: string;
   href: string;
   note?: string;
+  /** A column inside a wide menu: what the reader came to do. */
+  section?: string;
 }
+
+/** Items in their sections, in order; one unnamed section when none are set. */
+const sectionsOf = (items: Item[]) => {
+  const out: Array<{ name: string; items: Item[] }> = [];
+  for (const i of items) {
+    const name = i.section ?? "";
+    const last = out[out.length - 1];
+    if (last && last.name === name) last.items.push(i);
+    else out.push({ name, items: [i] });
+  }
+  return out;
+};
 
 /** Two menus and two links: what a trader uses, and the zoo behind it. */
 const GROUPS: Array<{ label: string; items: Item[] }> = [
@@ -19,17 +33,17 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
     label: "Product",
     items: [
       // Most used first: the check itself, where traders already are, then what to watch, then the rest.
-      { label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
-      { label: "Live feed", href: "/feed", note: "new coins, minus the known scams" },
-      { label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun, four.meme" },
-      { label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
-      { label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
-      { label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
-      { label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
-      { label: "Stats", href: "/stats", note: "our numbers, live" },
-      { label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
-      { label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
-      { label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
+      { section: "Check", label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
+      { section: "Check", label: "Live feed", href: "/feed", note: "new coins, minus the known scams" },
+      { section: "Check", label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun, four.meme" },
+      { section: "Check", label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
+      { section: "Watch", label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
+      { section: "Watch", label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
+      { section: "Watch", label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
+      { section: "Watch", label: "Stats", href: "/stats", note: "our numbers, live" },
+      { section: "For agents", label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
+      { section: "For agents", label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
+      { section: "For agents", label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
     ],
   },
   {
@@ -71,9 +85,12 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                 <button type="button" className={`flex items-center gap-1.5 text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
                   {tr(g.label)} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
                 </button>
-                <div className="invisible absolute left-1/2 top-full z-50 w-72 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                  <div className="rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl">
-                    {g.items.map((i) => (
+                <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 ${sectionsOf(g.items).length > 1 ? "w-[780px]" : "w-72"}`}>
+                  <div className={`rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl ${sectionsOf(g.items).length > 1 ? "grid grid-cols-3 gap-1" : ""}`}>
+                    {sectionsOf(g.items).map((sec) => (
+                      <div key={sec.name || "all"}>
+                        {sec.name && <p className="px-3.5 pb-1 pt-2 text-[12px] text-fg-4">{tr(sec.name)}</p>}
+                    {sec.items.map((i) => (
                       <a
                         key={i.href}
                         href={i.href}
@@ -84,6 +101,8 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                         <span className="block text-[14px] text-white">{tr(i.label)}</span>
                         {i.note && <span className="block text-[12.5px] text-fg-4">{tr(i.note)}</span>}
                       </a>
+                    ))}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -130,7 +149,10 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               <div key={g.label} className="mt-6">
                 <p className="text-[12.5px] [&::first-letter]:uppercase text-fg-4">{tr(g.label)}</p>
                 <div className="mt-2 grid">
-                  {g.items.map((i) => (
+                  {sectionsOf(g.items).map((sec) => (
+                    <div key={sec.name || "all"} className="grid">
+                      {sec.name && <p className="mt-3 text-[12px] text-fg-4 first:mt-0">{tr(sec.name)}</p>}
+                  {sec.items.map((i) => (
                     <a
                       key={i.href}
                       href={i.href}
@@ -141,6 +163,8 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                     >
                       {tr(i.label)}
                     </a>
+                  ))}
+                    </div>
                   ))}
                 </div>
               </div>
