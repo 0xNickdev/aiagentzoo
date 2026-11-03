@@ -33,9 +33,11 @@ type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number
  */
 export async function startPumpStream(t: StreamSink, { url, token, log = console.log, allPools = false }: StreamOptions): Promise<() => void> {
   type Yellowstone = typeof import("@triton-one/yellowstone-grpc");
+  // Cast kept: the package's types describe its ESM shape, but Node hands its CommonJS exports over wrapped in default.
   const mod = (await import("@triton-one/yellowstone-grpc")) as unknown as Yellowstone & { default: Yellowstone["default"] | { default: Yellowstone["default"] } };
   // A CommonJS package seen from ESM: the class is the default export, possibly wrapped once more.
   const Client = ("default" in mod.default ? mod.default.default : mod.default) as Yellowstone["default"];
+  // Cast kept: the enum sits on the wrapped default when the named export is missing, which its types cannot say.
   const CommitmentLevel = mod.CommitmentLevel ?? (mod.default as unknown as Yellowstone).CommitmentLevel;
   let stopped = false;
   const open = new Set<{ end(): void }>();
@@ -188,7 +190,7 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
         if (!res.ok || !res.body) throw new Error(`relay responded ${res.status}`);
         const dec = new TextDecoder();
         let buf = "";
-        for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+        for await (const chunk of res.body) {
           heard = Date.now();
           buf += dec.decode(chunk, { stream: true });
           for (let i = buf.indexOf("\n"); i >= 0; i = buf.indexOf("\n")) {

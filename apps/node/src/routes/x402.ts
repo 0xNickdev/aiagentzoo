@@ -16,7 +16,9 @@ export async function x402Routes(ctx: RouteContext, req: IncomingMessage, res: S
   const paid = ROUTE.x402.exec(path);
   if (req.method === "GET" && paid) {
     if (!x402) return json(res, 404, { error: "x402 is off on this node" });
-    const [, routeId, raw] = paid as unknown as [string, string, string];
+    // Both groups are required by the pattern, so a match always has them.
+    const routeId = paid[1]!;
+    const raw = paid[2]!;
     const mint = norm(raw);
     const at = serverAddress();
     const port = at && typeof at === "object" ? at.port : 8787;

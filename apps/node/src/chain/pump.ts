@@ -797,7 +797,7 @@ export class PumpTape {
     try {
       const saved = JSON.parse(json) as {
         v?: number;
-        tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut"> & Partial<Tracked> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][] }>;
+        tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut" | "bundlers"> & Partial<Omit<Tracked, "bundlers">> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][]; bundlers?: [string, { tok: number; sold: number }][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
@@ -824,7 +824,7 @@ export class PumpTape {
           buyers: new Map(s.buyers ?? []),
           moreBuyers: s.moreBuyers?.length ? new Set(s.moreBuyers) : undefined,
           launchBuys: new Map(s.launchBuys ?? []),
-          bundlers: s.bundlers ? new Map(s.bundlers as unknown as [string, { tok: number; sold: number }][]) : undefined,
+          bundlers: s.bundlers ? new Map(s.bundlers) : undefined,
         };
         this.tokens.set(t.mint, t);
         const mine = this.byCreator.get(t.creator) ?? [];

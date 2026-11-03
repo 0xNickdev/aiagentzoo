@@ -50,8 +50,14 @@ interface Body {
 const bp = (x: number) => Math.round(x * 10_000);
 
 /** Numbers trimmed to four decimals so the blob stays small. */
-const slimFacts = (f: ChainFacts): ChainFacts =>
-  Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined).map(([k, v]) => [k, typeof v === "number" && !Number.isInteger(v) ? Math.round(v * 10_000) / 10_000 : v])) as unknown as ChainFacts;
+const slimFacts = (f: ChainFacts): ChainFacts => {
+  const out = { ...f };
+  for (const [k, v] of Object.entries(out)) {
+    if (v === undefined) Reflect.deleteProperty(out, k);
+    else if (typeof v === "number" && !Number.isInteger(v)) Reflect.set(out, k, Math.round(v * 10_000) / 10_000);
+  }
+  return out;
+};
 
 export interface HistoryEarly {
   wallet: string;
