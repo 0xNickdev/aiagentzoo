@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { shortAddress, useGuardian } from "../zoo";
 import { t } from "../i18n";
+import { compactK } from "../format";
 
 const CANYON = NODE_URLS.find((u) => u.includes("canyon")) ?? NODE_URLS[NODE_URLS.length - 1] ?? "";
 
@@ -26,7 +27,6 @@ export function useHolder(wallet: string | null): Holder | null {
   return h;
 }
 
-const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(Math.round(n)));
 
 /**
  * The header's one primary action. Signing in is a free message signature, never a transaction; it is the key to
@@ -77,13 +77,13 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
                 <p className="mt-2 text-[15px] text-warn">{t("Holder · alerts first, more checks, the vote")}</p>
               ) : (
                 <p className="mt-2 text-[14px] leading-relaxed text-fg-3">
-                  {t("Not a holder yet. Holding {n} $ZOOAGENCY opens alerts first, more checks and the vote.", { n: fmt(holder.min) })}
+                  {t("Not a holder yet. Holding {n} $ZOOAGENCY opens alerts first, more checks and the vote.", { n: compactK(holder.min) })}
                 </p>
               )
             ) : (
               <p className="mt-2 text-[14px] text-fg-4">{t("Reading your balance...")}</p>
             )}
-            {holder?.balance != null && <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: fmt(holder.balance) })}</p>}
+            {holder?.balance != null && <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: compactK(holder.balance) })}</p>}
             <div className="mt-4 grid gap-1 border-t border-white/10 pt-3 text-[14px]">
               <a href="/ask" className="rounded-lg px-2 py-1.5 text-fg-2 hover:bg-white/[0.06] hover:text-white">
                 {t("Watch a token in Telegram")}

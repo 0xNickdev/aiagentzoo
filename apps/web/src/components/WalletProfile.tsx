@@ -7,14 +7,10 @@ import { t } from "../i18n";
 import { secs } from "./XRayRadar";
 import { type LaunchOutcome, launchOutcome } from "../outcome";
 import DevHabits, { type Habits } from "./DevHabits";
+import { agoTight, short } from "../format";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const sym = (s: string) => s.replace(/^\$+/, "");
-const ago = (at: number) => {
-  const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
-  return m < 60 ? t("{m} min ago", { m }) : m < 1440 ? t("{h}h ago", { h: Math.round(m / 60) }) : t("{d}d ago", { d: Math.round(m / 1440) });
-};
 const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
 
 interface Profile {
@@ -229,7 +225,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                 {d.launches.map((x) => (
                   <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="tabular-nums grid w-full grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-left text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
                     <span className="truncate text-fg-2">
-                      ${sym(x.symbol)} <span className="text-fg-4">· {VENUE[x.venue] ?? x.venue} · {ago(x.createdAt)}</span>
+                      ${sym(x.symbol)} <span className="text-fg-4">· {VENUE[x.venue] ?? x.venue} · {agoTight(x.createdAt)}</span>
                     </span>
                     <span className="text-right text-fg-4">{x.buyers}</span>
                     <span className="text-right text-fg-4">{x.early}</span>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { t } from "../i18n";
 import { shortAddress } from "../zoo";
 import { type CreatureDetail, loadCreature, pct, portrait } from "./data";
+import { DEXSCREENER_URL } from "../links";
 
 const rule = (line: string) => line.replace(/^\s*\d+[.)]\s*/, "").trim().toLowerCase();
 
@@ -201,7 +202,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                             <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[x.verdict]}`}>{t(x.verdict)}</span>
                             <div className="min-w-0 flex-1">
                               <a
-                                href={`https://dexscreener.com/solana/${x.mint}`}
+                                href={`${DEXSCREENER_URL}/solana/${x.mint}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[13px] text-fg-2 hover:text-white"

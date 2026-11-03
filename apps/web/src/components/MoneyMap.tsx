@@ -3,9 +3,8 @@ import { chainOf, explorer } from "../chain";
 import { NODE_URLS } from "../sim/live";
 import type { Early, XRayReport } from "./XRay";
 import { t } from "../i18n";
+import { pctFine, short } from "../format";
 
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
-const pct = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const sol = (x: number) => (x >= 100 ? Math.round(x).toLocaleString("en-US") : x >= 10 ? x.toFixed(1) : x.toFixed(2));
@@ -209,10 +208,10 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
             <Node x={COL[0]} y={midY - BH / 2} h={BH} title={funderTitle} sub={funderSub} left color={funderColor} href={fund?.funder ? explorer(fund.funder) : undefined} />
             <Node x={COL[1]} y={midY - (BH + 18) / 2} h={BH + 18} title={t("The dev {w}", { w: short(r.creator) })} sub={devSold || devRecord} sub2={devSold ? devRecord : undefined} color={(f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE} href={explorer(r.creator)} />
             {gs.map((g, i) => (
-              <Node key={g.key} x={COL[2]} y={gy(i)} h={BH} title={t(g.label)} sub={t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} color={g.color} />
+              <Node key={g.key} x={COL[2]} y={gy(i)} h={BH} title={t(g.label)} sub={t("{n} wallets · took {p}", { n: g.wallets.length, p: pctFine(g.took) })} color={g.color} />
             ))}
-            <Node x={COL[3]} y={soldY} h={BH} title={t("Already sold")} sub={pct(sold)} color={RED} right />
-            <Node x={COL[3]} y={heldY} h={BH} title={t("Still holding")} sub={pct(held)} color={WHITE} right />
+            <Node x={COL[3]} y={soldY} h={BH} title={t("Already sold")} sub={pctFine(sold)} color={RED} right />
+            <Node x={COL[3]} y={heldY} h={BH} title={t("Still holding")} sub={pctFine(held)} color={WHITE} right />
           </svg>
 
           {/* On a phone the same story reads top to bottom. */}
@@ -229,7 +228,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
               <li key={g.key} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
                 <p className="text-[15px] text-white">{t(g.label)}</p>
                 <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">
-                  {t("{n} wallets · took {p}", { n: g.wallets.length, p: pct(g.took) })} · {t("sold {p}", { p: pct(Math.max(0, g.took - g.held)) })}
+                  {t("{n} wallets · took {p}", { n: g.wallets.length, p: pctFine(g.took) })} · {t("sold {p}", { p: pctFine(Math.max(0, g.took - g.held)) })}
                 </p>
               </li>
             ))}

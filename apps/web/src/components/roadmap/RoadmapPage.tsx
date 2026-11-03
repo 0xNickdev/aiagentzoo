@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NODE_URLS } from "../../sim/live";
 import { useLiveNumbers } from "../LiveStats";
 import { lang, t } from "../../i18n";
+import { num } from "../../format";
+import { BOT_URL } from "../../links";
 
 /** The roadmap is one file, /roadmap.json, so every change to the plan is a commit anyone can read. */
 type Status = "shipped" | "building" | "next" | "vote" | "exploring";
@@ -66,7 +68,6 @@ const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const zh = () => lang() === "zh";
 /** The Chinese copy of a field when the page is in Chinese and the file has one. */
 const tx = (o: { zh?: Zh }, k: keyof Zh, en: string | undefined) => (zh() && o.zh?.[k]) || en || "";
-const num = (n: number) => n.toLocaleString("en-US");
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : num(n));
 
 function usePlan(): Plan | null {
@@ -592,7 +593,7 @@ function Vote({ plan }: { plan: Plan }) {
           ))}
         </div>
         <a
-          href="https://t.me/zooaiagency_bot"
+          href={BOT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition hover:bg-white/90"

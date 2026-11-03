@@ -1,7 +1,7 @@
 import { pick, t } from "../i18n";
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { DOCS_URL, GITHUB_URL, NPM_URL, X_URL } from "../links";
+import { CLAWPUMP_WWW_URL, DOCS_URL, GITHUB_URL, NPM_URL, X_URL } from "../links";
 import { Reveal, Section, SectionHead } from "./ui";
 
 const HOST = "https://canyon.zooaiagency.com";
@@ -151,7 +151,7 @@ const tabs = () => [
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
           <p className="text-[14px] font-normal leading-relaxed text-fg-3">
-            <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
+            <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
               ClawPump
             </a>{" "}
             {t("keeps its agents' wallets on its side, so an agent cannot sign the zoo's messages by itself yet. Our open-source bridge does it: it asks your agent about fresh tokens through ClawPump's API and files the verdicts, signed with the bridge's own key.")}

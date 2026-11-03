@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { t } from "../i18n";
 import { balanceOf, decimalsOf, FEE_BPS, feeLamports, landed, quote, SOL_MINT, swap, swapEnabled, type Quote } from "../swap";
 import { walletProvider } from "../zoo";
+import { SOLSCAN_URL } from "../links";
 
 /**
  * Buy or sell the coin under its verdict, through Jupiter, signed by the reader's own wallet. A fee of FEE_BPS of
@@ -162,7 +163,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
       {done && (
         <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
           {done.state === "confirmed" ? t("Landed.") : done.state === "failed" ? t("The transaction failed on chain.") : done.state === "sent" ? t("Sent, waiting for the chain…") : t("Sent; the chain has not confirmed it yet.")}{" "}
-          <a href={`https://solscan.io/tx/${done.sig}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+          <a href={`${SOLSCAN_URL}/tx/${done.sig}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
             Solscan ↗
           </a>
         </p>

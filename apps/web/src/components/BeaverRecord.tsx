@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { nodeOf } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
 import { lang, t } from "../i18n";
+import { DEXSCREENER_URL } from "../links";
 
 interface Night {
   night: string;
@@ -79,7 +80,7 @@ export default function BeaverRecord() {
               <li key={c.night + c.mint} className="border-b border-dashed border-white/10 py-2.5 text-[12.5px]">
                 <div className="flex items-baseline justify-between gap-3">
                   <a
-                    href={`https://dexscreener.com/solana/${c.mint}`}
+                    href={`${DEXSCREENER_URL}/solana/${c.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={t("check what it did on DexScreener")}

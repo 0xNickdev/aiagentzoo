@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t } from "../i18n";
+import { short } from "../format";
 
 /** One wallet that bought in the first five seconds, as /v1/xray reports it. */
 export interface EarlyWallet {
@@ -31,7 +32,6 @@ const has = (e: EarlyWallet, k: Kind) => (k === "crew" ? e.crew : k === "ring" ?
 
 export const share = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
 export const secs = (s: number | null) => (s === null ? "-" : s < 120 ? `${s}s` : `${Math.round(s / 60)}m`);
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
 const W = 640;
 const H = 600;

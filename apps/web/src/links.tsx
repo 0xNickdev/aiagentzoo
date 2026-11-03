@@ -2,6 +2,18 @@ export const GITHUB_URL = "https://github.com/0xNickdev/aiagentzoo";
 export const NPM_URL = "https://www.npmjs.com/package/@aiagentzoo/sdk";
 export const X_URL = "https://x.com/zooclawagency";
 export const DOCS_URL = "/docs";
+export const BOT_URL = "https://t.me/zooaiagency_bot";
+export const EXTENSION_URL = "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl";
+export const CLAWPUMP_URL = "https://clawpump.tech";
+export const CLAWPUMP_WWW_URL = "https://www.clawpump.tech";
+export const DEXSCREENER_URL = "https://dexscreener.com";
+export const SOLSCAN_URL = "https://solscan.io";
+
+/** $ZOOAGENCY written out: these links name the token itself, whatever VITE_TOKEN_MINT says. */
+const ZOOAGENCY_MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
+export const ZOOAGENCY_CLAWPUMP_URL = `${CLAWPUMP_URL}/tokens/${ZOOAGENCY_MINT}`;
+export const ZOOAGENCY_DEXSCREENER_URL = `${DEXSCREENER_URL}/solana/${ZOOAGENCY_MINT}`;
+export const ZOOAGENCY_SOLSCAN_URL = `${SOLSCAN_URL}/token/${ZOOAGENCY_MINT}`;
 
 /** The X mark. */
 export function XIcon({ size = 18, className = "" }: { size?: number; className?: string }) {

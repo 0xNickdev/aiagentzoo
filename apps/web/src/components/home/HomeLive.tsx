@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { t, tChain } from "../../i18n";
-import { ago, compact, feedRows, type FeedRow, full, hue, initials, type Moment, NORTH, picOf, short, SITE_WALLET, SITE_XRAY, ticker, useNorth, useNow, useTicker } from "./live";
+import { ago, compact, feedRows, type FeedRow, full, hue, initials, type Moment, NORTH, picOf, SITE_WALLET, SITE_XRAY, ticker, useNorth, useNow, useTicker } from "./live";
+import { shortOr } from "../../format";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 // Magic UI's AnimatedList spring: new rows grow in on top, the rest glide down.
@@ -32,7 +33,7 @@ function Row({ e, now }: { e: FeedRow; now: number }) {
     : e.drained != null
       ? [`${Math.round(e.drained)} SOL`, t("left in the pool")]
       : [`#${e.serial}`, t("launch today")];
-  const sub = [e.creator ? `${t("dev")} ${short(e.creator)}` : "", e.dump && e.serial ? t("{n}th launch today", { n: e.serial }) : ""].filter(Boolean).join(" · ");
+  const sub = [e.creator ? `${t("dev")} ${shortOr(e.creator)}` : "", e.dump && e.serial ? t("{n}th launch today", { n: e.serial }) : ""].filter(Boolean).join(" · ");
   return (
     <a href={SITE_XRAY(e.mint)} className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-[10px] p-3 transition-colors hover:bg-white/[0.035] sm:grid-cols-[40px_minmax(0,1fr)_auto_64px]">
       <Avatar mint={e.mint} symbol={e.symbol} image={e.image} venue={e.venue} tone={red ? "red" : "amber"} />
@@ -101,7 +102,7 @@ function RugCase() {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[20px] font-semibold tracking-[-0.02em] text-white">{ticker(c.symbol, c.mint)}</p>
           <p className="text-[12.5px] text-[#a3aaa6]">
-            <span className="tabular-nums">{short(c.mint)}</span> · {t("went to zero {a} ago", { a: ago(c.at, now) })}
+            <span className="tabular-nums">{shortOr(c.mint)}</span> · {t("went to zero {a} ago", { a: ago(c.at, now) })}
           </p>
         </div>
         <span className="rounded-full border border-[#ff8a7e]/35 bg-[#ff8a7e]/10 px-3 py-1 text-[12px] font-medium text-[#ff8a7e]">{t("AVOID")}</span>
@@ -227,7 +228,7 @@ export function WhyAvoid() {
           <a href={SITE_WALLET(top.wallet)} className="group mt-5 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-white/[0.07] bg-[#0a0e0c] p-6 transition-colors hover:border-white/20">
             <div>
               <p className="text-[15px] text-[#a3aaa6]">
-                {t("Loudest dev of the last 48 hours")} · <span className="tabular-nums">{short(top.wallet)}</span>
+                {t("Loudest dev of the last 48 hours")} · <span className="tabular-nums">{shortOr(top.wallet)}</span>
               </p>
               <p className="mt-2.5 text-[22px] tracking-[-0.02em] text-white sm:text-[24px]">
                 {t("{n} launches, {d} dumped. Usually sells {m}.", {

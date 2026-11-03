@@ -3,6 +3,7 @@ import { NODE_URLS } from "../sim/live";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t } from "../i18n";
 import { chainName, rememberChains } from "../chain";
+import { short } from "../format";
 
 /**
  * The wall of cabals: wallets the long memory ties together as one hand, through a shared funder, crew hits, sniping
@@ -31,7 +32,6 @@ interface Cabal {
 }
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
-const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 const go = (href: string) => {
   window.history.pushState(null, "", href);
   window.dispatchEvent(new PopStateEvent("popstate"));

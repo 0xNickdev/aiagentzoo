@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../../sim/live";
+import { agoCompact, shortOr } from "../../format";
 
 /** The home page reads everything from the north node; a field it cannot read shows "-", never a made-up number. */
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -9,11 +10,10 @@ export const SITE_WALLET = (w: string) => `/xray?wallet=${w}`;
 export const compact = (n: number) =>
   n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : Math.round(n).toLocaleString("en-US");
 export const full = (n: number) => Math.round(n).toLocaleString("en-US");
-export const short = (a?: string) => (a ? `${a.slice(0, 4)}…${a.slice(-4)}` : "");
 
 const clean = (s?: string) => String(s ?? "").replace(/^\$+/, "").replace(/[\sㅤᅟᅠ​-‍﻿]+/g, " ").trim();
 /** A ticker as people write it; a coin with an empty or invisible ticker shows its address instead. */
-export const ticker = (s?: string, mint?: string) => (clean(s) ? `$${clean(s)}` : mint ? short(mint) : "$?");
+export const ticker = (s?: string, mint?: string) => (clean(s) ? `$${clean(s)}` : mint ? shortOr(mint) : "$?");
 export const initials = (s?: string, mint?: string) => (clean(s) || mint || "?").slice(0, 2).toUpperCase();
 export const hue = (m: string) => {
   let h = 0;
@@ -82,10 +82,8 @@ export function useTicker(base: number | null, perMinute = 0): number | null {
   return shown;
 }
 
-export const ago = (t: number, now = Date.now()) => {
-  const s = Math.max(0, Math.round((now - t) / 1000));
-  return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} h`;
-};
+/** "12s", "5 min", "2 h": the home page's spaced units. */
+export const ago = (t: number, now = Date.now()) => agoCompact(t, now, [" min", " h"]);
 
 /** Re-renders every second, for "12s ago" labels. */
 export function useNow(everyMs = 1000): number {

@@ -4,11 +4,12 @@ import { ArrowRight } from "lucide-react";
 import { navigate } from "../router";
 import SiteNav from "./SiteNav";
 import { pick, t } from "../i18n";
-import { compact, full, NORTH, picOf, short, SITE_WALLET, SITE_XRAY, ticker, useNorth, useTicker } from "./home/live";
+import { compact, full, NORTH, picOf, SITE_WALLET, SITE_XRAY, ticker, useNorth, useTicker } from "./home/live";
 import type { NetInfo } from "./home/particleScene";
-import { EXTENSION_URL } from "./HomeSections";
+import { EXTENSION_URL } from "../links";
 
 import { addressIn as mintIn } from "../chain";
+import { shortOr } from "../format";
 
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 18 },
@@ -44,7 +45,7 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
   let pic: string | undefined;
   if (info.kind === "dev") {
     title = t("The dev");
-    sub = short(info.wallet);
+    sub = shortOr(info.wallet);
     rows.push([t("Launches in 48 hours"), full(info.launches48h)], [t("Dumped"), full(info.dumped), true]);
     if (info.medianDumpMin != null) rows.push([t("Usually sells"), info.medianDumpMin < 1 ? t("in under a minute") : t("after {m} min", { m: info.medianDumpMin }), true]);
     rows.push([t("Graduated"), full(info.graduated)]);
@@ -52,7 +53,7 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
     cta = t("See the wallet");
   } else if (info.kind === "coin") {
     title = ticker(info.symbol, info.mint);
-    sub = short(info.mint);
+    sub = shortOr(info.mint);
     pic = picOf(info.mint, undefined, info.venue);
     if (info.buyers != null) rows.push([t("People bought it"), full(info.buyers)]);
     const sec = info.dumpedAfterSec ?? (info.dumpedAfterMin != null ? info.dumpedAfterMin * 60 : null);
@@ -65,7 +66,7 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
     cta = t("Open X-Ray");
   } else {
     title = t("A regular buyer");
-    sub = short(info.wallet);
+    sub = shortOr(info.wallet);
     rows.push([t("Bought this dev's launches"), full(info.launches)]);
     if (info.snipes48h != null) rows.push([t("Sniped launches, 48h"), full(info.snipes48h), true]);
     href = SITE_WALLET(info.wallet);

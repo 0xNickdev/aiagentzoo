@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGuardian } from "../zoo";
 import { t, tChain } from "../i18n";
 import WalletButton, { useHolder } from "./Wallet";
-import { ago, useRadar, type Watched } from "./radarCore";
+import { useRadar, type Watched } from "./radarCore";
+import { agoText } from "../format";
+import { ZOOAGENCY_CLAWPUMP_URL } from "../links";
 
 const EASE = [0.215, 0.61, 0.355, 1] as const;
 
@@ -32,7 +34,7 @@ function Row({ w, locked }: { w: Watched; locked: boolean }) {
       <p className="flex items-center justify-end gap-2 text-right text-[14px] sm:justify-start sm:text-left" style={{ color }}>
         <span className={`h-2 w-2 shrink-0 rounded-full ${w.verdict ? "" : "animate-pulse"}`} style={{ background: color }} />
         {status}
-        {turned && w.turnedAt && <span className="text-fg-4">· {ago(w.turnedAt)}</span>}
+        {turned && w.turnedAt && <span className="text-fg-4">· {agoText(w.turnedAt)}</span>}
       </p>
     </motion.a>
   );
@@ -122,7 +124,7 @@ export default function Radar() {
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-48 items-end justify-center bg-gradient-to-t from-[#030504] to-transparent pb-6">
                 <span className="pointer-events-auto">
                   {session ? (
-                    <a href="https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-medium text-black">
+                    <a href={ZOOAGENCY_CLAWPUMP_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-medium text-black">
                       {t("Get $ZOOAGENCY")} <ArrowRight size={15} />
                     </a>
                   ) : (

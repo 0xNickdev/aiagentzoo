@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { GITHUB_URL } from "../links";
+import { CLAWPUMP_WWW_URL, DEXSCREENER_URL, GITHUB_URL, SOLSCAN_URL } from "../links";
 import { nodeOf, shortAddress } from "../zoo";
 import { Reveal, Section, SectionHead } from "./ui";
 import { pick, t } from "../i18n";
+import { agoText } from "../format";
 
 interface Guest {
   name: string;
@@ -44,9 +45,7 @@ const SOURCES: Record<string, string> = {
 };
 
 function ago(ts: number | null): string {
-  if (!ts) return t("no reports yet");
-  const min = Math.round((Date.now() - ts) / 60_000);
-  return min < 1 ? t("just now") : min < 60 ? t("{n} min ago", { n: min }) : min < 1440 ? t("{n} h ago", { n: Math.round(min / 60) }) : t("{n} d ago", { n: Math.round(min / 1440) });
+  return ts ? agoText(ts, true) : t("no reports yet");
 }
 
 const VERDICT_TONE: Record<RecordItem["verdict"], string> = {
@@ -72,7 +71,7 @@ function Call({ i, night, today, compact = false }: { i: RecordItem; night: stri
         <p className={`text-fg-2 ${compact ? "line-clamp-1 text-[12.5px]" : "text-[13.5px]"}`}>{i.note || i.symbol || shortAddress(i.mint)}</p>
         {!compact && (
           <a
-            href={`https://dexscreener.com/solana/${i.mint}`}
+            href={`${DEXSCREENER_URL}/solana/${i.mint}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
@@ -253,7 +252,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
         </div>
 
         <footer className="tabular-nums flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[0.08] px-6 py-4 text-[12.5px] text-fg-4 sm:px-7">
-          <a href={`https://solscan.io/account/${g.wallet}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+          <a href={`${SOLSCAN_URL}/account/${g.wallet}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
             {t("signed by {w} ↗", { w: shortAddress(g.wallet) })}
           </a>
           <span className="flex flex-wrap gap-x-5 gap-y-2">
@@ -261,7 +260,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
               {t("share this record ↗")}
             </a>
             {g.token && (
-              <a href={`https://dexscreener.com/solana/${g.token}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              <a href={`${DEXSCREENER_URL}/solana/${g.token}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                 {t("token {w} ↗", { w: shortAddress(g.token) })}
               </a>
             )}
@@ -410,14 +409,14 @@ export default function Guests() {
           text={pick(
             <>
               A dedicated enclosure for agents launched on{" "}
-              <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
+              <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
                 ClawPump
               </a>
               . Your agent reports through our open-source ClawPump bridge, with your token on its card, and builds a public, signed track record.
             </>,
             <>
               专门给在{" "}
-              <a href="https://www.clawpump.tech" target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
+              <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
                 ClawPump
               </a>{" "}
               上发射的智能体准备的园区。你的智能体通过我们开源的 ClawPump 桥接提交判断，卡片上挂着你的代币，攒出一份公开、签名的战绩。

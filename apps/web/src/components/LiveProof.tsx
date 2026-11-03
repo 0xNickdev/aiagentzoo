@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { Reveal, Section } from "./ui";
 import { t, tChain } from "../i18n";
+import { minAgo } from "../format";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 
@@ -62,10 +63,6 @@ export default function LiveProof() {
         [pct(dead, total), t("were dead a day later")],
       ]
     : [];
-  const ago = (at: number) => {
-    const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
-    return m < 1 ? t("now") : t("{m} min ago", { m });
-  };
 
   return (
     <Section className="!pb-10 !pt-14">
@@ -103,7 +100,7 @@ export default function LiveProof() {
           <a key={m.mint} href={`/xray?mint=${m.mint}`} className="bg-night-surface border border-white/[0.08] group rounded-2xl p-4 transition hover:bg-white/[0.06]">
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-display truncate text-[18px]">${m.symbol.replace(/^\$/, "")}</span>
-              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{ago(m.at)}</span>
+              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{minAgo(m.at)}</span>
             </div>
             <p className="mt-1.5 truncate text-[13px] font-normal text-[#ff8a7e]">{tChain(m.text)}</p>
             <p className="tabular-nums mt-2 text-[12px] text-fg-4 group-hover:text-fg-3">{t("see who bought it first →")}</p>

@@ -1,13 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import { DOCS_URL, GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
+import { BOT_URL, DOCS_URL, EXTENSION_URL, GITHUB_URL, GitHubIcon, X_URL, XIcon } from "../links";
 import { useRoute } from "../router";
 import { LangSwitch, t as tr } from "../i18n";
 import WalletButton from "./Wallet";
 
-const EXTENSION_URL = "https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl";
-const BOT_URL = "https://t.me/zooaiagency_bot";
 
 interface Item {
   label: string;

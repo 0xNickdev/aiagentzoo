@@ -1,3 +1,4 @@
+import { DEXSCREENER_URL, SOLSCAN_URL } from "./links";
 /**
  * The three chains the zoo reads, told apart by the shape of an address and by what the node said: base58 is Solana;
  * 0x and forty hex digits is BNB Chain or Base, and the shape alone cannot say which. Every answer from the node names
@@ -64,12 +65,12 @@ export const addressIn = (text: string): string | null => {
   return text.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/)?.[0] ?? null;
 };
 
-const EXPLORER: Record<Chain, { name: string; host: string }> = { solana: { name: "Solscan", host: "https://solscan.io" }, bsc: { name: "BscScan", host: "https://bscscan.com" }, base: { name: "BaseScan", host: "https://basescan.org" } };
+const EXPLORER: Record<Chain, { name: string; host: string }> = { solana: { name: "Solscan", host: SOLSCAN_URL }, bsc: { name: "BscScan", host: "https://bscscan.com" }, base: { name: "BaseScan", host: "https://basescan.org" } };
 /** The chain's explorer, for a wallet or token. */
-export const explorer = (address: string) => (chainOf(address) === "solana" ? `https://solscan.io/account/${address}` : `${EXPLORER[chainOf(address)].host}/address/${address}`);
+export const explorer = (address: string) => (chainOf(address) === "solana" ? `${SOLSCAN_URL}/account/${address}` : `${EXPLORER[chainOf(address)].host}/address/${address}`);
 export const explorerName = (address: string) => EXPLORER[chainOf(address)].name;
 /** A transaction's page; a 0x hash looks the same on both EVM chains, so an address near it (its token) says which. */
-export const explorerTx = (tx: string, near?: string) => (tx.startsWith("0x") ? `${EXPLORER[near ? chainOf(near) : "bsc"].host}/tx/${tx}` : `https://solscan.io/tx/${tx}`);
+export const explorerTx = (tx: string, near?: string) => (tx.startsWith("0x") ? `${EXPLORER[near ? chainOf(near) : "bsc"].host}/tx/${tx}` : `${SOLSCAN_URL}/tx/${tx}`);
 const DEX: Record<Chain, string> = { solana: "solana", bsc: "bsc", base: "base" };
 /** A chart for the token on DexScreener. */
-export const chart = (mint: string) => `https://dexscreener.com/${DEX[chainOf(mint)]}/${mint}`;
+export const chart = (mint: string) => `${DEXSCREENER_URL}/${DEX[chainOf(mint)]}/${mint}`;

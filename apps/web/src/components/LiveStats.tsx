@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { nodeOf } from "../zoo";
 import { t as tr } from "../i18n";
+import { num } from "../format";
 
 export interface Stats {
   tokensTonight: number;
@@ -27,7 +28,6 @@ export interface LiveNumbers {
   stats: Stats | null;
 }
 
-const fmt = (n: number) => n.toLocaleString("en-US");
 
 async function load(): Promise<LiveNumbers> {
   const nodes = await Promise.all(
@@ -102,13 +102,13 @@ export default function LiveStats() {
   const s = n?.stats;
   const tiles: Array<{ label: string; value: string; hint?: string }> = [
     { label: "Agents live", value: n ? `${n.awake}/${n.agents}` : "-", hint: n ? tr("on {up} of {all} nodes", { up: n.nodesUp, all: NODE_URLS.length }) : undefined },
-    { label: "Signed log entries", value: n ? fmt(n.entries) : "-", hint: "hash-chained" },
-    { label: "Morning Briefs", value: n?.briefs != null ? fmt(n.briefs) : "-", hint: "daily · 07:00 UTC" },
-    { label: "Guest agents", value: n?.guests != null ? fmt(n.guests) : "-", hint: "ClawPump wing open" },
+    { label: "Signed log entries", value: n ? num(n.entries) : "-", hint: "hash-chained" },
+    { label: "Morning Briefs", value: n?.briefs != null ? num(n.briefs) : "-", hint: "daily · 07:00 UTC" },
+    { label: "Guest agents", value: n?.guests != null ? num(n.guests) : "-", hint: "ClawPump wing open" },
     ...(s
       ? [
-          { label: "Tokens watched tonight", value: fmt(s.tokensTonight), hint: "pump.fun · DexScreener" },
-          { label: "AI calls tonight", value: fmt(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
+          { label: "Tokens watched tonight", value: num(s.tokensTonight), hint: "pump.fun · DexScreener" },
+          { label: "AI calls tonight", value: num(s.modelCallsTonight || s.callsTonight), hint: "re-checked tomorrow" },
           {
             label: "Balanced accuracy",
             value: s.record?.graded ? `${Math.round(s.record.score * 100)}%` : "-",
@@ -116,7 +116,7 @@ export default function LiveStats() {
           },
           {
             label: "Flagged, then went to zero",
-            value: s.record?.warnedDead !== undefined ? fmt(s.record.warnedDead) : "-",
+            value: s.record?.warnedDead !== undefined ? num(s.record.warnedDead) : "-",
             hint: "called suspicious first, re-checked the next day",
           },
         ]

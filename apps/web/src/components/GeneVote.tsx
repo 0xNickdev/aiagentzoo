@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { nodeOf, useGuardian } from "../zoo";
 import { Section, SectionHead } from "./ui";
 import { t } from "../i18n";
+import { compactK } from "../format";
 
 interface Candidate {
   id: "a" | "b" | "c";
@@ -19,7 +20,6 @@ interface Gene {
   naming: { week: string; name: string | null; you: boolean } | null;
 }
 
-const short = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(Math.round(n)));
 
 function left(iso: string): string {
   const ms = Math.max(0, Date.parse(iso) - Date.now());
@@ -54,7 +54,7 @@ export default function GeneVote() {
     }).catch(() => null);
     const body = r ? ((await r.json()) as { weight?: number; error?: string }) : { error: t("the node did not answer") };
     if (!r?.ok) setMsg(body.error ?? t("Could not save."));
-    else setMsg(body.weight ? t("Counted with {w} $ZOOAGENCY. You can change your vote until the week closes.", { w: short(body.weight) }) : t("Saved."));
+    else setMsg(body.weight ? t("Counted with {w} $ZOOAGENCY. You can change your vote until the week closes.", { w: compactK(body.weight) }) : t("Saved."));
     void load();
   };
 

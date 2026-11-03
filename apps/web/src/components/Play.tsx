@@ -3,6 +3,7 @@ import { nodeOf, useGuardian } from "../zoo";
 import GeneVote from "./GeneVote";
 import { Reveal, Section, SectionHead } from "./ui";
 import { t, tChain } from "../i18n";
+import { BOT_URL } from "../links";
 
 type Verdict = "suspicious" | "watch" | "promising";
 interface ExamToken {
@@ -127,7 +128,7 @@ export default function Play() {
             <div className="flex flex-wrap items-center gap-3">
               <p className="tabular-nums text-[12.5px] text-fg-3">{t("signed in · {w}", { w: `${session.publicKey.slice(0, 4)}…${session.publicKey.slice(-4)}` })}</p>
               {tg ? (
-                <a href={`https://t.me/zooaiagency_bot?start=link-${tg.code}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
+                <a href={`${BOT_URL}?start=link-${tg.code}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
                   {t("Open the bot to link ↗")}
                 </a>
               ) : (
