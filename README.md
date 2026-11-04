@@ -18,7 +18,7 @@
 
 </div>
 
-> **Solana Hackathon 2026 · Consumer App + x402 + Aurora Intents.** [Consumer app video](https://youtu.be/OnpBzH-iIH0) · [x402 video](https://youtu.be/aPKPV1nuOes) · [Deck](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing) · [Live X-Ray](https://zooaiagency.com/xray) · [x402, every sale live](https://zooaiagency.com/x402)
+> **Solana Hackathon 2026 · Consumer App + x402 + Aurora Intents.** [Consumer app video](https://youtu.be/OnpBzH-iIH0) · [x402 video](https://youtu.be/aPKPV1nuOes) · [Aurora Intents video](https://youtu.be/87vudP3dNFc) · [Deck](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing) · [Live X-Ray](https://zooaiagency.com/xray) · [x402, every sale live](https://zooaiagency.com/x402)
 >
 > Try the paid lane in one line, no wallet needed to see the handshake:
 > `curl -si https://north.zooaiagency.com/v1/x402/check/<any pump.fun mint> | grep -i payment-required`
@@ -48,7 +48,7 @@ The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiage
 Built and shipped live on mainnet during the hackathon (414 commits since 12 October):
 
 - **x402 on Solana, mainnet and devnet**: trading agents pay per check in USDC over plain HTTP, no key and no account (real USDC on mainnet, test USDC on devnet); the node is its own facilitator, settles only when there is a report to deliver, and logs every sale with the hash of the report sold ([details below](#x402-agents-pay-per-check), live at [zooaiagency.com/x402](https://zooaiagency.com/x402))
-- **Aurora Intents: buy from any chain**: no SOL? The X-Ray buy box funds itself from USDC, USDT, ETH, BNB, BTC and more on 14 chains. Aurora's Swap API quotes the SOL, the reader sends one transfer from their own wallet (MetaMask etc. for EVM, a deposit address for the rest), the SOL lands in their Solana wallet and the Jupiter buy is filled with it; refunds go back on the origin chain. A real run: [2 USDC on Base](https://basescan.org/tx/0x1304d1c628568e17013d94605560ef652d3f5c6123235fc6aa0657ed85e96f4e) to SOL, then [the buy on Solana](https://solscan.io/tx/3ESDnN7GRCUX6yP3XodEwiMNK6G1N8mtzi53HaoyYERgKmDUxkkDQ3rkFPrhHTBxP8UEappCM5oSFwoj4x17Crfv). Code: [`intents.ts`](apps/web/src/intents.ts), [`FundAnyChain.tsx`](apps/web/src/components/FundAnyChain.tsx)
+- **Aurora Intents: buy from any chain**: no SOL? The X-Ray buy box funds itself from USDC, USDT, ETH, BNB, BTC and more on 14 chains. Aurora's Swap API quotes the SOL, the reader sends one transfer from their own wallet (MetaMask etc. for EVM, a deposit address for the rest), the SOL lands in their Solana wallet and the Jupiter buy is filled with it; refunds go back on the origin chain. A real run: [2 USDC on Base](https://basescan.org/tx/0x1304d1c628568e17013d94605560ef652d3f5c6123235fc6aa0657ed85e96f4e) to SOL, then [the buy on Solana](https://solscan.io/tx/3ESDnN7GRCUX6yP3XodEwiMNK6G1N8mtzi53HaoyYERgKmDUxkkDQ3rkFPrhHTBxP8UEappCM5oSFwoj4x17Crfv). Video: [youtu.be/87vudP3dNFc](https://youtu.be/87vudP3dNFc). Code: [`intents.ts`](apps/web/src/intents.ts), [`FundAnyChain.tsx`](apps/web/src/components/FundAnyChain.tsx)
 - **tool prints and the operator**: a rugger on a fresh wallet is still recognised, by how the launch transaction was built and by the wallets it signs together with ([below](#what-it-is))
 - the X-Ray as a terminal, with an in-page Jupiter swap and one-tap links to Axiom, GMGN, BullX and Padre
 - wallet tags (crew, rugger, bundle, KOL, KOL side wallet, smart money, new), cabals, KOL side wallets
@@ -57,7 +57,7 @@ Built and shipped live on mainnet during the hackathon (414 commits since 12 Oct
 - the same reading on BNB Chain (four.meme, Flap) and Base (Clanker)
 - **the finding**: we graded our own verdict against reality. On 34,183 launches, coins flagged "avoid" died 98.4% of the time and coins not flagged died 97.5%: the label named the people behind a coin but ranked nothing. So we froze every launch at minute five, found what the ones that ran had in common, and replaced the 0-100 risk score with calibrated odds. On held-out launches they rank far better than the verdict (AUC 0.89 against 0.59); the top tenth ran seven times as often as the average launch. Method and refit scripts: [`apps/node/scripts/calibrate`](apps/node/scripts/calibrate).
 
-**Videos** (real screen recordings of the live site): consumer app, 3:56: [youtu.be/OnpBzH-iIH0](https://youtu.be/OnpBzH-iIH0) · x402 agent paying on mainnet, 1:20: [youtu.be/aPKPV1nuOes](https://youtu.be/aPKPV1nuOes) · **Deck**: [Google Slides](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing)
+**Videos** (real screen recordings of the live site): consumer app, 3:56: [youtu.be/OnpBzH-iIH0](https://youtu.be/OnpBzH-iIH0) · x402 agent paying on mainnet, 1:20: [youtu.be/aPKPV1nuOes](https://youtu.be/aPKPV1nuOes) · Aurora Intents, a buy funded from Base, 1:23: [youtu.be/87vudP3dNFc](https://youtu.be/87vudP3dNFc) · **Deck**: [Google Slides](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing)
 
 Live: [zooaiagency.com/xray](https://zooaiagency.com/xray). Usage in the last seven days (to 3 November): 596 users, 21,150 X-Rays, 292,806 checks, most of them fired automatically by the extension ([`/v1/usage`](https://north.zooaiagency.com/v1/usage)).
 
