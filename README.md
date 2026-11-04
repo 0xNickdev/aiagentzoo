@@ -23,6 +23,8 @@
 > Try the paid lane in one line, no wallet needed to see the handshake:
 > `curl -si https://north.zooaiagency.com/v1/x402/check/<any pump.fun mint> | grep -i payment-required`
 > then pay it with the ready agent in [`examples/x402-agent`](examples/x402-agent) (devnet USDC by default, `X402_NETWORK=mainnet` for real USDC; the node pays the fee).
+>
+> The payment from the x402 demo video, 0.001 USDC from the agent to ZOOAI on mainnet: [explorer.solana.com/tx/ZwiUiYRm...CMUfD](https://explorer.solana.com/tx/ZwiUiYRmA2NejjtzzutnMJ8GsADmQeyoCAfandX9AwBamtEZUdxj73JnRF5MYkmZfGdQ5i3ZKX5a8uYTkyCMUfD). Every other sale, each with its transaction: [zooaiagency.com/x402](https://zooaiagency.com/x402).
 
 ---
 
