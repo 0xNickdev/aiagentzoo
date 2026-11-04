@@ -18,7 +18,7 @@
 
 </div>
 
-> **Solana Hackathon 2026 · Consumer App + x402.** [Consumer app video](https://youtu.be/OnpBzH-iIH0) · [x402 video](https://youtu.be/aPKPV1nuOes) · [Deck](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing) · [Live X-Ray](https://zooaiagency.com/xray) · [x402, every sale live](https://zooaiagency.com/x402)
+> **Solana Hackathon 2026 · Consumer App + x402 + Aurora Intents.** [Consumer app video](https://youtu.be/OnpBzH-iIH0) · [x402 video](https://youtu.be/aPKPV1nuOes) · [Deck](https://docs.google.com/presentation/d/1w4hsAPq1mOx23TY-k01iVevCHWkEh2L_/edit?usp=sharing) · [Live X-Ray](https://zooaiagency.com/xray) · [x402, every sale live](https://zooaiagency.com/x402)
 >
 > Try the paid lane in one line, no wallet needed to see the handshake:
 > `curl -si https://north.zooaiagency.com/v1/x402/check/<any pump.fun mint> | grep -i payment-required`
@@ -48,6 +48,7 @@ The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiage
 Built and shipped live on mainnet during the hackathon (414 commits since 12 October):
 
 - **x402 on Solana, mainnet and devnet**: trading agents pay per check in USDC over plain HTTP, no key and no account (real USDC on mainnet, test USDC on devnet); the node is its own facilitator, settles only when there is a report to deliver, and logs every sale with the hash of the report sold ([details below](#x402-agents-pay-per-check), live at [zooaiagency.com/x402](https://zooaiagency.com/x402))
+- **Aurora Intents: buy from any chain**: no SOL? The X-Ray buy box funds itself from USDC, USDT, ETH, BNB, BTC and more on 14 chains. Aurora's Swap API quotes the SOL, the reader sends one transfer from their own wallet (MetaMask etc. for EVM, a deposit address for the rest), the SOL lands in their Solana wallet and the Jupiter buy is filled with it; refunds go back on the origin chain. A real run: [2 USDC on Base](https://basescan.org/tx/0x1304d1c628568e17013d94605560ef652d3f5c6123235fc6aa0657ed85e96f4e) to SOL, then [the buy on Solana](https://solscan.io/tx/3ESDnN7GRCUX6yP3XodEwiMNK6G1N8mtzi53HaoyYERgKmDUxkkDQ3rkFPrhHTBxP8UEappCM5oSFwoj4x17Crfv). Code: [`intents.ts`](apps/web/src/intents.ts), [`FundAnyChain.tsx`](apps/web/src/components/FundAnyChain.tsx)
 - **tool prints and the operator**: a rugger on a fresh wallet is still recognised, by how the launch transaction was built and by the wallets it signs together with ([below](#what-it-is))
 - the X-Ray as a terminal, with an in-page Jupiter swap and one-tap links to Axiom, GMGN, BullX and Padre
 - wallet tags (crew, rugger, bundle, KOL, KOL side wallet, smart money, new), cabals, KOL side wallets
