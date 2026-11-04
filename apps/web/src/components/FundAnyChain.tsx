@@ -89,6 +89,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
           setOutTx(h);
           setGot(s.swapDetails?.amountOutFormatted ?? null);
           setPhase("done");
+          setError(null);
           try { localStorage.removeItem(KEY); } catch { /* */ }
           const sol = Number(s.swapDetails?.amountOutFormatted ?? 0);
           if (sol > 0) onFunded(sol);
@@ -108,6 +109,8 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
   const start = async () => {
     if (!token || !wallet || atomic <= 0n) return;
     setError(null);
+    // Busy from the first click: a second click while the wallet is still asking would only get "already pending".
+    setPhase("quoting");
     try {
       let from = evmAddr;
       if (isEvm && !from) {
@@ -115,8 +118,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
         setEvmAddr(from);
       }
       const refundTo = isEvm ? from! : refund.trim();
-      if (!refundTo) return setError(t("Enter your {c} address for a refund if the swap cannot complete.", { c: chainName(token.blockchain) }));
-      setPhase("quoting");
+      if (!refundTo) return (setPhase("idle"), setError(t("Enter your {c} address for a refund if the swap cannot complete.", { c: chainName(token.blockchain) })));
       const q = await quoteSol(token, atomic, wallet, refundTo, false);
       if (!q.depositAddress) throw new Error("no deposit address in the quote");
       const d = { address: q.depositAddress, memo: q.depositMemo, amountIn: amount, symbol: token.symbol, chain: token.blockchain };
@@ -129,6 +131,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
       setDeposit(d);
       try { localStorage.setItem(KEY, JSON.stringify(d)); } catch { /* */ }
       setSt("PENDING_DEPOSIT");
+      setError(null);
       setPhase("waiting");
     } catch (e) {
       setPhase("idle");
