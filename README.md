@@ -104,6 +104,37 @@ How one request goes, on [`north.zooaiagency.com`](https://north.zooaiagency.com
 5. The node **settles**: it co-signs as fee payer, submits and waits for confirmation. The agent needs USDC only, no SOL. If settlement fails the report is withheld and the reason comes back in a `402`.
 6. `200` with the report, the Solana transaction in `PAYMENT-RESPONSE`, and `X-Report-Sha256`. The sale is appended to the node's signed, hash-chained public log (`x402.sale`), so what the zoo said for money can be checked later against what the coin did.
 
+```mermaid
+sequenceDiagram
+  participant A as Agent (guard.ts)
+  participant N as ZOOAI node
+  participant S as Solana
+  A->>N: GET /v1/x402/check/<mint>
+  N-->>A: 402 + PAYMENT-REQUIRED (0.001 USDC, mint, payee, fee payer)
+  A->>A: sign USDC TransferChecked (@x402/svm)
+  A->>N: retry + PAYMENT-SIGNATURE
+  N->>N: verify amount, mint, payee, simulation
+  N->>N: build the report (nothing to sell: stop, not charged)
+  N->>S: co-sign as fee payer, submit, confirm
+  S-->>N: transaction confirmed
+  N-->>A: 200 + report + PAYMENT-RESPONSE (tx) + X-Report-Sha256
+```
+
+**When a payment fails**, the agent always learns why and is never charged without a report:
+
+| What went wrong | What the node answers | Charged? |
+|---|---|---|
+| no payment header | `402` with `PAYMENT-REQUIRED`: what to pay, to whom, on which network | no |
+| header is not a valid x402 v2 payload, or x402 v1 `X-PAYMENT` | `402`, `invalid_payload` and how to pay | no |
+| wrong amount, wrong mint, wrong payee, or the client names its own price | `402` with the verify reason (checked against the route's price, never the client's) | no |
+| transfer would fail on chain: not enough USDC, expired blockhash, already used | `402` with the simulation or verify reason | no |
+| the zoo knows nothing about the token (verdict `unknown`) | `200`, `x402-charged: false`, the payment is never submitted | no |
+| the report fails to build (404, node error) | the error, `x402-charged: false`, the signed transfer expires unused | no |
+| settlement fails on Solana | `402` with the settle reason and `PAYMENT-RESPONSE`; the report is withheld | no |
+| all good | `200`, report, transaction in `PAYMENT-RESPONSE`, `x402-charged: true`, sale in the public log | 0.001 USDC |
+
+The example agent turns these into plain advice (`explain()` in [`guard.ts`](examples/x402-agent/guard.ts)): fund the wallet, run again, or send a fresh payment. Counters of refused and failed settlements are public in [`/v1/x402/receipts`](https://north.zooaiagency.com/v1/x402/receipts) (`refusedBeforeSettle`, `settleFailed`). Seen live in the [x402 video](https://youtu.be/aPKPV1nuOes): two paid checks on mainnet, one of them [on Solana Explorer](https://explorer.solana.com/tx/ZwiUiYRmA2NejjtzzutnMJ8GsADmQeyoCAfandX9AwBamtEZUdxj73JnRF5MYkmZfGdQ5i3ZKX5a8uYTkyCMUfD).
+
 The node is its own facilitator (the official `@x402/svm` facilitator scheme running in process): no third-party service sits between the agent's money and the report. Code: [`apps/node/src/x402.ts`](apps/node/src/x402.ts), tests for every failure path: [`apps/node/test/x402.test.ts`](apps/node/test/x402.test.ts). A ready agent that refuses the swap on `avoid`: [`examples/x402-agent`](examples/x402-agent). Every sale, live: [zooaiagency.com/x402](https://zooaiagency.com/x402).
 
 ```bash
