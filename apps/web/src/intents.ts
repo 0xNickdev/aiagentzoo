@@ -42,6 +42,8 @@ let tokensCache: Promise<Token[]> | null = null;
 export function sources(): Promise<Token[]> {
   tokensCache ??= fetch(url("tokens"))
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`tokens ${r.status}`))))
+    // Aurora wraps the list as { tokens, asset_stats }; 1Click returns the bare array.
+    .then((j: Token[] | { tokens: Token[] }) => (Array.isArray(j) ? j : j.tokens))
     .then((list: Token[]) => {
       const order = [...Object.keys(EVM), ...Object.keys(OTHER)];
       return list
