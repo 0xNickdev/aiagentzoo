@@ -7,6 +7,8 @@
 import { walletProvider } from "./zoo";
 
 export const SOL_MINT = "So11111111111111111111111111111111111111112";
+/** Rent-exempt minimum of a plain system account (0 bytes of data). */
+const RENT_EXEMPT_LAMPORTS = 890_880n;
 const JUP = "https://lite-api.jup.ag/swap/v1";
 const RPC = ((import.meta.env.VITE_SOLANA_RPC as string | undefined) ?? "").trim() || "https://api.mainnet-beta.solana.com";
 
@@ -111,7 +113,15 @@ export async function swap(q: Quote, owner: string): Promise<SwapResult> {
       data: Buffer.from(ix.data, "base64"),
     });
   const payer = new PublicKey(owner);
-  const fee = feeLamports(q);
+  const c = new Connection(RPC, "confirmed");
+  let fee = feeLamports(q);
+  // Solana refuses a transfer that leaves a new account under the rent-exempt minimum: if the fee wallet is empty
+  // and the fee is smaller than that, the whole trade would fail with "insufficient funds for rent". Skip the fee
+  // on such a small trade instead of failing the reader's buy.
+  if (fee > 0n && fee < RENT_EXEMPT_LAMPORTS) {
+    const held = BigInt(await c.getBalance(new PublicKey(TREASURY)).catch(() => 0));
+    if (held + fee < RENT_EXEMPT_LAMPORTS) fee = 0n;
+  }
   const feeIx = fee > 0n ? [SystemProgram.transfer({ fromPubkey: payer, toPubkey: new PublicKey(TREASURY), lamports: fee })] : [];
   const instructions = [
     ...ixs.computeBudgetInstructions.map(toIx),
@@ -121,7 +131,6 @@ export async function swap(q: Quote, owner: string): Promise<SwapResult> {
     ...(ixs.cleanupInstruction ? [toIx(ixs.cleanupInstruction)] : []),
     ...(ixs.otherInstructions ?? []).map(toIx),
   ];
-  const c = new Connection(RPC, "confirmed");
   const tables = (
     await Promise.all(ixs.addressLookupTableAddresses.map(async (a) => (await c.getAddressLookupTable(new PublicKey(a))).value))
   ).filter((t): t is NonNullable<typeof t> => t !== null);
