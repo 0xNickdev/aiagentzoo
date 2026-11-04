@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
 import { balanceOf, decimalsOf, FEE_BPS, feeLamports, landed, quote, SOL_MINT, swap, swapEnabled, type Quote } from "../swap";
 import { walletProvider } from "../zoo";
 import { SOLSCAN_URL } from "../links";
+import FundAnyChain from "./FundAnyChain";
 
 /**
  * Buy or sell the coin under its verdict, through Jupiter, signed by the reader's own wallet. A fee of FEE_BPS of
@@ -19,6 +20,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
   const [busy, setBusy] = useState<"quote" | "sign" | "wait" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ sig: string; state: "confirmed" | "failed" | "unknown" | "sent" } | null>(null);
+  const [funded, setFunded] = useState(0);
 
   const inMint = side === "buy" ? SOL_MINT : mint;
   const outMint = side === "buy" ? mint : SOL_MINT;
@@ -31,7 +33,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
     if (!wallet) return void (setBalance(null), setSolBalance(null));
     void balanceOf(wallet, inMint).then(setBalance).catch(() => setBalance(null));
     void balanceOf(wallet, SOL_MINT).then(setSolBalance).catch(() => setSolBalance(null));
-  }, [wallet, inMint, done]);
+  }, [wallet, inMint, done, funded]);
 
   // A fresh quote whenever the side or the amount changes, a moment after typing stops.
   useEffect(() => {
@@ -88,6 +90,13 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
     }
   };
 
+  // SOL just arrived from another chain: fill the buy with it, keeping a little for the network fee.
+  const onFunded = useCallback((sol: number) => {
+    setSide("buy");
+    setAmount(String(Math.max(0, Math.floor((sol - 0.006) * 1000) / 1000)));
+    setFunded((n) => n + 1);
+  }, []);
+
   if (!swapEnabled()) return null;
   const fee = q ? Number(feeLamports(q)) / 1e9 : 0;
   // What the wallet must hold: the SOL spent (buys) plus about 0.004 SOL for network fees and the token account.
@@ -135,6 +144,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
           </div>
         )
       )}
+      {side === "buy" && <FundAnyChain wallet={wallet} onConnect={() => void connect()} onFunded={onFunded} />}
       <div className="tabular-nums mt-2 min-h-[2.6em] text-[12px] leading-relaxed text-fg-3">
         {busy === "quote" && t("quoting…")}
         {q && busy !== "quote" && (
