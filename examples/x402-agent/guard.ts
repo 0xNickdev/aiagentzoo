@@ -90,7 +90,18 @@ async function main(): Promise<void> {
   const signer = await loadSigner();
   // Registered for one network only, so the client pays where this wallet holds USDC, whatever the node offers first.
   const client = new x402Client().register(NETWORK, new ExactSvmScheme(toClientSvmSigner(signer), { rpcUrl: RPC }));
-  const paidFetch = wrapFetchWithPayment(fetch, client);
+  // Says each x402 step out loud: the node's 402 with the price, then the retry that carries the signed USDC transfer.
+  const shown = (path: string) => path.replace(/[1-9A-HJ-NP-Za-km-z]{32,44}/, (m) => `${m.slice(0, 6)}...${m.slice(-4)}`);
+  const steps: typeof fetch = async (input, init) => {
+    const req = new Request(input, init);
+    const path = shown(new URL(req.url).pathname);
+    const paying = req.headers.has("PAYMENT-SIGNATURE");
+    if (paying) console.log(`  -> GET ${path} + PAYMENT-SIGNATURE (USDC transfer signed by the agent)`);
+    const res = await fetch(req);
+    if (res.status === 402 && !paying) console.log(`  <- 402 Payment Required for GET ${path}: ${price} USDC on ${menu.cluster}`);
+    return res;
+  };
+  const paidFetch = wrapFetchWithPayment(steps, client);
   const offered = (await (await fetch(`${NODE}/v1/x402`)).json()) as { networks: Array<{ network: string; cluster: string; asset: { mint: string } }>; resources: Array<{ url: string; price: { usdc: number } }> };
   const net = offered.networks.find((n) => n.network === NETWORK);
   if (!net) {
