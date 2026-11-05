@@ -9,6 +9,7 @@ import { eventRoutes, guestListRoutes, guestRoutes } from "./routes/guests.ts";
 import { cabalRoutes, chainBoardRoutes, chainReadRoutes, tapeRoutes } from "./routes/chain.ts";
 import { checkRoutes } from "./routes/check.ts";
 import { walletRoutes } from "./routes/wallets.ts";
+import { callRoutes } from "./routes/calls.ts";
 import { askRoutes } from "./routes/ask.ts";
 import { guestWardenRoutes, wardenRoutes } from "./routes/warden.ts";
 
@@ -19,6 +20,7 @@ type Route = (ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url:
 /** Every route group in the order the node tries them; the first that handles a request answers it. */
 const ROUTES: Route[] = [
   x402Routes,
+  callRoutes,
   nodeRoutes,
   boardRoutes,
   agentRoutes,
