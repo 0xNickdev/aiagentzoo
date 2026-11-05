@@ -5,10 +5,14 @@
  * wallet is the point, not the shill itself.
  */
 
-const CHANNEL = "https://t.me/s/pumpfun_lp";
-/** A call stays this long; the X-Ray reads coins up to two days old. */
-const KEEP_MS = 48 * 3600_000;
+import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+
+const CHANNEL = `https://t.me/s/${process.env.CALLOUT_CHANNEL ?? "pumpfun_lp"}`;
+/** A call is kept 30 days, on disk, so a restart does not empty the tab. */
+const KEEP_MS = 30 * 86_400_000;
 const POLL_MS = 30_000;
+/** A cold start walks the channel back this many pages, one a second: a polite reader of a public page. */
+const BACKFILL_PAGES = 40;
 
 export interface Callout {
   /** The channel post id, unique and increasing. */
@@ -25,9 +29,16 @@ export interface Callout {
   mcUsd: number | null;
   /** The caller's how-many-th call on this coin. */
   nth: number | null;
+  /** When the call was made: the post time less the channel's "Called: N minutes ago". */
   at: number;
+  /** When the channel posted it. */
+  postedAt: number;
   url: string;
 }
+
+/** pump.fun mentions arrive as @[name](user id): keep the name. */
+export const cleanMentions = (s: string) => s.replace(/@\[([^\]]{1,40})\]\([0-9a-f-]{36}\)/gi, "@$1");
+const AGO: Record<string, number> = { second: 1000, minute: 60_000, hour: 3_600_000, day: 86_400_000 };
 
 const strip = (html: string) =>
   html
@@ -62,8 +73,11 @@ export function parseChannel(html: string): Callout[] {
     const mint = /CONTRACT\s*\n+\s*([1-9A-HJ-NP-Za-km-z]{32,44})/.exec(text)?.[1] ?? /pump\.fun\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})/.exec(block)?.[1];
     if (!mint) continue;
     const sym = /\(\s*\$([^)\n]{1,24})\)/.exec(text)?.[1]?.trim() ?? "";
-    const said = /💬\s*CALLOUT\s*\n+([\s\S]*?)\n+\s*💰/.exec(text)?.[1]?.trim() ?? "";
+    const said = cleanMentions(/💬\s*CALLOUT\s*\n+([\s\S]*?)\n+\s*💰/.exec(text)?.[1]?.trim() ?? "");
     const time = /<time datetime="([^"]+)"/.exec(block)?.[1];
+    const postedAt = time ? Date.parse(time) : Date.now();
+    const ago = /Called:\s*(\d+|a|an)\s*(second|minute|hour|day)s?\s+ago/i.exec(text);
+    const back = ago ? (/^\d+$/.test(ago[1]!) ? Number(ago[1]) : 1) * (AGO[ago[2]!.toLowerCase()] ?? 0) : 0;
     const twitter = line(/Twitter:\s*([^\n]+)/);
     out.push({
       post: Number(id[1]),
@@ -77,7 +91,8 @@ export function parseChannel(html: string): Callout[] {
       calledMcUsd: usd(line(/Called at MC:\s*([^\n]+)/)),
       mcUsd: usd(line(/Market cap:\s*([^\n]+)/)),
       nth: Number(line(/Callout:\s*#(\d+)/)) || null,
-      at: time ? Date.parse(time) : Date.now(),
+      at: postedAt - back,
+      postedAt,
       url: `https://t.me/pumpfun_lp/${id[1]}`,
     });
   }
@@ -93,10 +108,37 @@ export class CalloutFeed {
 
   private fetchFn: typeof fetch;
   private log: (m: string) => void;
+  private file: string | null;
+  private dirty = false;
 
-  constructor(fetchFn: typeof fetch = fetch, log: (m: string) => void = () => {}) {
+  constructor(fetchFn: typeof fetch = fetch, log: (m: string) => void = () => {}, file: string | null = null) {
     this.fetchFn = fetchFn;
     this.log = log;
+    this.file = file;
+    if (file && existsSync(file)) {
+      try {
+        this.add(JSON.parse(readFileSync(file, "utf8")) as Callout[]);
+        this.dirty = false;
+      } catch (e) {
+        log(`callouts: could not read ${file}: ${(e as Error).message}`);
+      }
+    }
+  }
+
+  get size(): number {
+    return this.seen.size;
+  }
+
+  private save(): void {
+    if (!this.file || !this.dirty) return;
+    try {
+      const tmp = `${this.file}.tmp`;
+      writeFileSync(tmp, JSON.stringify([...this.byMint.values()].flat()));
+      renameSync(tmp, this.file);
+      this.dirty = false;
+    } catch (e) {
+      this.log(`callouts: could not save: ${(e as Error).message}`);
+    }
   }
 
   start(): void {
@@ -120,12 +162,17 @@ export class CalloutFeed {
       list.push(c);
       this.byMint.set(c.mint, list);
       this.last = Math.max(this.last, c.post);
+      this.dirty = true;
       added++;
     }
     return added;
   }
 
+  private busy = false;
+
   async poll(): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
     try {
       const page = async (before?: number) => {
         const r = await this.fetchFn(before ? `${CHANNEL}?before=${before}` : CHANNEL, { headers: { "user-agent": "Mozilla/5.0 (ZOOAI X-Ray)" }, signal: AbortSignal.timeout(10_000) });
@@ -134,16 +181,23 @@ export class CalloutFeed {
       const prevLast = this.last;
       let calls = await page();
       this.add(calls);
-      // A busy minute can post more than one page: walk back until we meet what we already had (at most 5 pages).
-      for (let i = 0; i < 5 && prevLast > 0; i++) {
+      // Walk back until we meet what we already had: a busy minute (5 pages), or a cold start (40 pages, one a second).
+      const pages = prevLast > 0 ? 5 : BACKFILL_PAGES;
+      for (let i = 0; i < pages; i++) {
         const oldest = calls[0]?.post;
-        if (oldest === undefined || oldest <= prevLast + 1) break;
+        if (oldest === undefined || (prevLast > 0 && oldest <= prevLast + 1)) break;
+        if (prevLast === 0) await new Promise((r) => setTimeout(r, 1000));
         calls = await page(oldest);
+        // An empty page, or one that did not go further back, ends the walk.
+        if (!calls.length || (calls[0]?.post ?? oldest) >= oldest) break;
         this.add(calls);
       }
       this.prune();
+      this.save();
     } catch (e) {
       this.log(`callouts: ${(e as Error).message}`);
+    } finally {
+      this.busy = false;
     }
   }
 
@@ -151,6 +205,7 @@ export class CalloutFeed {
     const cut = Date.now() - KEEP_MS;
     for (const [mint, list] of this.byMint) {
       const kept = list.filter((c) => c.at >= cut);
+      if (kept.length !== list.length) this.dirty = true;
       if (kept.length) this.byMint.set(mint, kept);
       else this.byMint.delete(mint);
     }
@@ -174,22 +229,36 @@ export interface Thesis {
   likes: number;
   at: number;
   url: string;
+  /** Hype, not a claim: emoji, "send it", cap targets. Counted, not quoted. */
+  hype: boolean;
 }
 
 /**
- * FOMO theses for a coin, through fomoapi.io. A page costs credits, so each coin is read at most once per 15 minutes
- * and the node stops asking after a daily budget; the X-Ray then says the theses are resting, not that there are none.
+ * A thesis that says something: enough letters to carry a claim, not only emoji, cap targets or "send it".
+ * The same rule as the tutor's, so a reader of both sees the same theses quoted.
+ */
+const HYPE = /^(?:[\s\p{Emoji}\p{P}]|easy|send(?:\s+it)?|lfg|gm|wagmi|moon|hold(?:ing)?|tight|ape|bullish|let'?s\s+go|we\s+(?:up|go)|\d+(?:\.\d+)?\s*[kmb]?\s*(?:mc|cap)?|soon|ez|next|millions?|billions?)*$/iu;
+export function meaningful(text: string): boolean {
+  const letters = (text.match(/\p{L}/gu) ?? []).length;
+  return letters >= 15 && !HYPE.test(text.trim());
+}
+
+const TTL = 60 * 60_000;
+
+/**
+ * FOMO theses for a coin, through fomoapi.io (unofficial). A page costs credits, so each coin is read at most once an
+ * hour per sort and the node stops at a daily budget (FOMO_DAILY_CALLS, default 30, inside the free plan). A coin
+ * under two hours old is read newest first, an older one by likes; the two merge by id.
  */
 export class FomoTheses {
-  private cache = new Map<string, { at: number; theses: Thesis[] }>();
+  private cache = new Map<string, { at: number; sorts: Set<"recent" | "likes">; theses: Map<string, Thesis> }>();
   private day = "";
   private spent = 0;
-
   private key: string;
   private dailyBudget: number;
   private fetchFn: typeof fetch;
 
-  constructor(key: string, dailyBudget = 300, fetchFn: typeof fetch = fetch) {
+  constructor(key: string, dailyBudget = 30, fetchFn: typeof fetch = fetch) {
     this.key = key;
     this.dailyBudget = dailyBudget;
     this.fetchFn = fetchFn;
@@ -199,41 +268,52 @@ export class FomoTheses {
     return this.key.length > 0;
   }
 
-  async of(mint: string): Promise<{ theses: Thesis[]; status: "ok" | "off" | "budget" | "error" }> {
+  async of(mint: string, sort: "recent" | "likes" = "likes"): Promise<{ theses: Thesis[]; status: "ok" | "off" | "budget" | "error" }> {
     if (!this.enabled) return { theses: [], status: "off" };
     const hit = this.cache.get(mint);
-    if (hit && Date.now() - hit.at < 15 * 60_000) return { theses: hit.theses, status: "ok" };
+    const fresh = hit && Date.now() - hit.at < TTL ? hit : null;
+    const list = (h: typeof hit) => [...(h?.theses.values() ?? [])].sort((a, b) => b.at - a.at);
+    if (fresh?.sorts.has(sort)) return { theses: list(fresh), status: "ok" };
     const today = new Date().toISOString().slice(0, 10);
     if (today !== this.day) (this.day = today), (this.spent = 0);
-    if (this.spent >= this.dailyBudget) return { theses: hit?.theses ?? [], status: "budget" };
+    if (this.spent >= this.dailyBudget) return { theses: list(hit), status: "budget" };
     this.spent++;
     try {
-      const r = await this.fetchFn(`https://api.fomoapi.io/v2/thesis/token/${mint}?limit=12&sort=likes&network=sol`, {
+      const r = await this.fetchFn(`https://api.fomoapi.io/v2/thesis/token/${mint}?limit=40&pages=1&sort=${sort}&network=sol`, {
         headers: { authorization: `Bearer ${this.key}` },
-        signal: AbortSignal.timeout(8_000),
+        signal: AbortSignal.timeout(10_000),
       });
-      if (!r.ok) return { theses: hit?.theses ?? [], status: "error" };
+      if (!r.ok) return { theses: list(hit), status: "error" };
       const body = (await r.json()) as { theses?: Array<Record<string, unknown>> };
-      const theses: Thesis[] = (body.theses ?? [])
-        .filter((x) => typeof x.text === "string" && (x.text as string).trim())
-        .map((x) => ({
-          id: String(x.id),
-          text: String(x.text).slice(0, 500),
+      const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+      const merged = new Map(fresh?.theses ?? []);
+      for (const x of body.theses ?? []) {
+        if (typeof x.text !== "string" || !x.text.trim()) continue;
+        const text = cleanMentions(String(x.text).trim()).slice(0, 500);
+        const real = num(x.realizedPnlUsd);
+        const unreal = num(x.unrealizedPnlUsd);
+        const t: Thesis = {
+          id: String(x.id ?? `${x.handle}:${x.ts}`),
+          text,
           handle: String(x.handle ?? ""),
           name: String(x.name ?? ""),
           avatar: typeof x.avatar === "string" ? x.avatar : null,
-          tradeUsd: typeof x.tradeUsd === "number" ? x.tradeUsd : null,
-          pnlUsd: typeof x.unrealizedPnlUsd === "number" || typeof x.realizedPnlUsd === "number" ? Number(x.unrealizedPnlUsd ?? 0) + Number(x.realizedPnlUsd ?? 0) : null,
+          tradeUsd: num(x.tradeUsd),
+          pnlUsd: real === null && unreal === null ? null : (real ?? 0) + (unreal ?? 0),
           isDev: x.isDev === true,
-          likes: Number(x.likes ?? 0),
+          likes: num(x.likes) ?? 0,
           at: Date.parse(String(x.ts ?? "")) || 0,
           url: x.handle ? `https://fomo.family/${String(x.handle)}` : "https://fomo.family",
-        }));
-      this.cache.set(mint, { at: Date.now(), theses });
+          hype: !meaningful(text),
+        };
+        merged.set(t.id, t);
+      }
+      const entry = { at: Date.now(), sorts: new Set([...(fresh?.sorts ?? []), sort]), theses: merged };
+      this.cache.set(mint, entry);
       if (this.cache.size > 5000) this.cache.delete(this.cache.keys().next().value!);
-      return { theses, status: "ok" };
+      return { theses: list(entry), status: "ok" };
     } catch {
-      return { theses: hit?.theses ?? [], status: "error" };
+      return { theses: list(hit), status: "error" };
     }
   }
 }

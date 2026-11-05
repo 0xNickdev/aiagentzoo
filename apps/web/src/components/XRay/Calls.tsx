@@ -18,6 +18,10 @@ export interface Callout {
   nth: number | null;
   at: number;
   url: string;
+  /** The caller's wallet in this coin, from the node's tape: first buy time, sold out since, or not seen buying. */
+  walletBoughtAt?: number | null;
+  walletSoldOut?: boolean | null;
+  walletSeen?: boolean;
 }
 export interface Thesis {
   id: string;
@@ -31,6 +35,7 @@ export interface Thesis {
   likes: number;
   at: number;
   url: string;
+  hype?: boolean;
 }
 export interface Calls {
   callouts: Callout[];
@@ -68,14 +73,30 @@ export function insideOf(r: XRayReport, wallet: string | null): { label: string;
   return null;
 }
 
+const span = (ms: number) => {
+  const m = Math.round(Math.abs(ms) / 60_000);
+  return m < 90 ? t("{m} min", { m }) : t("{h} h", { h: (m / 60).toFixed(1) });
+};
+
+/** What the caller's own wallet did around the call: bought before calling it is the thing to know. */
+export function timingOf(c: Callout): { label: string; bad: boolean } | null {
+  if (!c.wallet || !c.walletSeen) return null;
+  if (c.walletBoughtAt == null) return { label: c.walletSoldOut ? t("their wallet bought it and sold out") : t("their wallet holds it"), bad: !!c.walletSoldOut };
+  const d = c.at - c.walletBoughtAt;
+  const sold = c.walletSoldOut ? t(", sold out since") : "";
+  return d > 60_000
+    ? { label: t("their wallet bought {s} before calling it{x}", { s: span(d), x: sold }), bad: true }
+    : { label: t("their wallet bought {s} after calling it{x}", { s: span(Math.max(0, -d)), x: sold }), bad: !!c.walletSoldOut };
+}
+
 /** The line for the overview: how many call it, and how many of them were already inside. */
 export function callsLine(r: XRayReport, c: Calls | null): { text: string; bad: boolean } | null {
   if (!c) return null;
   const n = c.callouts.length + c.theses.length;
   if (!n) return null;
-  const inside = c.callouts.filter((x) => insideOf(r, x.wallet)?.bad).length + c.theses.filter((x) => x.isDev).length;
+  const inside = c.callouts.filter((x) => insideOf(r, x.wallet)?.bad || timingOf(x)?.bad).length + c.theses.filter((x) => x.isDev).length;
   const parts = [c.callouts.length ? t("{n} pump.fun callouts", { n: c.callouts.length }) : "", c.theses.length ? t("{n} FOMO theses", { n: c.theses.length }) : ""].filter(Boolean).join(" · ");
-  return { text: inside ? t("{p} · {n} by wallets already inside", { p: parts, n: inside }) : parts, bad: inside > 0 };
+  return { text: inside ? t("{p} · {n} by wallets already in it", { p: parts, n: inside }) : parts, bad: inside > 0 };
 }
 
 const ago = (ms: number) => {
@@ -85,6 +106,7 @@ const ago = (ms: number) => {
 
 /** "Who's calling it": each call next to what the chain says about the caller. */
 export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | null; market: Market | null }) {
+  const [hypeOpen, setHypeOpen] = useState(false);
   const card = "bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6";
   if (!calls)
     return (
@@ -93,6 +115,11 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
       </div>
     );
   const none = !calls.callouts.length && !calls.theses.length;
+  // The dev's own thesis first, then what the biggest positions wrote; hype is counted, not quoted.
+  const dev = calls.theses.filter((x) => x.isDev);
+  const said = calls.theses.filter((x) => !x.isDev && !x.hype).sort((a, b) => (b.tradeUsd ?? 0) - (a.tradeUsd ?? 0));
+  const hype = calls.theses.filter((x) => !x.isDev && x.hype);
+  const theses = [...dev, ...said, ...(hypeOpen ? hype : [])];
   return (
     <div className="space-y-4">
       <div className={card}>
@@ -113,6 +140,7 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
           <ul className="mt-3 divide-y divide-white/[0.06]">
             {calls.callouts.map((c) => {
               const inside = insideOf(r, c.wallet);
+              const when = timingOf(c);
               const x = c.calledMcUsd && market?.mcapUsd ? market.mcapUsd / c.calledMcUsd : null;
               return (
                 <li key={c.post} className="py-3">
@@ -141,6 +169,7 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
                         {short(c.wallet)}
                       </button>
                     )}
+                    {when && <span className={when.bad ? "text-[#ff8a7e]" : "text-fg-3"}>{when.label}</span>}
                     <span className={inside?.bad ? "text-[#ff8a7e]" : "text-fg-4"}>{inside ? inside.label : t("not in the first seconds or the bundles")}</span>
                   </div>
                 </li>
@@ -154,7 +183,7 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
         <div className={card}>
           <p className="text-[15px] font-semibold text-fg">{t("FOMO theses")}</p>
           <ul className="mt-3 divide-y divide-white/[0.06]">
-            {calls.theses.map((x) => (
+            {theses.map((x) => (
               <li key={x.id} className="py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <a href={x.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[13.5px] text-fg hover:underline">
@@ -172,6 +201,11 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
               </li>
             ))}
           </ul>
+          {hype.length > 0 && (
+            <button type="button" onClick={() => setHypeOpen(!hypeOpen)} className="tabular-nums mt-2 text-[12.5px] text-fg-3 hover:text-white">
+              {hypeOpen ? t("hide the hype") : t("+ {n} hype posts (lfg, send it, cap targets)", { n: hype.length })}
+            </button>
+          )}
         </div>
       )}
       {calls.thesesStatus === "budget" && <p className="px-1 text-[12px] text-fg-4">{t("FOMO theses are resting for today: the daily read budget is used up.")}</p>}
