@@ -84,9 +84,11 @@ export function timingOf(c: Callout): { label: string; bad: boolean } | null {
   if (c.walletBoughtAt == null) return { label: c.walletSoldOut ? t("their wallet bought it and sold out") : t("their wallet holds it"), bad: !!c.walletSoldOut };
   const d = c.at - c.walletBoughtAt;
   const sold = c.walletSoldOut ? t(", sold out since") : "";
-  return d > 60_000
+  // The channel gives the call time to the minute: within a minute either way is "as they called it".
+  if (Math.abs(d) <= 90_000) return { label: t("their wallet bought it as they called it{x}", { x: sold }), bad: !!c.walletSoldOut };
+  return d > 0
     ? { label: t("their wallet bought {s} before calling it{x}", { s: span(d), x: sold }), bad: true }
-    : { label: t("their wallet bought {s} after calling it{x}", { s: span(Math.max(0, -d)), x: sold }), bad: !!c.walletSoldOut };
+    : { label: t("their wallet bought {s} after calling it{x}", { s: span(-d), x: sold }), bad: !!c.walletSoldOut };
 }
 
 /** The line for the overview: how many call it, and how many of them were already inside. */
