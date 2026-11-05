@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { t } from "../i18n";
 import type { XRayReport } from "./XRay";
 
@@ -85,9 +86,13 @@ export function factorsOf(r: XRayReport): Factor[] {
 }
 
 export default function FactorsCard({ r }: { r: XRayReport }) {
+  const [every, setEvery] = useState(false);
   const rows = factorsOf(r);
   if (!rows.length) return null;
   const flags = rows.filter((x) => x.bad).length;
+  // The ones that say something first; the quiet ones wait behind a tap, so twenty numbers do not all shout at once.
+  const loud = rows.filter((x) => x.bad || x.good);
+  const shown = every || loud.length === 0 ? rows : loud;
   return (
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -95,7 +100,7 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
         <span className="tabular-nums text-[12px] text-fg-4">{flags ? t("{n} of {m} look bad", { n: flags, m: rows.length }) : t("none of {m} look bad", { m: rows.length })}</span>
       </div>
       <dl className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-2">
-        {rows.map((x) => (
+        {shown.map((x) => (
           <div key={x.k} className="flex items-baseline justify-between gap-3 bg-night-surface px-4 py-3">
             <div className="min-w-0">
               <dt className="text-[13px] text-fg-2">{x.k}</dt>
@@ -105,6 +110,11 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
           </div>
         ))}
       </dl>
+      {shown.length < rows.length || every ? (
+        <button type="button" onClick={() => setEvery(!every)} className="tabular-nums mt-3 text-[13px] text-fg-3 hover:text-white">
+          {every ? t("show only what stands out") : t("+ {n} more factors, nothing unusual", { n: rows.length - shown.length })}
+        </button>
+      ) : null}
       <p className="mt-4 text-[12px] leading-relaxed text-fg-4">{r.check.odds ? t("Read from the chain for this coin. The odds above say how launches like it went; these are the parts it is made of. Red marks a number we have seen go with rugs.") : t("Read from the chain for this coin. Red marks a number we have seen go with rugs.")}</p>
     </div>
   );

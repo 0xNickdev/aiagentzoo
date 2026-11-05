@@ -4,7 +4,7 @@ import { chainName, chainOf, chart, unitOf, venueOfChain } from "../../chain";
 import { Tags } from "../WalletTags";
 import MoneyMap from "../MoneyMap";
 import FactorsCard from "../Factors";
-import { lang, t, tChain } from "../../i18n";
+import { t } from "../../i18n";
 import Swap from "../Swap";
 import CopyCa from "../CopyCa";
 import XRayRadar, { KIND, kindOf, secs } from "../XRayRadar";
@@ -16,10 +16,12 @@ import { OddsCard, OddsPill } from "./Odds";
 import { Addr, ageOf, HoldStrip, KIND_TAGS, NORTH, openWallet, Outcome, Panel, Stat, TONE, VENUE, venueLabel } from "./shared";
 import { ShareBar } from "./ShareBar";
 import { Dossier } from "./Dossier";
-import { KeyFacts } from "./KeyFacts";
+import { Summary } from "./Summary";
+import { useMarket } from "./Market";
+import { CallsTab, callsLine, useCalls } from "./Calls";
 import { TERMINALS, TradeOnEvm } from "./Trade";
 
-export type Tab = "overview" | "network" | "dev" | "five" | "map" | "bundles" | "holders" | "wallets";
+export type Tab = "overview" | "calls" | "network" | "dev" | "five" | "map" | "bundles" | "holders" | "wallets";
 
 /** A report laid out like a terminal: the verdict and a menu of what decides it on the left, one section at a time on the right. */
 export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) => void }) {
@@ -39,24 +41,24 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
   // ?tab=network opens a tab straight away, so a link can point at the map
   const askedTab = () => {
     const q = new URLSearchParams(window.location.search).get("tab");
-    return (["overview", "network", "dev", "five", "map", "bundles", "holders", "wallets"] as Tab[]).includes(q as Tab) ? (q as Tab) : "overview";
+    return (["overview", "calls", "network", "dev", "five", "map", "bundles", "holders", "wallets"] as Tab[]).includes(q as Tab) ? (q as Tab) : "overview";
   };
   const [tab, setTab] = useState<Tab>(askedTab);
-  const [all, setAll] = useState(false);
+  const market = useMarket(r.mint);
+  const calls = useCalls(r.mint);
+  const callLine = callsLine(r, calls);
   const [sel, setSelState] = useState<string | null>(null);
   // Where the wallet was picked: on the map its dossier opens beside the map, in the list it opens under its row.
   const [from, setFrom] = useState<"map" | "list">("map");
   useEffect(() => {
     setSelState(null);
     setTab(askedTab());
-    setAll(false);
   }, [r.mint]);
   const selected = early.find((e) => e.wallet === sel) ?? null;
   const open = (x: Tab) => {
     setTab(x);
     if (window.innerWidth < 1024) document.getElementById("xr-main")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const go = (id: string) => open(({ "xr-creator": "dev", "xr-five": "five", "xr-funder": "dev", "xr-holders": "holders" } as Record<string, Tab>)[id] ?? "overview");
   const setSel = (w: string | null) => {
     setFrom("list");
     setSelState(w);
@@ -73,6 +75,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
   const old = !!r.outsideStream;
   const MENU: Array<{ id: Tab; k: string; sub: string; bad?: boolean }> = [
     { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : old ? t("only holders read") : t("no red flags") },
+    { id: "calls", k: "Who's calling it", sub: !calls ? t("reading…") : callLine ? callLine.text : t("no calls seen"), bad: callLine?.bad },
     { id: "network", k: "Network", sub: t("who is behind it, on one map") },
     { id: "dev", k: "The dev", sub: old ? (r.devHistory ? t("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches }) : t("before our stream")) : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
     { id: "five", k: "First 5 seconds", sub: old ? t("before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pctFine(took) }) : t("nobody"), bad: fiveBad },
@@ -81,8 +84,6 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
     { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
     ...(early.length ? [{ id: "wallets" as Tab, k: "All wallets", sub: t("{n} in the first 5 s", { n: early.length }) }] : []),
   ];
-  const head = c.reasons[0] ? tChain(c.reasons[0]).replace(/^./, (x) => x.toUpperCase()) : old ? t("Launched before our stream.") : t("No red flags on the chain so far.");
-  const shown = all ? c.reasons : c.reasons.slice(0, 3);
   const Title = ({ k, note }: { k: string; note?: string }) => (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
       <h3 className="font-display text-2xl text-fg">{t(k)}</h3>
@@ -114,7 +115,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
             <i className="h-[7px] w-[7px] rounded-full" style={{ background: tone.color, boxShadow: `0 0 10px ${tone.color}` }} />
             {t(tone.label)}
           </span>
-          {c.odds && <OddsPill o={c.odds} />}
+          {c.odds && <OddsPill o={c.odds} verdict={c.verdict} />}
           <span className="tabular-nums ml-auto hidden items-center gap-2 text-[12px] text-fg-3 md:inline-flex">
             <i className={`h-[7px] w-[7px] rounded-full ${c.stream?.live ? "bg-[#a6e3b4] shadow-[0_0_10px_#a6e3b4]" : "bg-white/30"}`} />
             {c.stream?.live ? t("stream live · read {s} s ago", { s: c.stream.lastEventSecAgo }) : t("stream paused")}
@@ -128,9 +129,11 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
           </div>
         </div>
 
+        <Summary r={r} market={market} calls={calls} open={open} />
+
         <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_300px] [&>*]:min-w-0">
           {/* read: the tabs */}
-          <aside className="flex gap-1 overflow-x-auto border-b border-white/[0.07] px-2.5 py-2 lg:flex-col lg:gap-0.5 lg:border-b-0 lg:border-r lg:px-2.5 lg:py-3.5">
+          <aside className="order-2 flex gap-1 overflow-x-auto border-b border-white/[0.07] px-2.5 py-2 lg:order-none lg:flex-col lg:gap-0.5 lg:border-b-0 lg:border-r lg:px-2.5 lg:py-3.5">
             <p className="hidden px-2.5 pb-2 pt-1.5 text-[11px] uppercase tracking-[0.14em] text-fg-4 lg:block">{t("read")}</p>
             {MENU.map((m) => (
               <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition lg:w-full lg:py-2 ${tab === m.id ? "bg-white/[0.07] text-white" : "hover:bg-white/[0.04]"}`}>
@@ -158,7 +161,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
             </div>
           </aside>
 
-        <div id="xr-main" className="order-2 min-w-0 scroll-mt-24 space-y-4 px-3.5 py-4 sm:px-4 lg:order-none">
+        <div id="xr-main" className="order-3 min-w-0 scroll-mt-24 space-y-4 px-3.5 py-4 sm:px-4 lg:order-none">
           {tiles.length > 0 && (
             <div className="mb-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] md:grid-cols-4">
               {tiles.map((x) => (
@@ -174,35 +177,8 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
             <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
               {tab === "overview" && (
                 <>
-                  {c.odds && <OddsCard o={c.odds} />}
+                  {c.odds && <OddsCard o={c.odds} verdict={c.verdict} />}
                   <FactorsCard r={r} />
-                  <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-[15px] font-semibold text-fg">{c.reasons.length ? t("Why {v}", { v: t(tone.label).toLowerCase() }) : head}</p>
-                      <span className="text-[12px] text-fg-4">{t("read from the chain, not from the chart")}</span>
-                    </div>
-                    {c.reasons.length > 0 && (
-                      <ul className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.08]">
-                        {shown.map((x) => (
-                          <li key={x} className="flex items-start gap-3 py-2.5 text-[14px] font-normal leading-snug text-fg-2">
-                            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color, boxShadow: `0 0 8px ${tone.color}80` }} />
-                            {tChain(x)}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {c.reasons.length > 3 && (
-                      <button type="button" onClick={() => setAll(!all)} className="tabular-nums mt-3 text-[13px] text-fg-3 hover:text-white">
-                        {all ? t("show fewer") : t("+ {n} more reasons", { n: c.reasons.length - 3 })}
-                      </button>
-                    )}
-                    {r.outsideStream ? (
-                      <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{t("Launched {day}, before our stream's window. What happened at launch is not on record, so there is no pass here: only who holds it now and the dev's kept record.", { day: new Date(r.createdAt).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) })}</p>
-                    ) : (
-                      c.notes.length > 0 && <p className="mt-4 text-[12px] font-normal leading-relaxed text-fg-3">{c.notes.map(tChain).join(" · ")}</p>
-                    )}
-                    <KeyFacts r={r} go={go} />
-                  </div>
                 </>
               )}
 
@@ -355,6 +331,8 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
         )
               )}
 
+              {tab === "calls" && <CallsTab r={r} calls={calls} market={market} />}
+
               {tab === "map" && <MoneyMap r={r} />}
 
               {tab === "network" && (
@@ -457,9 +435,11 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
           </div>
 
           {/* trade: the swap, who holds it */}
-          <aside className="order-3 border-t border-white/[0.07] px-4 py-4 lg:order-none lg:border-l lg:border-t-0 [&>*:first-child]:mt-0 [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
+          <aside className="order-1 border-b border-white/[0.07] px-4 py-4 lg:order-none lg:border-b-0 lg:border-l lg:border-t-0 [&>*:first-child]:mt-0 [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
             {bsc ? <TradeOnEvm mint={r.mint} flap={f?.venue === "flap"} /> : <Swap mint={r.mint} symbol={r.symbol} />}
-            <HoldStrip c={c} />
+            <div className="hidden lg:block">
+              <HoldStrip c={c} />
+            </div>
           </aside>
         </div>
 

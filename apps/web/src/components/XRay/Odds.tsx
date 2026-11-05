@@ -1,7 +1,7 @@
 import OddsGauge from "../OddsGauge";
 import { Check, X } from "lucide-react";
 import { t } from "../../i18n";
-import type { Odds } from "./types";
+import type { Odds, Verdict } from "./types";
 
 export const hoursOf = (min: number) => (min < 120 ? t("{m} min", { m: min }) : t("{h} h", { h: Math.round(min / 60) }));
 
@@ -9,14 +9,15 @@ export const pctOdds = (p: number) => (p >= 0.1 ? `${Math.round(p * 100)}%` : p 
 export const timesAvg = (x: number) => (x < 0.1 ? "<0.1×" : `${x}×`);
 
 /** The run odds as a pill: moss when it beats the average launch twice over, plain otherwise. */
-export function OddsPill({ o }: { o: Odds }) {
+export function OddsPill({ o, verdict }: { o: Odds; verdict?: Verdict }) {
   if (o.settled)
     return o.settled.ran ? (
       <span className="tabular-nums inline-flex items-center rounded-full border border-[#a6e3b44d] px-3 py-1 text-[12.5px] text-[#a6e3b4]">{t("ran to {s} SOL cap", { s: o.settled.peakSol })}</span>
     ) : (
       <span className="tabular-nums inline-flex items-center rounded-full border border-white/[0.12] px-3 py-1 text-[12.5px] text-fg-3">{t("has not run in {h}", { h: hoursOf(o.settled.ageMin) })}</span>
     );
-  const good = o.vsAverage >= 2;
+  // Green only beside a clean verdict: next to a warning, a high run chance must not read as a go.
+  const good = o.vsAverage >= 2 && verdict === "pass";
   return (
     <span className="tabular-nums inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px]" title={t("Chance the market cap climbs past 85 SOL after minute five. The average launch: 2.7%.")} style={{ color: good ? "#a6e3b4" : "#d9dddb", borderColor: good ? "#a6e3b44d" : "rgba(255,255,255,0.12)" }}>
       {t("runs {p}", { p: pctOdds(o.run) })} <span className="text-fg-4">· {t("{x} avg", { x: timesAvg(o.vsAverage) })}</span>
@@ -25,8 +26,9 @@ export function OddsPill({ o }: { o: Odds }) {
 }
 
 /** The odds, with what moved them and how they were fitted: what minute five said, then what happened. */
-export function OddsCard({ o }: { o: Odds }) {
-  const runColor = o.settled?.ran || (!o.settled && o.vsAverage >= 2) ? "#a6e3b4" : "#d9dddb";
+export function OddsCard({ o, verdict }: { o: Odds; verdict?: Verdict }) {
+  // What happened is a fact and stays green; a forecast is only green beside a clean verdict.
+  const runColor = o.settled?.ran || (!o.settled && o.vsAverage >= 2 && verdict === "pass") ? "#a6e3b4" : "#d9dddb";
   const devColor = o.devDumps !== null && o.devDumps >= 0.5 ? "#ff8a7e" : "#d9dddb";
   const Outcome = ({ good, text }: { good: boolean; text: string }) => (
     <p className="mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[13px]" style={{ color: good ? "#a6e3b4" : "#ff8a7e", borderColor: good ? "#a6e3b44d" : "#ff8a7e4d", background: good ? "#a6e3b414" : "#ff8a7e14" }}>
@@ -39,7 +41,7 @@ export function OddsCard({ o }: { o: Odds }) {
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[15px] font-semibold text-fg">{t("The odds")}</p>
-        <span className="text-[12px] text-fg-4">{o.at === "5min" ? t("what minute five said, and what happened") : t("early read: under five minutes old")}</span>
+        <span className="text-[12px] text-fg-4">{o.at === "5min" ? t("how launches like this went, not who is behind it") : t("early read: under five minutes old")}</span>
       </div>
       <div className="mt-5 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-2">
         <div className="flex flex-col items-center bg-night-surface px-4 pb-5 pt-4 text-center">

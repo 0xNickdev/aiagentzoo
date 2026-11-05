@@ -113,6 +113,8 @@ export default function XRay() {
     return () => window.removeEventListener("popstate", read);
   }, []);
 
+  const compact = !!report || !!wallet || (busy && !!mintIn(input));
+
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // Read the field itself too: a value set by a script (a password manager, a test agent) never reaches React's state.
@@ -123,9 +125,12 @@ export default function XRay() {
 
   return (
     <>
-      <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
+      <Section className={compact ? "!pb-5 !pt-24 sm:!pt-28" : "!pb-10"} backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
+        {/* A coin or a wallet on screen: the headline steps aside and the search sits right above the report. */}
         <Reveal className="mx-auto max-w-3xl text-center">
           <BackToFeed />
+          {!compact && (
+            <>
           <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme, Flap and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
@@ -135,9 +140,11 @@ export default function XRay() {
           <p className="mx-auto mt-6 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
             {t("The wallets that got in during the first five seconds, and who they are across every launch of the last two days: the creator's own crew, sniper rings, serial snipers. Who paid for the creator. How much of the volume is churn.")}
           </p>
+            </>
+          )}
         </Reveal>
         <Reveal delay={0.15}>
-          <form onSubmit={submit} className="bg-night-surface border border-white/[0.08] mx-auto mt-10 flex max-w-2xl flex-col gap-2 rounded-2xl p-2 sm:flex-row sm:rounded-full">
+          <form onSubmit={submit} className={`bg-night-surface border border-white/[0.08] mx-auto ${compact ? "mt-0" : "mt-10"} flex max-w-2xl flex-col gap-2 rounded-2xl p-2 sm:flex-row sm:rounded-full`}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
