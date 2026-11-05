@@ -125,7 +125,7 @@ export default function XRay() {
 
   return (
     <>
-      <Section className={compact ? "!pb-5 !pt-24 sm:!pt-28" : "!pb-10"} backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
+      <Section className={compact ? "!pb-4 !pt-[76px] sm:!pt-28" : "!pb-10"} backdrop={{ src: "/backdrops/cycle.webp", tint: "160,190,220", glowAt: "50% 35%", opacity: 0.3 }}>
         {/* A coin or a wallet on screen: the headline steps aside and the search sits right above the report. */}
         <Reveal className="mx-auto max-w-3xl text-center">
           <BackToFeed />
