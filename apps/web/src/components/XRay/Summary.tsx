@@ -20,6 +20,20 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
   const took = r.early.reduce((n, e) => n + e.bought, 0);
   const holds = r.early.reduce((n, e) => n + e.held, 0);
   const line = callsLine(r, calls);
+  // The dev's record says what they usually do; this says what they have done on this coin so far, right beside it.
+  const devNow = (() => {
+    if (!f || r.outsideStream) return null;
+    const age = f.ageMin < 60 ? t("{m} min in", { m: f.ageMin }) : f.ageMin < 48 * 60 ? t("{h} h in", { h: Math.round(f.ageMin / 60) }) : t("{d} d in", { d: Math.round(f.ageMin / 1440) });
+    const sold = f.creatorSoldPct;
+    const holds = c.holders?.creatorHoldsPct;
+    const held = holds !== null && holds !== undefined ? t("holds {p}%", { p: holds }) : null;
+    if (sold === null || sold === undefined) return t("On this one: {a}, the dev never bought.", { a: age });
+    if (sold >= 99) return t("On this one: {a}, already sold their whole bag.", { a: age });
+    if (sold >= 50) return t("On this one: {a}, already sold {p}% of their bag{h}.", { a: age, p: sold, h: held ? `, ${held}` : "" });
+    if (sold > 0) return t("On this one: {a}, sold {p}% so far{h}.", { a: age, p: sold, h: held ? `, ${held}` : "" });
+    return t("On this one: {a}, has not sold{h}.", { a: age, h: held ? `, ${held}` : "" });
+  })();
+  const isDevRecord = (x: string) => /dumped \d+ of their \d+ launches/.test(x);
 
   const inside: Array<{ k: string; v: string; tab: Tab; bad: boolean }> = [];
   if (r.early.length) inside.push({ k: t("first 5 seconds"), v: t("{n} wallets took {p}, hold {h}", { n: r.early.length, p: pctFine(took), h: pctFine(holds) }), tab: "five", bad: took >= 0.25 && holds >= 0.1 });
@@ -47,7 +61,10 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
           {reasons.map((x) => (
             <li key={x} className="flex items-start gap-2.5 text-[14.5px] leading-snug text-fg">
               <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.color, boxShadow: `0 0 8px ${tone.color}80` }} />
-              <span className="[&::first-letter]:uppercase">{tChain(x)}</span>
+              <span className="[&::first-letter]:uppercase">
+                {tChain(x)}
+                {isDevRecord(x) && devNow && <span className="text-fg-3">{". "}{devNow}</span>}
+              </span>
             </li>
           ))}
         </ul>
