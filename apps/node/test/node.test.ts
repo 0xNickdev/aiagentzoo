@@ -1315,6 +1315,19 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   // Paired with another token, the curve is not in SOL: no dead-curve call.
   assert.equal(checkToken("M", { symbol: "Q", facts: facts({ ageMin: 600, curveSol: null, quote: "Q1" }), creatorRecord: rec() }).verdict, "pass");
 
+  // A coin that left the curve in seconds: four curve buyers say nothing about the market in its pool.
+  const fast = checkToken("M", { symbol: "G", facts: facts({ ageMin: 2800, buyers: 4, buys: 5, sells: 0, top5Share: 1, graduated: true, poolSol: 400, ammBuys: 4900, ammSells: 3700 }), creatorRecord: rec() });
+  assert.equal(fast.verdict, "pass");
+  assert.equal(fast.facts!.buys, 4905);
+  assert.equal(fast.facts!.sells, 3700);
+  // Still on the curve, the same numbers are the whole story.
+  assert.match(checkToken("M", { symbol: "C", facts: facts({ buyers: 4, top5Share: 1 }), creatorRecord: rec() }).reasons.join(" "), /only 4 wallets[\s\S]*|top 5 buyers/);
+  // Bundlers under the line do not flag, but a pass does not pretend they are not there.
+  const under = checkToken("M", { symbol: "B", facts: facts({ bundlers: 40, bundlersPeak: 0.25, bundlersHeld: 0.04 }), creatorRecord: rec() });
+  assert.equal(under.verdict, "pass");
+  assert.match(under.notes.join(" "), /40 wallets bought it in bundles and held up to 25%.*they still hold 4%/);
+  assert.match(under.notes.join(" "), /large bundle/);
+
   // Minutes in, a sniper hears pass with a note, unless the creator's own record already speaks.
   const fresh = checkToken("M", { symbol: "F", facts: facts({ ageMin: 2, buyers: 3, top5Share: 1 }), creatorRecord: rec() });
   assert.equal(fresh.verdict, "pass");
@@ -2088,4 +2101,11 @@ test("the trail names where a dev's SOL ended up, three hops deep, and stays qui
   const msg = trailMessage("SILK", t);
   assert.match(msg, /Kev, a KOL on Kolscan/);
   assert.match(msg, /not who owns the wallets/);
+});
+
+test("a check read from the kept record says where the record stops", async () => {
+  const { recordNote } = await import("../src/routes/check.ts");
+  const launch = Date.UTC(2026, 9, 29, 10);
+  assert.match(recordNote(launch + 3 * 3_600_000, launch), /our record of 29 Oct, 3 h after launch/);
+  assert.match(recordNote(launch + 96 * 3_600_000, launch), /our record of 2 Nov, 4 days after launch/);
 });

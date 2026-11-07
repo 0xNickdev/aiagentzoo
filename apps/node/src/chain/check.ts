@@ -75,8 +75,11 @@ export interface TokenCheck {
   facts: {
     ageMin: number;
     buyers: number;
+    /** Curve and pool together; `buyers` is the curve's only. */
     buys: number;
     sells: number;
+    poolBuys?: number;
+    poolSells?: number;
     creatorSoldPct: number | null;
     creatorLaunches24h: number;
     creatorDumped48h: number | null;
@@ -283,6 +286,8 @@ export function checkToken(
     const said = `${f.bundlers} wallets bought it in bundles (four or more in one block) and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they still hold ${pct(f.bundlersHeld ?? 0)}%`;
     if ((f.bundlersHeld ?? 0) >= 0.4) flag(avoid, said, WEIGHT.bundlersAvoid);
     else flag(caution, said, WEIGHT.bundlersCaution);
+  } else if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) > 0 && !f.mayhem) {
+    notes.push(`${f.bundlers} wallets bought it in bundles and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together, under the 30% we flag; they still hold ${pct(f.bundlersHeld ?? 0)}%`);
   }
 
   // The account the token advertises, reused on other launches whose devs sold within minutes: the same hands.
@@ -323,9 +328,11 @@ export function checkToken(
     // Minutes in, a handful of buyers is normal; only the creator's own record can speak yet.
     // Said once the verdict is known: "no red flags yet" next to an avoid would contradict it.
   } else {
-    if (f.top5Share !== null && f.top5Share > 0.5) flag(caution, `the top 5 buyers took ${pct(f.top5Share)}% of all buying`, WEIGHT.top5);
+    // Buyers are counted on the curve. A coin that left it in seconds has a handful there and its whole market in the pool.
+    const inPool = f.graduated && (f.ammBuys >= 10 || (f.poolSol ?? 0) >= 20);
+    if (!inPool && f.top5Share !== null && f.top5Share > 0.5) flag(caution, `the top 5 buyers took ${pct(f.top5Share)}% of all buying`, WEIGHT.top5);
     if (f.buyers === 0) flag(caution, "nobody has bought it", WEIGHT.noBuyers);
-    else if (f.buyers < 10) flag(caution, f.buyers === 1 ? "only 1 wallet has bought it" : `only ${f.buyers} wallets have bought it`, WEIGHT.fewBuyers);
+    else if (!inPool && f.buyers < 10) flag(caution, f.buyers === 1 ? "only 1 wallet has bought it" : `only ${f.buyers} wallets have bought it`, WEIGHT.fewBuyers);
     if (f.sells > f.buys * 2 && f.sells >= 10) flag(caution, `sells outnumber buys ${f.sells} to ${f.buys}`, WEIGHT.sellsOutnumber);
     if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem) flag(caution, `at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`, WEIGHT.wash);
     if (f.bumps !== undefined && f.bumps >= 3 && !f.mayhem) flag(caution, `a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`, WEIGHT.bumps);
@@ -391,7 +398,7 @@ export function checkToken(
     const when = age < 1 ? "just launched" : `only ${age} min old`;
     notes.unshift(verdict === "pass" ? `${when}: no red flags yet, so check again before adding` : `${when}: more can show up, check again before adding`);
   }
-  if (verdict === "pass") notes.push("pass means no creator dump, bundle, creator's crew, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
+  if (verdict === "pass") notes.push("pass means no creator dump, large bundle, creator's crew, sniper hold, serial launcher or dead curve was seen on chain; it is not a call that the price goes up");
   if (!stream.live) notes.push("the chain stream is down right now: this answer may be stale");
   return {
     ...base,
@@ -406,8 +413,10 @@ export function checkToken(
     facts: {
       ageMin: Math.round(f.ageMin),
       buyers: f.buyers,
-      buys: f.buys,
-      sells: f.sells,
+      buys: f.buys + (f.ammBuys ?? 0),
+      sells: f.sells + (f.ammSells ?? 0),
+      poolBuys: f.ammBuys ?? 0,
+      poolSells: f.ammSells ?? 0,
       creatorSoldPct: pct(f.creatorSold === null ? null : Math.min(1, f.creatorSold)),
       creatorLaunches24h: f.creatorLaunches24h,
       creatorDumped48h: c ? c.dumped : null,

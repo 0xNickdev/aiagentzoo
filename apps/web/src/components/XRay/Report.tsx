@@ -91,7 +91,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
     </div>
   );
   const tiles = f && !old ? [
-    { k: t("buyers"), v: String(f.buyers), d: t("{b} buys · {s} sells", { b: f.buys, s: f.sells }), tone: "" },
+    { k: (f.poolBuys ?? 0) > 0 ? t("buyers on the curve") : t("buyers"), v: String(f.buyers), d: t("{b} buys · {s} sells", { b: f.buys.toLocaleString("en-US"), s: f.sells.toLocaleString("en-US") }), tone: "" },
     { k: t("dev sold"), v: f.creatorSoldPct === null || f.creatorSoldPct === undefined ? "-" : `${f.creatorSoldPct}%`, d: t("of their own bag"), tone: (f.creatorSoldPct ?? 0) >= 50 ? "bad" : (f.creatorSoldPct ?? 0) === 0 && f.buyers >= 10 ? "ok" : "" },
     { k: t("bundlers hold"), v: `${f.bundlersHeldPct ?? 0}%`, d: t("peak {p}% · {n} wallets", { p: f.bundlersPeakPct ?? 0, n: f.bundlers ?? 0 }), tone: bundleBad && (f.bundlers ?? 0) >= 10 ? "bad" : "" },
     { k: t("churn"), v: `${f.churnPct ?? 0}%`, d: t("sold back what they bought"), tone: (f.churnPct ?? 0) >= 30 ? "bad" : "" },

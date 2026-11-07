@@ -58,6 +58,7 @@ export interface Check {
   facts: {
     ageMin: number;
     buyers: number;
+    poolBuys?: number;
     buys: number;
     sells: number;
     creatorSoldPct: number | null;

@@ -20,6 +20,14 @@ import { ROUTE, norm, fromPeer, clientIp, readJson, json } from "./http.ts";
 import type { RouteContext } from "./context.ts";
 
 /** The pre-trade check and the X-Ray, its track record and holder keys. */
+/** A kept record stops where the record stops: a green on it says nothing about what came after. */
+export function recordNote(recordedAt: number, createdAt: number): string {
+  const day = new Date(recordedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  const h = Math.max(0, (recordedAt - createdAt) / 3_600_000);
+  const after = h < 48 ? `${Math.max(1, Math.round(h))} h` : `${Math.round(h / 24)} days`;
+  return `trades here stop at our record of ${day}, ${after} after launch: anything later is not in this check`;
+}
+
 export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
   const { enclosure, history, x402, checkGate, holderGate, deepGate, holderDeepGate, keyGate, holding, preferHistory, kept, chainFor, tapeOf, shills, withCabal, usage, cache } = ctx;
   // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
@@ -141,6 +149,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     }
     res.setHeader("cache-control", "no-store");
     const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
+    if (past) check.notes.unshift(recordNote(past.recordedAt, past.createdAt));
     const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : base ? (baseSocials.image(mint) ?? clanker.image(mint)) : socials.image(mint);
     if (!image) bsc ? void (bscTape.venueOf(mint) === "flap" ? recordFlap(mint) : recordFourMeme(mint)) : base ? void recordClankerFromApi(mint) : socials.want(mint);
     // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
