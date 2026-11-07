@@ -8,6 +8,11 @@
  *   these odds ran 19.6% of the time.
  * - devDumps: a dev who has not dumped by minute five sells half the bag later. AUC 0.95.
  *
+ * Checked forward on 2026-11-07, these same coefficients on 32,849 launches they never saw: run AUC 0.883, calibration
+ * slope 0.98, top tenth ran 14.5%. Most of that is telling dead launches from live ones: among launches still trading
+ * after minute five, run AUC 0.69, slope 0.57. devDumps' 0.95 counts devs already gone by minute five; among devs who
+ * had not dumped, the case it is shown for, it is 0.82. scripts/calibrate/audit.py repeats this.
+ *
  * They are odds, not advice: a 20% run still dies four times out of five. Refit by scripts/calibrate when the market
  * moves; the date below says which fit this is.
  */

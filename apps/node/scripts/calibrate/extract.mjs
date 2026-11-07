@@ -13,7 +13,7 @@ const toks = tape.tokens.filter((t) => !t.quote && !t.venue);
 const byCreator = new Map();
 for (const t of toks) (byCreator.get(t.creator) ?? byCreator.set(t.creator, []).get(t.creator)).push(t);
 const rows = [];
-const H = ["mint","ageH","hour","mayhem","still5","dumped5","devSold5","priorLaunches","priorDumped","priorGrad","priorAlive","serial","launchN","launchShare","devShare","buyers1m","buyers5","earlyHeld","earlyWallets","washShare","bumps","creatorCrew","ringWallets","hasX","hasTg","hasWeb","nSocial","funderEx","funderDevs","funderKnown","capFirst","alive","grad","peak","peakAfter5","dumpedLater","dead"];
+const H = ["curve5","trades5","mint","ageH","hour","mayhem","still5","dumped5","devSold5","priorLaunches","priorDumped","priorGrad","priorAlive","serial","launchN","launchShare","devShare","buyers1m","buyers5","earlyHeld","earlyWallets","washShare","bumps","creatorCrew","ringWallets","hasX","hasTg","hasWeb","nSocial","funderEx","funderDevs","funderKnown","capFirst","alive","grad","peak","peakAfter5","dumpedLater","dead"];
 for (const t of toks) {
   const age = snapAt - t.createdAt;
   if (age < 24 * 3600e3) continue;
@@ -35,7 +35,7 @@ for (const t of toks) {
   if (t.graduated) { if (t.poolSol !== null) { alive = t.poolSol >= 4 ? 1 : 0; dead = t.poolSol < 0.4 ? 1 : 0; } }
   else { const real = t.curveSol ?? (t.buys === 0 ? 0 : null); if (real !== null) { const c = capOf(real); alive = c >= 85 ? 1 : 0; dead = c < 32 ? 1 : 0; } }
   const a5 = t.at5 && t.at5.at !== undefined && t.at5.at - t.createdAt < 10 * 60e3 ? t.at5 : null;
-  rows.push([t.mint, (age / 3600e3).toFixed(1), new Date(t.createdAt).getUTCHours(), t.mayhem ? 1 : 0, a5 ? 1 : 0,
+  rows.push([a5?.curve ?? "", a5?.trades ?? "", t.mint, (age / 3600e3).toFixed(1), new Date(t.createdAt).getUTCHours(), t.mayhem ? 1 : 0, a5 ? 1 : 0,
     t.dumped && t.dumpedAt !== null && t.dumpedAt <= at ? 1 : 0, t.devFirstSellAt !== undefined && t.devFirstSellAt <= at ? 1 : 0,
     prior.length, pd, pg, pa, pd >= 3 && pd / (prior.length + 1) >= 0.5 ? 1 : 0, lb.length, lshare.toFixed(4), ((t.devBought ?? 0) / supply).toFixed(4), b1, b5,
     a5?.earlyHeld ?? "", a5?.earlyWallets ?? "", a5?.washShare ?? "", a5?.bumps ?? "", a5?.creatorCrew ?? "", a5?.ringWallets ?? "",

@@ -224,7 +224,7 @@ interface Tracked {
   /** The last curve trade, to spot a buy and a sell in one transaction. Not saved. */
   last?: { tx: string; user: string; isBuy: boolean };
   /** The early and churn numbers as they stood five minutes in, for the check's own record. */
-  at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number; at?: number };
+  at5?: { earlyHeld: number; earlyWallets: number; washShare: number; bumps: number; creatorCrew?: number; ringWallets?: number; at?: number; curve?: number | null; trades?: number };
   /** Crew and ring counts, worked out at most once a minute. Not saved. */
   crew?: { at: number; counts: Crew; members: CrewMembers };
   /**
@@ -573,7 +573,7 @@ export class PumpTape {
     // launched before the tape knew these numbers) has no five-minute reading, and the record leaves it out.
     if (!t.at5 && ev.ts - t.createdAt >= 5 * 60_000 && ev.ts - t.createdAt < AT5_LATEST) {
       const { creatorCrew, ringWallets } = this.crewOf(t, now);
-      t.at5 = { ...this.early(t), creatorCrew, ringWallets, at: ev.ts };
+      t.at5 = { ...this.early(t), creatorCrew, ringWallets, at: ev.ts, curve: t.curveSol, trades: t.buys + t.sells };
     }
     // A buy and a sell by one wallet in one transaction is a bump bot, not a trader.
     if (tx) {

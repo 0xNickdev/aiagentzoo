@@ -10,3 +10,8 @@ features as they stood five minutes in.
    AUC, a calibration table by tenths, and the coefficients and means to paste into `odds.ts`.
 
 `peakAfter5` is the run target, `dumpedLater` the dev-dumps target. Bump `ODDS_FIT` when the coefficients change.
+
+`python3 audit.py <folder>/features.csv` runs the shipped coefficients on a fresh tape: forward AUC, calibration slope,
+the same among launches still trading after minute five and devs who had not dumped, and baselines from the curve at
+minute five. Keep launches from before a fit out of it, and do not use a buyer's total SOL as a minute-five reading:
+it includes their later buys.
