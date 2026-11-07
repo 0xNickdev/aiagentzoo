@@ -75,3 +75,17 @@ test("calls survive a restart: saved after a poll, read back by the next feed", 
   const b = new CalloutFeed(fake, () => {}, file);
   assert.equal(b.of("84sWQfNG5jBghw76FYdE5MpmtRPNEwZrxBZQ3KhQpump")[0]?.text, "fresh call");
 });
+
+test("FOMO moves to the next key when one is refused, and keeps it", async () => {
+  const used: string[] = [];
+  const fake = (async (_u: string, o: { headers: { authorization: string } }) => {
+    used.push(o.headers.authorization);
+    return o.headers.authorization.endsWith("a") ? new Response("{}", { status: 402 }) : new Response(JSON.stringify({ theses: [] }));
+  }) as unknown as typeof fetch;
+  const f = new FomoTheses("a, b", 10, fake);
+  assert.equal((await f.of("m1")).status, "ok");
+  assert.equal((await f.of("m2")).status, "ok");
+  assert.deepEqual(used, ["Bearer a", "Bearer b", "Bearer b"]);
+  const dead = new FomoTheses("a", 10, fake);
+  assert.equal((await dead.of("m1")).status, "error");
+});

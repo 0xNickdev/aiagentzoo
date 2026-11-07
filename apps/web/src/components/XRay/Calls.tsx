@@ -21,6 +21,7 @@ export interface Callout {
   /** The caller's wallet in this coin, from the node's tape: first buy time, sold out since, or not seen buying. */
   walletBoughtAt?: number | null;
   walletSoldOut?: boolean | null;
+  walletExitAt?: number | null;
   walletSeen?: boolean;
 }
 export interface Thesis {
@@ -83,8 +84,9 @@ export function timingOf(c: Callout): { label: string; bad: boolean } | null {
   if (!c.wallet || !c.walletSeen) return null;
   if (c.walletBoughtAt == null) return { label: c.walletSoldOut ? t("their wallet bought it and sold out") : t("their wallet holds it"), bad: !!c.walletSoldOut };
   const d = c.at - c.walletBoughtAt;
-  const sold = c.walletSoldOut ? t(", sold out since") : "";
   // The channel gives the call time to the minute: within a minute either way is "as they called it".
+  const outFirst = c.walletExitAt != null && c.at - c.walletExitAt > 90_000;
+  const sold = outFirst ? t(", sold out {s} before calling it", { s: span(c.at - c.walletExitAt!) }) : c.walletSoldOut ? t(", sold out since") : "";
   if (Math.abs(d) <= 90_000) return { label: t("their wallet bought it as they called it{x}", { x: sold }), bad: !!c.walletSoldOut };
   return d > 0
     ? { label: t("their wallet bought {s} before calling it{x}", { s: span(d), x: sold }), bad: true }

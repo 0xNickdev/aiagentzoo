@@ -725,10 +725,10 @@ export class PumpTape {
 
   /** The first buyers still holding, biggest position first, from the trades the tape saw: candidates for a holders read. */
   /** One wallet in one coin: when it first bought, and whether it has sold out since. Null when the tape has no record of it. */
-  buyerOf(mint: string, wallet: string): { at: number | null; soldOut: boolean } | null {
+  buyerOf(mint: string, wallet: string): { at: number | null; soldOut: boolean; exitAt: number | null } | null {
     const b = this.tokens.get(mint)?.buyers.get(wallet);
     if (!b) return null;
-    return { at: b.at ?? null, soldOut: b.exitAt !== undefined };
+    return { at: b.at ?? null, soldOut: b.exitAt !== undefined, exitAt: b.exitAt ?? null };
   }
 
   positionsOf(mint: string, limit = 40): string[] {

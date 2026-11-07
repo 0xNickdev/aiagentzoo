@@ -34,7 +34,7 @@ export async function callRoutes(_ctx: RouteContext, req: IncomingMessage, res: 
   // Each caller's wallet against the tape: did it buy this coin, when, and has it sold out since.
   const callouts = (s.feed?.of(mint) ?? []).map((c) => {
     const b = c.wallet ? tape.buyerOf(mint, c.wallet) : null;
-    return { ...c, walletBoughtAt: b?.at ?? null, walletSoldOut: b ? b.soldOut : null, walletSeen: !!b };
+    return { ...c, walletBoughtAt: b?.at ?? null, walletSoldOut: b ? b.soldOut : null, walletExitAt: b?.exitAt ?? null, walletSeen: !!b };
   });
   return json(res, 200, {
     mint,

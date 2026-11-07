@@ -244,28 +244,32 @@ export function meaningful(text: string): boolean {
 }
 
 const TTL = 60 * 60_000;
+/** What the API answers when a key can no longer read: bad key, out of credits, or held back. */
+const REFUSED = new Set([401, 402, 403, 429]);
 
 /**
  * FOMO theses for a coin, through fomoapi.io (unofficial). A page costs credits, so each coin is read at most once an
  * hour per sort and the node stops at a daily budget (FOMO_DAILY_CALLS, default 30, inside the free plan). A coin
- * under two hours old is read newest first, an older one by likes; the two merge by id.
+ * under two hours old is read newest first, an older one by likes; the two merge by id. FOMO_API_KEY can list several
+ * keys, comma separated: when the API refuses one (credits gone), the next takes over.
  */
 export class FomoTheses {
   private cache = new Map<string, { at: number; sorts: Set<"recent" | "likes">; theses: Map<string, Thesis> }>();
   private day = "";
   private spent = 0;
-  private key: string;
+  private keys: string[];
+  private active = 0;
   private dailyBudget: number;
   private fetchFn: typeof fetch;
 
   constructor(key: string, dailyBudget = 30, fetchFn: typeof fetch = fetch) {
-    this.key = key;
+    this.keys = key.split(",").map((k) => k.trim()).filter(Boolean);
     this.dailyBudget = dailyBudget;
     this.fetchFn = fetchFn;
   }
 
   get enabled(): boolean {
-    return this.key.length > 0;
+    return this.keys.length > 0;
   }
 
   async of(mint: string, sort: "recent" | "likes" = "likes"): Promise<{ theses: Thesis[]; status: "ok" | "off" | "budget" | "error" }> {
@@ -279,10 +283,16 @@ export class FomoTheses {
     if (this.spent >= this.dailyBudget) return { theses: list(hit), status: "budget" };
     this.spent++;
     try {
-      const r = await this.fetchFn(`https://api.fomoapi.io/v2/thesis/token/${mint}?limit=40&pages=1&sort=${sort}&network=sol`, {
-        headers: { authorization: `Bearer ${this.key}` },
-        signal: AbortSignal.timeout(10_000),
-      });
+      const read = () =>
+        this.fetchFn(`https://api.fomoapi.io/v2/thesis/token/${mint}?limit=40&pages=1&sort=${sort}&network=sol`, {
+          headers: { authorization: `Bearer ${this.keys[this.active]}` },
+          signal: AbortSignal.timeout(10_000),
+        });
+      let r = await read();
+      while (REFUSED.has(r.status) && this.active < this.keys.length - 1) {
+        this.active++;
+        r = await read();
+      }
       if (!r.ok) return { theses: list(hit), status: "error" };
       const body = (await r.json()) as { theses?: Array<Record<string, unknown>> };
       const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
