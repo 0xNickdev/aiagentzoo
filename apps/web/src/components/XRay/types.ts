@@ -87,6 +87,7 @@ export interface Check {
     ringWallets: number | null;
     serialSnipers: number | null;
   } | null;
+  rights?: { program: "token" | "token-2022"; mintAuthority: string | null; freezeAuthority: string | null; permanentDelegate?: string; transferHook?: string; transferFeeBps?: number; defaultFrozen?: boolean; nonTransferable?: boolean; pauseAuthority?: string };
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
 }
 

@@ -1,3 +1,4 @@
+import { RightsStats } from "./Rights";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { chainName, chainOf, chart, unitOf, venueOfChain } from "../../chain";
@@ -373,6 +374,13 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
                 </>
               )}
             </Panel>
+                  {c.rights && (
+                    <div className="mt-4">
+                      <Panel title="Token rights" note={c.rights.program === "token-2022" ? "Token-2022 · read from the mint" : "read from the mint"}>
+                        <RightsStats r={c.rights} />
+                      </Panel>
+                    </div>
+                  )}
                 </div>
               )}
 

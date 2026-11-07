@@ -14,6 +14,50 @@ const SYSTEM = "11111111111111111111111111111111";
 /** Lockers that hold tokens until a date: Streamflow, Jupiter Lock, Raydium's LP locker. */
 const LOCKERS = new Set(["strmRqUCoQUgGUan5YhzUZa6KqdzwX5L6FpUxfmKg5m", "LocpQgucEQHbqNABEYvBvwoxCPsSbG91A1QaQhQQqjn", "LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE"]);
 
+/** What the token's own account lets someone do to holders, read from the mint. */
+export interface TokenRights {
+  program: "token" | "token-2022";
+  /** Can mint more. Null: revoked. */
+  mintAuthority: string | null;
+  /** Can freeze any holder's tokens. Null: revoked. */
+  freezeAuthority: string | null;
+  /** Can move or burn anyone's tokens. */
+  permanentDelegate?: string;
+  /** A program that runs on every transfer. */
+  transferHook?: string;
+  /** Taken on every transfer, in basis points. */
+  transferFeeBps?: number;
+  /** New token accounts start frozen. */
+  defaultFrozen?: boolean;
+  nonTransferable?: boolean;
+  /** Can pause all transfers. */
+  pauseAuthority?: string;
+}
+
+type MintExtension = { extension?: string; state?: Record<string, unknown> };
+const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+
+/** The rights in a jsonParsed mint account; null when it is not a mint. */
+export function rightsOf(account: { owner?: string; data?: { parsed?: { type?: string; info?: Record<string, unknown> } } } | null | undefined): TokenRights | null {
+  const info = account?.data?.parsed?.info;
+  if (!info || account?.data?.parsed?.type !== "mint") return null;
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const out: TokenRights = { program: account?.owner === TOKEN_2022 ? "token-2022" : "token", mintAuthority: str(info.mintAuthority), freezeAuthority: str(info.freezeAuthority) };
+  for (const e of (info.extensions as MintExtension[] | undefined) ?? []) {
+    const st = e.state ?? {};
+    if (e.extension === "permanentDelegate" && str(st.delegate)) out.permanentDelegate = str(st.delegate)!;
+    if (e.extension === "transferHook" && str(st.programId)) out.transferHook = str(st.programId)!;
+    if (e.extension === "transferFeeConfig") {
+      const bps = Number((st.newerTransferFee as { transferFeeBasisPoints?: unknown } | undefined)?.transferFeeBasisPoints ?? 0);
+      if (bps > 0) out.transferFeeBps = bps;
+    }
+    if (e.extension === "defaultAccountState" && st.accountState === "frozen") out.defaultFrozen = true;
+    if (e.extension === "nonTransferable") out.nonTransferable = true;
+    if (e.extension === "pausableConfig" && str(st.authority)) out.pauseAuthority = str(st.authority)!;
+  }
+  return out;
+}
+
 export interface HolderReport {
   /** Share of supply in the ten largest wallets, pools and program accounts left out, 0..1. */
   top10Share: number;
@@ -27,6 +71,8 @@ export interface HolderReport {
   creatorLockedShare?: number;
   /** The supply left now, in whole tokens: what was minted, less what was burned. */
   supply?: number;
+  /** Who can mint, freeze or move tokens; left out when the mint could not be read. */
+  rights?: TokenRights;
   /** The pump.fun creator, when pump.fun says. */
   creator: string | null;
   /** Share of supply the creator still holds; null when the creator is unknown. */
@@ -95,7 +141,7 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
   const hit = cache.get(mint);
   if (hit && now - hit.at < CACHE_MS) return hit.report;
 
-  const [supply, largest, coin] = await Promise.all([
+  const [supply, largest, coin, mintAccount] = await Promise.all([
     rpc<{ value: { uiAmount: number | null } }>("getTokenSupply", [mint], f),
     rpc<{ value: Array<{ address: string; uiAmount: number | null }> }>("getTokenLargestAccounts", [mint], f),
     knownCreator
@@ -103,7 +149,9 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
       : f(`${PUMP_API}/coins/${mint}`, { signal: AbortSignal.timeout(6_000) })
           .then((r) => (r.ok ? (r.json() as Promise<{ creator?: string }>) : null))
           .catch(() => null),
+    rpc<{ value: Parameters<typeof rightsOf>[0] }>("getAccountInfo", [mint, { encoding: "jsonParsed" }], f),
   ]);
+  const rights = rightsOf(mintAccount?.value);
   const total = supply?.value.uiAmount ?? 0;
   const accounts = largest?.value ?? [];
   if (!total || !accounts.length) {
@@ -165,6 +213,7 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
     lockedShare: round(lockedAmount / total),
     ...(creator ? { creatorLockedShare: round(creatorLocked / total) } : {}),
     supply: total,
+    ...(rights ? { rights } : {}),
     creator,
     creatorShare: creatorShare === null ? null : round(creatorShare),
   };

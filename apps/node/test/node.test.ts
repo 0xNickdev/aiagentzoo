@@ -2109,3 +2109,28 @@ test("a check read from the kept record says where the record stops", async () =
   assert.match(recordNote(launch + 3 * 3_600_000, launch), /our record of 29 Oct, 3 h after launch/);
   assert.match(recordNote(launch + 96 * 3_600_000, launch), /our record of 2 Nov, 4 days after launch/);
 });
+
+test("the mint says who can still touch holders' tokens", async () => {
+  const { rightsOf } = await import("../src/chain/holders.ts");
+  const mint = (info: Record<string, unknown>, owner = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") => ({ owner, data: { parsed: { type: "mint", info } } });
+  assert.deepEqual(rightsOf(mint({ mintAuthority: null, freezeAuthority: null })), { program: "token", mintAuthority: null, freezeAuthority: null });
+  const hard = rightsOf(mint({
+    mintAuthority: "M", freezeAuthority: "F",
+    extensions: [
+      { extension: "metadataPointer", state: {} },
+      { extension: "permanentDelegate", state: { delegate: "D" } },
+      { extension: "transferHook", state: { authority: "A", programId: "H" } },
+      { extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 250 } } },
+      { extension: "defaultAccountState", state: { accountState: "frozen" } },
+      { extension: "nonTransferable" },
+      { extension: "pausableConfig", state: { authority: "P", paused: false } },
+    ],
+  }, "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"));
+  assert.deepEqual(hard, { program: "token-2022", mintAuthority: "M", freezeAuthority: "F", permanentDelegate: "D", transferHook: "H", transferFeeBps: 250, defaultFrozen: true, nonTransferable: true, pauseAuthority: "P" });
+  // An unset hook or a zero fee is not a right anyone holds.
+  const quiet = rightsOf(mint({ mintAuthority: null, freezeAuthority: null, extensions: [{ extension: "transferHook", state: { programId: null } }, { extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 0 } } }] }));
+  assert.equal(quiet!.transferHook, undefined);
+  assert.equal(quiet!.transferFeeBps, undefined);
+  assert.equal(rightsOf(null), null);
+  assert.equal(rightsOf({ data: { parsed: { type: "account", info: {} } } }), null);
+});

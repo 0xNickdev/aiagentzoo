@@ -2,7 +2,7 @@ import type { Odds } from "./odds.ts";
 import { printWarning, type PrintRecord } from "./fingerprint.ts";
 import { operatorWarning, type OperatorRecord } from "./operators.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
-import type { HolderReport } from "./holders.ts";
+import type { HolderReport, TokenRights } from "./holders.ts";
 import type { LineageView } from "./lineage.ts";
 import { deployerOf } from "./exchanges.ts";
 import type { AccountRecord } from "./socials.ts";
@@ -124,6 +124,8 @@ export interface TokenCheck {
   } | null;
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
+  /** Only with ?holders=1: who can mint, freeze or move tokens, from the mint account. Shown, not scored. */
+  rights?: TokenRights;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
@@ -448,6 +450,7 @@ export function checkToken(
       runnerDev: runner,
     },
     ...(holders !== undefined ? { holders } : {}),
+    ...(opts.holders?.rights ? { rights: opts.holders.rights } : {}),
     ...(lin !== undefined
       ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, funderService: lin.funderService ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),
@@ -535,6 +538,7 @@ export function outsideCheck(
     reasons: [...avoid, ...caution],
     notes,
     facts: null,
+    ...(h?.rights ? { rights: h.rights } : {}),
     ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}), ...(h.creatorLockedShare !== undefined ? { devLockedPct: pct1(h.creatorLockedShare)! } : {}) } : null } : {}),
   };
 }
