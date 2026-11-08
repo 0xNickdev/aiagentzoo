@@ -33,7 +33,8 @@ export interface HandReport {
   traced: number;
   /**
    * Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. `upstream`
-   * counts traced buyers whose trail broke further up, on a funder's funder, with a failed or too deep read.
+   * counts traced buyers whose trail broke further up, on a funder's funder or the top-up before the buy, with a failed
+   * read.
    */
   missed?: { none: number; rpc: number; long: number; upstream: number };
   /** The first failed reads, as the RPC gave them. */
@@ -97,12 +98,14 @@ export async function traceHand(buyers: HandBuyer[], creator: string | null, fun
     if (f.err && errors.length < 3 && !errors.includes(f.err)) errors.push(f.err);
     return f;
   };
-  // A read that fails further up a buyer's trail ends it early, and a funder above could be the one they share.
+  // A read that fails further up a buyer's trail ends it early, and a funder above could be the one they share. A history
+  // too deep to reach its start up there is a busy wallet (a bot, a service): the trail ends at it, as at an exchange,
+  // and buyers still group on it.
   const upstream = new Set<string>();
   const upstreamRpc = new Set<string>();
   const trail = (buyer: string): Funder => async (w) => {
     const f = read(await counted(w));
-    if (w !== buyer && !f.funder && f.why !== "none") (upstream.add(buyer), f.why === "rpc" && upstreamRpc.add(buyer));
+    if (w !== buyer && !f.funder && f.why === "rpc") (upstream.add(buyer), upstreamRpc.add(buyer));
     return f;
   };
   // Each buyer's trail: its first money in, followed back, and who topped it up just before it bought, one hop more.
@@ -114,7 +117,8 @@ export async function traceHand(buyers: HandBuyer[], creator: string | null, fun
     const t = read(await topUp(b.wallet, b.at));
     if (t.err && errors.length < 3 && !errors.includes(t.err)) errors.push(t.err);
     if (!t.funder) {
-      if (t.why !== "none") (upstream.add(b.wallet), t.why === "rpc" && upstreamRpc.add(b.wallet));
+      // 200 trades since the buy is a busy trader, not a fresh wallet: nothing to read there either.
+      if (t.why === "rpc") (upstream.add(b.wallet), upstreamRpc.add(b.wallet));
       return out;
     }
     if (t.funder === b.wallet || exchangeOf(t.funder) || launcherOf(t.funder)) return out;
