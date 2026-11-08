@@ -71,7 +71,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
           <span className="tabular-nums mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
         </a>
-        <div className="hidden items-center gap-7 lg:flex">
+        <div className="hidden items-center gap-7 xl:flex">
           {LINKS.map((l) => (
             <a
               key={l.href}
@@ -79,7 +79,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               target={external(l.href) ? "_blank" : undefined}
               rel={external(l.href) ? "noopener noreferrer" : undefined}
               aria-current={route === l.href ? "page" : undefined}
-              className={`text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-fg-3"}`}
+              className={`whitespace-nowrap text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-fg-3"}`}
             >
               {tr(l.label)}
             </a>
@@ -88,7 +88,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             const here = g.items.some((i) => i.href === route);
             return (
               <div key={g.label} className="group relative">
-                <button type="button" className={`flex items-center gap-1.5 text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
+                <button type="button" className={`flex items-center gap-1.5 whitespace-nowrap text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
                   {tr(g.label)} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
                 </button>
                 <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 ${sectionsOf(g.items).length > 1 ? "w-[560px]" : "w-72"}`}>
@@ -116,7 +116,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             );
           })}
         </div>
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-3 xl:flex">
           <LangSwitch />
           <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="ZOOAI AGENCY on X" className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 transition hover:bg-white/[0.06] hover:text-white">
             <XIcon size={15} />
@@ -126,7 +126,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
           </a>
           <WalletButton />
         </div>
-        <button type="button" className="text-white lg:hidden" aria-label={menuOpen ? tr("Close menu") : tr("Open menu")} onClick={() => setMenuOpen((open) => !open)}>
+        <button type="button" className="text-white xl:hidden" aria-label={menuOpen ? tr("Close menu") : tr("Open menu")} onClick={() => setMenuOpen((open) => !open)}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </nav>
@@ -134,7 +134,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            className="mobile-menu-glass fixed left-4 right-4 top-16 z-50 max-h-[80svh] overflow-y-auto rounded-2xl p-6 lg:hidden"
+            className="mobile-menu-glass fixed left-4 right-4 top-16 z-50 max-h-[80svh] overflow-y-auto rounded-2xl p-6 xl:hidden"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

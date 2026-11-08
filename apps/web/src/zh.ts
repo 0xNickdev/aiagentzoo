@@ -1,5 +1,6 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "once a living token is graded": "等有存活币被打分后出分",
   "Live feed": "实时新币",
   "The zoo": "动物园",
   "More": "更多",

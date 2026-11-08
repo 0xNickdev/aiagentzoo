@@ -112,7 +112,7 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
         <div className="flex items-baseline justify-between gap-3 py-2">
           <dt className="text-fg-4">{t("balanced accuracy")}</dt>
           <dd className="text-right font-semibold tabular-nums text-white">
-            {g.score?.skill !== undefined && g.score?.skill !== null ? accuracyLabel(g.score.skill, scored) : t(scored ? "after the next check" : "first check tomorrow")}
+            {g.score?.skill !== undefined && g.score?.skill !== null ? accuracyLabel(g.score.skill, scored) : t(scored ? "once a living token is graded" : "first check tomorrow")}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-3 py-2">
