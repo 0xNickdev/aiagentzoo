@@ -114,7 +114,7 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
   const worker = async () => {
     while (next < window.length) {
       const i = next++;
-      txs[i] = await call<Tx>("getTransaction", [window[i]!.signature, { encoding: "json", maxSupportedTransactionVersion: 0 }], f);
+      txs[i] = await call<Tx>("getTransaction", [window[i]!.signature, { encoding: "json", maxSupportedTransactionVersion: 1 }], f);
     }
   };
   const progress = setInterval(() => log(`replay ${mint}: ${next} of ${window.length} transactions read`), 60_000);

@@ -150,7 +150,7 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
   }
   if (!sigs.length) return { funder: null, why: "none" };
   // Oldest first: the funding is nearly always the first or second transaction, so those two are read before the rest.
-  const get = (list: Array<{ signature: string }>) => Promise.all(list.map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn)));
+  const get = (list: Array<{ signature: string }>) => Promise.all(list.map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], fetchFn)));
   const txs = await get(sigs.slice(0, 2));
   if (!txs.some((t) => t.ok && fundingIn(t.result, wallet))) txs.push(...(await get(sigs.slice(2, 6))));
   let failed = "";

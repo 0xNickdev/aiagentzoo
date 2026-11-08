@@ -32,7 +32,7 @@ export async function originOf(mint: string, f: typeof fetch = fetch, now = Date
   ]);
   const launch = first?.data?.[0];
   const tx = launch
-    ? await rpc<{ blockTime: number | null; transaction: { message: { accountKeys: Key[] } } }>("getTransaction", [launch.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f)
+    ? await rpc<{ blockTime: number | null; transaction: { message: { accountKeys: Key[] } } }>("getTransaction", [launch.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], f)
     : null;
   // The fee payer of the launch transaction is the wallet that created the token.
   const payer = tx?.transaction.message.accountKeys[0];

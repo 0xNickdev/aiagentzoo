@@ -95,7 +95,7 @@ async function originOf(address: string, f: typeof fetch): Promise<{ locker: boo
   const first = sigs?.at(-1)?.signature;
   if (!first) return none;
   type Key = string | { pubkey: string; signer?: boolean };
-  const tx = await historyRpc<{ transaction: { message: { accountKeys: Key[] } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], f);
+  const tx = await historyRpc<{ transaction: { message: { accountKeys: Key[] } } }>("getTransaction", [first, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], f);
   if (!tx) return none;
   const keys = tx.transaction.message.accountKeys;
   const got = { locker: keys.some((k) => LOCKERS.has(typeof k === "string" ? k : k.pubkey)), signers: keys.filter((k): k is { pubkey: string; signer: boolean } => typeof k !== "string" && Boolean(k.signer)).map((k) => k.pubkey) };
