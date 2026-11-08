@@ -6,9 +6,14 @@
  * were paid by one owner.
  */
 import { exchangeOf, launcherOf } from "./exchanges.ts";
-import { fundersEnabled, readFunder, type FunderRead } from "./funders.ts";
+import { fundersEnabled, readFunder, readTopUp, type FunderRead } from "./funders.ts";
 
-export const HAND = { hops: 4, wallets: 12, cautionWallets: 4, cautionTook: 0.2, avoidWallets: 6, avoidHeld: 0.3 } as const;
+/**
+ * The 24 biggest buyers: the first 12 followed 4 hops back, the next 12 two (a hand spread thin still sits among them).
+ * Each also has its top-up just before the buy read, followed one more hop.
+ */
+export const HAND = { hops: 4, wallets: 24, deep: 12, shallowHops: 2, topUpHops: 2, cautionWallets: 4, cautionTook: 0.2, avoidWallets: 6, avoidHeld: 0.3 } as const;
+export type HandBuyer = { wallet: string; took: number; held: number; at?: number };
 
 export interface HandGroup {
   /** The wallet they all trace back to. */
@@ -41,6 +46,7 @@ export interface HandReport {
 }
 
 type Funder = (wallet: string) => Promise<string | null | FunderRead>;
+type TopUp = (wallet: string, at: number) => Promise<string | null | FunderRead>;
 const read = (x: string | null | FunderRead): FunderRead => (x === null ? { funder: null, why: "none" } : typeof x === "string" ? { funder: x, why: "found" } : x);
 const funders = new Map<string, FunderRead>();
 /** Funders do not change: a wallet's first money in is read once. A failed read is not kept, so it is asked again. */
@@ -52,6 +58,18 @@ const cachedFunder: Funder = async (w) => {
   if (funders.size > 50_000) funders.delete(funders.keys().next().value!);
   return f;
 };
+
+const topUps = new Map<string, FunderRead>();
+const cachedTopUp: TopUp = async (w, at) => {
+  const k = `${w}:${at}`;
+  const hit = topUps.get(k);
+  if (hit) return hit;
+  const f = await readTopUp(w, at, fetch);
+  if (f.why !== "rpc") topUps.set(k, f);
+  if (topUps.size > 50_000) topUps.delete(topUps.keys().next().value!);
+  return f;
+};
+const noTopUp: TopUp = async () => null;
 
 /** The wallets up a buyer's funding, nearest first, stopping before an exchange or a launch service. */
 export async function chainOf(wallet: string, funder: Funder, hops: number = HAND.hops): Promise<string[]> {
@@ -67,7 +85,7 @@ export async function chainOf(wallet: string, funder: Funder, hops: number = HAN
 }
 
 /** The largest set of buyers that share a wallet up their funding. */
-export async function traceHand(buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, funder: Funder = cachedFunder): Promise<HandReport> {
+export async function traceHand(buyers: HandBuyer[], creator: string | null, funder: Funder = cachedFunder, topUp: TopUp = funder === cachedFunder ? cachedTopUp : noTopUp): Promise<HandReport> {
   const sample = buyers.slice(0, HAND.wallets);
   const own0 = new Set(sample.map((b) => b.wallet));
   const traced = new Set<string>();
@@ -87,18 +105,37 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     if (w !== buyer && !f.funder && f.why !== "none") (upstream.add(buyer), f.why === "rpc" && upstreamRpc.add(buyer));
     return f;
   };
-  const chains: string[][] = [];
+  // Each buyer's trail: its first money in, followed back, and who topped it up just before it bought, one hop more.
+  // Entries are [wallet, hops from the buyer].
+  const trailOf = async (b: HandBuyer, i: number): Promise<Array<[string, number]>> => {
+    const first = await chainOf(b.wallet, trail(b.wallet), i < HAND.deep ? HAND.hops : HAND.shallowHops);
+    const out: Array<[string, number]> = first.map((a, h) => [a, h + 1]);
+    if (b.at == null) return out;
+    const t = read(await topUp(b.wallet, b.at));
+    if (t.err && errors.length < 3 && !errors.includes(t.err)) errors.push(t.err);
+    if (!t.funder) {
+      if (t.why !== "none") (upstream.add(b.wallet), t.why === "rpc" && upstreamRpc.add(b.wallet));
+      return out;
+    }
+    if (t.funder === b.wallet || exchangeOf(t.funder) || launcherOf(t.funder)) return out;
+    // A wallet with no first funding to follow is traced after all when it was topped up.
+    if (why.get(b.wallet) === "none") (why.delete(b.wallet), traced.add(b.wallet));
+    const up = [t.funder, ...(await chainOf(t.funder, trail(b.wallet), HAND.topUpHops - 1))];
+    for (const [h, a] of up.entries()) if (!out.some(([x]) => x === a)) out.push([a, h + 1]);
+    return out;
+  };
+  const chains: Array<Array<[string, number]>> = [];
   // A few at a time: each hop is RPC reads.
-  for (let i = 0; i < sample.length; i += 3) chains.push(...(await Promise.all(sample.slice(i, i + 3).map((b) => chainOf(b.wallet, trail(b.wallet))))));
+  for (let i = 0; i < sample.length; i += 3) chains.push(...(await Promise.all(sample.slice(i, i + 3).map((b, j) => trailOf(b, i + j)))));
   // Buyers that share any wallet up their funding are one owner, and so is everyone those share with: a union of chains.
   const parent = sample.map((_, i) => i);
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
   const own = new Map(sample.map((b, i) => [b.wallet, i]));
   const seenAt = new Map<string, Array<{ i: number; hops: number }>>();
   chains.forEach((c, i) => {
-    c.forEach((a, h) => seenAt.set(a, [...(seenAt.get(a) ?? []), { i, hops: h + 1 }]));
+    for (const [a, h] of c) seenAt.set(a, [...(seenAt.get(a) ?? []), { i, hops: h }]);
     // A buyer that paid another buyer.
-    for (const a of c) if (own.has(a)) parent[find(own.get(a)!)] = find(i);
+    for (const [a] of c) if (own.has(a)) parent[find(own.get(a)!)] = find(i);
   });
   for (const hits of seenAt.values()) for (const x of hits.slice(1)) parent[find(x.i)] = find(hits[0]!.i);
   const comps = new Map<number, number[]>();
@@ -122,7 +159,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
       hops: Math.max(hops, 1),
       took: Math.round(members.reduce((n, m) => n + m.took, 0) * 1000) / 1000,
       held: Math.round(members.reduce((n, m) => n + m.held, 0) * 1000) / 1000,
-      dev: !!creator && idx.some((i) => chains[i]!.includes(creator)),
+      dev: !!creator && idx.some((i) => chains[i]!.some(([a]) => a === creator)),
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
@@ -135,7 +172,7 @@ const CACHE_MS = 10 * 60_000;
  * The hand behind a coin's biggest buyers, kept ten minutes. A trace that outlasts the request keeps going, so the
  * next check has it.
  */
-export function handOf(mint: string, buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, now = Date.now()): Promise<HandReport | null> {
+export function handOf(mint: string, buyers: HandBuyer[], creator: string | null, now = Date.now()): Promise<HandReport | null> {
   if (!fundersEnabled() || buyers.length < HAND.cautionWallets) return Promise.resolve(null);
   const hit = reports.get(mint);
   if (hit && now - hit.at < CACHE_MS) return hit.p;
@@ -160,7 +197,7 @@ export function handWarning(r: HandReport | null | undefined): { text: string; a
 }
 
 /** handOf, given at most `ms`: a trace still running then comes back as `late` rather than as no answer. */
-export async function handWithin(mint: string, buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, ms = 5_000): Promise<HandReport | null> {
+export async function handWithin(mint: string, buyers: HandBuyer[], creator: string | null, ms = 5_000): Promise<HandReport | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const late = new Promise<"late">((r) => (timer = setTimeout(() => r("late"), ms)));
   const r = await Promise.race([handOf(mint, buyers, creator), late]);

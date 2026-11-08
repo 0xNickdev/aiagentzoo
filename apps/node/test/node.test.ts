@@ -2255,3 +2255,53 @@ test("the one-wallet check says whether it ran complete, missed reads, or ran ou
   assert.equal(a.score, b.score);
   assert.ok(b.notes.some((n) => n.includes("one-wallet check is incomplete")));
 });
+
+test("the hand trace reads top-ups before the buy, money sent as USDC, and the next 12 buyers", async () => {
+  const { traceHand, handWarning, handNote } = await import("../src/chain/hand.ts");
+  const { fundingIn } = await import("../src/chain/funders.ts");
+  const BINANCE = "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9";
+  const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  // Paid in USDC: the wallet's token account rose, the sender signed.
+  const usdc = {
+    transaction: { message: { accountKeys: [{ pubkey: "BOSS", signer: true }, { pubkey: "W", signer: false }], instructions: [{ program: "spl-token" }] } },
+    meta: {
+      preBalances: [1, 0], postBalances: [1, 0],
+      preTokenBalances: [{ accountIndex: 2, mint: USDC, owner: "BOSS", uiTokenAmount: { amount: "50000000" } }],
+      postTokenBalances: [{ accountIndex: 2, mint: USDC, owner: "BOSS", uiTokenAmount: { amount: "0" } }, { accountIndex: 3, mint: USDC, owner: "W", uiTokenAmount: { amount: "50000000" } }],
+    },
+  };
+  assert.equal(fundingIn(usdc as never, "W"), "BOSS");
+  // Dust in USDC is not funding; the wallet's own swap is not either.
+  const dust = { ...usdc, meta: { ...usdc.meta, postTokenBalances: [{ accountIndex: 3, mint: USDC, owner: "W", uiTokenAmount: { amount: "1000" } }] } };
+  assert.equal(fundingIn(dust as never, "W"), null);
+  const swap = { ...usdc, transaction: { message: { ...usdc.transaction.message, accountKeys: [{ pubkey: "BOSS", signer: true }, { pubkey: "W", signer: true }] } } };
+  assert.equal(fundingIn(swap as never, "W"), null);
+
+  // Every buyer first withdrew from an exchange, then one wallet topped them all up right before they bought.
+  const buyers = Array.from({ length: 8 }, (_, i) => ({ wallet: `T${i}`, took: 0.05, held: 0.05, at: 1_000_000 }));
+  const exFirst = async (w: string) => (w.startsWith("T") ? BINANCE : null);
+  const plain = await traceHand(buyers, null, exFirst);
+  assert.equal(plain.group, null);
+  const topped = await traceHand(buyers, null, exFirst, async () => "HAND");
+  assert.equal(topped.group!.wallets.length, 8);
+  assert.equal(topped.group!.root, "HAND");
+  assert.equal(handWarning(topped)!.avoid, true);
+  // Topped up from the exchange too: still strangers.
+  assert.equal((await traceHand(buyers, null, exFirst, async () => BINANCE)).group, null);
+  // A failed top-up read leaves the check incomplete.
+  const failed = await traceHand(buyers, null, exFirst, async (w) => (w === "T2" ? { funder: null, why: "rpc" } : null));
+  assert.equal(failed.missed!.upstream, 1);
+  assert.match(handNote(failed)!, /could not be read this time/);
+
+  // A hand spread thin: 12 real buyers on top, the hand's 6 wallets in places 13 to 24, paid from one wallet two hops back.
+  const crowd = [
+    ...Array.from({ length: 12 }, (_, i) => ({ wallet: `R${i}`, took: 0.04, held: 0.04 })),
+    ...Array.from({ length: 12 }, (_, i) => ({ wallet: `S${i}`, took: 0.035, held: 0.035 })),
+  ];
+  const pays = (w: string) => (w.startsWith("R") ? `own${w}` : /^S[0-5]$/.test(w) ? `mid${Number(w.slice(1)) % 3}` : w.startsWith("mid") ? "BOSS" : w.startsWith("S") ? `own${w}` : null);
+  const thin = await traceHand(crowd, null, async (w) => pays(w));
+  assert.equal(thin.checked, 24);
+  assert.equal(thin.group!.wallets.length, 6);
+  assert.equal(thin.group!.root, "BOSS");
+  assert.ok(handWarning(thin));
+});

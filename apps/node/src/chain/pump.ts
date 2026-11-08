@@ -732,13 +732,13 @@ export class PumpTape {
   }
 
   /** The biggest buyers by what they took at most, the creator left out: who a hand spread over many wallets would be. */
-  bigBuyersOf(mint: string, limit = 12): Array<{ wallet: string; took: number; held: number }> {
+  bigBuyersOf(mint: string, limit = 24): Array<{ wallet: string; took: number; held: number; at?: number }> {
     const t = this.tokens.get(mint);
     if (!t) return [];
     const supply = supplyOf(t);
     return [...t.buyers.entries()]
       .filter(([w]) => w !== t.creator)
-      .map(([wallet, b]) => ({ wallet, took: tookOf(b, supply) / supply, held: Math.max(0, (b.tok ?? 0) - (b.sold ?? 0)) / supply }))
+      .map(([wallet, b]) => ({ wallet, took: tookOf(b, supply) / supply, held: Math.max(0, (b.tok ?? 0) - (b.sold ?? 0)) / supply, ...(b.at ? { at: b.at } : {}) }))
       .filter((b) => b.took >= 0.005)
       .sort((a, b) => b.took - a.took)
       .slice(0, limit);

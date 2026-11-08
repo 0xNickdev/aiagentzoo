@@ -43,8 +43,15 @@ type Ix = { program?: string; parsed?: { type?: string; info?: { source?: string
 type Key = string | { pubkey: string; signer?: boolean };
 interface ParsedTx {
   transaction: { message: { accountKeys?: Key[]; instructions: Ix[] } };
-  meta?: { err?: unknown; preBalances?: number[]; postBalances?: number[]; innerInstructions?: Array<{ instructions: Ix[] }> };
+  meta?: { err?: unknown; preBalances?: number[]; postBalances?: number[]; innerInstructions?: Array<{ instructions: Ix[] }>; preTokenBalances?: TokenBalance[]; postTokenBalances?: TokenBalance[] };
 }
+type TokenBalance = { accountIndex: number; mint: string; owner?: string; uiTokenAmount: { amount: string } };
+/** Money sent as a token instead of SOL, and the least of it that counts as funding: wrapped SOL 0.01, USDC and USDT $1. */
+const MONEY: Record<string, bigint> = {
+  So11111111111111111111111111111111111111112: 10_000_000n,
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 1_000_000n,
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: 1_000_000n,
+};
 
 /**
  * One pace for every funding read on this node: the history RPC refuses bursts (429), and a refused read is a buyer
@@ -101,6 +108,27 @@ export function fundingIn(tx: ParsedTx | null, wallet: string): string | null {
   // Money routed through a program (a distributor, a multisend): the wallet's balance rose and it did not sign.
   const keys = (tx.transaction.message.accountKeys ?? []).map((k) => (typeof k === "string" ? { pubkey: k, signer: false } : { pubkey: k.pubkey, signer: !!k.signer }));
   const i = keys.findIndex((k) => k.pubkey === wallet);
+  // Paid in USDC, USDT or wrapped SOL: the wallet's token account rose and it did not sign.
+  if (i < 0 || !keys[i]!.signer) {
+    const pre0 = tx.meta?.preTokenBalances ?? [];
+    const post0 = tx.meta?.postTokenBalances ?? [];
+    const amt = (l: TokenBalance[], idx: number) => BigInt(l.find((x) => x.accountIndex === idx)?.uiTokenAmount.amount ?? "0");
+    for (const p of post0) {
+      const min = MONEY[p.mint];
+      if (!min || p.owner !== wallet || BigInt(p.uiTokenAmount.amount) - amt(pre0, p.accountIndex) < min) continue;
+      let from: string | null = null;
+      let fell = 0n;
+      for (const q of pre0) {
+        if (q.mint !== p.mint || !q.owner || q.owner === wallet) continue;
+        const d = BigInt(q.uiTokenAmount.amount) - amt(post0, q.accountIndex);
+        if (d > fell) (fell = d), (from = q.owner);
+      }
+      // The sender when it signed; through a pool or a program, whoever signed and paid.
+      const signers = keys.filter((k) => k.signer && k.pubkey !== wallet).map((k) => k.pubkey);
+      const by = from && signers.includes(from) ? from : (signers[0] ?? from);
+      if (by) return by;
+    }
+  }
   const pre = tx.meta?.preBalances;
   const post = tx.meta?.postBalances;
   if (i < 0 || !pre || !post || keys[i]!.signer || (post[i] ?? 0) - (pre[i] ?? 0) < MIN_FUNDING) return null;
@@ -163,6 +191,36 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
     if (from) return { funder: from, why: "found" };
   }
   return failed ? { funder: null, why: "rpc", err: failed } : { funder: null, why: "none" };
+}
+
+/**
+ * Who topped `wallet` up just before it bought (at `at`, ms): the three transactions before the buy, nearest first. A
+ * wallet first funded from an exchange can still be filled by one hand right before it buys.
+ */
+export async function readTopUp(wallet: string, at: number, fetchFn: typeof fetch): Promise<FunderRead> {
+  const t = Math.floor(at / 1000);
+  let before: string | undefined;
+  for (let page = 0; page < 2; page++) {
+    const got = await call<Array<{ signature: string; blockTime?: number | null; err?: unknown }>>("getSignaturesForAddress", [wallet, { limit: 100, ...(before ? { before } : {}) }], fetchFn);
+    if (!got.ok) return { funder: null, why: "rpc", err: got.err };
+    const list = got.result ?? [];
+    const prior = list.filter((x) => !x.err && x.blockTime != null && x.blockTime <= t);
+    if (prior.length || list.length < 100) {
+      const txs = await Promise.all(prior.slice(0, 3).map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], fetchFn)));
+      let failed = "";
+      for (const x of txs) {
+        if (!x.ok) {
+          failed ||= x.err;
+          continue;
+        }
+        const from = fundingIn(x.result, wallet);
+        if (from) return { funder: from, why: "found" };
+      }
+      return failed ? { funder: null, why: "rpc", err: failed } : { funder: null, why: "none" };
+    }
+    before = list[list.length - 1]!.signature;
+  }
+  return { funder: null, why: "long" };
 }
 
 /** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
