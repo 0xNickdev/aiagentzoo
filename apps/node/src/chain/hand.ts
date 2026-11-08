@@ -24,6 +24,8 @@ export interface HandGroup {
 }
 export interface HandReport {
   checked: number;
+  /** Of those, the buyers whose funder could be read at all. */
+  traced: number;
   group: HandGroup | null;
 }
 
@@ -54,9 +56,16 @@ export async function chainOf(wallet: string, funder: Funder, hops: number = HAN
 /** The largest set of buyers that share a wallet up their funding. */
 export async function traceHand(buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, funder: Funder = cachedFunder): Promise<HandReport> {
   const sample = buyers.slice(0, HAND.wallets);
+  const own0 = new Set(sample.map((b) => b.wallet));
+  const read = new Set<string>();
+  const counted: Funder = async (w) => {
+    const f = await funder(w);
+    if (f && own0.has(w)) read.add(w);
+    return f;
+  };
   const chains: string[][] = [];
   // A few at a time: each hop is RPC reads.
-  for (let i = 0; i < sample.length; i += 4) chains.push(...(await Promise.all(sample.slice(i, i + 4).map((b) => chainOf(b.wallet, funder)))));
+  for (let i = 0; i < sample.length; i += 4) chains.push(...(await Promise.all(sample.slice(i, i + 4).map((b) => chainOf(b.wallet, counted)))));
   // Buyers that share any wallet up their funding are one owner, and so is everyone those share with: a union of chains.
   const parent = sample.map((_, i) => i);
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
@@ -93,7 +102,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
-  return { checked: sample.length, group: best };
+  return { checked: sample.length, traced: read.size, group: best };
 }
 
 const reports = new Map<string, { at: number; p: Promise<HandReport | null> }>();

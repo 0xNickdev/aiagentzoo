@@ -127,8 +127,8 @@ export interface TokenCheck {
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who can mint, freeze or move tokens, from the mint account. A right still held is a reason (see rightsWarnings). */
   rights?: TokenRights;
-  /** Only with ?holders=1: the biggest set of top buyers paid from one wallet, up to three hops back. */
-  hand?: import("./hand.ts").HandGroup;
+  /** Only with ?holders=1: how many of the biggest buyers had their funding followed, and the largest set paid from one wallet. */
+  hand?: HandReport;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
@@ -499,7 +499,7 @@ export function checkToken(
     },
     ...(holders !== undefined ? { holders } : {}),
     ...(rights ? { rights } : {}),
-    ...(opts.hand?.group ? { hand: opts.hand.group } : {}),
+    ...(opts.hand ? { hand: opts.hand } : {}),
     ...(lin !== undefined
       ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, funderService: lin.funderService ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),
