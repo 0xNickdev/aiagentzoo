@@ -5,6 +5,7 @@ import { lineage, type LineageView } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
 import { holderReport, holdersEnabled, mintRights, poolSolOf } from "../chain/holders.ts";
+import { handOf } from "../chain/hand.ts";
 import { CHAIN_NAME, checkToken, oddsRunNote, outsideCheck } from "../chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "../chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "../chain/base.ts";
@@ -102,6 +103,8 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const pool = deep && found ? (bsc ? bscTape.poolOf(mint) : base ? null : holdersEnabled() ? tape.poolOf(mint) : null) : null;
     const evmLineage = bsc ? bscLineage : baseLineage;
     const evmFunders = bsc ? bscFundersEnabled() : baseFundersEnabled();
+    // The biggest buyers' money traced back: a hand spread over wallets and minutes. Solana launches the tape holds.
+    const handP = deep && found && !evm ? within(handOf(mint, tape.bigBuyersOf(mint), found.creator), 5_000) : Promise.resolve(null);
     const [holders, , poolSol] = await Promise.all([
       deep && (found || past) && !evm && holdersEnabled()
         ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
@@ -135,7 +138,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     // Holders that could not be ranked (USDC has too many accounts) still leave the mint's rights to read.
     const rights = deep && (found || past) && !evm && !holders ? await within(mintRights(mint)) : null;
     const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
-    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
+    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), hand: await handP, ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found && !evm) {
       const funder = lineage.funderOf(found.creator) ?? null;

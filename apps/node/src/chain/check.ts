@@ -3,6 +3,7 @@ import { printWarning, type PrintRecord } from "./fingerprint.ts";
 import { operatorWarning, type OperatorRecord } from "./operators.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport, TokenRights } from "./holders.ts";
+import { handWarning, type HandReport } from "./hand.ts";
 import type { LineageView } from "./lineage.ts";
 import { deployerOf } from "./exchanges.ts";
 import type { AccountRecord } from "./socials.ts";
@@ -126,6 +127,8 @@ export interface TokenCheck {
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
   /** Only with ?holders=1: who can mint, freeze or move tokens, from the mint account. A right still held is a reason (see rightsWarnings). */
   rights?: TokenRights;
+  /** Only with ?holders=1: the biggest set of top buyers paid from one wallet, up to three hops back. */
+  hand?: import("./hand.ts").HandGroup;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
   /** How fresh the chain stream behind this answer is. */
@@ -178,6 +181,8 @@ export const WEIGHT = {
   devDumpsCaution: 15,
   /** Someone can still freeze, take, pause or lock up a holder's tokens: the holder may never get to sell. */
   rightsAvoid: 40,
+  handAvoid: 30,
+  handCaution: 15,
   mintable: 20,
   transferHook: 15,
   transferFee: 10,
@@ -247,7 +252,7 @@ const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: 
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; rights?: TokenRights | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; rights?: TokenRights | null; hand?: HandReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -405,6 +410,10 @@ export function checkToken(
   const op = operatorWarning(opts.operator ?? null);
   if (op) flag(op.avoid ? avoid : caution, op.text, WEIGHT.operator);
 
+  // One hand dressed as a crowd: the biggest buyers paid from one wallet, however far apart their buys were spaced.
+  const hand = handWarning(opts.hand);
+  if (hand) flag(hand.avoid ? avoid : caution, hand.text, hand.avoid ? WEIGHT.handAvoid : WEIGHT.handCaution);
+
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
   // still shows, but it no longer decides: whoever holds it now does. Only when the holders were read.
   const devGone = devGoneOf(f, opts.holders);
@@ -490,6 +499,7 @@ export function checkToken(
     },
     ...(holders !== undefined ? { holders } : {}),
     ...(rights ? { rights } : {}),
+    ...(opts.hand?.group ? { hand: opts.hand.group } : {}),
     ...(lin !== undefined
       ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, funderService: lin.funderService ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),

@@ -2158,3 +2158,32 @@ test("a right still held on the mint is a reason; a stablecoin issuer's is only 
   assert.equal(coin.verdict, "avoid");
   assert.ok(coin.score! >= 60);
 });
+
+test("one hand in many wallets: buyers whose money comes from one wallet, up to four hops back, are one owner", async () => {
+  const { traceHand, handWarning } = await import("../src/chain/hand.ts");
+  const BINANCE = "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9";
+  const buyers = Array.from({ length: 12 }, (_, i) => ({ wallet: `H${i}`, took: 0.033, held: 0.03 }));
+  const run = (pays: Record<string, string>) => traceHand(buyers, "DEV", async (w) => pays[w] ?? null);
+  // A tree: root -> 2 -> 4 -> 6 -> the twelve buyers. No two buyers share a direct funder past pairs.
+  const tree: Record<string, string> = {};
+  buyers.forEach((b, i) => Object.assign(tree, { [b.wallet]: `L3${i % 6}`, [`L3${i % 6}`]: `L2${i % 4}`, [`L2${i % 4}`]: `L1${i % 2}`, [`L1${i % 2}`]: "ROOT" }));
+  const t = await run(tree);
+  assert.equal(t.group!.wallets.length, 12);
+  assert.equal(t.group!.root, "ROOT");
+  assert.equal(handWarning(t)!.avoid, true);
+  // Paid from an exchange: its customers are strangers, the chain stops there.
+  const ex = await run(Object.fromEntries(buyers.map((b) => [b.wallet, BINANCE])));
+  assert.equal(ex.group, null);
+  // The dev's own wallet two hops back.
+  const dev = await run(Object.fromEntries(buyers.flatMap((b, i) => [[b.wallet, `M${i % 3}`], [`M${i % 3}`, "DEV"]])));
+  assert.equal(dev.group!.dev, true);
+  assert.match(handWarning(dev)!.text, /paid from the dev's own wallet/);
+  // Three wallets from one funder is under the line; four that took under 20% too.
+  const three = await run({ H0: "F", H1: "F", H2: "F" });
+  assert.equal(handWarning(three), null);
+  const small = await traceHand(buyers.map((b) => ({ ...b, took: 0.04 })).slice(0, 4), null, async () => "F");
+  assert.equal(handWarning(small), null);
+  // Sold out: still said, as a caution.
+  const sold = await traceHand(buyers.map((b) => ({ ...b, held: 0 })), null, async () => "F");
+  assert.equal(handWarning(sold)!.avoid, false);
+});

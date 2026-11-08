@@ -285,6 +285,7 @@ var ZOO_CHAIN = [
   [/^at least (\d+)% of the trading is wallets selling back what they just bought: volume, not holders$/, (m) => `至少 ${m[1]}% 的成交是钱包刚买就卖回：这是刷量，不是持有者`],
   [/^a bot bought and sold it in the same transaction (\d+) times to keep it on the front page$/, (m) => `机器人在同一笔交易里买了又卖 ${m[1]} 次，为了挂在首页`],
   [/^one wallet holds (\d+)% of the supply$/, (m) => `一个钱包持有 ${m[1]}% 的供应`],
+  [/^(\d+) of its (\d+) biggest buyers were paid from (the dev's own wallet|one wallet up to (\d+) hops back|one wallet) and took (\d+)% of the supply; they still hold (\d+)%$/, (m) => `最大的 ${m[2]} 个买家里有 ${m[1]} 个的资金来自${m[3] === "the dev's own wallet" ? "开发者自己的钱包" : m[4] ? `同一个钱包（最多往上 ${m[4]} 跳）` : "同一个钱包"}，买走了 ${m[5]}% 的供应，现在还持有 ${m[6]}%`],
   [/^one wallet can still freeze any holder's tokens: a frozen wallet cannot sell$/, () => "仍有一个钱包可以冻结任何持有者的代币：被冻结的钱包无法卖出"],
   [/^one wallet can move or burn any holder's tokens without asking: a permanent delegate$/, () => "有一个钱包可以不经同意转走或销毁任何持有者的代币：永久代理"],
   [/^one wallet can pause every transfer of it: while paused nobody can sell$/, () => "有一个钱包可以暂停所有转账：暂停期间谁也卖不了"],
