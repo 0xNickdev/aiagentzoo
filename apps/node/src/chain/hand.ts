@@ -30,7 +30,7 @@ export interface HandReport {
    * Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. `upstream`
    * counts traced buyers whose trail broke further up, on a funder's funder, with a failed or too deep read.
    */
-  missed?: { none: number; rpc: number; long: number; upstream?: number };
+  missed?: { none: number; rpc: number; long: number; upstream: number };
   /** The first failed reads, as the RPC gave them. */
   errors?: string[];
   /** Some failed read up a trail was the RPC refusing: asking again soon can fill it. */
@@ -126,7 +126,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
-  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length, ...(upstream.size ? { upstream: upstream.size } : {}) }, ...(upstreamRpc.size ? { upstreamRpc: true } : {}), ...(errors.length ? { errors } : {}), group: best };
+  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length, upstream: upstream.size }, ...(upstreamRpc.size ? { upstreamRpc: true } : {}), ...(errors.length ? { errors } : {}), group: best };
 }
 
 const reports = new Map<string, { at: number; p: Promise<HandReport | null> }>();

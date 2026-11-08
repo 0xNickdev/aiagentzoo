@@ -2210,7 +2210,7 @@ test("a funder sent through a program still counts, and a failed read is not tak
   const buyers = Array.from({ length: 6 }, (_, i) => ({ wallet: `B${i}`, took: 0.05, held: 0.05 }));
   const r = await traceHand(buyers, null, async (w) => (w === "B0" ? { funder: null, why: "rpc" } : w === "B1" ? { funder: null, why: "long" } : w.startsWith("B") ? "F" : null));
   assert.equal(r.traced, 4);
-  assert.deepEqual(r.missed, { none: 0, rpc: 1, long: 1 });
+  assert.deepEqual(r.missed, { none: 0, rpc: 1, long: 1, upstream: 0 });
   assert.equal(r.group!.wallets.length, 4);
 });
 
@@ -2235,7 +2235,7 @@ test("the one-wallet check says whether it ran complete, missed reads, or ran ou
   const aboveLong = await traceHand(buyers, null, async (w) => (w === "FC5" ? { funder: null, why: "long" } : w.startsWith("C") ? `F${w}` : null));
   assert.match(handNote(aboveLong)!, /^the funding of 1 of its 12 biggest buyers is too far back/);
   // The end of a trail is not a gap.
-  assert.equal(clean.missed!.upstream, undefined);
+  assert.equal(clean.missed!.upstream, 0);
   const bare = await traceHand(buyers, null, async (w) => (w === "C3" ? null : w.startsWith("C") ? `F${w}` : null));
   assert.match(handNote(bare)!, /no one wallet paid enough of them to flag \(1 had no funding to follow\)$/);
   // A flagged hand is a reason, not a note.
