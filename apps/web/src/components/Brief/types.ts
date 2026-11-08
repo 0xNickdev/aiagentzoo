@@ -27,7 +27,7 @@ export interface Sections {
   calls?: Call[];
   reviewZh?: string;
   counts?: { graduated: number; wentToZero: number; suspicious: number };
-  learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null } | null; playbook: { version: number; text: string } };
+  learned?: { score: { hits: number; misses: number; accuracy: number | null; skill?: number | null; cases?: Array<{ outcome: string; already?: boolean }> } | null; playbook: { version: number; text: string } };
 }
 export interface Week {
   start: string;

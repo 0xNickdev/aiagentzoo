@@ -2,6 +2,7 @@ import { useState } from "react";
 import { shortAddress } from "../../zoo";
 import { lang, t as tr, tChain } from "../../i18n";
 import { DEXSCREENER_URL } from "../../links";
+import { nightSkill } from "../../accuracy";
 import type { Call, GuestReport, Obs, Sections, Week } from "./types";
 import { clean, dex, money, pct, TABS } from "./shared";
 import type { TabKey } from "./shared";
@@ -127,12 +128,14 @@ export function Learned({ learned }: { learned: Sections["learned"] }) {
   const [open, setOpen] = useState(false);
   const score = learned?.score;
   const scored = score ? score.hits + score.misses : 0;
+  const skill = nightSkill(score);
+  const oneSided = scored > 0 && skill === null && !!score?.cases;
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
       <p className="tabular-nums text-[12px] text-fg-4">{tr("What the pack learned")}</p>
-      {scored > 0 && score!.skill !== undefined && score!.skill !== null ? (
+      {scored > 0 && skill !== null ? (
         <>
-          <p className="font-display mt-4 text-5xl">{Math.round(score!.skill * 100)}%</p>
+          <p className="font-display mt-4 text-5xl">{Math.round(skill * 100)}%</p>
           <p className="mt-2 text-[13.5px] font-normal text-fg-4">
             {tr("balanced accuracy on yesterday's calls: half for calling the dead, half for calling the living. By the plain count, {h} right and {m} wrong.", { h: score!.hits, m: score!.misses })}
           </p>
@@ -141,7 +144,9 @@ export function Learned({ learned }: { learned: Sections["learned"] }) {
         <>
           <p className="font-display mt-4 text-5xl text-fg-3">-</p>
           <p className="mt-2 text-[13.5px] font-normal text-fg-4">
-            {tr("This night was scored before balanced accuracy. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.", { h: score!.hits, m: score!.misses })}
+            {oneSided
+              ? tr("No token from these calls lived, so this night has no balanced score. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.", { h: score!.hits, m: score!.misses })
+              : tr("This night was scored before balanced accuracy. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.", { h: score!.hits, m: score!.misses })}
           </p>
         </>
       ) : (

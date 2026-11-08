@@ -53,13 +53,13 @@ export default function WallOfRugs() {
       />
       <div className="mb-4 flex flex-wrap gap-2">
         {CHAINS.map((c) => (
-          <button key={c.id || "all"} type="button" onClick={() => (setList(null), setChain(c.id))} className={`rounded-full px-4 py-1.5 text-[13px] transition ${chain === c.id ? "bg-white text-black" : "border border-white/[0.12] text-fg-3 hover:text-white"}`}>
+          <button key={c.id || "all"} type="button" onClick={() => (setList(null), setChain(c.id))} className={`rounded-full px-4 py-2 text-[13px] transition sm:py-1.5 ${chain === c.id ? "bg-white text-black" : "border border-white/[0.12] text-fg-3 hover:text-white"}`}>
             {t(c.label)}
           </button>
         ))}
       </div>
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -77,12 +77,13 @@ export default function WallOfRugs() {
             onClick={() => (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
             onKeyDown={(e) => e.key === "Enter" && (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
             title={t("Open this dev's wallet")}
-            className="tabular-nums grid cursor-pointer grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
+            className="tabular-nums grid cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] items-center gap-3 border-t border-white/[0.08] px-5 py-4 text-[14px] sm:py-3.5 sm:text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+            <span className="min-w-0">
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-fg underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
-              {r.chain && <span className="shrink-0 rounded-full border border-white/[0.12] px-1.5 text-[10.5px] text-fg-4">{CHAIN_SHORT[r.chain]}</span>}
+              {r.chain && <span className="shrink-0 rounded-full border border-white/[0.12] px-1.5 text-[11px] text-fg-4">{CHAIN_SHORT[r.chain]}</span>}
               <button
                 type="button"
                 onClick={(e) => {
@@ -91,11 +92,13 @@ export default function WallOfRugs() {
                   setCopied(r.wallet);
                   window.setTimeout(() => setCopied(null), 1200);
                 }}
-                className="shrink-0 text-[11.5px] text-fg-4 hover:text-white"
+                className="hidden shrink-0 text-[11.5px] text-fg-4 hover:text-white sm:inline"
                 title={t("Copy the wallet")}
               >
                 {copied === r.wallet ? t("copied") : t("copy")}
               </button>
+            </span>
+            {r.lastDump && <span className="mt-1 block truncate text-[12.5px] text-fg-4 sm:hidden">${r.lastDump.symbol.replace(/^\$/, "")} · {tChain(r.lastDump.text)}</span>}
             </span>
             <span className="text-right text-fg-3">{r.launches48h}</span>
             <span className="text-right text-[#ff8a7e]">{r.dumped}</span>

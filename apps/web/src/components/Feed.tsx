@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { hue, initials, picOf } from "./home/live";
 import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
 import { landed, quote, SOL_MINT, swap, swapEnabled } from "../swap";
@@ -122,6 +123,18 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
   );
 }
 
+/** The coin's picture, a small pump.fun thumbnail where there is one, over its first letters so a missing picture is never a blank square. */
+function Pic({ c }: { c: Coin }) {
+  const [broken, setBroken] = useState(false);
+  const src = picOf(c.mint, c.image ?? undefined);
+  return (
+    <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[12.5px] font-semibold text-white" style={{ background: `hsl(${hue(c.mint)} 14% 15%)` }}>
+      {initials(c.symbol, c.mint)}
+      {src && !broken && <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="absolute inset-0 h-full w-full rounded-lg object-cover" />}
+    </span>
+  );
+}
+
 function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; amount: string; onState: (m: string | null) => void }) {
   const pass = c.verdict === "pass";
   const capUsd = c.capSol !== null && solUsd ? c.capSol * solUsd : null;
@@ -138,16 +151,11 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
       }}
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.35, ease: EASE }}
       className="group block rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 transition hover:border-white/[0.16] hover:bg-white/[0.04]"
     >
       <div className="flex items-center gap-3">
-        {c.image ? (
-          <img src={c.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-lg object-cover" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
-        ) : (
-          <div className="h-10 w-10 shrink-0 rounded-lg bg-white/[0.06]" />
-        )}
+        <Pic c={c} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14.5px] text-white">
             ${c.symbol.replace(/^\$/, "")} <span className="text-[12.5px] text-fg-4">{c.name}</span>

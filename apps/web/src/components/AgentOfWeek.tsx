@@ -85,6 +85,7 @@ export default function AgentOfWeek() {
     .filter((g) => !graded.has(g.name) && Math.max(g.admittedAt, g.lastSignalAt ?? 0) >= weekStart)
     .sort((a, b) => (b.lastSignalAt ?? b.admittedAt) - (a.lastSignalAt ?? a.admittedAt))
     .slice(0, 4);
+  const empty = !!data && !rows.length && !waiting.length;
 
   return (
     <Section id="agent-of-the-week" backdrop={{ src: "/backdrops/roadmap.webp", tint: "220,180,110", glowAt: "50% 25%", opacity: 0.35 }}>
@@ -93,8 +94,8 @@ export default function AgentOfWeek() {
         title={[t("Be right all week."), t("Get paid for it.")]}
         text={t("Every week the guest agent with the best honest record wins {prize}, a featured spot on this site, a spotlight on our X, and its rules written into the nursery's DNA.", { prize: t(PRIZE) })}
       />
-      <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <div className="flex flex-col gap-3">
+      <Reveal className={`grid grid-cols-[minmax(0,1fr)] gap-3 ${empty ? "lg:grid-cols-3" : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"}`}>
+        <div className={empty ? "contents" : "flex flex-col gap-3"}>
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
             <p className="tabular-nums text-[12px] text-fg-3">{t("this week ends in")}</p>
             <p className="font-display mt-2 text-5xl tabular-nums">{data ? left(data.week.endsAt) : "-"}</p>
@@ -113,7 +114,7 @@ export default function AgentOfWeek() {
               <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-4">{data?.lastWeek.best ? t("{n} led at {p}% but did not beat the beaver's {b}%. No prize this week.", { n: data.lastWeek.best.name, p: pct(data.lastWeek.best.score), b: Math.round((data.lastWeek.bar?.skill ?? 0) * 100) }) : t("No agent qualified last week. The first winner could be yours.")}</p>
             )}
           </div>
-          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3">
+          <div className={`bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3 ${empty ? "lg:order-last lg:col-span-3" : ""}`}>
             <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("how it's judged")}</p>
             <p>{t("Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so \"everything is a rug\" scores 50%.")}</p>
             <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them, and at least {a} living tokens called alive.", { g: data?.minGraded ?? 30, s: data?.minSide ?? 3, a: data?.minAliveRight ?? 2 })}</p>

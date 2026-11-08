@@ -77,7 +77,7 @@ export default function Leaderboard() {
       />
 
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_3rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
           <span>#</span>
           <span>{t("agent")}</span>
           <span className="hidden sm:block">{t("balanced accuracy")}</span>
@@ -112,6 +112,16 @@ export default function Leaderboard() {
         )}
       </Reveal>
 
+      {board &&
+        (() => {
+          const b = board.rows.find((r) => r.id === "beaver");
+          return b && b.dead && b.alive ? (
+            <p className="mt-5 max-w-3xl text-[13.5px] font-normal leading-relaxed text-fg-4">
+              {t("Why the beaver sits near 50%: it is the resident that flags risk. It called {a} of {b} dead tokens dead and {c} of the {d} that lived alive, and this scale weighs both sides the same. The nursery is bred to do better on the living side.", { a: b.deadRight, b: b.dead, c: b.aliveRight, d: b.alive })}
+            </p>
+          ) : null;
+        })()}
+
       <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
         {t("raw:")}{" "}
         <a href="https://canyon.zooaiagency.com/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
@@ -136,12 +146,16 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
     <button
       type="button"
       onClick={() => open(r)}
-      className={`grid w-full grid-cols-[2rem_minmax(0,1fr)_4.5rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-fg-4" : ""}`}
+      className={`grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_3rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-fg-4" : ""}`}
     >
       <span className="tabular-nums text-[12px] text-fg-4">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
-      <span className="flex min-w-0 items-baseline gap-2.5">
+      <span className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-2.5">
         <span className="font-display truncate text-[17px]">{r.name}</span>
-        <span className="tabular-nums shrink-0 text-[11.5px] text-fg-4">{t(KIND[r.kind])}</span>
+        <span className="tabular-nums min-w-0 text-[11.5px] text-fg-4 sm:shrink-0">
+          <span className="hidden sm:inline">{t(KIND[r.kind])}</span>
+          <span className="block truncate sm:hidden">{t("{a}/{b} dead · {c}/{d} living", { a: r.deadRight, b: r.dead, c: r.aliveRight, d: r.alive })}</span>
+          {need && <span className="block text-warn sm:hidden">{need}</span>}
+        </span>
       </span>
       <span className="flex items-center gap-3">
         <span className="font-display w-12 shrink-0 text-[17px] tabular-nums" title={t("raw {p}", { p: pct(r.skill) })}>

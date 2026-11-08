@@ -27,39 +27,33 @@ const sectionsOf = (items: Item[]) => {
   return out;
 };
 
-/** Two menus and two links: what a trader uses, and the zoo behind it. */
+/** What a trader uses, in plain sight; everything else under one menu. */
+const LINKS: Item[] = [
+  { label: "X-Ray", href: "/xray" },
+  { label: "Live feed", href: "/feed" },
+  { label: "Wall of rugs", href: "/rugs" },
+  { label: "Extension", href: EXTENSION_URL },
+  { label: "Telegram bot", href: BOT_URL },
+];
 const GROUPS: Array<{ label: string; items: Item[] }> = [
   {
-    label: "Product",
+    label: "More",
     items: [
-      // Most used first: the check itself, where traders already are, then what to watch, then the rest.
-      { section: "Check", label: "X-Ray", href: "/xray", note: "paste a token, see who's behind it" },
-      { section: "Check", label: "Live feed", href: "/feed", note: "new coins, minus the known scams" },
-      { section: "Check", label: "Chrome extension", href: EXTENSION_URL, note: "the verdict on gmgn, Axiom, pump.fun, four.meme" },
-      { section: "Check", label: "Telegram bot", href: BOT_URL, note: "checks and alerts in any chat" },
-      { section: "Watch", label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
-      { section: "Watch", label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
-      { section: "Watch", label: "Wall of rugs", href: "/rugs", note: "worst devs, 48h" },
-      { section: "Watch", label: "Stats", href: "/stats", note: "our numbers, live" },
-    ],
-  },
-  {
-    label: "Agents",
-    items: [
+      { section: "Tools", label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
+      { section: "Tools", label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
+      { section: "Tools", label: "Stats", href: "/stats", note: "our numbers, live" },
+      { section: "Tools", label: "Roadmap", href: "/roadmap", note: "what we build next" },
+      { section: "Tools", label: "Docs", href: DOCS_URL, note: "API, SDK and skill.md" },
       { section: "The zoo", label: "The agents", href: "/agents", note: "graded in public every day" },
       { section: "The zoo", label: "Live", href: "/live", note: "the nodes, right now" },
       { section: "The zoo", label: "Morning Brief", href: "/brief", note: "every day at 07:00 UTC" },
       { section: "The zoo", label: "Evolution", href: "/evolution", note: "judges that breed and die" },
-      { section: "Use them", label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
-      { section: "Use them", label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
-      { section: "Use them", label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
-      { section: "Use them", label: "Connect an agent", href: "/connect", note: "bring your own, with a wallet" },
+      { section: "The zoo", label: "Ask the beaver", href: "/ask", note: "is it a rug?" },
+      { section: "The zoo", label: "Humans vs the beaver", href: "/play", note: "play, win SOL" },
+      { section: "The zoo", label: "x402 for agents", href: "/x402", note: "pay per check in USDC" },
+      { section: "The zoo", label: "Connect an agent", href: "/connect", note: "bring your own, with a wallet" },
     ],
   },
-];
-const LINKS: Item[] = [
-  { label: "Roadmap", href: "/roadmap" },
-  { label: "Docs", href: DOCS_URL },
 ];
 
 const external = (href: string) => href.startsWith("http");
@@ -77,7 +71,19 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
           <span className="tabular-nums mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
         </a>
-        <div className="hidden items-center gap-9 lg:flex">
+        <div className="hidden items-center gap-7 lg:flex">
+          {LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              target={external(l.href) ? "_blank" : undefined}
+              rel={external(l.href) ? "noopener noreferrer" : undefined}
+              aria-current={route === l.href ? "page" : undefined}
+              className={`text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-fg-3"}`}
+            >
+              {tr(l.label)}
+            </a>
+          ))}
           {GROUPS.map((g) => {
             const here = g.items.some((i) => i.href === route);
             return (
@@ -109,16 +115,6 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
               </div>
             );
           })}
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              aria-current={route === l.href ? "page" : undefined}
-              className={`text-[14.5px] transition-colors hover:text-white ${route === l.href ? "text-white" : "text-fg-3"}`}
-            >
-              {tr(l.label)}
-            </a>
-          ))}
         </div>
         <div className="hidden items-center gap-3 lg:flex">
           <LangSwitch />
@@ -145,8 +141,15 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <WalletButton block />
+            <div className="mt-4 grid">
+              {LINKS.map((l) => (
+                <a key={l.href} href={l.href} target={external(l.href) ? "_blank" : undefined} rel={external(l.href) ? "noopener noreferrer" : undefined} onClick={() => setMenuOpen(false)} className="py-2 text-[16px] text-fg-2">
+                  {tr(l.label)}
+                </a>
+              ))}
+            </div>
             {GROUPS.map((g) => (
-              <div key={g.label} className="mt-6">
+              <div key={g.label} className="mt-5 border-t border-white/10 pt-4">
                 <p className="text-[12.5px] [&::first-letter]:uppercase text-fg-4">{tr(g.label)}</p>
                 <div className="mt-2 grid">
                   {sectionsOf(g.items).map((sec) => (
@@ -169,13 +172,6 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                 </div>
               </div>
             ))}
-            <div className="mt-6 grid border-t border-white/10 pt-4">
-              {LINKS.map((l) => (
-                <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="py-2 text-[16px] text-fg-2">
-                  {tr(l.label)}
-                </a>
-              ))}
-            </div>
             <div className="mt-5 flex items-center gap-5">
               <LangSwitch />
               <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="X" className="text-fg-2">

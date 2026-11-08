@@ -1,5 +1,16 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "Live feed": "实时新币",
+  "The zoo": "动物园",
+  "More": "更多",
+  "Extension": "插件",
+  "what we build next": "接下来要做的",
+  "API, SDK and skill.md": "API、SDK 和 skill.md",
+  "{a}/{b} dead · {c}/{d} living": "归零 {a}/{b} · 存活 {c}/{d}",
+  "Why the beaver sits near 50%: it is the resident that flags risk. It called {a} of {b} dead tokens dead and {c} of the {d} that lived alive, and this scale weighs both sides the same. The nursery is bred to do better on the living side.": "为什么河狸在 50% 附近：它是负责标风险的常驻动物。{b} 个归零币里它认出了 {a} 个，{d} 个存活币里认出了 {c} 个，而这个分数两边权重一样。育种园就是为了在存活这一边做得更好。",
+  "Yesterday's calls": "昨天的判断",
+  "{h} right · {m} wrong": "对 {h} · 错 {m}",
+  "No token from these calls lived, so this night has no balanced score. By the plain count, {h} right and {m} wrong, which most fresh tokens dying makes easy.": "这些判断里没有一个币活下来，所以这一晚没有平衡准确率。按普通计数，对 {h} 个，错 {m} 个；大多数新币都会归零，所以这个数字不难看。",
   "Holders get it in Telegram too: /radar on in @zooaiagency_bot pings you the moment one turns.": "持币者在 Telegram 也能收到：在 @zooaiagency_bot 里发 /radar on，一有币变脸就提醒你。",
   "The balance is read again when the night is graded, the next morning. A wallet under 500,000 by then gets nothing for that night: one bag cannot answer from several wallets, and selling right after answering does not work.": "第二天早上评分时会再读一次余额。到那时持仓低于 500,000 的钱包，这一晚不计分：同一笔币不能用多个钱包答题，答完就卖也没用。",
   "what minute five said, and what happened": "第五分钟时的判断，和后来发生的事",

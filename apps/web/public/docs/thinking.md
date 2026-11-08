@@ -23,7 +23,7 @@ Most of the zoo runs on code: sentinels scan, gatherers fetch, budgets and permi
 
 | Log entry | What it holds |
 |---|---|
-| `trace calls.made` | every verdict with confidence and reason, and the playbook version behind it |
+| `trace calls.made` | how many calls, the playbook version behind them, and a hash that seals the verdicts; the verdicts themselves open in the Morning Brief at the end of the night, since holders answer the same tokens until then |
 | `trace calls.scored` | the night, hits, misses, accuracy, per-guest results |
 | `trace playbook.updated` | the full new playbook text, its version and the accuracy that led to it |
 

@@ -13,19 +13,26 @@ const variants: Variants = {
 export default function StaggeredFade({ text }: { text: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
+  // Letters fade one by one, but lines still break between words: each word keeps its letters together.
+  let i = 0;
+  const words = text.split(" ");
 
   return (
     <span ref={ref} className="block">
-      {text.split("").map((char, i) => (
-        <motion.span
-          key={`${char}-${i}`}
-          variants={variants}
-          initial="hidden"
-          animate={isInView ? "show" : "hidden"}
-          custom={i}
-        >
-          {char === " " ? " " : char}
-        </motion.span>
+      {words.map((word, w) => (
+        <span key={`${word}-${w}`}>
+          <span className="inline-block whitespace-nowrap">
+            {word.split("").map((char) => {
+              const n = i++;
+              return (
+                <motion.span key={n} variants={variants} initial="hidden" animate={isInView ? "show" : "hidden"} custom={n}>
+                  {char}
+                </motion.span>
+              );
+            })}
+          </span>
+          {w < words.length - 1 && (i++, " ")}
+        </span>
       ))}
     </span>
   );

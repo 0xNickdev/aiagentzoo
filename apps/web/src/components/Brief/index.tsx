@@ -1,4 +1,4 @@
-import { accuracyLabel } from "../../accuracy";
+import { accuracyLabel, nightSkill } from "../../accuracy";
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import NightCard, { type NightCardData } from "../NightCard";
@@ -78,7 +78,7 @@ export default function Brief() {
       wentToZero: sec.counts?.wentToZero ?? sec.wentToZero.length,
       highlight: tell ? clean(`$${tell.symbol}: ${(tell.reasons ?? []).join(", ")}.`) : null,
       nursery,
-      skill: sec.learned?.score?.skill ?? null,
+      skill: nightSkill(sec.learned?.score),
       scored: sec.learned?.score ? sec.learned.score.hits + sec.learned.score.misses : 0,
     });
   };
@@ -91,8 +91,10 @@ export default function Brief() {
         [tr("Fresh launches"), s.launches.toLocaleString("en-US")],
         [tr("Graduated"), String(s.counts?.graduated ?? s.graduated.length)],
         [tr("Went to zero"), String(s.counts?.wentToZero ?? s.wentToZero.length)],
-        [tr("Flagged"), String(s.counts?.suspicious ?? s.suspicious.length)],
-        [tr("Balanced accuracy"), accuracyLabel(s.learned?.score?.skill, scored)],
+        [tr("Flagged"), (s.counts?.suspicious ?? s.suspicious.length).toLocaleString("en-US")],
+        nightSkill(s.learned?.score) !== null || !scored
+          ? [tr("Balanced accuracy"), accuracyLabel(nightSkill(s.learned?.score), scored)]
+          : [tr("Yesterday's calls"), tr("{h} right · {m} wrong", { h: s.learned!.score!.hits, m: s.learned!.score!.misses })],
       ]
     : [];
 
