@@ -147,18 +147,43 @@ export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" 
  * The wallet that first sent SOL into `wallet`, and why not when there is none: "none" is an answer (the history holds
  * no funding), "rpc" is a failed read worth asking again, "long" a history too deep to page back to its start.
  */
+type Sig = { signature: string; blockTime?: number | null; err?: unknown };
+/** Short histories read whole while finding a funder, oldest first: the top-up before a buy is read from them, not asked again. */
+const whole = new Map<string, Sig[]>();
+const keepWhole = (wallet: string, list: Sig[]) => {
+  if (!list.every((x) => typeof x.blockTime === "number")) return;
+  whole.set(wallet, list);
+  if (whole.size > 20_000) whole.delete(whole.keys().next().value!);
+};
+/** Transactions do not change once confirmed: each is read once, by the funder read and the top-up read alike. */
+const txs = new Map<string, ParsedTx>();
+async function readTx(signature: string, fetchFn: typeof fetch): Promise<{ ok: true; result: ParsedTx | null } | { ok: false; err: string }> {
+  const hit = txs.get(signature);
+  if (hit) return { ok: true, result: hit };
+  const r = await call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], fetchFn);
+  if (r.ok && r.result) {
+    txs.set(signature, r.result);
+    if (txs.size > 20_000) txs.delete(txs.keys().next().value!);
+  }
+  return r;
+}
+
 export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise<FunderRead> {
   // The funding is the wallet's first transfer in, so read back to the very start of its history:
   // a serial launcher's latest pages are all launches, its funding sits under them.
-  let sigs: Array<{ signature: string }> = [];
+  let sigs: Sig[] = [];
   // Helius answers oldest-first in one call; any other RPC falls back to paging back through the history.
-  const first = await call<{ data?: Array<{ signature: string }> }>("getTransactionsForAddress", [wallet, { sortOrder: "asc", limit: 8, transactionDetails: "signatures" }], fetchFn);
-  if (first.ok && first.result?.data?.length) sigs = first.result.data;
+  const first = await call<{ data?: Sig[] }>("getTransactionsForAddress", [wallet, { sortOrder: "asc", limit: 8, transactionDetails: "signatures" }], fetchFn);
+  if (first.ok && first.result?.data?.length) {
+    sigs = first.result.data;
+    if (sigs.length < 8) keepWhole(wallet, sigs);
+  }
   else {
     let before: string | undefined;
     let done = false;
+    let pages = 0;
     for (let page = 0; page < 8; page++) {
-      const got = await call<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
+      const got = await call<Sig[]>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
       if (!got.ok) return { funder: null, why: "rpc", err: got.err };
       const list = got.result ?? [];
       if (!list.length) {
@@ -166,6 +191,7 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
         break;
       }
       sigs = list;
+      pages++;
       before = list[list.length - 1]!.signature;
       if (list.length < 1000) {
         done = true;
@@ -175,10 +201,11 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
     if (!done) return { funder: null, why: "long" };
     // Newest first from this call: the start of the history is at the end.
     sigs = [...sigs].reverse();
+    if (pages === 1) keepWhole(wallet, sigs);
   }
   if (!sigs.length) return { funder: null, why: "none" };
   // Oldest first: the funding is nearly always the first or second transaction, so those two are read before the rest.
-  const get = (list: Array<{ signature: string }>) => Promise.all(list.map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], fetchFn)));
+  const get = (list: Sig[]) => Promise.all(list.map(({ signature }) => readTx(signature, fetchFn)));
   const txs = await get(sigs.slice(0, 2));
   if (!txs.some((t) => t.ok && fundingIn(t.result, wallet))) txs.push(...(await get(sigs.slice(2, 6))));
   let failed = "";
@@ -199,16 +226,19 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
  */
 export async function readTopUp(wallet: string, at: number, fetchFn: typeof fetch): Promise<FunderRead> {
   const t = Math.floor(at / 1000);
+  // Read whole already, and after the buy: the history up to the buy is all there.
+  const known = whole.get(wallet);
+  const fresh = known && (known[known.length - 1]?.blockTime ?? 0) >= t ? [...known].reverse() : null;
   let before: string | undefined;
   for (let page = 0; page < 2; page++) {
-    const got = await call<Array<{ signature: string; blockTime?: number | null; err?: unknown }>>("getSignaturesForAddress", [wallet, { limit: 100, ...(before ? { before } : {}) }], fetchFn);
+    const got = fresh ? ({ ok: true, result: fresh } as const) : await call<Sig[]>("getSignaturesForAddress", [wallet, { limit: 100, ...(before ? { before } : {}) }], fetchFn);
     if (!got.ok) return { funder: null, why: "rpc", err: got.err };
     const list = got.result ?? [];
     const prior = list.filter((x) => !x.err && x.blockTime != null && x.blockTime <= t);
-    if (prior.length || list.length < 100) {
-      const txs = await Promise.all(prior.slice(0, 3).map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }], fetchFn)));
+    if (prior.length || list.length < 100 || fresh) {
+      const near = await Promise.all(prior.slice(0, 3).map(({ signature }) => readTx(signature, fetchFn)));
       let failed = "";
-      for (const x of txs) {
+      for (const x of near) {
         if (!x.ok) {
           failed ||= x.err;
           continue;

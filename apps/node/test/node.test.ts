@@ -2305,3 +2305,26 @@ test("the hand trace reads top-ups before the buy, money sent as USDC, and the n
   assert.equal(thin.group!.root, "BOSS");
   assert.ok(handWarning(thin));
 });
+
+test("the top-up read reuses a short history and the transactions the funder read already fetched", async () => {
+  const { readFunder, readTopUp } = await import("../src/chain/funders.ts");
+  const W = "TOPPEDWALLET";
+  const calls: string[] = [];
+  const tx = (from: string, to: string) => ({ transaction: { message: { instructions: [{ program: "system", parsed: { type: "transfer", info: { source: from, destination: to, lamports: 50_000_000 } } }] } } });
+  const book: Record<string, unknown> = { s1: tx("EXCH", W), s2: tx("HAND", W), s3: { transaction: { message: { instructions: [] } } } };
+  const fake = (async (_u: string, init: { body: string }) => {
+    const { method, params } = JSON.parse(init.body);
+    calls.push(method);
+    const result =
+      method === "getTransactionsForAddress" ? { data: [{ signature: "s1", blockTime: 100 }, { signature: "s2", blockTime: 200 }, { signature: "s3", blockTime: 201 }] }
+      : method === "getTransaction" ? book[params[0]]
+      : null;
+    return new Response(JSON.stringify({ result }));
+  }) as unknown as typeof fetch;
+  assert.equal((await readFunder(W, fake)).funder, "EXCH");
+  const before = calls.length;
+  // Bought at 201: the transfer right before is the top-up.
+  assert.equal((await readTopUp(W, 201_000, fake)).funder, "HAND");
+  assert.ok(!calls.slice(before).includes("getSignaturesForAddress"));
+  assert.ok(calls.slice(before).filter((m) => m === "getTransaction").length <= 1);
+});
