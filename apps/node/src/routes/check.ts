@@ -4,7 +4,7 @@ import { fundersEnabled, traceFunders } from "../chain/funders.ts";
 import { lineage, type LineageView } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
-import { holderReport, holdersEnabled, poolSolOf } from "../chain/holders.ts";
+import { holderReport, holdersEnabled, mintRights, poolSolOf } from "../chain/holders.ts";
 import { CHAIN_NAME, checkToken, oddsRunNote, outsideCheck } from "../chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "../chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "../chain/base.ts";
@@ -132,8 +132,10 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       if (!funding) evmLineage.enqueue(found.creator);
     }
     if (past && !evm) funding = (fundersEnabled() ? lineage.view(past.creator) : null) ?? (past.funder ? { creator: past.creator, funder: past.funder, funderIsHot: exchangeOf(past.funder) != null || launcherOf(past.funder) != null, funderLabel: exchangeOf(past.funder), funderService: launcherOf(past.funder), siblings: [], siblingLaunches48h: 0, siblingDumped48h: 0, tracedAt: past.recordedAt } : null);
+    // Holders that could not be ranked (USDC has too many accounts) still leave the mint's rights to read.
+    const rights = deep && (found || past) && !evm && !holders ? await within(mintRights(mint)) : null;
     const linked = found || past ? (bsc ? bscSocials : base ? baseSocials : socials).forMint(mint) : [];
-    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
+    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) && (!evm || holders !== undefined) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found && !evm ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found && !evm) {
       const funder = lineage.funderOf(found.creator) ?? null;
@@ -158,9 +160,10 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       const origin = bsc ? await within(fourMeme.get(mint), 6_000) : base ? await within(clanker.get(mint), 6_000) : await within(originOf(mint), 6_000);
       if (origin) {
         const holdersNow = evm ? undefined : await within(holderReport(mint, fetch, Date.now(), origin.creator));
+        const rightsNow = evm || holdersNow ? null : await within(mintRights(mint));
         const kept = history?.wallet(origin.creator, 20) ?? null;
         const dev = kept ? { launches: kept.launches, dumped: kept.dumped } : null;
-        const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, dev }, { stream, chain });
+        const outside = outsideCheck(mint, { symbol: origin.symbol, createdAt: origin.createdAt, holders: holdersNow, rights: rightsNow, dev }, { stream, chain });
         let funded: LineageView | null = null;
         if (evm && evmFunders) {
           funded = evmLineage.view(origin.creator) ?? null;

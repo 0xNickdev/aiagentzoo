@@ -135,6 +135,23 @@ export async function poolSolOf(pool: string, f: typeof fetch = fetch): Promise<
   return r.value.reduce((n, a) => n + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
 }
 
+const rightsCache = new Map<string, { at: number; rights: TokenRights | null }>();
+/**
+ * Who can mint, freeze or move a token, read from its mint account. Apart from the holders: a token as big as USDC has
+ * too many accounts for the RPC to rank its holders, and its rights still read.
+ */
+export async function mintRights(mint: string, f: typeof fetch = fetch, now = Date.now()): Promise<TokenRights | null> {
+  if (!RPC()) return null;
+  const hit = rightsCache.get(mint);
+  if (hit && now - hit.at < CACHE_MS) return hit.rights;
+  const a = await rpc<{ value: Parameters<typeof rightsOf>[0] }>("getAccountInfo", [mint, { encoding: "jsonParsed" }], f);
+  const rights = rightsOf(a?.value);
+  // A failed read is not kept: the next check asks again.
+  if (a) rightsCache.set(mint, { at: now, rights });
+  if (rightsCache.size > 5_000) for (const [k, v] of rightsCache) if (now - v.at > CACHE_MS) rightsCache.delete(k);
+  return rights;
+}
+
 /** `knownCreator`: the creator as the stream saw it; pump.fun's own API (the fallback) no longer answers for most coins. */
 export async function holderReport(mint: string, f: typeof fetch = fetch, now = Date.now(), knownCreator?: string | null): Promise<HolderReport | null> {
   if (!RPC()) return null;
@@ -149,9 +166,9 @@ export async function holderReport(mint: string, f: typeof fetch = fetch, now = 
       : f(`${PUMP_API}/coins/${mint}`, { signal: AbortSignal.timeout(6_000) })
           .then((r) => (r.ok ? (r.json() as Promise<{ creator?: string }>) : null))
           .catch(() => null),
-    rpc<{ value: Parameters<typeof rightsOf>[0] }>("getAccountInfo", [mint, { encoding: "jsonParsed" }], f),
+    mintRights(mint, f, now),
   ]);
-  const rights = rightsOf(mintAccount?.value);
+  const rights = mintAccount;
   const total = supply?.value.uiAmount ?? 0;
   const accounts = largest?.value ?? [];
   if (!total || !accounts.length) {

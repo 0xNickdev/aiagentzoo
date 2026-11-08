@@ -124,7 +124,7 @@ export interface TokenCheck {
   } | null;
   /** Who paid for the creator, and what else that wallet paid for. Absent when the node has no RPC. */
   funding?: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; otherCreators: number; theirLaunches48h: number; theirDumps48h: number } | null;
-  /** Only with ?holders=1: who can mint, freeze or move tokens, from the mint account. Shown, not scored. */
+  /** Only with ?holders=1: who can mint, freeze or move tokens, from the mint account. A right still held is a reason (see rightsWarnings). */
   rights?: TokenRights;
   /** Only with ?holders=1: who holds it right now, from Solana RPC. */
   holders?: { top10Pct: number; topWalletPct: number; creatorHoldsPct: number | null; programPct?: number; lockedPct?: number; devLockedPct?: number; burnedPct?: number } | null;
@@ -176,7 +176,41 @@ export const WEIGHT = {
   crewBack: 35,
   devDumps: 30,
   devDumpsCaution: 15,
+  /** Someone can still freeze, take, pause or lock up a holder's tokens: the holder may never get to sell. */
+  rightsAvoid: 40,
+  mintable: 20,
+  transferHook: 15,
+  transferFee: 10,
 } as const;
+
+/** Issuers whose freeze and mint rights are the point of the token: regulated stablecoins. Said, not scored. */
+export const ISSUED: Record<string, string> = {
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: "Circle",
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: "Tether",
+  "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": "Paxos",
+};
+
+/**
+ * What the mint's rights let someone do to a holder. A launchpad coin gives every right up at launch, so any right
+ * still held is a choice: freezing, taking, pausing or locking tokens up stops a holder from ever selling (avoid);
+ * more supply, a program on every transfer or a fee on it costs them (caution).
+ */
+export function rightsWarnings(mint: string, r: TokenRights | null | undefined): Array<{ text: string; avoid: boolean; weight: number }> {
+  if (!r || ISSUED[mint]) return [];
+  const out: Array<{ text: string; avoid: boolean; weight: number }> = [];
+  const no = (text: string) => out.push({ text, avoid: true, weight: WEIGHT.rightsAvoid });
+  if (r.freezeAuthority) no("one wallet can still freeze any holder's tokens: a frozen wallet cannot sell");
+  if (r.permanentDelegate) no("one wallet can move or burn any holder's tokens without asking: a permanent delegate");
+  if (r.pauseAuthority) no("one wallet can pause every transfer of it: while paused nobody can sell");
+  if (r.defaultFrozen) no("a new holder's tokens start frozen until the token's authority thaws them");
+  if (r.nonTransferable) no("it cannot be transferred, so it cannot be sold");
+  if (r.mintAuthority) out.push({ text: "the supply is not fixed: one wallet can still mint more", avoid: false, weight: WEIGHT.mintable });
+  if (r.transferHook) out.push({ text: "a program of the creator's choosing runs on every transfer and can refuse a sell: a transfer hook", avoid: false, weight: WEIGHT.transferHook });
+  if ((r.transferFeeBps ?? 0) >= 100) out.push({ text: `every transfer pays a ${+(r.transferFeeBps! / 100).toFixed(2)}% fee to the token's authority`, avoid: false, weight: WEIGHT.transferFee });
+  return out;
+}
+const issuedNote = (mint: string, r: TokenRights | null | undefined) =>
+  ISSUED[mint] && r && (r.freezeAuthority || r.mintAuthority || r.permanentDelegate) ? `${ISSUED[mint]} issues it and keeps the rights to mint and freeze it, as a stablecoin issuer does: said, not scored` : null;
 
 /** The score for a verdict from its reasons' weights: avoid 60..100, caution 25..59, pass 0..24. */
 export function scoreOf(verdict: CheckVerdict, weights: number[], opts: { early?: boolean } = {}): RiskScore {
@@ -213,7 +247,7 @@ const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: 
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; rights?: TokenRights | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -393,6 +427,11 @@ export function checkToken(
     for (const r of avoid) weight.set(r, Math.round((weight.get(r) ?? 0) / 2));
     caution.unshift(runnerReason(pat!), ...avoid.splice(0));
   }
+  // The mint's rights after the softening: a dev gone or a runner dev's record says nothing about who can freeze it.
+  const rights = opts.rights ?? opts.holders?.rights ?? null;
+  for (const w of rightsWarnings(mint, rights)) flag(w.avoid ? avoid : caution, w.text, w.weight);
+  const issued = issuedNote(mint, rights);
+  if (issued) notes.push(issued);
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
   const score = scoreOf(verdict, [...avoid, ...caution].map((r) => weight.get(r) ?? 0), { early });
   if (early) {
@@ -450,7 +489,7 @@ export function checkToken(
       runnerDev: runner,
     },
     ...(holders !== undefined ? { holders } : {}),
-    ...(opts.holders?.rights ? { rights: opts.holders.rights } : {}),
+    ...(rights ? { rights } : {}),
     ...(lin !== undefined
       ? { funding: lin ? { funder: lin.funder, funderIsHot: lin.funderIsHot, funderLabel: lin.funderLabel ?? null, funderService: lin.funderService ?? null, otherCreators: lin.siblings.length, theirLaunches48h: lin.siblingLaunches48h, theirDumps48h: lin.siblingDumped48h } : null }
       : {}),
@@ -503,7 +542,7 @@ export class RateGate {
  */
 export function outsideCheck(
   mint: string,
-  o: { symbol: string | null; createdAt: number; holders: HolderReport | null | undefined; dev: { launches: number; dumped: number } | null },
+  o: { symbol: string | null; createdAt: number; holders: HolderReport | null | undefined; rights?: TokenRights | null; dev: { launches: number; dumped: number } | null },
   opts: { now?: number; stream?: TokenCheck["stream"]; chain?: Chain } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
@@ -523,6 +562,10 @@ export function outsideCheck(
   const d = o.dev;
   if (d && d.launches >= 3 && d.dumped / d.launches >= 0.6) (avoid.push(`its dev dumped ${d.dumped} of ${d.launches} launches the zoo has kept`), weights.push(WEIGHT.devDumps));
   else if (d && d.dumped >= 2) (caution.push(`its dev dumped ${d.dumped} of ${d.launches} launches the zoo has kept`), weights.push(WEIGHT.devDumpsCaution));
+  const rights = o.rights ?? h?.rights ?? null;
+  for (const w of rightsWarnings(mint, rights)) ((w.avoid ? avoid : caution).push(w.text), weights.push(w.weight));
+  const issued = issuedNote(mint, rights);
+  if (issued) notes.push(issued);
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "unknown";
   return {
     version: CHECK_VERSION,
@@ -538,7 +581,7 @@ export function outsideCheck(
     reasons: [...avoid, ...caution],
     notes,
     facts: null,
-    ...(h?.rights ? { rights: h.rights } : {}),
+    ...(rights ? { rights } : {}),
     ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}), ...(h.creatorLockedShare !== undefined ? { devLockedPct: pct1(h.creatorLockedShare)! } : {}) } : null } : {}),
   };
 }

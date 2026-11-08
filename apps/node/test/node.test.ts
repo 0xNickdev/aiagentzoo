@@ -2134,3 +2134,27 @@ test("the mint says who can still touch holders' tokens", async () => {
   assert.equal(rightsOf(null), null);
   assert.equal(rightsOf({ data: { parsed: { type: "account", info: {} } } }), null);
 });
+
+test("a right still held on the mint is a reason; a stablecoin issuer's is only said", async () => {
+  const { rightsWarnings, outsideCheck } = await import("../src/chain/check.ts");
+  const open = { program: "token" as const, mintAuthority: null, freezeAuthority: null };
+  assert.deepEqual(rightsWarnings("X", open), []);
+  assert.deepEqual(rightsWarnings("X", null), []);
+  const freeze = rightsWarnings("X", { ...open, freezeAuthority: "F" });
+  assert.equal(freeze.length, 1);
+  assert.equal(freeze[0]!.avoid, true);
+  const mint = rightsWarnings("X", { ...open, mintAuthority: "M", transferFeeBps: 250, transferHook: "H" });
+  assert.deepEqual(mint.map((w) => w.avoid), [false, false, false]);
+  assert.match(mint[2]!.text, /2\.5% fee/);
+  // A fee under 1% is a cost of trading, not a reason.
+  assert.deepEqual(rightsWarnings("X", { ...open, transferFeeBps: 50 }), []);
+  const usdc = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  assert.deepEqual(rightsWarnings(usdc, { ...open, mintAuthority: "M", freezeAuthority: "F" }), []);
+  const out = outsideCheck(usdc, { symbol: "USDC", createdAt: 0, holders: null, rights: { ...open, mintAuthority: "M", freezeAuthority: "F" }, dev: null }, { now: 1 });
+  assert.equal(out.verdict, "unknown");
+  assert.ok(out.notes.some((n) => n.startsWith("Circle issues it")));
+  assert.equal(out.rights?.freezeAuthority, "F");
+  const coin = outsideCheck("Y", { symbol: "Y", createdAt: 0, holders: null, rights: { ...open, freezeAuthority: "F" }, dev: null }, { now: 1 });
+  assert.equal(coin.verdict, "avoid");
+  assert.ok(coin.score! >= 60);
+});
