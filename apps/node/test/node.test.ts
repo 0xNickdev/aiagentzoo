@@ -2227,6 +2227,15 @@ test("the one-wallet check says whether it ran complete, missed reads, or ran ou
   assert.equal(handNote(gap), "the funding of 1 of its 12 biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute");
   const deep = await traceHand(buyers, null, async (w) => (w === "C3" ? { funder: null, why: "long" } : w.startsWith("C") ? `F${w}` : null));
   assert.match(handNote(deep)!, /^the funding of 1 of its 12 biggest buyers is too far back/);
+  // A read that fails further up, on a buyer's funder's funder, leaves the check incomplete too: the shared wallet could sit above it.
+  const above = await traceHand(buyers, null, async (w) => (w === "FC3" ? { funder: null, why: "rpc" } : w === "FC5" ? { funder: null, why: "long" } : w.startsWith("C") ? `F${w}` : null));
+  assert.equal(above.traced, 12);
+  assert.equal(above.missed!.upstream, 2);
+  assert.equal(handNote(above), "the funding of 2 of its 12 biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute");
+  const aboveLong = await traceHand(buyers, null, async (w) => (w === "FC5" ? { funder: null, why: "long" } : w.startsWith("C") ? `F${w}` : null));
+  assert.match(handNote(aboveLong)!, /^the funding of 1 of its 12 biggest buyers is too far back/);
+  // The end of a trail is not a gap.
+  assert.equal(clean.missed!.upstream, undefined);
   const bare = await traceHand(buyers, null, async (w) => (w === "C3" ? null : w.startsWith("C") ? `F${w}` : null));
   assert.match(handNote(bare)!, /no one wallet paid enough of them to flag \(1 had no funding to follow\)$/);
   // A flagged hand is a reason, not a note.

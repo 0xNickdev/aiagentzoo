@@ -26,10 +26,15 @@ export interface HandReport {
   checked: number;
   /** Of those, the buyers whose funder could be read at all. */
   traced: number;
-  /** Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. */
-  missed?: { none: number; rpc: number; long: number };
+  /**
+   * Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. `upstream`
+   * counts traced buyers whose trail broke further up, on a funder's funder, with a failed or too deep read.
+   */
+  missed?: { none: number; rpc: number; long: number; upstream?: number };
   /** The first failed reads, as the RPC gave them. */
   errors?: string[];
+  /** Some failed read up a trail was the RPC refusing: asking again soon can fill it. */
+  upstreamRpc?: boolean;
   /** The trace outlasted the request: nothing was judged this time, it finishes in the background for the next check. */
   late?: boolean;
   group: HandGroup | null;
@@ -74,9 +79,17 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     if (f.err && errors.length < 3 && !errors.includes(f.err)) errors.push(f.err);
     return f;
   };
+  // A read that fails further up a buyer's trail ends it early, and a funder above could be the one they share.
+  const upstream = new Set<string>();
+  const upstreamRpc = new Set<string>();
+  const trail = (buyer: string): Funder => async (w) => {
+    const f = read(await counted(w));
+    if (w !== buyer && !f.funder && f.why !== "none") (upstream.add(buyer), f.why === "rpc" && upstreamRpc.add(buyer));
+    return f;
+  };
   const chains: string[][] = [];
   // A few at a time: each hop is RPC reads.
-  for (let i = 0; i < sample.length; i += 3) chains.push(...(await Promise.all(sample.slice(i, i + 3).map((b) => chainOf(b.wallet, counted)))));
+  for (let i = 0; i < sample.length; i += 3) chains.push(...(await Promise.all(sample.slice(i, i + 3).map((b) => chainOf(b.wallet, trail(b.wallet))))));
   // Buyers that share any wallet up their funding are one owner, and so is everyone those share with: a union of chains.
   const parent = sample.map((_, i) => i);
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
@@ -113,7 +126,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
-  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length }, ...(errors.length ? { errors } : {}), group: best };
+  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length, ...(upstream.size ? { upstream: upstream.size } : {}) }, ...(upstreamRpc.size ? { upstreamRpc: true } : {}), ...(errors.length ? { errors } : {}), group: best };
 }
 
 const reports = new Map<string, { at: number; p: Promise<HandReport | null> }>();
@@ -130,7 +143,7 @@ export function handOf(mint: string, buyers: Array<{ wallet: string; took: numbe
   reports.set(mint, { at: now, p });
   // A trace with failed reads is kept a minute, not ten: the next X-Ray asks again, and what was read stays cached.
   void p.then((r) => {
-    if (r?.missed?.rpc && reports.get(mint)?.p === p) reports.set(mint, { at: now - CACHE_MS + 60_000, p });
+    if ((r?.missed?.rpc || r?.upstreamRpc) && reports.get(mint)?.p === p) reports.set(mint, { at: now - CACHE_MS + 60_000, p });
   });
   if (reports.size > 2_000) for (const [k, v] of reports) if (now - v.at > CACHE_MS) reports.delete(k);
   return p;
@@ -164,8 +177,9 @@ export function handNote(r: HandReport | null | undefined): string | null {
   if (r.late) return "the money trail of its biggest buyers took too long to read this time, so the one-wallet check is not in this answer: check again in a minute";
   const rpc = r.missed?.rpc ?? 0;
   const long = r.missed?.long ?? 0;
-  if (rpc) return `the funding of ${rpc + long} of its ${r.checked} biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute`;
-  if (long) return `the funding of ${long} of its ${r.checked} biggest buyers is too far back in a long history to read, so the one-wallet check is incomplete`;
+  const up = r.missed?.upstream ?? 0;
+  if (rpc || r.upstreamRpc) return `the funding of ${rpc + long + up} of its ${r.checked} biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute`;
+  if (long || up) return `the funding of ${long + up} of its ${r.checked} biggest buyers is too far back in a long history to read, so the one-wallet check is incomplete`;
   const none = r.missed?.none ?? 0;
   return `the money of its ${r.checked} biggest buyers was traced up to ${HAND.hops} hops back: no one wallet paid enough of them to flag${none ? ` (${none} had no funding to follow)` : ""}`;
 }
