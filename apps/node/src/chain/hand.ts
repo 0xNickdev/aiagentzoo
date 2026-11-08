@@ -28,6 +28,8 @@ export interface HandReport {
   traced: number;
   /** Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. */
   missed?: { none: number; rpc: number; long: number };
+  /** The first failed reads, as the RPC gave them. */
+  errors?: string[];
   group: HandGroup | null;
 }
 
@@ -63,9 +65,11 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
   const own0 = new Set(sample.map((b) => b.wallet));
   const traced = new Set<string>();
   const why = new Map<string, FunderRead["why"]>();
+  const errors: string[] = [];
   const counted: Funder = async (w) => {
     const f = read(await funder(w));
     if (own0.has(w)) f.funder ? traced.add(w) : why.set(w, f.why);
+    if (f.err && errors.length < 3 && !errors.includes(f.err)) errors.push(f.err);
     return f;
   };
   const chains: string[][] = [];
@@ -107,7 +111,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
-  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length }, group: best };
+  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length }, ...(errors.length ? { errors } : {}), group: best };
 }
 
 const reports = new Map<string, { at: number; p: Promise<HandReport | null> }>();

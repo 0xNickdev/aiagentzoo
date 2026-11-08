@@ -47,21 +47,23 @@ interface ParsedTx {
 }
 
 /** An RPC call that tells a failure (rate limit, timeout) apart from an empty answer. */
-async function call<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<{ ok: true; result: T | null } | { ok: false }> {
+async function call<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<{ ok: true; result: T | null } | { ok: false; err: string }> {
+  let err = "";
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetchFn(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8_000) });
-      if (r.status === 429 || r.status >= 500) throw new Error(String(r.status));
-      const body = (await r.json()) as { result?: T; error?: { code?: number } };
-      // -32429 and friends: the provider's own rate limit inside a 200.
-      if (body.error && body.error.code !== -32602 && body.error.code !== -32601) throw new Error("rpc error");
+      if (r.status === 429 || r.status >= 500) throw new Error(`http ${r.status}`);
+      const body = (await r.json()) as { result?: T; error?: { code?: number; message?: string } };
+      // Method not found or bad params is an answer; anything else (a rate limit inside a 200) is worth asking again.
+      if (body.error && body.error.code !== -32602 && body.error.code !== -32601) throw new Error(`code ${body.error.code} ${(body.error.message ?? "").slice(0, 60)}`);
       if (body.error) return { ok: true, result: null };
       return { ok: true, result: body.result ?? null };
-    } catch {
+    } catch (e) {
+      err = `${method}: ${(e as Error).message.slice(0, 80)}`;
       await new Promise((r) => setTimeout(r, 400 * (attempt + 1) ** 2));
     }
   }
-  return { ok: false };
+  return { ok: false, err };
 }
 
 const MIN_FUNDING = 10_000_000;
@@ -87,7 +89,7 @@ export function fundingIn(tx: ParsedTx | null, wallet: string): string | null {
   return payer;
 }
 
-export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" | "long" };
+export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" | "long"; err?: string };
 /**
  * The wallet that first sent SOL into `wallet`, and why not when there is none: "none" is an answer (the history holds
  * no funding), "rpc" is a failed read worth asking again, "long" a history too deep to page back to its start.
@@ -104,7 +106,7 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
     let done = false;
     for (let page = 0; page < 8; page++) {
       const got = await call<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
-      if (!got.ok) return { funder: null, why: "rpc" };
+      if (!got.ok) return { funder: null, why: "rpc", err: got.err };
       const list = got.result ?? [];
       if (!list.length) {
         done = true;
@@ -124,16 +126,16 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
   if (!sigs.length) return { funder: null, why: "none" };
   // Oldest first, read together: the funding usually comes just before the first buy.
   const txs = await Promise.all(sigs.slice(0, 6).map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn)));
-  let failed = false;
+  let failed = "";
   for (const t of txs) {
     if (!t.ok) {
-      failed = true;
+      failed ||= t.err;
       continue;
     }
     const from = fundingIn(t.result, wallet);
     if (from) return { funder: from, why: "found" };
   }
-  return { funder: null, why: failed ? "rpc" : "none" };
+  return failed ? { funder: null, why: "rpc", err: failed } : { funder: null, why: "none" };
 }
 
 /** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
