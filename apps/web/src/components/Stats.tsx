@@ -56,7 +56,7 @@ interface Dev {
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="bg-night-surface px-5 py-4">
-      <p className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4">{k}</p>
+      <p className="tabular-nums text-[13px] [&::first-letter]:uppercase text-fg-4">{k}</p>
       <p className="tabular-nums mt-2 text-[26px] leading-none text-fg">{v}</p>
       {sub && <p className="mt-2 text-[13px] text-fg-4">{sub}</p>}
     </div>
@@ -71,14 +71,14 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>
       </div>
-      <div className="flex h-44 items-end gap-3 border-b border-white/15 pb-0">
+      <div className="flex h-44 items-end gap-1.5 sm:gap-3 border-b border-white/15 pb-0">
         {days.map((d) => {
           const v = pick(d);
           return (
-            <div key={d.day} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.day}: ${num(v)}`}>
-              <span className="tabular-nums mb-1.5 text-[12.5px] text-fg-3">{num(v)}</span>
+            <div key={d.day} className="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end" title={`${d.day}: ${num(v)}`}>
+              <span className="tabular-nums mb-1.5 text-[11px] text-fg-3 sm:text-[13px]">{num(v)}</span>
               <div className={`w-full max-w-[56px] rounded-t-[4px] transition ${d.day === today ? "bg-white/35" : "bg-white/75"} group-hover:bg-white`} style={{ height: `${Math.max(2, (v / max) * 100)}%` }} />
             </div>
           );
@@ -86,7 +86,7 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
       </div>
       <div className="mt-2 flex gap-3">
         {days.map((d) => (
-          <span key={d.day} className="tabular-nums flex-1 text-center text-[12px] text-fg-4">
+          <span key={d.day} className="tabular-nums flex-1 text-center text-[13px] text-fg-4">
             {d.day.slice(5)}
             {d.day === today ? ` · ${t("so far")}` : ""}
           </span>
@@ -101,9 +101,9 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>
       </div>
-      <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+      <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[13px] text-fg-4">
         <span>{t("dev wallet")}</span>
         <span className="text-right">{t("launched")}</span>
         <span className="text-right">{t("dumped")}</span>
@@ -111,7 +111,7 @@ function DevTable({ title, note, rows, good }: { title: string; note: string; ro
       </div>
       {!rows && <p className="py-6 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
       {rows?.map((r) => (
-        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[12px] transition first:border-t-0 hover:bg-white/[0.03]">
+        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[13px] transition first:border-t-0 hover:bg-white/[0.03]">
           <span className="truncate text-fg-2">{short(r.wallet)}</span>
           <span className="text-right text-fg-4">{num(r.launches48h)}</span>
           <span className={`text-right ${!good && r.dumped ? "text-[#ff8a7e]" : "text-fg-4"}`}>{num(r.dumped)}</span>
@@ -158,16 +158,16 @@ export default function Stats() {
             <Bars title="Verdict checks by day" note="includes automatic ones" days={days} pick={(d) => d.checks} />
           </Reveal>
         </div>
-        <p className="mx-auto max-w-3xl text-center text-[12.5px] leading-relaxed text-fg-3">
+        <p className="mx-auto max-w-3xl text-center text-[13px] leading-relaxed text-fg-3">
           {t("A full X-Ray is a person opening the whole report: on the site with a token pasted, in the extension's panel, in the bot or the Telegram app. A verdict check is the short answer; the extension asks for one on every token page and every address on X, and /xray asks for one per example card, so checks run well ahead of people. Callers are counted as hashes, never addresses. Days are UTC.")}
         </p>
 
         <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
             <h3 className="font-display text-xl text-fg">{t("How the verdicts held up")}</h3>
-            <span className="tabular-nums text-[12px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
+            <span className="tabular-nums text-[13px] text-fg-4">{t("tokens launched 24 to 48 hours ago, verdict taken at 5 minutes")}</span>
           </div>
-          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4">
+          <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] gap-3 border-b border-white/[0.08] pb-2 text-[13px] text-fg-4">
             <span>{t("at 5 minutes")}</span>
             <span className="hidden text-right sm:block">{t("tokens")}</span>
             <span className="text-right">{t("dead")}</span>
@@ -177,7 +177,7 @@ export default function Stats() {
             [t("flagged avoid"), a],
             [t("not flagged"), n],
           ].map(([label, s]) => (
-            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[12.5px] first:border-t-0">
+            <div key={label as string} className="tabular-nums grid grid-cols-[minmax(0,1fr)_7rem_6rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_9rem] items-baseline gap-3 border-t border-white/[0.08] py-2.5 text-[13px] first:border-t-0">
               <span className="text-fg-2">{label as string}</span>
               {(() => {
                 const v = s ? tally(s as Side) : null;
@@ -191,7 +191,7 @@ export default function Stats() {
               })()}
             </div>
           ))}
-          <p className="mt-4 text-[12.5px] leading-relaxed text-fg-3">
+          <p className="mt-4 text-[13px] leading-relaxed text-fg-3">
             {t("Read it honestly: on pump.fun almost every launch dies within two days, flagged or not. The verdict does not find the survivors: it names the dev who dumps, the snipers and who paid for them. The odds are what rank them: the launches they put in the top tenth climbed past 85 SOL seven times as often as the average one.")}
           </p>
         </Reveal>
@@ -209,7 +209,7 @@ export default function Stats() {
         <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h3 className="font-display text-xl text-fg">{t("$ZOOAGENCY creator fees")}</h3>
-            <span className="tabular-nums text-[12px] text-fg-4">{t("buybacks and burns")}</span>
+            <span className="tabular-nums text-[13px] text-fg-4">{t("buybacks and burns")}</span>
           </div>
           <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-fg-3">
             {t("pump.fun pays a coin's creator fees to the creator wallet, with no split on chain. ClawPump splits ours after that: 61.5% buys $ZOOAGENCY back and burns it. Its page lists every buyback with its transaction and how much has been burned, so the proof is not our word.")}
@@ -226,7 +226,7 @@ export default function Stats() {
 
         <FeeLoop />
 
-        <p className="tabular-nums pt-2 text-center text-[12.5px] text-fg-4">
+        <p className="tabular-nums pt-2 text-center text-[13px] text-fg-4">
           {t("raw:")}{" "}
           {["/v1/usage", "/v1/chain", "/v1/check/record", "/v1/chain/ruggers", "/v1/chain/builders"].map((p, i) => (
             <span key={p}>
@@ -260,18 +260,18 @@ function FeeLoop() {
     <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t("Swap fees")}</h3>
-        <span className="tabular-nums text-[12px] text-fg-4">{t("{p}% buys $ZOOAGENCY back, the rest runs the zoo", { p: Math.round(b.buyShare * 100) })}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{t("{p}% buys $ZOOAGENCY back, the rest runs the zoo", { p: Math.round(b.buyShare * 100) })}</span>
       </div>
       <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-fg-3">
         {t("Every trade in the X-Ray pays its fee in SOL to a hot wallet. Every six hours the node sweeps it: a tenth buys $ZOOAGENCY through Jupiter straight into the treasury, the rest goes to the treasury as SOL. Each run below links both transactions.")}
       </p>
       <div className="tabular-nums mt-4 grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-4">
-        <div><p className="text-fg">{sol(b.totals.feesSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("fees swept")}</p></div>
-        <div><p className="text-fg">{sol(b.totals.boughtSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("spent on buybacks")}</p></div>
-        <div><p className="text-fg">{sol(b.totals.sweptSol)} SOL</p><p className="text-[11.5px] text-fg-4">{t("to the treasury")}</p></div>
-        <div><p className="text-fg">{b.totals.runs}</p><p className="text-[11.5px] text-fg-4">{t("runs")}</p></div>
+        <div><p className="text-fg">{sol(b.totals.feesSol)} SOL</p><p className="text-[12.5px] text-fg-4">{t("fees swept")}</p></div>
+        <div><p className="text-fg">{sol(b.totals.boughtSol)} SOL</p><p className="text-[12.5px] text-fg-4">{t("spent on buybacks")}</p></div>
+        <div><p className="text-fg">{sol(b.totals.sweptSol)} SOL</p><p className="text-[12.5px] text-fg-4">{t("to the treasury")}</p></div>
+        <div><p className="text-fg">{b.totals.runs}</p><p className="text-[12.5px] text-fg-4">{t("runs")}</p></div>
       </div>
-      <p className="tabular-nums mt-3 text-[12px] text-fg-4">
+      <p className="tabular-nums mt-3 text-[13px] text-fg-4">
         {t("hot wallet")} <a href={`${SOLSCAN_URL}/account/${b.hot}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.hot)}</a>
         {b.treasury && <> · {t("treasury")} <a href={`${SOLSCAN_URL}/account/${b.treasury}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">{short(b.treasury)}</a></>}
       </p>

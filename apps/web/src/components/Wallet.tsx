@@ -52,7 +52,7 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
         <button type="button" onClick={signIn} disabled={busy} className={`${base} bg-white text-black hover:bg-white/90 disabled:opacity-70`}>
           {busy ? t("Check your wallet...") : t("Connect wallet")}
         </button>
-        {error && <p className="mt-2 max-w-[220px] text-[12.5px] text-[#ff8a7e]">{t(error)}</p>}
+        {error && <p className="mt-2 max-w-[220px] text-[13px] text-[#ff8a7e]">{t(error)}</p>}
       </div>
     );
 
@@ -71,7 +71,7 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
             transition={{ duration: 0.2 }}
             className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-4 text-left shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl"
           >
-            <p className="tabular-nums text-[12.5px] text-fg-4">{shortAddress(session.publicKey)}</p>
+            <p className="tabular-nums text-[13px] text-fg-4">{shortAddress(session.publicKey)}</p>
             {holder ? (
               holder.holder ? (
                 <p className="mt-2 text-[15px] text-warn">{t("Holder · alerts first, more checks, the vote")}</p>
@@ -83,7 +83,7 @@ export default function WalletButton({ block = false }: { block?: boolean }) {
             ) : (
               <p className="mt-2 text-[14px] text-fg-4">{t("Reading your balance...")}</p>
             )}
-            {holder?.balance != null && <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{t("balance {n}", { n: compactK(holder.balance) })}</p>}
+            {holder?.balance != null && <p className="tabular-nums mt-1 text-[13px] text-fg-4">{t("balance {n}", { n: compactK(holder.balance) })}</p>}
             <div className="mt-4 grid gap-1 border-t border-white/10 pt-3 text-[14px]">
               <a href="/ask" className="rounded-lg px-2 py-1.5 text-fg-2 hover:bg-white/[0.06] hover:text-white">
                 {t("Watch a token in Telegram")}

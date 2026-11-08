@@ -25,7 +25,7 @@ function Header() {
 
 /** A thin "+" at a corner, the way instrument panels mark their frame. */
 const Plus = ({ className = "" }: { className?: string }) => (
-  <span aria-hidden className={`pointer-events-none absolute text-[12.5px] leading-none text-fg-4 ${className}`}>
+  <span aria-hidden className={`pointer-events-none absolute text-[13px] leading-none text-fg-4 ${className}`}>
     +
   </span>
 );
@@ -59,7 +59,7 @@ function Hero({ data }: { data: Nursery | null }) {
       <Header />
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 pb-10 pt-28 sm:px-8">
-        <motion.p {...rise(0.1)} className="text-[12.5px] text-fg-4">
+        <motion.p {...rise(0.1)} className="text-[13px] text-fg-4">
           {t("The Nursery · live on Solana")}
         </motion.p>
         <motion.h1 {...rise(0.2)} className="font-display mt-5 max-w-4xl text-[2.9rem] leading-[0.98] sm:text-7xl lg:text-[6rem]">
@@ -86,12 +86,12 @@ function Hero({ data }: { data: Nursery | null }) {
           <Plus className="-bottom-1.5 -right-1.5" />
           {stats.map(([k, v], i) => (
             <div key={k} className={`px-1 py-4 sm:px-5 ${i > 0 ? "sm:border-l sm:border-white/[0.08]" : ""} ${i === 4 ? "col-span-2 sm:col-span-1" : ""}`}>
-              <p className="text-[11.5px] text-fg-4">{k}</p>
+              <p className="text-[12.5px] text-fg-4">{k}</p>
               <p className="mt-1.5 text-xl tabular-nums text-white sm:text-2xl">{v}</p>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2.5 text-[12px] text-fg-3">
+        <div className="mt-3 flex items-center gap-2.5 text-[13px] text-fg-3">
           <img src="/evolution/heron.webp" alt="" className="h-6 w-6 rounded-full" />
           {t("Kept by the heron. Every birth, death and grade is signed on the public log.")}
         </div>
@@ -125,10 +125,10 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
   const answered = new Set(data.exam?.answered ?? []);
 
   return (
-    <section id="living" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
+    <section id="living" className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-32">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <motion.div {...rise()}>
-          <p className="text-[12.5px] text-fg-3">{t(data.generation === 1 ? "After {n} turn" : "After {n} turns", { n: data.generation })}</p>
+          <p className="text-[13px] text-fg-3">{t(data.generation === 1 ? "After {n} turn" : "After {n} turns", { n: data.generation })}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("The living")}</h2>
         </motion.div>
         <motion.p {...rise(0.1)} className="max-w-sm text-[14px] leading-relaxed text-fg-4">
@@ -137,7 +137,7 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
       </div>
 
       {data.exam && (
-        <motion.div {...rise(0.15)} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-white/[0.08] py-3 text-[12.5px] text-fg-3">
+        <motion.div {...rise(0.15)} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-white/[0.08] py-3 text-[13px] text-fg-3">
           <span className="text-fg-3">{t("Tonight's exam")}</span>
           <span>{data.exam.tokens.map((tok) => `$${tok.symbol}`).join("  ")}</span>
           <span className="ml-auto tabular-nums">{t("{a}/{b} answered", { a: answered.size, b: ranked.length })}</span>
@@ -156,9 +156,9 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
               className="group relative flex flex-col bg-[#050706] p-6 text-left transition-colors hover:bg-[#0a0d0b]"
             >
               <div className="flex items-start justify-between">
-                <span className="text-[12.5px] tabular-nums text-fg-4">{pad(i + 1)}</span>
+                <span className="text-[13px] tabular-nums text-fg-4">{pad(i + 1)}</span>
                 {tag && (
-                  <span className={`text-[11.5px] ${tag === "breeds" ? "text-warn" : "text-danger"}`}>
+                  <span className={`text-[12.5px] ${tag === "breeds" ? "text-warn" : "text-danger"}`}>
                     {tag === "breeds" ? t("Breeds next") : tag === "starving" ? t("Starving") : t("At risk")}
                   </span>
                 )}
@@ -175,13 +175,13 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
               <h3 className="font-display mt-5 text-2xl">{c.name}</h3>
               <p className="mt-1 text-[13px] text-fg-3">{c.temperament}</p>
               <div className="mt-5">
-                <div className="mb-2 flex justify-between text-[12px] text-fg-4">
+                <div className="mb-2 flex justify-between text-[13px] text-fg-4">
                   <span>{t("Since last turn")}</span>
                   <span className="tabular-nums text-fg-3">{c.graded ? t("{p} · {n} graded", { p: pct(c.skill), n: c.graded }) : t("no grades yet")}</span>
                 </div>
                 <Bar value={c.skill ?? 0} tone={c.id === atRisk || c.starving ? "bg-rose-200/70" : breeding.has(c.id) ? "bg-amber-200/80" : "bg-white/60"} />
               </div>
-              <p className="mt-4 text-[12px] tabular-nums text-fg-4">
+              <p className="mt-4 text-[13px] tabular-nums text-fg-4">
                 {t("lifetime {p} · gen {g}", { p: pct(c.lifetimeSkill), g: c.generation })}
                 {c.mutation ? ` · ${t("mutant")}` : ""}
               </p>
@@ -195,13 +195,13 @@ function Living({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void 
 
 function Bloodlines({ data, onOpen }: { data: Nursery; onOpen: (id: string) => void }) {
   return (
-    <section id="tree" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="tree" className="relative overflow-hidden py-16 sm:py-32">
       <img src="/evolution/roots.webp" alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30" loading="lazy" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,#030504_0%,rgba(3,5,4,0.4)_30%,rgba(3,5,4,0.4)_70%,#030504_100%)]" />
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <motion.div {...rise()} className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="text-[12.5px] text-fg-3">
+            <p className="text-[13px] text-fg-3">
               {t(data.creatures.length === 1 ? "{n} creature so far" : "{n} creatures so far", { n: data.creatures.length })}
             </p>
             <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("The bloodlines")}</h2>
@@ -277,7 +277,7 @@ function Chart({ history, nextTurn, curveOn }: { history: Nursery["history"]; ne
       {[0.25, 0.5, 0.75].map((g) => (
         <g key={g}>
           <line x1={16} x2={W - 16} y1={y(g)} y2={y(g)} className="stroke-white/[0.06]" />
-          <text x={W - 14} y={y(g) - 4} textAnchor="end" className="fill-fg-4 text-[11px] tabular-nums">
+          <text x={W - 14} y={y(g) - 4} textAnchor="end" className="fill-fg-4 text-[12px] tabular-nums">
             {g * 100}%
           </text>
         </g>
@@ -299,7 +299,7 @@ function Tonight({ data }: { data: Nursery }) {
   return (
     <div className="mt-10 grid gap-4 sm:grid-cols-2">
       <motion.div {...rise(0.05)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
-        <p className="flex items-center gap-2 text-[12px] tabular-nums text-fg-3">
+        <p className="flex items-center gap-2 text-[13px] tabular-nums text-fg-3">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> {t("Tonight · {a}/{b} answered", { a: answered.length, b: alive })}
         </p>
         {answered.length === 0 ? (
@@ -312,7 +312,7 @@ function Tonight({ data }: { data: Nursery }) {
               const c = byId.get(id);
               const total = v.suspicious + v.watch + v.promising || 1;
               return (
-                <li key={id} className="flex items-center gap-3 text-[12.5px]">
+                <li key={id} className="flex items-center gap-3 text-[13px]">
                   {c && <img src={portrait(c.house)} alt="" className="h-6 w-6 rounded-full" />}
                   <span className="w-20 truncate text-fg-2">{c?.name ?? id}</span>
                   <span className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]" title={t("{s} suspicious, {w} watch, {p} promising", { s: v.suspicious, w: v.watch, p: v.promising })}>
@@ -320,7 +320,7 @@ function Tonight({ data }: { data: Nursery }) {
                     <span className="bg-white/30" style={{ width: `${(v.watch / total) * 100}%` }} />
                     <span className="bg-emerald-200/70" style={{ width: `${(v.promising / total) * 100}%` }} />
                   </span>
-                  <span className="w-16 text-right text-[12px] tabular-nums text-fg-3">
+                  <span className="w-16 text-right text-[13px] tabular-nums text-fg-3">
                     {v.suspicious}·{v.watch}·{v.promising}
                   </span>
                 </li>
@@ -329,20 +329,20 @@ function Tonight({ data }: { data: Nursery }) {
           </ul>
         )}
         {answered.length > 0 && (
-          <p className="mt-3 text-[11.5px] text-fg-4">
+          <p className="mt-3 text-[12.5px] text-fg-4">
             <span className="text-danger">{t("suspicious")}</span> · {t("watch")} · <span className="text-moss">{t("promising")}</span>
           </p>
         )}
       </motion.div>
       <motion.div {...rise(0.1)} className="rounded-2xl bg-white/[0.02] p-5 ring-1 ring-white/[0.08]">
-        <p className="text-[12px] text-fg-3">{t("Coming up")}</p>
+        <p className="text-[13px] text-fg-3">{t("Coming up")}</p>
         <ol className="mt-3 space-y-3 text-[13.5px] leading-relaxed">
           <li>
-            <span className="block text-[12px] tabular-nums text-fg-4">{t("{d} · after 07:00 UTC", { d: dayOf(data.night) })}</span>
+            <span className="block text-[13px] tabular-nums text-fg-4">{t("{d} · after 07:00 UTC", { d: dayOf(data.night) })}</span>
             <span className="text-fg-2">{t("Tonight's exam is graded by what actually happened to the tokens.")}</span>
           </li>
           <li>
-            <span className="block text-[12px] tabular-nums text-fg-4">{t("{d} · turn {n}", { d: turnDay, n: pad(data.generation + 1) })}</span>
+            <span className="block text-[13px] tabular-nums text-fg-4">{t("{d} · turn {n}", { d: turnDay, n: pad(data.generation + 1) })}</span>
             <span className="text-fg-2">{t("The weakest dies and leaves an epitaph. The two best breed; the child carries one mutation.")}</span>
           </li>
         </ol>
@@ -355,10 +355,10 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
   const events = data.chronicle.filter((e) => e.kind !== "scored").slice(0, 14);
   const graded = data.chronicle.filter((e) => e.kind === "scored").slice(0, 3);
   return (
-    <section className="mx-auto grid max-w-7xl gap-14 px-5 py-24 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+    <section className="mx-auto grid max-w-7xl gap-14 px-5 py-16 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       <div>
         <motion.div {...rise()}>
-          <p className="text-[12.5px] text-fg-3">{t("Signed on the public log")}</p>
+          <p className="text-[13px] text-fg-3">{t("Signed on the public log")}</p>
           <h2 className="font-display mt-3 text-5xl sm:text-6xl">{t("The chronicle")}</h2>
         </motion.div>
         <Tonight data={data} />
@@ -366,12 +366,12 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           {[...events, ...graded].sort((a, b) => b.at - a.at).map((e, i) => (
             <motion.li key={`${e.at}-${i}`} {...rise(0.03 * i)} className="relative pb-7 pl-6">
               <span className="absolute -left-[3.5px] top-1.5 h-[7px] w-[7px] rounded-full bg-[#030504] ring-1 ring-white/30" />
-              <p className="text-[12px] tabular-nums text-fg-4">
+              <p className="text-[13px] tabular-nums text-fg-4">
                 <span className={KIND_MARK[e.kind].tone}>{t(KIND_MARK[e.kind].label)}</span> · {t("{d} · turn {n}", { d: e.night, n: pad(e.generation) })}
               </p>
               <p className="mt-1.5 text-[14.5px] leading-relaxed text-fg-2">{e.text}</p>
               {e.ids[0] && e.kind !== "scored" && (
-                <button type="button" onClick={() => onOpen(e.ids[0]!)} className="mt-1.5 text-[12.5px] text-fg-4 hover:text-white">
+                <button type="button" onClick={() => onOpen(e.ids[0]!)} className="mt-1.5 text-[13px] text-fg-4 hover:text-white">
                   {t("open")} →
                 </button>
               )}
@@ -381,7 +381,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
       </div>
       <div>
         <motion.div {...rise(0.1)}>
-          <p className="text-[12.5px] text-fg-3">{t("Mean balanced accuracy per turn")}</p>
+          <p className="text-[13px] text-fg-3">{t("Mean balanced accuracy per turn")}</p>
           <h3 className="font-display mt-3 text-3xl">{t("Is it working?")}</h3>
           <p className="mt-3 text-[14px] leading-relaxed text-fg-4">
             {t("If selection does its job, the nursery should be right a little more often after every turn. This is the only chart that matters here.")}
@@ -395,7 +395,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
           />
         </motion.div>
         <motion.div {...rise(0.3)} className="mt-8 rounded-3xl bg-white/[0.02] p-6 ring-1 ring-white/[0.08]">
-          <p className="text-[12.5px] text-fg-4">{t("The rules of the nursery")}</p>
+          <p className="text-[13px] text-fg-4">{t("The rules of the nursery")}</p>
           <ol className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-fg-3">
             <li>{t("1. A playbook is fixed for life. Creatures never rewrite their own rules.")}</li>
             <li>{t("2. Every night all of them answer the same exam: three sturdier tokens, three launches the odds favor and two plain fresh launches, so there are living ones to tell apart.")}</li>
@@ -414,7 +414,7 @@ function Chronicle({ data, onOpen }: { data: Nursery; onOpen: (id: string) => vo
 function Waiting({ state }: { state: "loading" | "empty" | "offline" }) {
   return (
     <section className="mx-auto max-w-3xl px-5 py-32 text-center">
-      <p className="text-[12.5px] text-fg-3">{state === "loading" ? t("Opening the nursery") : state === "empty" ? t("Not yet") : t("Offline")}</p>
+      <p className="text-[13px] text-fg-3">{state === "loading" ? t("Opening the nursery") : state === "empty" ? t("Not yet") : t("Offline")}</p>
       <p className="font-display mt-4 text-3xl text-fg-2">
         {state === "loading"
           ? t("Listening for the heron…")
@@ -443,7 +443,7 @@ export default function EvolutionApp() {
       ) : (
         <Waiting state={state === "ready" ? "loading" : state} />
       )}
-      <footer className="mx-auto flex max-w-7xl flex-wrap justify-between gap-4 border-t border-white/[0.07] px-5 py-8 text-[12.5px] text-fg-4 sm:px-8">
+      <footer className="mx-auto flex max-w-7xl flex-wrap justify-between gap-4 border-t border-white/[0.07] px-5 py-8 text-[13px] text-fg-4 sm:px-8">
         <span>ZOOAI AGENCY · {t("The Nursery")}</span>
         <span className="flex gap-6">
           <a href="/docs/thinking" className="hover:text-white">

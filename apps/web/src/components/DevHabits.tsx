@@ -28,7 +28,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 function Row({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
-      <span className="text-[12.5px] font-normal text-fg-4">{k}</span>
+      <span className="text-[13px] font-normal text-fg-4">{k}</span>
       <span className={`tabular-nums text-right text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
     </div>
   );
@@ -55,7 +55,7 @@ export default function DevHabits({ h }: { h: Habits | null | undefined }) {
   if (!rows.length) return null;
   return (
     <div className="mt-3 border-t border-white/[0.08] pt-3">
-      <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-fg-4">
+      <p className="tabular-nums text-[12.5px] [&::first-letter]:uppercase text-fg-4">
         {p ? t("usually · from {n} launches", { n: p.launches }) : t("habits")}
       </p>
       <div className="mt-1.5">

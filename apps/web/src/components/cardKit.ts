@@ -1,7 +1,7 @@
 /** Shared look of the share cards (X-Ray, Ask, Night card): the night with one moss glow, the wordmark, solid text in one family. */
 
 export const FG2 = "#e6e9e7";
-export const FG4 = "#a3aaa6";
+export const FG4 = "#b8beba";
 export const HAIR = "rgba(255,255,255,0.14)";
 /** Small text on the cards: Geist, never monospace. */
 export const small = (n: number) => `500 ${n}px "Geist", -apple-system, sans-serif`;

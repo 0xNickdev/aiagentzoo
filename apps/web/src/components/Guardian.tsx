@@ -12,7 +12,7 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           type="button"
           onClick={signOut}
           title={t("Sign out")}
-          className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg"
+          className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[13px] text-fg"
         >
           Guardian {shortAddress(session.publicKey)}
         </button>
@@ -21,12 +21,12 @@ export function GuardianButton({ className = "" }: { className?: string }) {
           type="button"
           onClick={signIn}
           disabled={busy}
-          className="bg-night-surface border border-white/[0.08] w-full rounded-full px-4 py-2.5 text-[12px] text-fg disabled:opacity-50"
+          className="bg-night-surface border border-white/[0.08] w-full rounded-full px-4 py-2.5 text-[13px] text-fg disabled:opacity-50"
         >
           {busy ? t("Check your wallet…") : t("Sign in as guardian")}
         </button>
       )}
-      {error && <p className="mt-2 text-[12.5px] text-fg-3">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-fg-3">{error}</p>}
     </div>
   );
 }
@@ -69,11 +69,11 @@ export function WakeButton({ agent }: { agent: string }) {
         type="button"
         onClick={wake}
         disabled={allowed === null || waiting > 0 || state?.text === "Waking…"}
-        className="rounded-full bg-white px-4 py-2.5 text-[12px] font-medium text-black transition hover:bg-white/90 disabled:opacity-40"
+        className="rounded-full bg-white px-4 py-2.5 text-[13px] font-medium text-black transition hover:bg-white/90 disabled:opacity-40"
       >
         {waiting > 0 ? t("Again in {n}s", { n: waiting }) : t("Wake the {a}", { a: t(agent) })}
       </button>
-      {state && <span className="text-[12.5px] font-normal leading-snug text-fg-4">{t(state.text)}</span>}
+      {state && <span className="text-[13px] font-normal leading-snug text-fg-4">{t(state.text)}</span>}
     </div>
   );
 }

@@ -59,7 +59,7 @@ export default function WallOfRugs() {
         ))}
       </div>
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -77,13 +77,13 @@ export default function WallOfRugs() {
             onClick={() => (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
             onKeyDown={(e) => e.key === "Enter" && (rememberChain(r.wallet, r.chain), goWallet(r.wallet))}
             title={t("Open this dev's wallet")}
-            className="tabular-nums grid cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] items-center gap-3 border-t border-white/[0.08] px-5 py-4 text-[14px] sm:py-3.5 sm:text-[12.5px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
+            className="tabular-nums grid cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_3.75rem_3.75rem] items-center gap-3 border-t border-white/[0.08] px-5 py-4 text-[14px] sm:py-3.5 sm:text-[13px] transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.06] focus-visible:outline-none sm:grid-cols-[2.5rem_minmax(0,12rem)_6rem_6rem_6rem_minmax(0,1fr)] sm:px-7"
           >
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <span className="min-w-0">
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-fg underline decoration-white/20 underline-offset-4">{short(r.wallet)}</span>
-              {r.chain && <span className="shrink-0 rounded-full border border-white/[0.12] px-1.5 text-[11px] text-fg-4">{CHAIN_SHORT[r.chain]}</span>}
+              {r.chain && <span className="shrink-0 rounded-full border border-white/[0.12] px-1.5 text-[12px] text-fg-4">{CHAIN_SHORT[r.chain]}</span>}
               <button
                 type="button"
                 onClick={(e) => {
@@ -92,13 +92,13 @@ export default function WallOfRugs() {
                   setCopied(r.wallet);
                   window.setTimeout(() => setCopied(null), 1200);
                 }}
-                className="hidden shrink-0 text-[11.5px] text-fg-4 hover:text-white sm:inline"
+                className="hidden shrink-0 text-[12.5px] text-fg-4 hover:text-white sm:inline"
                 title={t("Copy the wallet")}
               >
                 {copied === r.wallet ? t("copied") : t("copy")}
               </button>
             </span>
-            {r.lastDump && <span className="mt-1 block truncate text-[12.5px] text-fg-4 sm:hidden">${r.lastDump.symbol.replace(/^\$/, "")} · {tChain(r.lastDump.text)}</span>}
+            {r.lastDump && <span className="mt-1 block truncate text-[13px] text-fg-4 sm:hidden">${r.lastDump.symbol.replace(/^\$/, "")} · {tChain(r.lastDump.text)}</span>}
             </span>
             <span className="text-right text-fg-3">{r.launches48h}</span>
             <span className="text-right text-[#ff8a7e]">{r.dumped}</span>
@@ -117,7 +117,7 @@ export default function WallOfRugs() {
       </Reveal>
       <Builders />
       <ReusedAccounts />
-      <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-4 text-center text-[13px] text-fg-4">
         {t("check any dev:")} <a href="/ask" className="underline decoration-white/25 underline-offset-4 hover:text-white">{t("ask the beaver")}</a> · {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/ruggers`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/ruggers</a>
       </p>
@@ -168,7 +168,7 @@ function Builders() {
         text={t("The other side of the list: dev wallets with launches that graduated and still hold liquidity, where the dev has not dumped. Rare. A track record, not a promise.")}
       />
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
           <span>#</span>
           <span>{t("dev wallet")}</span>
           <span className="text-right">{t("launched")}</span>
@@ -178,7 +178,7 @@ function Builders() {
         </div>
         {!list && <p className="px-7 py-10 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
         {list?.map((r, i) => (
-          <div key={r.wallet} className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[12.5px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
+          <div key={r.wallet} className="tabular-nums grid grid-cols-[2rem_minmax(0,1fr)_4rem_4rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-[13px] sm:grid-cols-[2.5rem_minmax(0,12rem)_5rem_6rem_5rem_minmax(0,1fr)] sm:px-7">
             <span className="text-fg-4">{String(i + 1).padStart(2, "0")}</span>
             <button type="button" onClick={() => goWallet(r.wallet)} className="truncate text-left text-fg-2 underline decoration-white/15 underline-offset-4 hover:text-white">
               {short(r.wallet)}
@@ -196,7 +196,7 @@ function Builders() {
           </div>
         ))}
       </Reveal>
-      <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-4 text-center text-[13px] text-fg-4">
         {t("raw:")}{" "}
         <a href={`${NORTH}/v1/chain/builders`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/chain/builders</a>
       </p>
@@ -219,14 +219,14 @@ function ReusedAccounts() {
   return (
     <div className="mt-16">
       <div className="mb-4 max-w-3xl">
-        <p className="tabular-nums mb-2 text-[12.5px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
+        <p className="tabular-nums mb-2 text-[13px] text-fg-3">{t("same account, new token · last 48 hours")}</p>
         <h3 className="font-display text-3xl leading-tight">{t("The accounts behind repeat rugs.")}</h3>
         <p className="mt-3 text-[13.5px] font-normal leading-relaxed text-fg-4">
           {t("A rugger switches wallets for every launch. The X account or Telegram group on the token often stays the same. These are linked, in their own metadata, to several launches whose dev sold within 5 minutes.")}
         </p>
       </div>
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
           <span>{t("linked account")}</span>
           <span className="text-right">{t("launches")}</span>
           <span className="text-right">{t("dev sold ≤5 min")}</span>
@@ -236,7 +236,7 @@ function ReusedAccounts() {
         {!list && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
         {list && list.length === 0 && <p className="px-7 py-8 text-center text-[13px] text-fg-3">{t("None yet: the reader fills this as new launches come in.")}</p>}
         {list?.map((a) => (
-          <div key={a.social.url} className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3 text-[12.5px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
+          <div key={a.social.url} className="tabular-nums grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3 text-[13px] sm:grid-cols-[minmax(0,14rem)_6rem_7rem_6rem_minmax(0,1fr)] sm:px-7">
             <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-fg-2 hover:text-white">
               {a.social.label} ↗
             </a>

@@ -77,7 +77,7 @@ export default function Leaderboard() {
       />
 
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_3rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
+        <div className="tabular-nums grid grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_3rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7">
           <span>#</span>
           <span>{t("agent")}</span>
           <span className="hidden sm:block">{t("balanced accuracy")}</span>
@@ -102,7 +102,7 @@ export default function Leaderboard() {
 
         {waiting.length > 0 && (
           <>
-            <p className="tabular-nums border-t border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-[12px] text-fg-4 sm:px-7">
+            <p className="tabular-nums border-t border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-[13px] text-fg-4 sm:px-7">
               {t("not ranked yet · the column on the right says what is missing")}
             </p>
             {waiting.map((r) => (
@@ -122,7 +122,7 @@ export default function Leaderboard() {
           ) : null;
         })()}
 
-      <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-4 text-center text-[13px] text-fg-4">
         {t("raw:")}{" "}
         <a href="https://canyon.zooaiagency.com/v1/leaderboard" className="underline decoration-white/25 underline-offset-4 hover:text-white">
           /v1/leaderboard
@@ -148,12 +148,12 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
       onClick={() => open(r)}
       className={`grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_3rem] items-center gap-3 border-t border-white/[0.08] px-5 py-3.5 text-left transition hover:bg-white/[0.03] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,14rem)_5rem_9rem] sm:px-7 ${rank === null ? "text-fg-4" : ""}`}
     >
-      <span className="tabular-nums text-[12px] text-fg-4">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
+      <span className="tabular-nums text-[13px] text-fg-4">{rank === null ? "·" : String(rank).padStart(2, "0")}</span>
       <span className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-2.5">
         <span className="font-display truncate text-[17px]">{r.name}</span>
-        <span className="tabular-nums min-w-0 text-[11.5px] text-fg-4 sm:shrink-0">
+        <span className="tabular-nums min-w-0 text-[12.5px] text-fg-4 sm:shrink-0">
           <span className="hidden sm:inline">{t(KIND[r.kind])}</span>
-          <span className="block truncate sm:hidden">{t("{a}/{b} dead · {c}/{d} living", { a: r.deadRight, b: r.dead, c: r.aliveRight, d: r.alive })}</span>
+          <span className="block sm:hidden">{t("{a}/{b} dead · {c}/{d} living", { a: r.deadRight, b: r.dead, c: r.aliveRight, d: r.alive })}</span>
           {need && <span className="block text-warn sm:hidden">{need}</span>}
         </span>
       </span>
@@ -167,10 +167,10 @@ function BoardRow({ r, rank, need }: { r: Row; rank: number | null; need?: strin
           <span className="absolute -top-1 left-1/2 h-[9px] w-px bg-white/25" />
         </span>
       </span>
-      <span className="tabular-nums text-right text-[12px] tabular-nums text-fg-3">{r.graded}</span>
-      <span className="tabular-nums hidden text-right text-[12px] tabular-nums text-fg-4 sm:block">
+      <span className="tabular-nums text-right text-[13px] tabular-nums text-fg-3">{r.graded}</span>
+      <span className="tabular-nums hidden text-right text-[13px] tabular-nums text-fg-4 sm:block">
         {r.deadRight}/{r.dead} · {r.aliveRight}/{r.alive}
-        {need && <span className="block text-[11.5px] text-warn">{need}</span>}
+        {need && <span className="block text-[12.5px] text-warn">{need}</span>}
       </span>
     </button>
   );

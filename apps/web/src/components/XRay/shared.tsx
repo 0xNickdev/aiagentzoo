@@ -34,7 +34,7 @@ export const TONE: Record<Verdict, { label: string; color: string }> = {
 export function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
-      <span className="text-[12.5px] font-normal text-fg-4">{t(k)}</span>
+      <span className="text-[13px] font-normal text-fg-4">{t(k)}</span>
       <span className={`tabular-nums text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
     </div>
   );
@@ -45,7 +45,7 @@ export function Panel({ title, note, children }: { title: string; note?: string;
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        {note && <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>}
+        {note && <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>}
       </div>
       {children}
     </div>
@@ -70,9 +70,9 @@ export function Addr({ a, href, className = "" }: { a: string; href?: string; cl
 export function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
   const o = launchOutcome(x);
   return (
-    <span className="tabular-nums shrink-0 text-right text-[12.5px] leading-snug">
+    <span className="tabular-nums shrink-0 text-right text-[13px] leading-snug">
       <span className={o.dumped ? "text-[#ff8a7e]" : "text-fg-3"}>{o.head}</span>
-      {o.tail && <span className="block text-[11.5px] text-fg-4">{o.tail}</span>}
+      {o.tail && <span className="block text-[12.5px] text-fg-4">{o.tail}</span>}
     </span>
   );
 }
@@ -101,12 +101,12 @@ export function HoldStrip({ c }: { c: XRayReport["check"] }) {
   if (!cells.length) return null;
   return (
     <div className="mt-3 border-t border-white/[0.08] pt-3">
-      <p className="tabular-nums text-[11px] [&::first-letter]:uppercase text-fg-4">{t("who holds it")}</p>
+      <p className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4">{t("who holds it")}</p>
       <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
         {cells.map((x) => (
           <div key={x.k} className="min-w-0">
             <p className={`tabular-nums text-[15px] leading-none ${x.bad ? "text-[#ff8a7e]" : "text-fg"}`}>{x.v}%</p>
-            <p className="mt-1 truncate text-[11px] font-normal text-fg-4">{x.k}</p>
+            <p className="mt-1 truncate text-[12px] font-normal text-fg-4">{x.k}</p>
           </div>
         ))}
       </div>

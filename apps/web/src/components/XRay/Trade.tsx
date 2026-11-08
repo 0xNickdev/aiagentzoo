@@ -30,7 +30,7 @@ export function TradeOnEvm({ mint, flap }: { mint: string; flap?: boolean }) {
   const base = chainOf(mint) === "base";
   return (
     <div>
-      <p className="text-[11.5px] text-fg-4">{t("trade it here")}</p>
+      <p className="text-[12.5px] text-fg-4">{t("trade it here")}</p>
       <div className="mt-2 flex flex-col gap-2">
         <a href={base ? `https://www.clanker.world/clanker/${mint}` : flap ? `https://flap.sh/bnb/${mint}` : `https://four.meme/token/${mint}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-center text-[13.5px] font-semibold text-black transition hover:bg-white/90">
           {base ? t("Buy on clanker.world ↗") : flap ? t("Buy on Flap ↗") : t("Buy on four.meme ↗")}
@@ -39,7 +39,7 @@ export function TradeOnEvm({ mint, flap }: { mint: string; flap?: boolean }) {
           {base ? t("Uniswap ↗") : t("PancakeSwap ↗")}
         </a>
       </div>
-      <p className="mt-3 text-[12px] font-normal leading-relaxed text-fg-4">{base ? t("Trading on Base is not routed through the zoo yet: a Clanker token lives in its Uniswap pool from the first second. Not financial advice.") : flap ? t("Trading on BNB Chain is not routed through the zoo yet: Flap while it is on the curve, PancakeSwap after it graduates. Not financial advice.") : t("Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.")}</p>
+      <p className="mt-3 text-[13px] font-normal leading-relaxed text-fg-4">{base ? t("Trading on Base is not routed through the zoo yet: a Clanker token lives in its Uniswap pool from the first second. Not financial advice.") : flap ? t("Trading on BNB Chain is not routed through the zoo yet: Flap while it is on the curve, PancakeSwap after it graduates. Not financial advice.") : t("Trading on BNB Chain is not routed through the zoo yet: four.meme while it is on the curve, PancakeSwap after it graduates. Not financial advice.")}</p>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export function TradeOnEvm({ mint, flap }: { mint: string; flap?: boolean }) {
 export function Terminals({ mint }: { mint: string }) {
   return (
     <div className="mt-4 border-t border-white/[0.08] pt-3">
-      <p className="text-[11.5px] text-fg-4">{t("open in your terminal")}</p>
+      <p className="text-[12.5px] text-fg-4">{t("open in your terminal")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {TERMINALS(mint).map((x) => (
           <a

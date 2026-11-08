@@ -102,7 +102,7 @@ export default function Brief() {
     <Section id="brief" backdrop={{ tint: "235,190,120", glowAt: "50% 10%" }}>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="tabular-nums text-[12.5px] text-fg-3">{tr("Every morning · 07:00 UTC · signed")}</p>
+          <p className="tabular-nums text-[13px] text-fg-3">{tr("Every morning · 07:00 UTC · signed")}</p>
           <h1 className="font-display mt-3 text-5xl sm:text-7xl">{tr("The Morning Brief")}</h1>
           <p className="mt-4 max-w-xl text-[15px] font-normal leading-relaxed text-fg-4">
             {tr("What launched overnight on pump.fun, what moved, what went to zero and what looks off. Assembled by the pack, no human in the loop.")}
@@ -115,7 +115,7 @@ export default function Brief() {
                 key={r.id}
                 type="button"
                 onClick={() => open(r)}
-                className={`tabular-nums rounded-full px-3.5 py-1.5 text-[12.5px] ring-1 transition ${
+                className={`tabular-nums rounded-full px-3.5 py-1.5 text-[13px] ring-1 transition ${
                   brief?.ref.id === r.id ? "bg-white text-black ring-white" : "text-fg-4 ring-white/15 hover:text-white"
                 }`}
               >
@@ -141,11 +141,11 @@ export default function Brief() {
           <div className="relative grid grid-cols-2 border-y border-white/12 sm:grid-cols-3 lg:grid-cols-6">
             {figures.map(([k, v], i) => (
               <div key={k} className={`px-1 py-5 sm:px-5 ${i > 0 ? "lg:border-l lg:border-white/[0.08]" : ""}`}>
-                <p className="tabular-nums text-[11.5px] text-fg-4">{k}</p>
+                <p className="tabular-nums text-[12.5px] text-fg-4">{k}</p>
                 {/* "71% · 4 calls": the number big, the sample beside it small, so it never wraps. */}
                 <p className="tabular-nums mt-2 text-2xl text-white">
                   {v.split(" · ")[0]}
-                  {v.includes(" · ") && <span className="ml-2 text-[12px] text-fg-3">{v.split(" · ").slice(1).join(" · ")}</span>}
+                  {v.includes(" · ") && <span className="ml-2 text-[13px] text-fg-3">{v.split(" · ").slice(1).join(" · ")}</span>}
                 </p>
               </div>
             ))}
@@ -153,23 +153,23 @@ export default function Brief() {
 
           <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <div>
-              <p className="tabular-nums text-[12px] text-fg-4">{tr("Night of {n} · night in review", { n: s.night })}</p>
+              <p className="tabular-nums text-[13px] text-fg-4">{tr("Night of {n} · night in review", { n: s.night })}</p>
               <p className="mt-4 text-[16px] font-normal leading-[1.7] text-fg-2 sm:text-[19px]">
                 {(lang() === "zh" ? (s.reviewZh ?? null) : review) ?? tr("{o} tokens observed; {g} graduated, {z} went to zero, {f} flagged.", { o: s.observed, g: s.counts?.graduated ?? s.graduated.length, z: s.counts?.wentToZero ?? s.wentToZero.length, f: s.counts?.suspicious ?? s.suspicious.length })}
               </p>
             </div>
             <div className="flex flex-col justify-end gap-3 lg:items-end">
-              <p className="tabular-nums text-[12.5px] text-fg-4" title={brief.ref.sha256}>
+              <p className="tabular-nums text-[13px] text-fg-4" title={brief.ref.sha256}>
                 sha256 {brief.ref.sha256.slice(0, 16)}…
               </p>
               <div className="flex gap-2">
-                <button type="button" onClick={() => void openCard()} className="rounded-full bg-white px-4 py-2 text-[12px] font-medium text-black hover:bg-white/90">
+                <button type="button" onClick={() => void openCard()} className="rounded-full bg-white px-4 py-2 text-[13px] font-medium text-black hover:bg-white/90">
                   {tr("Night card")}
                 </button>
-                <button type="button" onClick={share} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
+                <button type="button" onClick={share} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[13px] text-fg-2 hover:text-white">
                   {tr("Copy link")}
                 </button>
-                <button type="button" onClick={download} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[12px] text-fg-2 hover:text-white">
+                <button type="button" onClick={download} className="bg-night-surface border border-white/[0.08] rounded-full px-4 py-2 text-[13px] text-fg-2 hover:text-white">
                   {tr("Download .md")}
                 </button>
               </div>
@@ -197,7 +197,7 @@ export default function Brief() {
               <WeekBoard week={s.week} />
             </div>
           )}
-          <p className="mt-4 text-[12.5px] font-normal text-fg-4">{tr("Observations from public data, not financial advice.")}</p>
+          <p className="mt-4 text-[13px] font-normal text-fg-4">{tr("Observations from public data, not financial advice.")}</p>
         </Reveal>
       )}
 

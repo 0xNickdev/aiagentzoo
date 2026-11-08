@@ -34,7 +34,7 @@ export function Answer({ a }: { a: Ask }) {
         <div className="min-w-0 bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="min-w-0">
-              <p className="tabular-nums flex flex-wrap items-center gap-2 text-[12.5px] text-fg-4">
+              <p className="tabular-nums flex flex-wrap items-center gap-2 text-[13px] text-fg-4">
                 <span className="min-w-0 truncate">
                   {a.name ? `${a.name} · ` : ""}
                   {a.mint}
@@ -44,7 +44,7 @@ export function Answer({ a }: { a: Ask }) {
               <h2 className="font-display mt-1 text-4xl">${a.symbol}</h2>
             </div>
             {a.facts.url && (
-              <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="tabular-nums text-[12.5px] text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
+              <a href={a.facts.url} target="_blank" rel="noopener noreferrer" className="tabular-nums text-[13px] text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
                 {t("chart ↗")}
               </a>
             )}
@@ -53,13 +53,13 @@ export function Answer({ a }: { a: Ask }) {
           <p className="font-display mt-6 text-6xl leading-none sm:text-7xl" style={{ color: tone.color }}>
             {t(tone.label)}
           </p>
-          <p className="tabular-nums mt-3 text-[12.5px] text-fg-3">
+          <p className="tabular-nums mt-3 text-[13px] text-fg-3">
             {t("confidence {c}% · playbook v{v}", { c: Math.round(a.confidence * 100), v: a.playbookVersion })}
             {a.by === "rules" ? t(" · rules only, the model was busy") : ""}
           </p>
           <p className="mt-5 max-w-2xl text-[17px] font-normal leading-relaxed text-fg-2">{whyOf(a)}</p>
 
-          <dl className="tabular-nums mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] sm:grid-cols-3">
+          <dl className="tabular-nums mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[13px] sm:grid-cols-3">
             {evidence(a).map(([k, v, bad]) => (
               <div key={k} className="bg-[#070908] px-4 py-3">
                 <dt className="text-fg-4">{t(k)}</dt>
@@ -74,10 +74,10 @@ export function Answer({ a }: { a: Ask }) {
           )}
           {a.council && <CouncilBlock c={a.council} outcome={a.graded?.outcome ?? null} />}
           {!a.facts.chain && (
-            <p className="mt-3 text-[12px] font-normal text-fg-4">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
+            <p className="mt-3 text-[13px] font-normal text-fg-4">{t("No chain facts: this token launched before our pump.fun stream picked it up, so the beaver judged from the market alone.")}</p>
           )}
 
-          <p className={`tabular-nums mt-6 text-[12px] ${a.graded?.hit === true ? "text-[#a6e3b4]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-warn"}`}>
+          <p className={`tabular-nums mt-6 text-[13px] ${a.graded?.hit === true ? "text-[#a6e3b4]" : a.graded?.hit === false ? "text-[#ff8a7e]" : "text-warn"}`}>
             {a.graded ? "● " : "○ "}
             {graded(a)}
           </p>
@@ -106,7 +106,7 @@ export function Answer({ a }: { a: Ask }) {
               <XIcon size={13} /> {t("Post on X")}
             </a>
           </div>
-          <p className="tabular-nums text-[12.5px] text-fg-4">
+          <p className="tabular-nums text-[13px] text-fg-4">
             {t("share:")} <span className="text-fg-3">{link}</span>
           </p>
           <p className="text-[13px] font-normal text-fg-4">{t("Not financial advice. A verdict from public data, checked in public a day later.")}</p>
@@ -127,7 +127,7 @@ export function CouncilBlock({ c, outcome }: { c: Council; outcome: "dead" | "al
         <p className="text-[15px] text-fg">
           {t("The nursery votes:")} <span className={tone.text}>{t(tone.label)}</span>
         </p>
-        <a href="/evolution" className="tabular-nums text-[12px] text-fg-4 underline decoration-white/20 underline-offset-4 hover:text-white">
+        <a href="/evolution" className="tabular-nums text-[13px] text-fg-4 underline decoration-white/20 underline-offset-4 hover:text-white">
           {t("{n} judges, weighted by their record", { n: c.votes.length })}
         </a>
       </div>
@@ -139,12 +139,12 @@ export function CouncilBlock({ c, outcome }: { c: Council; outcome: "dead" | "al
               <a href={`/evolution#${v.id}`} className="min-w-0 truncate text-[13.5px] text-fg-2 hover:text-white">
                 {v.name}
               </a>
-              <span className={`tabular-nums text-right text-[12.5px] ${TONE[v.verdict].text}`}>
+              <span className={`tabular-nums text-right text-[13px] ${TONE[v.verdict].text}`}>
                 {hit === true ? "✓ " : hit === false ? "✗ " : ""}
                 {t(TONE[v.verdict].label)}
               </span>
-              <p className="min-w-0 text-[12.5px] font-normal leading-snug text-fg-4">{v.why}</p>
-              <span className="tabular-nums self-start pt-0.5 text-right text-[11.5px] text-fg-4" title={t("Balanced accuracy above a coin flip; a judge no better than a coin flip weighs nothing")}>
+              <p className="min-w-0 text-[13px] font-normal leading-snug text-fg-4">{v.why}</p>
+              <span className="tabular-nums self-start pt-0.5 text-right text-[12.5px] text-fg-4" title={t("Balanced accuracy above a coin flip; a judge no better than a coin flip weighs nothing")}>
                 {max > 0 ? (v.weight > 0 ? t("weight {w}", { w: Math.round((v.weight / max) * 100) }) : t("no weight")) : ""}
               </span>
             </li>
@@ -160,18 +160,18 @@ export function CreatorBlock({ r, big = false }: { r: CreatorRecord; big?: boole
   const serial = r.launches48h >= 3 && r.dumped >= Math.ceil(r.launches48h / 2);
   return (
     <div>
-      <p className="tabular-nums text-[12.5px] text-fg-4">
+      <p className="tabular-nums text-[13px] text-fg-4">
         {t("creator wallet · {w} · last 48h on pump.fun", { w: `${r.wallet.slice(0, 6)}…${r.wallet.slice(-6)}` })}
       </p>
       <p className={`font-display mt-2 ${big ? "text-4xl sm:text-5xl" : "text-2xl"} ${serial ? "text-[#ff8a7e]" : "text-white"}`}>
         {t(r.launches48h === 1 ? "{n} launch, dumped {d}" : "{n} launches, dumped {d}", { n: r.launches48h, d: r.dumped })}
         {r.medianDumpMin !== null ? t(", median {m} min", { m: r.medianDumpMin }) : ""}
       </p>
-      <p className="tabular-nums mt-2 text-[12.5px] text-fg-3">
+      <p className="tabular-nums mt-2 text-[13px] text-fg-3">
         {t("{a} in the last 24h · {g} graduated", { a: r.launches24h, g: r.graduated })}{serial ? t(" · a serial dumper") : ""}
       </p>
       {big && r.recent.length > 0 && (
-        <ul className="tabular-nums mt-5 grid gap-1.5 text-[12px] sm:grid-cols-2">
+        <ul className="tabular-nums mt-5 grid gap-1.5 text-[13px] sm:grid-cols-2">
           {r.recent.map((x) => (
             <li key={x.mint} className="flex justify-between gap-3 border-b border-dashed border-white/10 py-1.5">
               <span className="truncate text-fg-2">${x.symbol}</span>

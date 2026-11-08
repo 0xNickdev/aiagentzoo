@@ -442,7 +442,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12.5px] font-medium" style={{ color: COLOR[n.kind] }}>{kindName[n.kind]}</p>
+              <p className="text-[13px] font-medium" style={{ color: COLOR[n.kind] }}>{kindName[n.kind]}</p>
               <p className="mt-0.5 truncate text-[15px] font-semibold text-white">{n.kind === "coin" ? n.label : n.kind === "dev" ? short(r.creator) : short(n.id)}</p>
             </div>
             <button type="button" onClick={() => setPicked(null)} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-fg-4 hover:text-white">
@@ -476,7 +476,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
           </button>
         ))}
       </div>
-      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[12px] text-fg-4">{t("Drag to move · pinch or ⌘ scroll to zoom · click a dot")}</p>
+      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[13px] text-fg-4">{t("Drag to move · pinch or ⌘ scroll to zoom · click a dot")}</p>
     </div>
   );
 }

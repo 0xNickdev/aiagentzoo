@@ -131,7 +131,7 @@ export default function XRay() {
           <BackToFeed />
           {!compact && (
             <>
-          <p className="tabular-nums text-[12px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme, Flap and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
+          <p className="tabular-nums text-[13px] text-fg-3">{t("X-Ray · every pump.fun, LaunchLab, Meteora, four.meme, Flap and Clanker trade, read live from Solana, BNB Chain and Base")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("See who you are")}
             <br />
@@ -152,7 +152,7 @@ export default function XRay() {
               placeholder={t("token address: pump.fun, LaunchLab, Meteora, four.meme, Flap, Clanker")}
               spellCheck={false}
               autoComplete="off"
-              className="font-mono min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-fg-4"
+              className="min-w-0 flex-1 bg-transparent px-5 py-3 text-[14px] text-white outline-none placeholder:text-fg-4"
               aria-label={t("Token address")}
             />
             <button type="submit" disabled={busy} className="rounded-full bg-white px-7 py-3 text-[14px] font-medium text-black transition hover:bg-white/90 disabled:opacity-60">

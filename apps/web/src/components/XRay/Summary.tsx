@@ -45,9 +45,9 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
   return (
     <div className="relative border-b border-white/[0.07] px-4 py-4 sm:px-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-fg-4">{t("What the chain shows")}</p>
+        <p className="text-[12px] uppercase tracking-[0.14em] text-fg-4">{t("What the chain shows")}</p>
         {market && market.mcapUsd !== null && (
-          <p className="tabular-nums text-[12.5px] text-fg-3">
+          <p className="tabular-nums text-[13px] text-fg-3">
             <span className="text-fg">{t("mcap {m}", { m: usdShort(market.mcapUsd) })}</span>
             {market.m5 !== null && <span className={market.m5 >= 0 ? "text-[#a6e3b4]" : "text-[#ff8a7e]"}> · 5m {pctMove(market.m5)}</span>}
             {market.h1 !== null && <span className={market.h1 >= 0 ? "text-[#a6e3b4]" : "text-[#ff8a7e]"}> · 1h {pctMove(market.h1)}</span>}
@@ -74,21 +74,21 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
         </p>
       )}
       {c.reasons.length > 3 && (
-        <button type="button" onClick={() => setAll(!all)} className="tabular-nums mt-1.5 text-[12.5px] text-fg-3 hover:text-white">
+        <button type="button" onClick={() => setAll(!all)} className="tabular-nums mt-1.5 text-[13px] text-fg-3 hover:text-white">
           {all ? t("show fewer") : t("+ {n} more", { n: c.reasons.length - 3 })}
         </button>
       )}
 
       {inside.length > 0 && (
         <div className="mt-3.5">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-fg-4">{t("Who is inside")}</p>
+          <p className="text-[12px] uppercase tracking-[0.14em] text-fg-4">{t("Who is inside")}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {inside.map((x) => (
               <button
                 key={x.k}
                 type="button"
                 onClick={() => open(x.tab)}
-                className={`tabular-nums rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition hover:border-white/25 ${x.bad ? "border-[#ff8a7e]/30 bg-[#ff8a7e]/[0.06]" : "border-white/[0.08] bg-white/[0.02]"}`}
+                className={`tabular-nums rounded-lg border px-2.5 py-1.5 text-left text-[13px] transition hover:border-white/25 ${x.bad ? "border-[#ff8a7e]/30 bg-[#ff8a7e]/[0.06]" : "border-white/[0.08] bg-white/[0.02]"}`}
               >
                 <span className="text-fg-4">{x.k}</span> <span className={x.bad ? "text-[#ff8a7e]" : "text-fg-2"}>{x.v}</span>
               </button>
@@ -96,9 +96,9 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
           </div>
         </div>
       )}
-      {c.notes.length > 0 && !r.outsideStream && <p className="mt-3 text-[12px] leading-relaxed text-fg-4">{c.notes.map(tChain).join(" · ")}</p>}
+      {c.notes.length > 0 && !r.outsideStream && <p className="mt-3 text-[13px] leading-relaxed text-fg-4">{c.notes.map(tChain).join(" · ")}</p>}
       {r.outsideStream && (
-        <p className="mt-3 text-[12px] leading-relaxed text-fg-4">
+        <p className="mt-3 text-[13px] leading-relaxed text-fg-4">
           {t("Launched {day}, before our stream's window.", { day: new Date(r.createdAt).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) })}
         </p>
       )}

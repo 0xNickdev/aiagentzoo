@@ -88,7 +88,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
   const Title = ({ k, note }: { k: string; note?: string }) => (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
       <h3 className="font-display text-2xl text-fg">{t(k)}</h3>
-      {note && <span className="tabular-nums text-[12px] text-fg-4">{t(note)}</span>}
+      {note && <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>}
     </div>
   );
   const tiles = f && !old ? [
@@ -107,17 +107,17 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
         <div className="relative flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
             <b className="text-[17px] font-semibold tracking-[-0.01em] text-fg">${r.symbol.replace(/^\$/, "")}</b>
-            <span className="tabular-nums truncate text-[12.5px] text-fg-3">
+            <span className="tabular-nums truncate text-[13px] text-fg-3">
               {r.name}{r.name ? " · " : ""}{ageOf(r)} · {venueLabel(f)}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </span>
           </div>
           <CopyCa mint={r.mint} />
-          <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold tracking-[0.02em]" style={{ color: tone.color, borderColor: `${tone.color}4d`, background: `${tone.color}1f` }}>
+          <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[13px] font-semibold tracking-[0.02em]" style={{ color: tone.color, borderColor: `${tone.color}4d`, background: `${tone.color}1f` }}>
             <i className="h-[7px] w-[7px] rounded-full" style={{ background: tone.color, boxShadow: `0 0 10px ${tone.color}` }} />
             {t(tone.label)}
           </span>
           {c.odds && <OddsPill o={c.odds} verdict={c.verdict} />}
-          <span className="tabular-nums ml-auto hidden items-center gap-2 text-[12px] text-fg-3 md:inline-flex">
+          <span className="tabular-nums ml-auto hidden items-center gap-2 text-[13px] text-fg-3 md:inline-flex">
             <i className={`h-[7px] w-[7px] rounded-full ${c.stream?.live ? "bg-[#a6e3b4] shadow-[0_0_10px_#a6e3b4]" : "bg-white/30"}`} />
             {c.stream?.live ? t("stream live · read {s} s ago", { s: c.stream.lastEventSecAgo }) : t("stream paused")}
           </span>
@@ -135,17 +135,17 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
         <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_300px] [&>*]:min-w-0">
           {/* read: the tabs */}
           <aside className="order-2 flex gap-1 overflow-x-auto border-b border-white/[0.07] px-2.5 py-2 lg:order-none lg:flex-col lg:gap-0.5 lg:border-b-0 lg:border-r lg:px-2.5 lg:py-3.5">
-            <p className="hidden px-2.5 pb-2 pt-1.5 text-[11px] uppercase tracking-[0.14em] text-fg-4 lg:block">{t("read")}</p>
+            <p className="hidden px-2.5 pb-2 pt-1.5 text-[12px] uppercase tracking-[0.14em] text-fg-4 lg:block">{t("read")}</p>
             {MENU.map((m) => (
               <button key={m.id} type="button" onClick={() => open(m.id)} className={`flex shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition lg:w-full lg:py-2 ${tab === m.id ? "bg-white/[0.07] text-white" : "hover:bg-white/[0.04]"}`}>
                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${m.bad ? "bg-[#ff8a7e] shadow-[0_0_8px_#ff8a7e]" : "bg-white/25"}`} />
                 <span className="min-w-0">
                   <span className={`block whitespace-nowrap text-[13px] ${tab === m.id ? "text-white" : "text-fg-3"}`}>{t(m.k)}</span>
-                  <span className={`tabular-nums hidden truncate text-[11.5px] lg:block ${m.bad ? "text-[#ff8a7e]/85" : "text-fg-4"}`}>{m.sub}</span>
+                  <span className={`tabular-nums hidden truncate text-[12.5px] lg:block ${m.bad ? "text-[#ff8a7e]/85" : "text-fg-4"}`}>{m.sub}</span>
                 </span>
               </button>
             ))}
-            <div className="mt-auto hidden space-y-1.5 border-t border-white/[0.07] px-2.5 pt-3 text-[12px] lg:block">
+            <div className="mt-auto hidden space-y-1.5 border-t border-white/[0.07] px-2.5 pt-3 text-[13px] lg:block">
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("dev")} <Addr a={r.creator} />
               </p>
@@ -157,7 +157,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               </p>
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("raw")}
-                <a href={`${NORTH}/v1/xray/${r.mint}`} className="font-mono text-[11.5px] underline decoration-white/20 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a>
+                <a href={`${NORTH}/v1/xray/${r.mint}`} className="font-mono text-[12.5px] underline decoration-white/20 underline-offset-4 hover:text-white">/v1/xray/{short(r.mint)}</a>
               </p>
             </div>
           </aside>
@@ -167,9 +167,9 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
             <div className="mb-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] md:grid-cols-4">
               {tiles.map((x) => (
                 <div key={x.k} className="bg-[#0f1412] px-4 py-3.5">
-                  <p className="text-[11.5px] text-fg-3">{x.k}</p>
+                  <p className="text-[12.5px] text-fg-3">{x.k}</p>
                   <p className={`tabular-nums mt-0.5 text-[22px] font-semibold tracking-[-0.02em] ${x.tone === "bad" ? "text-[#ff8a7e]" : x.tone === "ok" ? "text-[#a6e3b4]" : "text-fg"}`}>{x.v}</p>
-                  <p className="tabular-nums mt-0.5 text-[11.5px] text-fg-4">{x.d}</p>
+                  <p className="tabular-nums mt-0.5 text-[12.5px] text-fg-4">{x.d}</p>
                 </div>
               ))}
             </div>
@@ -209,21 +209,21 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
               {r.socials?.map((s) => (
                 <div key={s.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2">
-                  <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-normal text-fg-3 hover:text-white">
+                  <a href={s.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[13px] font-normal text-fg-3 hover:text-white">
                     {s.social.label} ↗
                   </a>
-                  <span className={`tabular-nums shrink-0 text-[12px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
+                  <span className={`tabular-nums shrink-0 text-[13px] ${s.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })}</span>
                 </div>
               ))}
               {!!r.mentions?.length && (
                 <div className="border-t border-white/[0.08] pt-2">
-                  <p className="text-[12px] text-fg-4">{t("seen on X")}</p>
+                  <p className="text-[13px] text-fg-4">{t("seen on X")}</p>
                   {r.mentions.slice(0, 6).map((m) => (
                     <div key={m.url} className="flex items-baseline justify-between gap-3 py-1">
-                      <a href={m.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[12.5px] font-normal text-fg-3 hover:text-white">
+                      <a href={m.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-[13px] font-normal text-fg-3 hover:text-white">
                         @{m.handle} ↗
                       </a>
-                      <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{m.postAt >= r.createdAt ? t("{m} min after launch", { m: Math.round((m.postAt - r.createdAt) / 60_000) }) : t("before launch")}</span>
+                      <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{m.postAt >= r.createdAt ? t("{m} min after launch", { m: Math.round((m.postAt - r.createdAt) / 60_000) }) : t("before launch")}</span>
                     </div>
                   ))}
                 </div>
@@ -231,10 +231,10 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               <DevHabits h={r.creatorRecord} />
               {(r.creatorRecord?.recent?.filter((x) => x.mint !== r.mint).length ?? 0) > 0 && (
                 <div className="mt-3 border-t border-white/[0.08] pt-3">
-                  <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-fg-4">{t("their other launches · tap to x-ray")}</p>
+                  <p className="tabular-nums text-[12.5px] [&::first-letter]:uppercase text-fg-4">{t("their other launches · tap to x-ray")}</p>
                   <div className="mt-1.5">
                     {r.creatorRecord!.recent!.filter((x) => x.mint !== r.mint).slice(0, 6).map((x) => (
-                      <button key={x.mint} type="button" onClick={() => onPick(x.mint)} className="flex w-full items-baseline justify-between gap-3 rounded-lg px-1 py-1.5 text-left text-[12.5px] transition hover:bg-white/[0.04]">
+                      <button key={x.mint} type="button" onClick={() => onPick(x.mint)} className="flex w-full items-baseline justify-between gap-3 rounded-lg px-1 py-1.5 text-left text-[13px] transition hover:bg-white/[0.04]">
                         <span className="truncate text-fg-2">${x.symbol.replace(/^\$/, "")}</span>
                         <Outcome x={x} />
                       </button>
@@ -251,11 +251,11 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               {fund?.funder && (
                 <>
                   <div className="flex items-baseline justify-between gap-3 py-2">
-                    <span className="text-[12.5px] font-normal text-fg-4">{t("funded by")}</span>
+                    <span className="text-[13px] font-normal text-fg-4">{t("funded by")}</span>
                     <Addr a={fund.funder} className="text-[13px] text-fg-2" />
                   </div>
                   {fund.funderIsHot ? (
-                    <p className="mt-1 text-[12.5px] font-normal text-fg-3">
+                    <p className="mt-1 text-[13px] font-normal text-fg-3">
                       {fund.funderService
                         ? t("{x}'s launcher: it pays for the creator wallet of every token launched through {x}, so the other creators it funded are other {x} launches, not a ring.", { x: fund.funderService })
                         : fund.funderLabel
@@ -269,7 +269,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
                       {fund.siblings.length > 0 && (
                         <div className="mt-2 border-t border-white/[0.08] pt-2">
                           {fund.siblings.slice(0, 6).map((s) => (
-                            <div key={s.wallet} className="flex items-baseline justify-between gap-3 py-1 text-[12px]">
+                            <div key={s.wallet} className="flex items-baseline justify-between gap-3 py-1 text-[13px]">
                               <Addr a={s.wallet} className="text-fg-3" />
                               <span className={`tabular-nums ${s.dumped >= 1 ? "text-[#ff8a7e]" : "text-fg-3"}`}>{t("{l} launched · {d} dumped", { l: s.launches48h, d: s.dumped })}</span>
                             </div>
@@ -291,7 +291,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
             <div>
               <div className="mb-2 flex items-baseline justify-between gap-3">
                 <h3 className="font-display text-xl text-fg">{t("The first 5 seconds")}</h3>
-                <span className="tabular-nums text-[12px] text-fg-4">{t("before anyone could see it")}</span>
+                <span className="tabular-nums text-[13px] text-fg-4">{t("before anyone could see it")}</span>
               </div>
               <XRayRadar early={early} selected={sel} onSelect={choose} />
             </div>
@@ -310,7 +310,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
                       <Stat k="in a sniper ring" v={String(f?.ringWallets ?? 0)} bad={(f?.ringWallets ?? 0) >= 3} />
                       <Stat k="serial snipers" v={String(f?.serialSnipers ?? 0)} />
                     </div>
-                    <p className="tabular-nums mt-5 text-[12.5px] text-[#ffc27a]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
+                    <p className="tabular-nums mt-5 text-[13px] text-[#ffc27a]/75">{t("Tap any wallet on the map or in the list to see who it is.")}</p>
                                       </motion.div>
                 )}
               </AnimatePresence>
@@ -322,9 +322,9 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               <h3 className="font-display text-xl text-fg">{t("The first 5 seconds")}</h3>
               <p className="mt-1 text-[13px] font-normal text-fg-4">{t("Nobody bought before the token was visible: no snipers, no crew in the first seconds.")}</p>
             </div>
-            <p className="tabular-nums text-[12px] text-fg-4">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
+            <p className="tabular-nums text-[13px] text-fg-4">{t("{b} buyers · {x} buys · {y} sells", { b: f?.buyers ?? 0, x: f?.buys ?? 0, y: f?.sells ?? 0 })}</p>
             {!!f?.bundlers && (
-              <p className={`tabular-nums w-full text-[12px] ${(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem ? "text-[#ff8a7e]" : "text-fg-4"}`}>
+              <p className={`tabular-nums w-full text-[13px] ${(f.bundlersPeakPct ?? 0) >= 30 && !f.mayhem ? "text-[#ff8a7e]" : "text-fg-4"}`}>
                 {t("later bought in bundles: {n} wallets, held up to {p}% together, {h}% now", { n: f.bundlers, p: f.bundlersPeakPct ?? 0, h: f.bundlersHeldPct ?? 0 })}
               </p>
             )}
@@ -356,7 +356,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
                       {!!f?.bundledSol && <Stat k={`${unitOf(r.mint)} through bundles`} v={f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })} />}
                     </div>
                   {!!f?.bundleWallets && <Stat k="launch block" v={t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 })} bad={(f.bundleSharePct ?? 0) >= 15} />}
-                  <p className="mt-4 text-[12.5px] font-normal leading-relaxed text-fg-3">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
+                  <p className="mt-4 text-[13px] font-normal leading-relaxed text-fg-3">{t("A crowd of buyers that is really a few hands buying in packs looks like demand and is not. Churn is wallets selling back what they just bought: volume, not holders.")}</p>
                 </div>
               )}
 
@@ -387,7 +387,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               {tab === "wallets" && (
                 
           <div className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-            <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem_3.5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7">
+            <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem_3.5rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7">
               <span>{t("wallet")}</span>
               <span className="hidden sm:block">{t("who")}</span>
               <span className="text-right">{t("took")}</span>
@@ -405,14 +405,14 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
                   id={`xr-row-${e.wallet}`}
                   type="button"
                   onClick={() => setSel(on ? null : e.wallet)}
-                  className={`tabular-nums grid w-full outline-none focus-visible:bg-white/[0.05] grid-cols-[minmax(0,1fr)_3.5rem_3.5rem_3.5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-2.5 text-left text-[12px] transition sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
+                  className={`tabular-nums grid w-full outline-none focus-visible:bg-white/[0.05] grid-cols-[minmax(0,1fr)_3.5rem_3.5rem_3.5rem] items-center gap-3 border-t border-white/[0.08] px-5 py-2.5 text-left text-[13px] transition sm:grid-cols-[minmax(0,1fr)_7.5rem_4rem_4rem_4rem_4.5rem_4.5rem] sm:px-7 ${on ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
                 >
                   <span className="flex items-center gap-2 truncate text-fg-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: k.color }} />
                     {short(e.wallet)}
                     <Tags tags={e.tags?.filter((x) => !KIND_TAGS.has(x))} className="ml-1 hidden sm:inline-flex" />
                     {e.cabal && (
-                      <a href={`/cabals?id=${e.cabal}`} onClick={(ev) => ev.stopPropagation()} className="hidden rounded-full px-1.5 py-px text-[10.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 sm:inline" title={t("part of a cabal the memory ties together")}>
+                      <a href={`/cabals?id=${e.cabal}`} onClick={(ev) => ev.stopPropagation()} className="hidden rounded-full px-1.5 py-px text-[11.5px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 sm:inline" title={t("part of a cabal the memory ties together")}>
                         #{e.cabal}
                       </a>
                     )}
@@ -452,7 +452,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
         </div>
 
         {/* the status line */}
-        <div className="tabular-nums relative flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 text-[11.5px] leading-relaxed text-fg-4 sm:px-5">
+        <div className="tabular-nums relative flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 text-[12.5px] leading-relaxed text-fg-4 sm:px-5">
           <span className="min-w-0 flex-1 basis-[60%]">{bsc ? (r.outsideStream ? t("How we know: this coin launched on {venue} before our two-day window, so what happened at launch is not on record; the dev's record is what the stream kept of their earlier launches.", { venue }) : t("How we know: every {venue} launch, buy and sell read from {chain} as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who holds it now is read at x-ray time; who paid for the dev is traced when a key for {chain} is set.", { venue, chain: where })) : r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
           <span className="font-mono text-fg-3">{NORTH.replace(/^https?:\/\//, "")}/v1/xray/{short(r.mint)}</span>
           <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#a6e3b4]" />{t("3 nodes · one operator")} · {t("Not financial advice.")}</span>

@@ -78,9 +78,9 @@ function NetCard({ info, onClose }: { info: NetInfo; onClose: () => void }) {
         {pic && <img src={pic} alt="" referrerPolicy="no-referrer" className="h-9 w-9 shrink-0 rounded-full bg-[#141a17] object-cover" onError={(e) => e.currentTarget.remove()} />}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-white">{title}</p>
-          <p className="text-[12px] text-[#a3aaa6]">{sub}</p>
+          <p className="text-[13px] text-[#b8beba]">{sub}</p>
         </div>
-        <button type="button" onClick={onClose} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-[#a3aaa6] hover:text-white">
+        <button type="button" onClick={onClose} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-[#b8beba] hover:text-white">
           ×
         </button>
       </div>
@@ -181,7 +181,7 @@ function HeroStats({ chain }: { chain: Chain | null }) {
             className={`py-5 sm:py-6 ${i % 2 ? "border-l border-white/[0.07] pl-5 sm:pl-7" : ""} ${i > 1 ? "border-t border-white/[0.07] lg:border-t-0" : ""} ${i === 2 ? "lg:border-l lg:pl-7" : ""}`}
           >
             <p className="font-display text-[24px] font-medium tabular-nums text-white sm:text-[28px]">{v}</p>
-            <p className="mt-1.5 text-[14px] text-[#a3aaa6]">{k}</p>
+            <p className="mt-1.5 text-[14px] text-[#b8beba]">{k}</p>
           </motion.div>
         ))}
       </div>

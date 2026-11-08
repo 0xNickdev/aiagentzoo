@@ -154,7 +154,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
 
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="mt-2 w-full rounded-xl border border-white/[0.1] px-3 py-2 text-left text-[12px] text-fg-3 transition hover:border-white/25 hover:text-white">
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 w-full rounded-xl border border-white/[0.1] px-3 py-2 text-left text-[13px] text-fg-3 transition hover:border-white/25 hover:text-white">
         {t("No SOL? Fund this buy from another chain")} <span className="text-fg-4">· USDC, ETH, BNB, BTC…</span>
       </button>
     );
@@ -163,8 +163,8 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
   return (
     <div className="mt-3 rounded-xl border border-white/[0.1] p-3">
       <div className="flex items-center justify-between">
-        <p className="text-[12px] text-fg-2">{t("Fund from another chain")}</p>
-        <button type="button" onClick={() => (phase === "waiting" ? null : (reset(), setOpen(false)))} className="text-[11px] text-fg-4 hover:text-white">
+        <p className="text-[13px] text-fg-2">{t("Fund from another chain")}</p>
+        <button type="button" onClick={() => (phase === "waiting" ? null : (reset(), setOpen(false)))} className="text-[12px] text-fg-4 hover:text-white">
           {phase === "waiting" ? "" : t("close")}
         </button>
       </div>
@@ -181,12 +181,12 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
           </select>
           <div className={row}>
             <input inputMode="decimal" size={1} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label={t("Amount")} className="tabular-nums w-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none" />
-            <span className="text-[12.5px] text-fg-3">{token?.symbol ?? ""}</span>
+            <span className="text-[13px] text-fg-3">{token?.symbol ?? ""}</span>
           </div>
           {token && !isEvm && (
-            <input value={refund} onChange={(e) => setRefund(e.target.value.trim())} placeholder={t("your {c} address, for a refund", { c: chainName(token.blockchain) })} className={`${row} w-full text-[12.5px] text-white outline-none placeholder:text-fg-4`} />
+            <input value={refund} onChange={(e) => setRefund(e.target.value.trim())} placeholder={t("your {c} address, for a refund", { c: chainName(token.blockchain) })} className={`${row} w-full text-[13px] text-white outline-none placeholder:text-fg-4`} />
           )}
-          <p className="tabular-nums mt-2 min-h-[2.6em] text-[12px] leading-relaxed text-fg-3">
+          <p className="tabular-nums mt-2 min-h-[2.6em] text-[13px] leading-relaxed text-fg-3">
             {!wallet
               ? t("Connect your Solana wallet first: the SOL arrives there.")
               : preview
@@ -214,11 +214,11 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
         </>
       ) : (
         deposit && (
-          <div className="mt-2 text-[12px] leading-relaxed text-fg-3">
+          <div className="mt-2 text-[13px] leading-relaxed text-fg-3">
             {!deposit.tx && phase === "waiting" && (
               <div className="rounded-lg border border-white/[0.1] p-2.5">
                 <p className="text-fg-2">{t("Send exactly {a} {s} on {c} to:", { a: deposit.amountIn, s: deposit.symbol, c: chainName(deposit.chain) })}</p>
-                <button type="button" onClick={() => void navigator.clipboard?.writeText(deposit.address)} className="mt-1 break-all text-left font-mono text-[12px] text-white underline decoration-white/20 underline-offset-4" title={t("copy")}>
+                <button type="button" onClick={() => void navigator.clipboard?.writeText(deposit.address)} className="mt-1 break-all text-left font-mono text-[13px] text-white underline decoration-white/20 underline-offset-4" title={t("copy")}>
                   {deposit.address}
                 </button>
                 {deposit.memo && <p className="mt-1">{t("memo")}: <span className="font-mono text-white">{deposit.memo}</span></p>}
@@ -242,15 +242,15 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
               </a>
             )}
             {phase !== "waiting" && (
-              <button type="button" onClick={reset} className="mt-2 block text-[11.5px] text-fg-4 hover:text-white">
+              <button type="button" onClick={reset} className="mt-2 block text-[12.5px] text-fg-4 hover:text-white">
                 {t("Fund again")}
               </button>
             )}
           </div>
         )
       )}
-      {error && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{error}</p>}
-      <p className="mt-2 text-[11px] leading-relaxed text-fg-4">{t("Swapped by Aurora Intents into SOL sent straight to your Solana wallet. If it cannot complete, it is refunded on the chain you paid from.")}</p>
+      {error && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{error}</p>}
+      <p className="mt-2 text-[12px] leading-relaxed text-fg-4">{t("Swapped by Aurora Intents into SOL sent straight to your Solana wallet. If it cannot complete, it is refunded on the chain you paid from.")}</p>
     </div>
   );
 }

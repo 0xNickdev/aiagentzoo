@@ -69,7 +69,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
         <a href="/" className="flex items-center gap-2.5 text-white" aria-label="ZOOAI AGENCY">
           <img src="/logo.svg" alt="ZOOAI" className="h-[22px] w-auto sm:h-6" />
-          <span className="tabular-nums mt-0.5 text-[12px] tracking-[0.22em] text-fg-3">AGENCY</span>
+          <span className="tabular-nums mt-0.5 text-[13px] tracking-[0.22em] text-fg-3">AGENCY</span>
         </a>
         <div className="hidden items-center gap-7 xl:flex">
           {LINKS.map((l) => (
@@ -89,13 +89,13 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             return (
               <div key={g.label} className="group relative">
                 <button type="button" className={`flex items-center gap-1.5 whitespace-nowrap text-[14.5px] transition-colors hover:text-white ${here ? "text-white" : "text-fg-3"}`}>
-                  {tr(g.label)} <span className="text-[11.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
+                  {tr(g.label)} <span className="text-[12.5px] opacity-60 transition-transform group-hover:rotate-180">▾</span>
                 </button>
                 <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 ${sectionsOf(g.items).length > 1 ? "w-[560px]" : "w-72"}`}>
                   <div className={`rounded-2xl border border-white/15 bg-[#070908]/[0.97] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl ${sectionsOf(g.items).length > 1 ? "grid grid-cols-2 gap-1" : ""}`}>
                     {sectionsOf(g.items).map((sec) => (
                       <div key={sec.name || "all"}>
-                        {sec.name && <p className="px-3.5 pb-1 pt-2 text-[12px] text-fg-4">{tr(sec.name)}</p>}
+                        {sec.name && <p className="px-3.5 pb-1 pt-2 text-[13px] text-fg-4">{tr(sec.name)}</p>}
                     {sec.items.map((i) => (
                       <a
                         key={i.href}
@@ -105,7 +105,7 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
                         className={`block rounded-xl px-3.5 py-2.5 transition hover:bg-white/[0.06] ${route === i.href ? "bg-white/[0.06]" : ""}`}
                       >
                         <span className="block text-[14px] text-white">{tr(i.label)}</span>
-                        {i.note && <span className="block text-[12.5px] text-fg-4">{tr(i.note)}</span>}
+                        {i.note && <span className="block text-[13px] text-fg-4">{tr(i.note)}</span>}
                       </a>
                     ))}
                       </div>
@@ -150,11 +150,11 @@ export default function SiteNav({ overlay = false, active }: { overlay?: boolean
             </div>
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-5 border-t border-white/10 pt-4">
-                <p className="text-[12.5px] [&::first-letter]:uppercase text-fg-4">{tr(g.label)}</p>
+                <p className="text-[13px] [&::first-letter]:uppercase text-fg-4">{tr(g.label)}</p>
                 <div className="mt-2 grid">
                   {sectionsOf(g.items).map((sec) => (
                     <div key={sec.name || "all"} className="grid">
-                      {sec.name && <p className="mt-3 text-[12px] text-fg-4 first:mt-0">{tr(sec.name)}</p>}
+                      {sec.name && <p className="mt-3 text-[13px] text-fg-4 first:mt-0">{tr(sec.name)}</p>}
                   {sec.items.map((i) => (
                     <a
                       key={i.href}

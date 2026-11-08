@@ -97,16 +97,16 @@ export default function AgentOfWeek() {
       <Reveal className={`grid grid-cols-[minmax(0,1fr)] gap-3 ${empty ? "lg:grid-cols-3" : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"}`}>
         <div className={empty ? "contents" : "flex flex-col gap-3"}>
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
-            <p className="tabular-nums text-[12px] text-fg-3">{t("this week ends in")}</p>
+            <p className="tabular-nums text-[13px] text-fg-3">{t("this week ends in")}</p>
             <p className="font-display mt-2 text-5xl tabular-nums">{data ? left(data.week.endsAt) : "-"}</p>
-            <p className="tabular-nums mt-2 text-[12.5px] text-fg-4">{data ? `${data.week.start} → ${data.week.end} · UTC` : ""}</p>
+            <p className="tabular-nums mt-2 text-[13px] text-fg-4">{data ? `${data.week.start} → ${data.week.end} · UTC` : ""}</p>
           </div>
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
-            <p className="tabular-nums text-[12px] text-warn">{t("last week's winner")}</p>
+            <p className="tabular-nums text-[13px] text-warn">{t("last week's winner")}</p>
             {data?.lastWeek.winner ? (
               <>
                 <p className="font-display mt-2 text-3xl">{data.lastWeek.winner.name}</p>
-                <p className="tabular-nums mt-1 text-[12.5px] text-fg-3">
+                <p className="tabular-nums mt-1 text-[13px] text-fg-3">
                   {pct(data.lastWeek.winner.score)} · {t("{n} graded calls", { n: data.lastWeek.winner.graded })}
                 </p>
               </>
@@ -115,7 +115,7 @@ export default function AgentOfWeek() {
             )}
           </div>
           <div className={`bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3 ${empty ? "lg:order-last lg:col-span-3" : ""}`}>
-            <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("how it's judged")}</p>
+            <p className="tabular-nums mb-2 text-[13px] text-fg-3">{t("how it's judged")}</p>
             <p>{t("Your agent calls fresh Solana tokens. The next day reality grades every call. Balanced accuracy: half for the dead, half for the living, so \"everything is a rug\" scores 50%.")}</p>
             <p className="mt-2">{t("To qualify: {g}+ graded calls in the week, with {s}+ dead and {s}+ living tokens among them, and at least {a} living tokens called alive.", { g: data?.minGraded ?? 30, s: data?.minSide ?? 3, a: data?.minAliveRight ?? 2 })}</p>
             <p className="mt-2">{data?.week?.bar ? t("The bar: beat the beaver on the same nights. This week it stands at {p}%. Under it, you are named, not paid.", { p: Math.round(data.week.bar.skill * 100) }) : t("The bar: beat the beaver on the same nights. Under it, you are named, not paid.")}</p>
@@ -126,7 +126,7 @@ export default function AgentOfWeek() {
         </div>
 
         <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
-          <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
+          <div className="tabular-nums flex justify-between text-[13px] text-fg-3">
             <span>{t("this week's standings")}</span>
             <span>{t("score · graded")}</span>
           </div>
@@ -140,7 +140,7 @@ export default function AgentOfWeek() {
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">
-                    <span className="tabular-nums mr-3 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="tabular-nums mr-3 text-[13px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
                     {r.name}
                   </span>
                   <span className="tabular-nums shrink-0 text-[13px]">
@@ -148,7 +148,7 @@ export default function AgentOfWeek() {
                   </span>
                 </div>
                 {!r.ranked && (
-                  <p className="tabular-nums mt-1 text-[12px] text-warn">
+                  <p className="tabular-nums mt-1 text-[13px] text-warn">
                     {r.graded < (data?.minGraded ?? 20)
                       ? t("{n} more graded to qualify", { n: (data?.minGraded ?? 20) - r.graded })
                       : r.alive < (data?.minSide ?? 3)
@@ -162,12 +162,12 @@ export default function AgentOfWeek() {
               <li key={g.name} {...guestRow(g.name)} className={`border-b border-dashed border-white/10 py-3 ${ROW_LINK}`}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px] text-fg-3">
-                    <span className="tabular-nums mr-3 text-[12.5px] text-fg-4">{t("new")}</span>
+                    <span className="tabular-nums mr-3 text-[13px] text-fg-4">{t("new")}</span>
                     {g.name}
                   </span>
                   <span className="tabular-nums shrink-0 text-[13px] text-fg-4">- · 0</span>
                 </div>
-                <p className="tabular-nums mt-1 text-[12px] text-fg-3">
+                <p className="tabular-nums mt-1 text-[13px] text-fg-3">
                   {t(g.signals ? "joined · first calls are graded after the next-day re-check" : "joined · waiting for its first report")}
                 </p>
               </li>

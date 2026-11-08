@@ -45,7 +45,7 @@ export function WatchPanel({ brief }: { brief: BriefDoc | null }) {
   return (
     <div className="grid gap-8 rounded-2xl bg-gradient-to-br from-white/[0.04] to-transparent p-7 ring-1 ring-white/10 sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div>
-        <p className="tabular-nums text-[12px] text-fg-4">{tr("Guardian watch · free")}</p>
+        <p className="tabular-nums text-[13px] text-fg-4">{tr("Guardian watch · free")}</p>
         <h3 className="font-display mt-3 text-4xl">{tr("Watch my token")}</h3>
         <p className="mt-3 max-w-md text-[14px] font-normal leading-relaxed text-fg-4">
           {tr("Sign in with a Solana wallet and add up to three tokens. The pack checks them every hour (liquidity, volume, sharp moves) and they get your own section in the next Morning Brief.")}
@@ -67,16 +67,16 @@ export function WatchPanel({ brief }: { brief: BriefDoc | null }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={tr("Token mint address")}
-              className="min-w-0 flex-1 rounded-full bg-white/5 px-4 py-2.5 font-mono text-[12px] text-white placeholder:text-fg-4 ring-1 ring-white/15 focus:outline-none focus:ring-white/40"
+              className="min-w-0 flex-1 rounded-full bg-white/5 px-4 py-2.5 font-mono text-[13px] text-white placeholder:text-fg-4 ring-1 ring-white/15 focus:outline-none focus:ring-white/40"
             />
-            <button type="submit" className="rounded-full bg-white px-5 py-2.5 text-[12px] font-medium [&::first-letter]:uppercase text-black hover:bg-white/90">
+            <button type="submit" className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium [&::first-letter]:uppercase text-black hover:bg-white/90">
               {tr("Add")}
             </button>
           </form>
-          {message && <p className="mt-2 text-[12px] font-normal text-fg-4">{message}</p>}
+          {message && <p className="mt-2 text-[13px] font-normal text-fg-4">{message}</p>}
           <ul className="mt-4 grid gap-2">
             {mints.map((m) => (
-              <li key={m} className="flex items-center justify-between gap-3 rounded-full bg-white/5 px-4 py-2 tabular-nums text-[12px] text-fg-2">
+              <li key={m} className="flex items-center justify-between gap-3 rounded-full bg-white/5 px-4 py-2 tabular-nums text-[13px] text-fg-2">
                 <span className="truncate">{m}</span>
                 <button type="button" onClick={() => change(m, "remove")} className="shrink-0 text-fg-4 hover:text-white">
                   {tr("remove")}

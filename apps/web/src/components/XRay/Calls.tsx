@@ -129,7 +129,7 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
       <div className={card}>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="font-display text-2xl text-fg">{t("Who's calling it")}</h3>
-          <span className="text-[12px] text-fg-4">{t("each caller set against the chain")}</span>
+          <span className="text-[13px] text-fg-4">{t("each caller set against the chain")}</span>
         </div>
         <p className="text-[13px] leading-relaxed text-fg-3">
           {none
@@ -151,17 +151,17 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <span className="text-[13.5px] text-fg">
                       {c.caller || t("a caller")}
-                      <span className="tabular-nums ml-2 text-[12px] text-fg-4">
+                      <span className="tabular-nums ml-2 text-[13px] text-fg-4">
                         {c.followers !== null ? t("{n} followers", { n: c.followers.toLocaleString("en-US") }) : ""}
                         {c.twitter ? ` · ${c.twitter}` : ""}
                       </span>
                     </span>
-                    <a href={c.url} target="_blank" rel="noopener noreferrer nofollow" className="tabular-nums text-[12px] text-fg-4 hover:text-white">
+                    <a href={c.url} target="_blank" rel="noopener noreferrer nofollow" className="tabular-nums text-[13px] text-fg-4 hover:text-white">
                       {ago(c.at)} ↗
                     </a>
                   </div>
                   {c.text && <p className="mt-1.5 text-[13.5px] leading-snug text-fg-2">“{c.text}”</p>}
-                  <div className="tabular-nums mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+                  <div className="tabular-nums mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
                     {c.calledMcUsd !== null && (
                       <span className="text-fg-3">
                         {t("called at {m}", { m: usdShort(c.calledMcUsd) })}
@@ -192,12 +192,12 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <a href={x.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[13.5px] text-fg hover:underline">
                     {x.name || x.handle}
-                    {x.handle && <span className="ml-2 text-[12px] text-fg-4">@{x.handle}</span>}
+                    {x.handle && <span className="ml-2 text-[13px] text-fg-4">@{x.handle}</span>}
                   </a>
-                  <span className="tabular-nums text-[12px] text-fg-4">{x.at ? ago(x.at) : ""}{x.likes ? ` · ${t("{n} likes", { n: x.likes })}` : ""}</span>
+                  <span className="tabular-nums text-[13px] text-fg-4">{x.at ? ago(x.at) : ""}{x.likes ? ` · ${t("{n} likes", { n: x.likes })}` : ""}</span>
                 </div>
                 <p className="mt-1.5 whitespace-pre-line text-[13.5px] leading-snug text-fg-2">{x.text}</p>
-                <div className="tabular-nums mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+                <div className="tabular-nums mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
                   {x.isDev && <span className="text-[#ff8a7e]">{t("the dev of this coin")}</span>}
                   {x.tradeUsd !== null && x.tradeUsd >= 1 && <span className="text-fg-3">{t("in for {u}", { u: usdShort(x.tradeUsd) })}</span>}
                   {x.pnlUsd !== null && Math.abs(x.pnlUsd) >= 1 && <span className={x.pnlUsd > 0 ? "text-[#a6e3b4]" : "text-[#ff8a7e]"}>{`${x.pnlUsd > 0 ? "+" : "−"}${usdShort(Math.abs(x.pnlUsd))} ${t("on it")}`}</span>}
@@ -206,14 +206,14 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
             ))}
           </ul>
           {hype.length > 0 && (
-            <button type="button" onClick={() => setHypeOpen(!hypeOpen)} className="tabular-nums mt-2 text-[12.5px] text-fg-3 hover:text-white">
+            <button type="button" onClick={() => setHypeOpen(!hypeOpen)} className="tabular-nums mt-2 text-[13px] text-fg-3 hover:text-white">
               {hypeOpen ? t("hide the hype") : t("+ {n} hype posts (lfg, send it, cap targets)", { n: hype.length })}
             </button>
           )}
         </div>
       )}
-      {calls.thesesStatus === "budget" && <p className="px-1 text-[12px] text-fg-4">{t("FOMO theses are resting for today: the daily read budget is used up.")}</p>}
-      <p className="px-1 text-[12px] leading-relaxed text-fg-4">{t("Callouts are pump.fun's own, relayed by t.me/pumpfun_lp with the caller's wallet as pump.fun shows it. Theses are what traders wrote on fomo.family when they bought, via fomoapi.io. A call is someone's opinion; the chain shows only what their wallet did.")}</p>
+      {calls.thesesStatus === "budget" && <p className="px-1 text-[13px] text-fg-4">{t("FOMO theses are resting for today: the daily read budget is used up.")}</p>}
+      <p className="px-1 text-[13px] leading-relaxed text-fg-4">{t("Callouts are pump.fun's own, relayed by t.me/pumpfun_lp with the caller's wallet as pump.fun shows it. Theses are what traders wrote on fomo.family when they bought, via fomoapi.io. A call is someone's opinion; the chain shows only what their wallet did.")}</p>
     </div>
   );
 }

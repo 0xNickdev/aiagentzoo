@@ -48,7 +48,7 @@ export function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void })
     <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
       {cells.map((x) => (
         <button key={x.id} type="button" onClick={() => go(x.id)} className="group bg-night-surface px-4 py-3.5 text-left transition hover:bg-night-surface">
-          <p className="text-[12.5px] text-fg-3">{t(x.k)}</p>
+          <p className="text-[13px] text-fg-3">{t(x.k)}</p>
           <p className={`tabular-nums mt-1 text-[16px] ${x.bad ? "text-[#ff8a7e]" : "text-fg"}`}>{x.v}</p>
           <p className="mt-0.5 truncate text-[13px] font-normal text-fg-3 group-hover:text-fg-3">{x.sub || " "}</p>
         </button>

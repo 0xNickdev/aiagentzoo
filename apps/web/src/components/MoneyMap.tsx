@@ -81,7 +81,7 @@ function Node({ x, y, h, title, sub, sub2, color = WHITE, href, right, left }: {
         </text>
       )}
       {sub2 && (
-        <text x={tx} y={top + 34} fill="#a3aaa6" fontSize={12.5} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
+        <text x={tx} y={top + 34} fill="#b8beba" fontSize={12.5} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
           {sub2}
         </text>
       )}
@@ -183,7 +183,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="font-display text-2xl text-fg">{t("Money map")}</h3>
-        <span className="tabular-nums text-[12.5px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
       </div>
 
       {gs.length === 0 ? (
@@ -218,16 +218,16 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
           <ol className="grid gap-3 md:hidden">
             <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: funderColor }}>
               <p className="text-[15px] text-white">{funderTitle}</p>
-              <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{funderSub}</p>
+              <p className="tabular-nums mt-1 text-[13px] text-fg-4">{funderSub}</p>
             </li>
             <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: (f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE }}>
               <p className="text-[15px] text-white">{t("The dev {w}", { w: short(r.creator) })}</p>
-              <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">{devSub}</p>
+              <p className="tabular-nums mt-1 text-[13px] text-fg-4">{devSub}</p>
             </li>
             {gs.map((g) => (
               <li key={g.key} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
                 <p className="text-[15px] text-white">{t(g.label)}</p>
-                <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">
+                <p className="tabular-nums mt-1 text-[13px] text-fg-4">
                   {t("{n} wallets · took {p}", { n: g.wallets.length, p: pctFine(g.took) })} · {t("sold {p}", { p: pctFine(Math.max(0, g.took - g.held)) })}
                 </p>
               </li>
@@ -345,7 +345,7 @@ function Outflows({ r }: { r: XRayReport }) {
   const head = (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
       <h3 className="font-display text-xl text-fg">{t("Where the SOL went")}</h3>
-      <span className="tabular-nums text-[12.5px] text-fg-4">{t("the dev and its selling wallets · transfers out · first 24 h")}</span>
+      <span className="tabular-nums text-[13px] text-fg-4">{t("the dev and its selling wallets · transfers out · first 24 h")}</span>
     </div>
   );
   const box = (body: React.ReactNode) => (
@@ -396,7 +396,7 @@ function Outflows({ r }: { r: XRayReport }) {
           <p className="text-[15px] leading-relaxed text-white">
             {t("The dev's SOL leads to")} {leads.join("; ")}.
           </p>
-          <p className="mt-1 text-[12.5px] text-fg-4">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
+          <p className="mt-1 text-[13px] text-fg-4">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
         </div>
       )}
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Where the SOL went")}>
@@ -414,7 +414,7 @@ function Outflows({ r }: { r: XRayReport }) {
         {groups.map((g) => (
           <li key={g.kind} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
             <p className="text-[15px] text-white">{t(g.label)}</p>
-            <p className="tabular-nums mt-1 text-[12.5px] text-fg-4">
+            <p className="tabular-nums mt-1 text-[13px] text-fg-4">
               {sol(g.sol)} SOL · {names(g)}
             </p>
           </li>
@@ -468,7 +468,7 @@ function Outflows({ r }: { r: XRayReport }) {
 
 function CabalChip({ id }: { id: number }) {
   return (
-    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full px-1.5 py-px text-[11px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 hover:text-white" title={t("part of a cabal the memory ties together")}>
+    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full px-1.5 py-px text-[12px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 hover:text-white" title={t("part of a cabal the memory ties together")}>
       {t("cabal #{c}", { c: id })}
     </a>
   );

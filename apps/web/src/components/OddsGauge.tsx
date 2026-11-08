@@ -38,7 +38,7 @@ export default function OddsGauge({ value, color, mark, markLabel, size = 220, d
           <>
             <line x1={at(mark, radius - stroke / 2 - 3)[0]} y1={at(mark, radius - stroke / 2 - 3)[1]} x2={at(mark, radius + stroke / 2 + 3)[0]} y2={at(mark, radius + stroke / 2 + 3)[1]} stroke="#d9dddb" strokeWidth={1.5} />
             {markLabel && (
-              <text x={at(mark, radius + stroke / 2 + 10)[0]} y={at(mark, radius + stroke / 2 + 10)[1]} fill="#a3aaa6" fontSize={11} fontFamily="Geist, sans-serif" textAnchor="end">
+              <text x={at(mark, radius + stroke / 2 + 10)[0]} y={at(mark, radius + stroke / 2 + 10)[1]} fill="#b8beba" fontSize={11} fontFamily="Geist, sans-serif" textAnchor="end">
                 {markLabel}
               </text>
             )}

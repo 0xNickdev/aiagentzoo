@@ -117,7 +117,7 @@ export default function Play() {
       <Section className="!pt-0 !pb-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="tabular-nums text-[12px] text-fg-3">{t("tonight's exam · night of {n}", { n: view?.night ?? "…" })}</p>
+            <p className="tabular-nums text-[13px] text-fg-3">{t("tonight's exam · night of {n}", { n: view?.night ?? "…" })}</p>
             <h2 className="font-display mt-1 text-3xl">{t("Rug, watch or alive?")}</h2>
           </div>
           {!session ? (
@@ -126,7 +126,7 @@ export default function Play() {
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
-              <p className="tabular-nums text-[12.5px] text-fg-3">{t("signed in · {w}", { w: `${session.publicKey.slice(0, 4)}…${session.publicKey.slice(-4)}` })}</p>
+              <p className="tabular-nums text-[13px] text-fg-3">{t("signed in · {w}", { w: `${session.publicKey.slice(0, 4)}…${session.publicKey.slice(-4)}` })}</p>
               {tg ? (
                 <a href={`${BOT_URL}?start=link-${tg.code}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black hover:bg-white/90">
                   {t("Open the bot to link ↗")}
@@ -157,9 +157,9 @@ export default function Play() {
                 <div key={x.mint} className="bg-night-surface border border-white/[0.08] flex flex-col rounded-2xl p-5">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="font-display truncate text-xl">${x.symbol}</span>
-                    {x.graduated && <span className="tabular-nums text-[11.5px] text-[#a6e3b4]">{t("graduated")}</span>}
+                    {x.graduated && <span className="tabular-nums text-[12.5px] text-[#a6e3b4]">{t("graduated")}</span>}
                   </div>
-                  <dl className="tabular-nums mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12.5px]">
+                  <dl className="tabular-nums mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[13px]">
                     <Fact k={t("liquidity")} v={x.market?.liq === null || x.market?.liq === undefined ? (x.graduated ? "-" : t("on curve")) : usd(x.market.liq)} />
                     <Fact k="24h" v={x.market?.change24h === null || x.market?.change24h === undefined ? "-" : `${Math.round(x.market.change24h)}%`} />
                     <Fact k={t("buys/sells")} v={x.market ? `${x.market.buys24h}/${x.market.sells24h}` : "-"} />
@@ -174,7 +174,7 @@ export default function Play() {
                         key={v}
                         type="button"
                         onClick={() => setPicks((p) => ({ ...p, [x.mint]: v }))}
-                        className={`rounded-full py-2 text-[12px] ring-1 transition ${picks[x.mint] === v ? on : "text-fg-4 ring-white/10 hover:text-white"}`}
+                        className={`rounded-full py-2 text-[13px] ring-1 transition ${picks[x.mint] === v ? on : "text-fg-4 ring-white/10 hover:text-white"}`}
                       >
                         {t(label)}
                       </button>
@@ -184,7 +184,7 @@ export default function Play() {
               ))}
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="tabular-nums text-[12.5px] text-fg-3">
+              <p className="tabular-nums text-[13px] text-fg-3">
                 {t("{a}/{n} answered · \"watch\" counts as a miss, like it does for the AI · change answers until the night ends", { a: answered, n: view.exam.length })}
               </p>
               <button type="button" onClick={() => void save()} disabled={saving || !answered} className="rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black hover:bg-white/90 disabled:opacity-50">
@@ -199,7 +199,7 @@ export default function Play() {
       <Section className="!pt-4">
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
-            <div className="tabular-nums flex justify-between text-[12px] text-fg-3">
+            <div className="tabular-nums flex justify-between text-[13px] text-fg-3">
               <span>{t("this week's humans")}</span>
               <span>{t("score · graded")}</span>
             </div>
@@ -214,7 +214,7 @@ export default function Play() {
                   </span>
                   <span className="tabular-nums text-[13px]">
                     {pct(r.score)} <span className="text-fg-4">· {r.graded}</span>
-                    {!r.ranked && <span className="ml-2 text-[12px] text-warn">{t("qualifying")}</span>}
+                    {!r.ranked && <span className="ml-2 text-[13px] text-warn">{t("qualifying")}</span>}
                   </span>
                 </li>
               ))}
@@ -222,7 +222,7 @@ export default function Play() {
           </div>
           <div className="flex flex-col gap-3">
             <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6">
-              <p className="tabular-nums text-[12px] text-warn">{t("last week's top 3")}</p>
+              <p className="tabular-nums text-[13px] text-warn">{t("last week's top 3")}</p>
               {view?.lastWeekTop.length ? (
                 <ol className="mt-3 space-y-1.5">
                   {view.lastWeekTop.map((w, i) => (
@@ -239,7 +239,7 @@ export default function Play() {
               )}
             </div>
             <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 text-[13px] font-normal leading-relaxed text-fg-3">
-              <p className="tabular-nums mb-2 text-[12px] text-fg-3">{t("the rules")}</p>
+              <p className="tabular-nums mb-2 text-[13px] text-fg-3">{t("the rules")}</p>
               <p>{t("Hold 500,000+ $ZOOAGENCY and sign in. Answer tonight's tokens. Tomorrow the same re-check grades humans and AI.")}</p>
               <p className="mt-2">{t("The balance is read again when the night is graded, the next morning. A wallet under 500,000 by then gets nothing for that night: one bag cannot answer from several wallets, and selling right after answering does not work.")}</p>
               <p className="mt-2">{t("Balanced accuracy: half for the dead, half for the living, so calling everything a rug scores 50%.")}</p>
@@ -257,9 +257,9 @@ export default function Play() {
 function Stat({ k, v, sub }: { k: string; v: string; sub: string }) {
   return (
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 text-center">
-      <p className="tabular-nums text-[12px] text-fg-3">{k}</p>
+      <p className="tabular-nums text-[13px] text-fg-3">{k}</p>
       <p className="font-display mt-1 text-4xl">{v}</p>
-      <p className="tabular-nums mt-1 truncate text-[12px] text-fg-3">{sub}</p>
+      <p className="tabular-nums mt-1 truncate text-[13px] text-fg-3">{sub}</p>
     </div>
   );
 }

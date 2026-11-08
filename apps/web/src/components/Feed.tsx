@@ -117,7 +117,7 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
     }
   };
   return (
-    <button type="button" onClick={go} disabled={busy !== null} className="tabular-nums shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">
+    <button type="button" onClick={go} disabled={busy !== null} className="tabular-nums shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">
       {busy ?? t("Buy {s}", { s: amount })}
     </button>
   );
@@ -128,7 +128,7 @@ function Pic({ c }: { c: Coin }) {
   const [broken, setBroken] = useState(false);
   const src = picOf(c.mint, c.image ?? undefined);
   return (
-    <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[12.5px] font-semibold text-white" style={{ background: `hsl(${hue(c.mint)} 14% 15%)` }}>
+    <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[13px] font-semibold text-white" style={{ background: `hsl(${hue(c.mint)} 14% 15%)` }}>
       {initials(c.symbol, c.mint)}
       {src && !broken && <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="absolute inset-0 h-full w-full rounded-lg object-cover" />}
     </span>
@@ -158,9 +158,9 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
         <Pic c={c} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14.5px] text-white">
-            ${c.symbol.replace(/^\$/, "")} <span className="text-[12.5px] text-fg-4">{c.name}</span>
+            ${c.symbol.replace(/^\$/, "")} <span className="text-[13px] text-fg-4">{c.name}</span>
           </p>
-          <p className="tabular-nums mt-0.5 truncate text-[12px] text-fg-3">
+          <p className="tabular-nums mt-0.5 truncate text-[13px] text-fg-3">
             {age(c.createdAt)} · {capUsd !== null && (
               <>
                 <NumberTicker value={capUsd} format={usd} className="text-fg-2" />
@@ -175,7 +175,7 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
         {swapEnabled() && <Buy coin={c} amount={amount} onState={onState} />}
       </div>
       <div className="mt-2.5 flex items-center gap-2.5">
-        <span className={`tabular-nums shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${pass ? "bg-[#a6e3b4]/[0.12] text-[#a6e3b4]" : "bg-[#ffc27a]/[0.12] text-[#ffc27a]"}`}>
+        <span className={`tabular-nums shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium ${pass ? "bg-[#a6e3b4]/[0.12] text-[#a6e3b4]" : "bg-[#ffc27a]/[0.12] text-[#ffc27a]"}`}>
           {pass ? t("no red flags") : t("caution")}
           {c.score !== null ? ` · ${c.score}` : ""}
         </span>
@@ -184,9 +184,9 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
             <span className="block h-full rounded-full bg-white/50" style={{ width: `${Math.round(c.progress * 100)}%` }} />
           </span>
         )}
-        {c.graduated && <span className="flex-1 truncate text-[11.5px] text-fg-4">{t("graduated")}</span>}
+        {c.graduated && <span className="flex-1 truncate text-[12.5px] text-fg-4">{t("graduated")}</span>}
       </div>
-      {!pass && c.reason && <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-fg-3">{tChain(c.reason)}</p>}
+      {!pass && c.reason && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-fg-3">{tChain(c.reason)}</p>}
     </motion.a>
   );
 }
@@ -229,7 +229,7 @@ export default function Feed() {
     <Section className="!pt-28 sm:!pt-36">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
-          <p className="tabular-nums flex items-center gap-2 text-[12.5px] text-fg-3">
+          <p className="tabular-nums flex items-center gap-2 text-[13px] text-fg-3">
             <span className={`h-[7px] w-[7px] rounded-full ${data?.stream.live ? "animate-pulse bg-[#a6e3b4]" : "bg-[#ffc27a]"}`} />
             {t("Live feed · fresh Solana launches · avoid is never shown")}
           </p>
@@ -283,7 +283,7 @@ export default function Feed() {
                 <p className="text-[16px] text-white">
                   {t(b.title)} <span className="tabular-nums text-fg-4">{data ? list.length : ""}</span>
                 </p>
-                <p className="text-[12px] text-fg-4">{t(b.note)}</p>
+                <p className="text-[13px] text-fg-4">{t(b.note)}</p>
               </div>
               <div className="flex max-h-[78vh] flex-col gap-2 overflow-y-auto pr-1">
                 <AnimatePresence initial={false}>
@@ -299,7 +299,7 @@ export default function Feed() {
         })}
       </div>
 
-      <p className="mt-8 max-w-3xl text-[12.5px] leading-relaxed text-fg-4">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a 1% fee goes to the zoo. Not financial advice.")}</p>
+      <p className="mt-8 max-w-3xl text-[13px] leading-relaxed text-fg-4">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a 1% fee goes to the zoo. Not financial advice.")}</p>
 
       <AnimatePresence>
         {state && (

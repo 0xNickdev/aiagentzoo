@@ -84,7 +84,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-4">
-          <span className="text-[12.5px] text-fg-4">{c ? t("House {house} · gen {g}", { house: c.house, g: c.generation }) : t("Loading")}</span>
+          <span className="text-[13px] text-fg-4">{c ? t("House {house} · gen {g}", { house: c.house, g: c.generation }) : t("Loading")}</span>
           <button type="button" onClick={onClose} aria-label={t("Close")} className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>
@@ -104,7 +104,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   <div className="min-w-0">
                     <h3 className="font-display text-4xl leading-none">{c.name}</h3>
                     <p className="mt-2 text-[14px] text-fg-4">{c.temperament}</p>
-                    <p className="mt-3 text-[12.5px] tabular-nums text-fg-4">
+                    <p className="mt-3 text-[13px] tabular-nums text-fg-4">
                       {t("born {d}", { d: c.bornNight })}
                       {dead ? ` · ${t("fell {d}", { d: c.diedNight ?? "" })}` : ` · ${t("alive")}`}
                     </p>
@@ -117,7 +117,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                   </blockquote>
                 )}
 
-                <dl className="mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[12px] text-fg-4">
+                <dl className="mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] text-[13px] text-fg-4">
                   {[
                     [t("Lifetime"), accuracyLabel(c.lifetimeSkill, c.lifetime.hits + c.lifetime.misses)],
                     [t("Since last turn"), accuracyLabel(c.skill, c.window.hits + c.window.misses)],
@@ -163,7 +163,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </header>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="text-[12.5px] text-fg-4">{t("DNA · the playbook it lives or dies by")}</h4>
+                <h4 className="text-[13px] text-fg-4">{t("DNA · the playbook it lives or dies by")}</h4>
                 <ol className="mt-4 space-y-2">
                   {genes(c).map((g, i) => (
                     <li
@@ -174,7 +174,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                     >
                       {g.text}
                       {c.parents.length > 0 && (
-                        <span className={`mt-1.5 block text-[11.5px] ${g.mutated ? "text-warn" : "text-fg-4"}`}>
+                        <span className={`mt-1.5 block text-[12.5px] ${g.mutated ? "text-warn" : "text-fg-4"}`}>
                           {g.mutated ? t("Mutation") : g.from ? t("From {name}", { name: g.from }) : t("Inherited, reworded")}
                         </span>
                       )}
@@ -184,13 +184,13 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
               </section>
 
               <section className="border-t border-white/[0.07] px-6 py-7">
-                <h4 className="text-[12.5px] text-fg-4">{t("Exams")}</h4>
+                <h4 className="text-[13px] text-fg-4">{t("Exams")}</h4>
                 {c.record.length === 0 ? (
                   <p className="mt-4 text-[13px] text-fg-3">{t("No exams yet. The next one is set tonight.")}</p>
                 ) : (
                   c.record.map((n) => (
                     <div key={n.night} className="mt-5">
-                      <p className="text-[12.5px] tabular-nums text-fg-4">
+                      <p className="text-[13px] tabular-nums text-fg-4">
                         {t("night of {d}", { d: n.night })} ·{" "}
                         {n.scored
                           ? t("{r} right, {w} wrong", { r: n.cases.filter((x) => x.hit === true).length, w: n.cases.filter((x) => x.hit === false).length })
@@ -199,7 +199,7 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                       <ul className="mt-2 divide-y divide-white/[0.06]">
                         {n.cases.map((x) => (
                           <li key={x.mint} className="flex items-start gap-3 py-2.5">
-                            <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[x.verdict]}`}>{t(x.verdict)}</span>
+                            <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[12.5px] ring-1 ${VERDICT_TONE[x.verdict]}`}>{t(x.verdict)}</span>
                             <div className="min-w-0 flex-1">
                               <a
                                 href={`${DEXSCREENER_URL}/solana/${x.mint}`}
@@ -209,10 +209,10 @@ export default function Sheet({ id, onClose, onOpen }: { id: string; onClose: ()
                               >
                                 {x.symbol && x.symbol !== "?" ? `$${x.symbol}` : shortAddress(x.mint)} ↗
                               </a>
-                              {x.why && <p className="mt-0.5 text-[12.5px] text-fg-3">{x.why}</p>}
+                              {x.why && <p className="mt-0.5 text-[13px] text-fg-3">{x.why}</p>}
                             </div>
                             <span
-                              className={`shrink-0 text-[12.5px] ${x.hit === true ? "text-moss" : x.hit === false ? "text-danger" : "text-fg-4"}`}
+                              className={`shrink-0 text-[13px] ${x.hit === true ? "text-moss" : x.hit === false ? "text-danger" : "text-fg-4"}`}
                             >
                               {x.hit === true ? "✓" : x.hit === false ? "✗" : x.verdict === "watch" ? t("not scored") : n.scored ? t("no market") : t("pending")}
                             </span>

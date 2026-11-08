@@ -34,9 +34,9 @@ export default function RoadmapTeaser() {
   };
 
   return (
-    <section id="roadmap" className="relative px-5 py-20 sm:px-8 sm:py-24 md:py-28">
+    <section id="roadmap" className="relative px-5 py-14 sm:px-8 sm:py-24 md:py-28">
       <div className="relative mx-auto w-full max-w-7xl">
-        <p className="tabular-nums text-[12.5px] text-fg-4">{t("Roadmap · Oct - Dec 2026")}</p>
+        <p className="tabular-nums text-[13px] text-fg-4">{t("Roadmap · Oct - Dec 2026")}</p>
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -52,7 +52,7 @@ export default function RoadmapTeaser() {
         <div className="mt-10 grid max-w-4xl sm:grid-cols-3">
           {next.map((it) => (
             <div key={it.id} className="border-t border-white/[0.14] py-5 pr-6">
-              <p className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4">
+              <p className="tabular-nums text-[13px] [&::first-letter]:uppercase text-fg-4">
                 <span className={it.status === "building" ? "text-warn" : ""}>{it.status === "building" ? "◐" : "○"}</span> {month(it.chapter)}
               </p>
               <p className="mt-2 text-[17px] text-white">{(zh && it.zh?.title) || it.title}</p>

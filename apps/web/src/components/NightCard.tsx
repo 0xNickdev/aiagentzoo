@@ -148,7 +148,7 @@ export default function NightCard({ data, onClose }: { data: NightCardData; onCl
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="tabular-nums text-[12.5px] text-fg-3">The night card · 1200 × 675</p>
+          <p className="tabular-nums text-[13px] text-fg-3">The night card · 1200 × 675</p>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
             <X size={15} />
           </button>

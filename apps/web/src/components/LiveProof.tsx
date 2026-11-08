@@ -67,7 +67,7 @@ export default function LiveProof() {
   return (
     <Section className="!pb-10 !pt-14">
       <Reveal>
-        <p className="tabular-nums mb-3 text-[12px] text-fg-3">{t("Read from the chain, not from a chart")}</p>
+        <p className="tabular-nums mb-3 text-[13px] text-fg-3">{t("Read from the chain, not from a chart")}</p>
         <h2 className="font-display max-w-3xl text-3xl leading-tight sm:text-4xl">
           {t("Most launches are rigged before you can see them.")}
         </h2>
@@ -81,7 +81,7 @@ export default function LiveProof() {
           </div>
         ))}
       </Reveal>
-      <p className="tabular-nums mt-3 text-[12.5px] text-fg-4">
+      <p className="tabular-nums mt-3 text-[13px] text-fg-4">
         {t("every SOL launch from 24 to 48 hours ago · our check's public record:")}{" "}
         <a href={`${NORTH}/v1/check/record`} className="underline decoration-white/25 underline-offset-4 hover:text-white">
           /v1/check/record
@@ -90,7 +90,7 @@ export default function LiveProof() {
 
       <div className="mt-10 mb-3 flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t("Devs who sold in the last few minutes")}</h3>
-        <a href="/xray" className="tabular-nums text-[12.5px] text-fg-3 hover:text-white">
+        <a href="/xray" className="tabular-nums text-[13px] text-fg-3 hover:text-white">
           {t("x-ray any token →")}
         </a>
       </div>
@@ -100,10 +100,10 @@ export default function LiveProof() {
           <a key={m.mint} href={`/xray?mint=${m.mint}`} className="bg-night-surface border border-white/[0.08] group rounded-2xl p-4 transition hover:bg-white/[0.06]">
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-display truncate text-[18px]">${m.symbol.replace(/^\$/, "")}</span>
-              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{minAgo(m.at)}</span>
+              <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{minAgo(m.at)}</span>
             </div>
             <p className="mt-1.5 truncate text-[13px] font-normal text-[#ff8a7e]">{tChain(m.text)}</p>
-            <p className="tabular-nums mt-2 text-[12px] text-fg-4 group-hover:text-fg-3">{t("see who bought it first →")}</p>
+            <p className="tabular-nums mt-2 text-[13px] text-fg-4 group-hover:text-fg-3">{t("see who bought it first →")}</p>
           </a>
         ))}
       </div>

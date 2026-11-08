@@ -99,7 +99,7 @@ export function LangSwitch({ className = "" }: { className?: string }) {
     </button>
   );
   return (
-    <div className={`liquid-glass flex items-center gap-0.5 rounded-full p-0.5 text-[12px] ${className}`} role="group" aria-label="Language">
+    <div className={`liquid-glass flex items-center gap-0.5 rounded-full p-0.5 text-[13px] ${className}`} role="group" aria-label="Language">
       {btn("en", "EN")}
       {btn("zh", "中文")}
     </div>

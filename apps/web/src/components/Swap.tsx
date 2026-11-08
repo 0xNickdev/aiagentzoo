@@ -104,13 +104,13 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
   const short = wallet !== null && balance !== null && (side === "buy" ? balance < need : balance < Number(amount));
   const solShort = side === "sell" && wallet !== null && solBalance !== null && solBalance < 0.004;
   const tab = (k: "buy" | "sell", label: string) => (
-    <button key={k} type="button" onClick={() => setSide(k)} className={`flex-1 rounded-lg px-3 py-1.5 text-[12.5px] transition ${side === k ? "bg-white/[0.1] text-white" : "text-fg-3 hover:text-white"}`}>
+    <button key={k} type="button" onClick={() => setSide(k)} className={`flex-1 rounded-lg px-3 py-1.5 text-[13px] transition ${side === k ? "bg-white/[0.1] text-white" : "text-fg-3 hover:text-white"}`}>
       {label}
     </button>
   );
   return (
     <div className="mt-4 min-w-0 max-w-full border-t border-white/[0.08] pt-3">
-      <p className="text-[11.5px] text-fg-4">{t("trade it here")}</p>
+      <p className="text-[12.5px] text-fg-4">{t("trade it here")}</p>
       <div className="mt-2 flex gap-1 rounded-xl border border-white/[0.08] p-1">{[tab("buy", t("Buy")), tab("sell", t("Sell"))]}</div>
       <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-2">
         <input
@@ -121,31 +121,31 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
           aria-label={side === "buy" ? t("SOL to spend") : t("{s} to sell", { s: sym })}
           className="tabular-nums w-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none"
         />
-        <span className="text-[12.5px] text-fg-3">{side === "buy" ? "SOL" : sym}</span>
+        <span className="text-[13px] text-fg-3">{side === "buy" ? "SOL" : sym}</span>
       </div>
       {side === "buy" ? (
         <div className="mt-1.5 flex gap-1.5">
           {["0.1", "0.5", "1"].map((v) => (
-            <button key={v} type="button" onClick={() => setAmount(v)} className="rounded-md border border-white/[0.1] px-2 py-0.5 text-[11.5px] text-fg-3 transition hover:border-white/30 hover:text-white">
+            <button key={v} type="button" onClick={() => setAmount(v)} className="rounded-md border border-white/[0.1] px-2 py-0.5 text-[12.5px] text-fg-3 transition hover:border-white/30 hover:text-white">
               {v}
             </button>
           ))}
-          {balance !== null && <span className="tabular-nums ml-auto self-center text-[11.5px] text-fg-4">{t("balance {n}", { n: balance.toLocaleString("en-US", { maximumFractionDigits: 3 }) })}</span>}
+          {balance !== null && <span className="tabular-nums ml-auto self-center text-[12.5px] text-fg-4">{t("balance {n}", { n: balance.toLocaleString("en-US", { maximumFractionDigits: 3 }) })}</span>}
         </div>
       ) : (
         balance !== null && (
           <div className="mt-1.5 flex gap-1.5">
             {[25, 50, 100].map((p) => (
-              <button key={p} type="button" onClick={() => setAmount(String(Math.floor((balance * p) / 100 * 10 ** dec) / 10 ** dec))} className="rounded-md border border-white/[0.1] px-2 py-0.5 text-[11.5px] text-fg-3 transition hover:border-white/30 hover:text-white">
+              <button key={p} type="button" onClick={() => setAmount(String(Math.floor((balance * p) / 100 * 10 ** dec) / 10 ** dec))} className="rounded-md border border-white/[0.1] px-2 py-0.5 text-[12.5px] text-fg-3 transition hover:border-white/30 hover:text-white">
                 {p}%
               </button>
             ))}
-            <span className="tabular-nums ml-auto self-center text-[11.5px] text-fg-4">{t("balance {n}", { n: balance.toLocaleString("en-US", { maximumFractionDigits: 0 }) })}</span>
+            <span className="tabular-nums ml-auto self-center text-[12.5px] text-fg-4">{t("balance {n}", { n: balance.toLocaleString("en-US", { maximumFractionDigits: 0 }) })}</span>
           </div>
         )
       )}
       {side === "buy" && <FundAnyChain wallet={wallet} onConnect={() => void connect()} onFunded={onFunded} />}
-      <div className="tabular-nums mt-2 min-h-[2.6em] text-[12px] leading-relaxed text-fg-3">
+      <div className="tabular-nums mt-2 min-h-[2.6em] text-[13px] leading-relaxed text-fg-3">
         {busy === "quote" && t("quoting…")}
         {q && busy !== "quote" && (
           <>
@@ -166,19 +166,19 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
       >
         {!wallet ? t("Connect wallet to trade") : busy === "sign" ? t("Sign in your wallet…") : busy === "wait" ? t("Landing…") : side === "buy" ? t("Buy {s}", { s: sym }) : t("Sell {s}", { s: sym })}
       </button>
-      {short && side === "buy" && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("Not enough SOL: this needs about {n} SOL with fees, the wallet has {b}.", { n: need.toFixed(3), b: (balance ?? 0).toFixed(4) })}</p>}
-      {short && side === "sell" && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("The wallet holds less {s} than that.", { s: sym })}</p>}
-      {solShort && !short && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{t("Keep about 0.004 SOL for the network fee.")}</p>}
-      {error && !short && !solShort && <p className="mt-2 text-[12px] leading-relaxed text-[#ff8a7e]">{error}</p>}
+      {short && side === "buy" && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{t("Not enough SOL: this needs about {n} SOL with fees, the wallet has {b}.", { n: need.toFixed(3), b: (balance ?? 0).toFixed(4) })}</p>}
+      {short && side === "sell" && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{t("The wallet holds less {s} than that.", { s: sym })}</p>}
+      {solShort && !short && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{t("Keep about 0.004 SOL for the network fee.")}</p>}
+      {error && !short && !solShort && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{error}</p>}
       {done && (
-        <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
+        <p className="mt-2 text-[13px] leading-relaxed text-fg-3">
           {done.state === "confirmed" ? t("Landed.") : done.state === "failed" ? t("The transaction failed on chain.") : done.state === "sent" ? t("Sent, waiting for the chain…") : t("Sent; the chain has not confirmed it yet.")}{" "}
           <a href={`${SOLSCAN_URL}/tx/${done.sig}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
             Solscan ↗
           </a>
         </p>
       )}
-      <p className="mt-2 text-[11px] leading-relaxed text-fg-4">{t("Routed by Jupiter, signed by your wallet, nothing held by us. {p}% fee: a tenth buys $ZOOAGENCY back, the rest runs the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
+      <p className="mt-2 text-[12px] leading-relaxed text-fg-4">{t("Routed by Jupiter, signed by your wallet, nothing held by us. {p}% fee: a tenth buys $ZOOAGENCY back, the rest runs the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
     </div>
   );
 }

@@ -97,14 +97,14 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
     <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[15px] font-semibold text-fg">{t("Every factor, counted")}</p>
-        <span className="tabular-nums text-[12px] text-fg-4">{flags ? t("{n} of {m} look bad", { n: flags, m: rows.length }) : t("none of {m} look bad", { m: rows.length })}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{flags ? t("{n} of {m} look bad", { n: flags, m: rows.length }) : t("none of {m} look bad", { m: rows.length })}</span>
       </div>
       <dl className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-2">
         {shown.map((x) => (
           <div key={x.k} className="flex items-baseline justify-between gap-3 bg-night-surface px-4 py-3">
             <div className="min-w-0">
               <dt className="text-[13px] text-fg-2">{x.k}</dt>
-              <p className="mt-0.5 text-[11.5px] leading-snug text-fg-4">{x.d}</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug text-fg-4">{x.d}</p>
             </div>
             <dd className={`tabular-nums shrink-0 text-right text-[17px] font-semibold ${x.bad ? "text-[#ff8a7e]" : x.good ? "text-[#a6e3b4]" : "text-fg"}`}>{x.v}</dd>
           </div>
@@ -115,7 +115,7 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
           {every ? t("show only what stands out") : t("+ {n} more factors, nothing unusual", { n: rows.length - shown.length })}
         </button>
       ) : null}
-      <p className="mt-4 text-[12px] leading-relaxed text-fg-4">{r.check.odds ? t("Read from the chain for this coin. The odds above say how launches like it went; these are the parts it is made of. Red marks a number we have seen go with rugs.") : t("Read from the chain for this coin. Red marks a number we have seen go with rugs.")}</p>
+      <p className="mt-4 text-[13px] leading-relaxed text-fg-4">{r.check.odds ? t("Read from the chain for this coin. The odds above say how launches like it went; these are the parts it is made of. Red marks a number we have seen go with rugs.") : t("Read from the chain for this coin. Red marks a number we have seen go with rugs.")}</p>
     </div>
   );
 }

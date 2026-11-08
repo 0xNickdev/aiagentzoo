@@ -88,7 +88,7 @@ export default function WallOfCabals() {
         <Reveal className="bg-night-surface border border-white/[0.08] mb-6 rounded-2xl p-5 sm:p-7">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-display text-2xl">{t("cabal #{n}", { n: open.id })}</h2>
-            <button type="button" onClick={() => (setOpen(null), history.pushState(null, "", "/cabals"))} className="tabular-nums rounded-full px-2.5 py-1 text-[12.5px] text-fg-3 ring-1 ring-white/10 hover:text-white">
+            <button type="button" onClick={() => (setOpen(null), history.pushState(null, "", "/cabals"))} className="tabular-nums rounded-full px-2.5 py-1 text-[13px] text-fg-3 ring-1 ring-white/10 hover:text-white">
               {t("close")}
             </button>
           </div>
@@ -101,25 +101,25 @@ export default function WallOfCabals() {
               [t("snipes"), String(open.snipes)],
             ].map(([k, v]) => (
               <div key={k} className="rounded-xl bg-black/30 px-3 py-2 ring-1 ring-white/[0.06]">
-                <p className="text-[12px] text-fg-4">{k}</p>
+                <p className="text-[13px] text-fg-4">{k}</p>
                 <p className="mt-0.5 text-[16px] text-fg">{v}</p>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[12.5px] text-fg-4">{t("first seen {a} days ago · last seen {b} days ago", { a: days(open.firstSeen), b: days(open.lastSeen) })}</p>
+          <p className="mt-3 text-[13px] text-fg-4">{t("first seen {a} days ago · last seen {b} days ago", { a: days(open.firstSeen), b: days(open.lastSeen) })}</p>
           {!!open.live?.length && (
             <div className="mt-5">
-              <p className="text-[12.5px] text-fg-4">{t("live right now")}</p>
+              <p className="text-[13px] text-fg-4">{t("live right now")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {open.live.map((l) => (
-                  <button key={l.mint} type="button" onClick={() => go(`/xray?mint=${l.mint}`)} className="rounded-full border border-white/[0.12] px-3 py-1 text-[12.5px] text-fg-2 hover:text-white">
+                  <button key={l.mint} type="button" onClick={() => go(`/xray?mint=${l.mint}`)} className="rounded-full border border-white/[0.12] px-3 py-1 text-[13px] text-fg-2 hover:text-white">
                     ${l.symbol.replace(/^\$/, "")} · {chainName(l.mint)}
                   </button>
                 ))}
               </div>
             </div>
           )}
-          <div className="tabular-nums mt-5 grid grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] gap-3 border-b border-white/[0.08] pb-2 text-[12px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_5rem]">
+          <div className="tabular-nums mt-5 grid grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] gap-3 border-b border-white/[0.08] pb-2 text-[13px] text-fg-4 sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_5rem]">
             <span>{t("wallet")}</span>
             <span className="text-right">{t("launched")}</span>
             <span className="text-right">{t("dumped")}</span>
@@ -128,7 +128,7 @@ export default function WallOfCabals() {
             <span className="hidden text-right sm:block">{t("bundles")}</span>
           </div>
           {open.members.map((m) => (
-            <button key={m.wallet} type="button" onClick={() => go(`/xray?wallet=${m.wallet}`)} className="tabular-nums grid w-full grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] gap-3 border-b border-white/[0.06] py-2 text-left text-[12.5px] hover:bg-white/[0.03] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_5rem]">
+            <button key={m.wallet} type="button" onClick={() => go(`/xray?wallet=${m.wallet}`)} className="tabular-nums grid w-full grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] gap-3 border-b border-white/[0.06] py-2 text-left text-[13px] hover:bg-white/[0.03] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_5rem]">
               <span className="truncate text-fg-2">{short(m.wallet)}</span>
               <span className="text-right text-fg-3">{m.launches}</span>
               <span className={`text-right ${m.dumped ? "text-[#ff8a7e]" : "text-fg-3"}`}>{m.dumped}</span>
@@ -140,7 +140,7 @@ export default function WallOfCabals() {
         </Reveal>
       )}
       <Reveal className="bg-night-surface border border-white/[0.08] overflow-hidden rounded-2xl">
-        <div className="tabular-nums grid grid-cols-[3.5rem_4rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[12px] text-fg-4 sm:grid-cols-[3.5rem_4.5rem_minmax(0,1fr)_5rem_5rem_5rem_6rem]">
+        <div className="tabular-nums grid grid-cols-[3.5rem_4rem_minmax(0,1fr)_4rem_4rem] gap-3 border-b border-white/[0.08] px-5 py-3 text-[13px] text-fg-4 sm:grid-cols-[3.5rem_4.5rem_minmax(0,1fr)_5rem_5rem_5rem_6rem]">
           <span>#</span>
           <span className="text-right">{t("wallets")}</span>
           <span>{t("members")}</span>

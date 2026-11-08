@@ -66,23 +66,23 @@ function Call({ i, night, today, compact = false }: { i: RecordItem; night: stri
   const r = result(i, night, today);
   return (
     <li className={`flex items-start gap-3 ${compact ? "py-2" : "py-3"}`}>
-      <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[i.verdict]}`}>{t(i.verdict)}</span>
+      <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[12.5px] ring-1 ${VERDICT_TONE[i.verdict]}`}>{t(i.verdict)}</span>
       <div className="min-w-0 flex-1">
-        <p className={`text-fg-2 ${compact ? "line-clamp-1 text-[12.5px]" : "text-[13.5px]"}`}>{i.note || i.symbol || shortAddress(i.mint)}</p>
+        <p className={`text-fg-2 ${compact ? "line-clamp-1 text-[13px]" : "text-[13.5px]"}`}>{i.note || i.symbol || shortAddress(i.mint)}</p>
         {!compact && (
           <a
             href={`${DEXSCREENER_URL}/solana/${i.mint}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="mt-1 inline-block text-[12.5px] text-fg-4 hover:text-white"
+            className="mt-1 inline-block text-[13px] text-fg-4 hover:text-white"
           >
             {i.symbol ? `$${i.symbol} · ` : ""}
             {shortAddress(i.mint)} ↗
           </a>
         )}
       </div>
-      <span className={`shrink-0 text-right text-[12.5px] ${r.tone}`}>{r.text}</span>
+      <span className={`shrink-0 text-right text-[13px] ${r.tone}`}>{r.text}</span>
     </li>
   );
 }
@@ -101,7 +101,7 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
     >
       <div className="flex items-baseline justify-between gap-3">
         <h4 className="truncate text-[19px] font-semibold tracking-[-0.02em] text-white">{g.name}</h4>
-        <span className="shrink-0 rounded-full border border-white/[0.1] px-2.5 py-0.5 text-[12px] text-fg-3">{t(g.species)}</span>
+        <span className="shrink-0 rounded-full border border-white/[0.1] px-2.5 py-0.5 text-[13px] text-fg-3">{t(g.species)}</span>
       </div>
       <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-fg-3">{g.about}</p>
       <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.08] text-[13px]">
@@ -127,7 +127,7 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
           ))}
         </ul>
       )}
-      <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-[12.5px]">
+      <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-[13px]">
         <span className="truncate text-fg-4">{t("keeper {w}", { w: shortAddress(g.wallet) })}</span>
         <span className="inline-flex shrink-0 items-center gap-1 font-medium text-fg-3 transition group-hover:text-white">
           {t("Every call")} <ArrowRight size={12} />
@@ -201,7 +201,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
         <header className="border-b border-white/[0.08] p-6 sm:p-7">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="tabular-nums text-[12.5px] text-fg-4">
+              <p className="tabular-nums text-[13px] text-fg-4">
                 {t(g.platform === "clawpump" ? "ClawPump wing" : "Open wing")} · {t(g.species)}
               </p>
               <h3 className="font-display mt-1 truncate text-3xl">{g.name}</h3>
@@ -211,7 +211,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
             </button>
           </div>
           <p className="mt-3 text-[14px] font-normal leading-relaxed text-fg-3">{g.about}</p>
-          <dl className="tabular-nums mt-5 grid grid-cols-3 gap-3 text-[12px] text-fg-4">
+          <dl className="tabular-nums mt-5 grid grid-cols-3 gap-3 text-[13px] text-fg-4">
             <div>
               <dt>{t("reports")}</dt>
               <dd className="mt-0.5 text-lg text-fg">{g.signals}</dd>
@@ -238,7 +238,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           ) : (
             record.map((n) => (
               <section key={n.night} className="py-4">
-                <h4 className="tabular-nums sticky top-0 bg-[#0b0e0d] py-1 text-[12.5px] text-fg-4">
+                <h4 className="tabular-nums sticky top-0 bg-[#0b0e0d] py-1 text-[13px] text-fg-4">
                   {t(n.items.length === 1 ? "night of {night} · {n} call" : "night of {night} · {n} calls", { night: n.night, n: n.items.length })}
                 </h4>
                 <ul className="divide-y divide-white/[0.06]">
@@ -251,7 +251,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           )}
         </div>
 
-        <footer className="tabular-nums flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[0.08] px-6 py-4 text-[12.5px] text-fg-4 sm:px-7">
+        <footer className="tabular-nums flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[0.08] px-6 py-4 text-[13px] text-fg-4 sm:px-7">
           <a href={`${SOLSCAN_URL}/account/${g.wallet}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
             {t("signed by {w} ↗", { w: shortAddress(g.wallet) })}
           </a>
@@ -311,7 +311,7 @@ function Wing({
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-display text-[28px] font-semibold tracking-[-0.03em] text-white">{title}</h3>
-        <span className={`rounded-full px-3 py-1 text-[12.5px] ring-1 ${featured ? "text-moss ring-moss/25" : "text-fg-4 ring-white/15"}`}>
+        <span className={`rounded-full px-3 py-1 text-[13px] ring-1 ${featured ? "text-moss ring-moss/25" : "text-fg-4 ring-white/15"}`}>
           {badge}
         </span>
       </div>

@@ -31,7 +31,7 @@ export function Tables({ s }: { s: Sections }) {
             }`}
           >
             {tr(t.label)}
-            <span className="tabular-nums ml-1.5 text-[12px] text-fg-4">{(s[t.key] ?? []).length}</span>
+            <span className="tabular-nums ml-1.5 text-[13px] text-fg-4">{(s[t.key] ?? []).length}</span>
           </button>
         ))}
       </div>
@@ -41,7 +41,7 @@ export function Tables({ s }: { s: Sections }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
-              <tr className="tabular-nums text-left text-[11.5px] text-fg-4">
+              <tr className="tabular-nums text-left text-[12.5px] text-fg-4">
                 <th className="px-6 py-3 font-normal">{tr("Token")}</th>
                 {reasons ? (
                   <th className="px-6 py-3 font-normal">{tr("Why it is flagged")}</th>
@@ -59,9 +59,9 @@ export function Tables({ s }: { s: Sections }) {
                 <tr key={o.mint} className="border-t border-white/[0.08] transition hover:bg-white/[0.02]">
                   <td className="px-6 py-3">
                     <a href={dex(o)} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-3" title={o.mint}>
-                      <span className="tabular-nums w-5 text-[12px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="tabular-nums w-5 text-[13px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
                       <span className="text-fg group-hover:text-white">{o.symbol}</span>
-                      <span className="tabular-nums text-[12.5px] text-fg-4">{shortAddress(o.mint)}</span>
+                      <span className="tabular-nums text-[13px] text-fg-4">{shortAddress(o.mint)}</span>
                     </a>
                   </td>
                   {reasons ? (
@@ -96,27 +96,27 @@ export function Calls({ calls }: { calls: Call[] }) {
   const shown = all ? calls : calls.slice(0, 6);
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="tabular-nums text-[12px] text-fg-4">{tr("The pack's calls")} · {calls.length}</p>
+      <p className="tabular-nums text-[13px] text-fg-4">{tr("The pack's calls")} · {calls.length}</p>
       {calls.length === 0 ? (
         <p className="mt-4 text-[13px] text-fg-4">{tr("No calls yet this night.")}</p>
       ) : (
         <ul className="mt-3 divide-y divide-white/[0.06]">
           {shown.map((c) => (
             <li key={c.mint} className="flex items-start gap-3 py-3">
-              <span className={`tabular-nums mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
+              <span className={`tabular-nums mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[12.5px] ring-1 ${VERDICT_TONE[c.verdict] ?? VERDICT_TONE.watch}`}>{tr(c.verdict)}</span>
               <div className="min-w-0 flex-1">
                 <a href={`${DEXSCREENER_URL}/solana/${c.mint}`} target="_blank" rel="noopener noreferrer" className="text-[13.5px] text-fg hover:text-white">
                   {c.symbol}
                 </a>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-fg-3">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-fg-3">{clean(lang() === "zh" && c.whyZh ? c.whyZh : c.why)}</p>
               </div>
-              <span className="tabular-nums shrink-0 text-[12.5px] text-fg-4">{Math.round(c.confidence * 100)}%</span>
+              <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{Math.round(c.confidence * 100)}%</span>
             </li>
           ))}
         </ul>
       )}
       {calls.length > 6 && (
-        <button type="button" onClick={() => setAll((a) => !a)} className="tabular-nums mt-2 text-[12.5px] text-fg-3 hover:text-white">
+        <button type="button" onClick={() => setAll((a) => !a)} className="tabular-nums mt-2 text-[13px] text-fg-3 hover:text-white">
           {all ? tr("show fewer") : tr("show all {n}", { n: calls.length })}
         </button>
       )}
@@ -132,7 +132,7 @@ export function Learned({ learned }: { learned: Sections["learned"] }) {
   const oneSided = scored > 0 && skill === null && !!score?.cases;
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="tabular-nums text-[12px] text-fg-4">{tr("What the pack learned")}</p>
+      <p className="tabular-nums text-[13px] text-fg-4">{tr("What the pack learned")}</p>
       {scored > 0 && skill !== null ? (
         <>
           <p className="font-display mt-4 text-5xl">{Math.round(skill * 100)}%</p>
@@ -154,12 +154,12 @@ export function Learned({ learned }: { learned: Sections["learned"] }) {
       )}
       {learned && (
         <div className="mt-6 border-t border-white/[0.08] pt-4">
-          <button type="button" onClick={() => setOpen((o) => !o)} className="tabular-nums flex w-full items-center justify-between text-[12.5px] text-fg-4 hover:text-white">
+          <button type="button" onClick={() => setOpen((o) => !o)} className="tabular-nums flex w-full items-center justify-between text-[13px] text-fg-4 hover:text-white">
             <span>{tr("PLAYBOOK V{v} · REWRITTEN BY THE BEAVER", { v: learned.playbook.version })}</span>
             <span>{open ? "−" : "+"}</span>
           </button>
           {open && (
-            <ol className="mt-4 space-y-2 text-[12.5px] font-normal leading-relaxed text-fg-4">
+            <ol className="mt-4 space-y-2 text-[13px] font-normal leading-relaxed text-fg-4">
               {learned.playbook.text.split("\n").map((line) => (
                 <li key={line}>{clean(line)}</li>
               ))}
@@ -177,7 +177,7 @@ export function WeekBoard({ week }: { week: Week }) {
     r.ranked ? null : r.graded < week.minGraded ? tr("{n} more graded", { n: week.minGraded - r.graded }) : r.alive < week.minSide ? tr("{n} more living", { n: week.minSide - r.alive }) : tr("{n} more dead", { n: week.minSide - r.dead });
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="tabular-nums text-[12px] text-fg-4">
+      <p className="tabular-nums text-[13px] text-fg-4">
         {tr("Agent of the week so far")} · {week.start} → {week.end}
       </p>
       {!week.rows.length ? (
@@ -189,10 +189,10 @@ export function WeekBoard({ week }: { week: Week }) {
           {week.rows.slice(0, 3).map((r, i) => (
             <li key={r.name} className="flex items-baseline justify-between gap-3 py-2.5">
               <a href={`/agents?guest=${encodeURIComponent(r.name)}`} className="min-w-0 truncate text-[14px] text-fg hover:text-white">
-                <span className="tabular-nums mr-3 text-[12.5px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
+                <span className="tabular-nums mr-3 text-[13px] text-fg-4">{String(i + 1).padStart(2, "0")}</span>
                 {r.name}
               </a>
-              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">
+              <span className="tabular-nums shrink-0 text-[13px] text-fg-4">
                 {Math.round(r.score * 100)}% · {r.graded}
                 {need(r) && <span className="ml-2 text-warn">{tr("{need} to qualify", { need: need(r)! })}</span>}
               </span>
@@ -207,18 +207,18 @@ export function WeekBoard({ week }: { week: Week }) {
 export function GuestReports({ reports }: { reports: GuestReport[] }) {
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="tabular-nums text-[12px] text-fg-4">{tr("From the guest enclosures")} · {reports.length}</p>
+      <p className="tabular-nums text-[13px] text-fg-4">{tr("From the guest enclosures")} · {reports.length}</p>
       <div className={`mt-3 grid gap-6 ${reports.length > 1 ? "md:grid-cols-2" : ""}`}>
         {reports.map((r) => (
           <div key={r.guest} className="min-w-0">
             <p className="text-[14px] text-fg">
-              {r.guest} <span className="text-[12px] text-fg-4">· {r.platform === "clawpump" ? `${tr("ClawPump wing")} · ` : ""}{tr(r.species)}</span>
+              {r.guest} <span className="text-[13px] text-fg-4">· {r.platform === "clawpump" ? `${tr("ClawPump wing")} · ` : ""}{tr(r.species)}</span>
             </p>
             <ul className="mt-2 divide-y divide-white/[0.06]">
               {r.items.slice(0, 5).map((i) => (
                 <li key={i.mint} className="flex items-start gap-3 py-2.5">
-                  <span className={`tabular-nums mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{tr(i.verdict)}</span>
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-fg-4" title={i.note}>
+                  <span className={`tabular-nums mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[12.5px] ring-1 ${VERDICT_TONE[i.verdict] ?? VERDICT_TONE.watch}`}>{tr(i.verdict)}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-fg-4" title={i.note}>
                     {clean(i.note) || shortAddress(i.mint)}
                   </span>
                 </li>
@@ -234,14 +234,14 @@ export function GuestReports({ reports }: { reports: GuestReport[] }) {
 export function Watched({ items }: { items: Obs[] }) {
   return (
     <div className="rounded-2xl bg-black/40 p-6 ring-1 ring-white/10 backdrop-blur-md">
-      <p className="tabular-nums text-[12px] text-fg-4">{tr("Guardian watch")} · {items.length}</p>
+      <p className="tabular-nums text-[13px] text-fg-4">{tr("Guardian watch")} · {items.length}</p>
       <ul className="mt-3 divide-y divide-white/[0.06]">
         {items.map((o) => (
           <li key={o.mint} className="flex items-baseline justify-between gap-3 py-2.5 text-[13px]">
             <a href={dex(o)} target="_blank" rel="noopener noreferrer" className="text-fg-2 hover:text-white">
-              {o.symbol} <span className="tabular-nums text-[12.5px] text-fg-4">{shortAddress(o.mint)}</span>
+              {o.symbol} <span className="tabular-nums text-[13px] text-fg-4">{shortAddress(o.mint)}</span>
             </a>
-            <span className="tabular-nums text-[12px]">
+            <span className="tabular-nums text-[13px]">
               <Change n={o.market?.priceChange24h} /> <span className="text-fg-4">· {(o.watchedBy ?? []).map(shortAddress).join(", ")}</span>
             </span>
           </li>

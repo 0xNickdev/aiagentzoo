@@ -42,7 +42,7 @@ const VERDICT: Record<string, string> = { avoid: "text-[#ff8a7e]", caution: "tex
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="bg-night-surface px-5 py-4">
-      <p className="text-[12px] text-fg-4 [&::first-letter]:uppercase">{k}</p>
+      <p className="text-[13px] text-fg-4 [&::first-letter]:uppercase">{k}</p>
       <p className="mt-2 text-[26px] leading-none text-fg tabular-nums">{v}</p>
       {sub && <p className="mt-2 text-[13px] text-fg-4">{sub}</p>}
     </div>
@@ -54,7 +54,7 @@ function Card({ title, note, children }: { title: string; note?: string; childre
     <div className="rounded-2xl border border-white/[0.08] bg-night-surface p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="font-display text-xl text-fg">{title}</h3>
-        {note && <span className="text-[12px] text-fg-4">{note}</span>}
+        {note && <span className="text-[13px] text-fg-4">{note}</span>}
       </div>
       {children}
     </div>
@@ -116,7 +116,7 @@ function Probe() {
           {busy ? t("Asking…") : t("Ask without paying")}
         </button>
       </form>
-      {out && <pre className="mt-4 max-h-80 overflow-auto rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{out}</pre>}
+      {out && <pre className="mt-4 max-h-80 overflow-auto rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{out}</pre>}
     </Card>
   );
 }
@@ -144,7 +144,7 @@ function AgentPrompt() {
   return (
     <Card title={t("Paste this into your coding agent")} note={t("Claude Code, Cursor, Codex")}>
       <p className="text-[14px] leading-relaxed text-fg-3">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
-      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
+      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button onClick={() => void copy()} disabled={!text} className="rounded-xl bg-white px-5 py-2.5 text-[14px] font-medium text-black transition hover:bg-white/85 disabled:opacity-50">
           {copied ? t("Copied") : t("Copy the prompt")}
@@ -202,7 +202,7 @@ export default function X402() {
                 {!menu && <li className="text-[13px] text-fg-4">{t("Reading the node…")}</li>}
               </ul>
               {menu?.networks.map((n) => (
-                <p key={n.network} className="mt-3 text-[12px] text-fg-4 first-of-type:mt-5">
+                <p key={n.network} className="mt-3 text-[13px] text-fg-4 first-of-type:mt-5">
                   {n.network === MAINNET ? t("mainnet") : t("devnet")}: {t("paid to")}{" "}
                   <a href={acct(n.payTo, n.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
                     {shortFit(n.payTo)}
@@ -225,7 +225,7 @@ export default function X402() {
             <ol className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               {STEPS.map(([k, v], i) => (
                 <li key={k} className="flex gap-3">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/15 text-[12px] text-fg-3 tabular-nums">{i + 1}</span>
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/15 text-[13px] text-fg-3 tabular-nums">{i + 1}</span>
                   <div>
                     <p className="text-[15px] text-fg">{t(k)}</p>
                     <p className="mt-1 text-[13px] leading-relaxed text-fg-4">{t(v)}</p>
@@ -240,7 +240,7 @@ export default function X402() {
           <Card title={t("Every sale, live")} note={t("each report's sha256 is also in the node's signed public log")}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-[13px] tabular-nums">
-                <thead className="text-[12px] text-fg-4">
+                <thead className="text-[13px] text-fg-4">
                   <tr className="border-b border-white/[0.08]">
                     <th className="py-2 pr-4 font-normal">{t("time UTC")}</th>
                     <th className="py-2 pr-4 font-normal">{t("bought")}</th>
@@ -291,7 +291,7 @@ export default function X402() {
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <Reveal>
             <Card title={t("From your agent")} note="@x402/fetch + @x402/svm">
-              <pre className="overflow-x-auto rounded-xl bg-black/40 p-4 text-[12px] leading-relaxed text-fg-3">{SNIPPET}</pre>
+              <pre className="overflow-x-auto rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{SNIPPET}</pre>
               <p className="mt-4 text-[13px] text-fg-4">
                 {t("A ready agent that refuses the swap on avoid:")}{" "}
                 <a href="https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent" target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
@@ -309,7 +309,7 @@ export default function X402() {
                 <li>{t("The transfer fails on chain: 402 with the reason, the report is withheld.")}</li>
                 <li>{t("You cannot name your own price: the node always checks the payment against its own.")}</li>
               </ul>
-              <p className="mt-5 text-[12px] text-fg-4">{t("The agent needs USDC only: the node pays the Solana network fee.")}</p>
+              <p className="mt-5 text-[13px] text-fg-4">{t("The agent needs USDC only: the node pays the Solana network fee.")}</p>
             </Card>
           </Reveal>
         </div>

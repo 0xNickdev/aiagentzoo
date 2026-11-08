@@ -39,13 +39,13 @@ function Row({ e, now }: { e: FeedRow; now: number }) {
       <Avatar mint={e.mint} symbol={e.symbol} image={e.image} venue={e.venue} tone={red ? "red" : "amber"} />
       <span className="flex min-w-0 flex-col gap-0.5">
         <b className="truncate text-[15px] font-semibold text-white">{ticker(e.symbol, e.mint)}</b>
-        <small className="truncate text-[12.5px] text-[#a3aaa6]">{sub}</small>
+        <small className="truncate text-[13px] text-[#b8beba]">{sub}</small>
       </span>
       <span className="flex flex-col items-end gap-0.5">
         <b className="text-[17px] font-semibold tabular-nums tracking-[-0.02em] text-white">{big}</b>
-        <small className="whitespace-nowrap text-[12.5px] text-[#a3aaa6]">{label}</small>
+        <small className="whitespace-nowrap text-[13px] text-[#b8beba]">{label}</small>
       </span>
-      <span className="hidden text-right text-[12.5px] tabular-nums text-[#a3aaa6] sm:block">{t("{a} ago", { a: ago(e.at, now) })}</span>
+      <span className="hidden text-right text-[13px] tabular-nums text-[#b8beba] sm:block">{t("{a} ago", { a: ago(e.at, now) })}</span>
     </a>
   );
 }
@@ -101,24 +101,24 @@ function RugCase() {
         <Avatar mint={c.mint} symbol={c.symbol} image={c.image} venue={f.venue} tone="red" size={44} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[20px] font-semibold tracking-[-0.02em] text-white">{ticker(c.symbol, c.mint)}</p>
-          <p className="text-[12.5px] text-[#a3aaa6]">
+          <p className="text-[13px] text-[#b8beba]">
             <span className="tabular-nums">{shortOr(c.mint)}</span> · {t("went to zero {a} ago", { a: ago(c.at, now) })}
           </p>
         </div>
-        <span className="rounded-full border border-[#ff8a7e]/35 bg-[#ff8a7e]/10 px-3 py-1 text-[12px] font-medium text-[#ff8a7e]">{t("AVOID")}</span>
+        <span className="rounded-full border border-[#ff8a7e]/35 bg-[#ff8a7e]/10 px-3 py-1 text-[13px] font-medium text-[#ff8a7e]">{t("AVOID")}</span>
       </div>
       {left != null && (
         <>
           <div className="mt-6 flex flex-wrap items-baseline gap-3">
             <p className="font-display text-[48px] font-semibold leading-none tracking-[-0.045em] tabular-nums text-white">
               {Math.round(f.curveSol!)}
-              <span className="px-[0.12em] font-medium text-[#a3aaa6]">→</span>
+              <span className="px-[0.12em] font-medium text-[#b8beba]">→</span>
               {f.poolSol! < 1 ? f.poolSol!.toFixed(2) : Math.round(f.poolSol!)}
             </p>
-            <span className="text-[20px] font-medium text-[#a3aaa6]">SOL</span>
+            <span className="text-[20px] font-medium text-[#b8beba]">SOL</span>
             <span className="ml-auto text-[15px] font-semibold tabular-nums text-[#ff8a7e]">-{Math.round((1 - left) * 100)}%</span>
           </div>
-          <p className="mt-2 text-[14px] text-[#a3aaa6]">{t("in the pool, from graduation to now")}</p>
+          <p className="mt-2 text-[14px] text-[#b8beba]">{t("in the pool, from graduation to now")}</p>
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
             <motion.i initial={{ width: "100%" }} whileInView={{ width: `${(left * 100).toFixed(1)}%` }} viewport={{ once: true }} transition={{ duration: 1.4, ease: EASE, delay: 0.3 }} className="block h-full rounded-full bg-[#ff8a7e]" />
           </div>
@@ -136,7 +136,7 @@ function RugCase() {
         ).map(([v, k]) => (
           <div key={k} className="rounded-[10px] bg-white/[0.03] p-3.5">
             <p className="text-[20px] font-semibold tabular-nums tracking-[-0.02em] text-white">{v}</p>
-            <p className="mt-1 text-[12.5px] leading-snug text-[#a3aaa6]">{k}</p>
+            <p className="mt-1 text-[13px] leading-snug text-[#b8beba]">{k}</p>
           </div>
         ))}
       </div>
@@ -147,7 +147,7 @@ function RugCase() {
           </li>
         ))}
       </ul>
-      <div className="-mx-6 mt-1 flex items-center justify-between gap-3 border-t border-white/[0.07] px-6 py-3.5 text-[13px] text-[#a3aaa6]">
+      <div className="-mx-6 mt-1 flex items-center justify-between gap-3 border-t border-white/[0.07] px-6 py-3.5 text-[13px] text-[#b8beba]">
         <span>{t("What the X-Ray shows on it.")}</span>
         <a href={SITE_XRAY(c.mint)} className="inline-flex items-center gap-1.5 font-medium text-white">
           {t("Open X-Ray")} <ArrowRight size={14} />
@@ -164,16 +164,16 @@ export function LiveNow() {
   const now = useNow();
   const rows = data ? feedRows(data.moments).slice(0, 8) : [];
   return (
-    <section id="now" className="relative scroll-mt-20 px-5 py-24 sm:px-8 sm:py-32">
+    <section id="now" className="relative scroll-mt-20 px-5 py-16 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-7xl">
-        <p className="flex items-center gap-2.5 text-[15px] text-[#a3aaa6]">
+        <p className="flex items-center gap-2.5 text-[15px] text-[#b8beba]">
           <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[#a6e3b4]" />
           {t("Live from the chain, refreshes every few seconds")}
         </p>
         <h2 className="font-display mt-3 text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[60px]">{t("What devs are doing right now.")}</h2>
         <div className="mt-12 grid items-start gap-5 lg:grid-cols-[1.2fr_1fr]">
           <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0a0e0c]">
-            <div className="flex items-center justify-between px-5 py-4 text-[13px] text-[#a3aaa6]">
+            <div className="flex items-center justify-between px-5 py-4 text-[13px] text-[#b8beba]">
               <span>{t("Dev dumps, serial launchers, drained pools")}</span>
               <span>
                 <b className="font-medium tabular-nums text-white">{chain ? full(chain.perMinute.launches) : "-"}</b> {t("launches a minute")}
@@ -210,9 +210,9 @@ export function WhyAvoid() {
     [bundle, t("launches where three or more wallets took 15% of the supply in the launch block.")],
   ];
   return (
-    <section className="relative px-5 pb-24 sm:px-8 sm:pb-32">
+    <section className="relative px-5 pb-16 sm:px-8 sm:pb-32">
       <div className="mx-auto max-w-7xl">
-        <p className="text-[15px] text-[#a3aaa6]">{t("Why it says avoid")}</p>
+        <p className="text-[15px] text-[#b8beba]">{t("Why it says avoid")}</p>
         <h2 className="font-display mt-3 max-w-4xl text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[60px]">
           {t("Three things that kill most coins, counted on yesterday's launches.")}
         </h2>
@@ -227,7 +227,7 @@ export function WhyAvoid() {
         {top && (
           <a href={SITE_WALLET(top.wallet)} className="group mt-5 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-white/[0.07] bg-[#0a0e0c] p-6 transition-colors hover:border-white/20">
             <div>
-              <p className="text-[15px] text-[#a3aaa6]">
+              <p className="text-[15px] text-[#b8beba]">
                 {t("Loudest dev of the last 48 hours")} · <span className="tabular-nums">{shortOr(top.wallet)}</span>
               </p>
               <p className="mt-2.5 text-[22px] tracking-[-0.02em] text-white sm:text-[24px]">

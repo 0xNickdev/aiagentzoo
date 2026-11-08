@@ -133,7 +133,7 @@ export default function AskPage() {
     <>
       <Section className="!pb-10" backdrop={{ src: "/backdrops/cycle.webp", tint: "200,170,110", glowAt: "50% 35%", opacity: 0.35 }}>
         <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="tabular-nums text-[12px] text-fg-3">{t("Ask the beaver · graded by reality tomorrow")}</p>
+          <p className="tabular-nums text-[13px] text-fg-3">{t("Ask the beaver · graded by reality tomorrow")}</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.02] sm:text-6xl md:text-7xl">
             {t("Is it a rug?")}
             <br />
@@ -166,7 +166,7 @@ export default function AskPage() {
             </button>
           </form>
           {error && <p className="mt-4 text-center text-[13px] text-[#ff8a7e]">{error}</p>}
-          <p className="tabular-nums mt-4 text-center text-[12.5px] text-fg-3">
+          <p className="tabular-nums mt-4 text-center text-[13px] text-fg-3">
             {!session ? (
               <>
                 {t("holding $ZOOAGENCY?")}{" "}
@@ -200,7 +200,7 @@ export default function AskPage() {
       <Section className="!pb-6 !pt-6">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-2xl">{t("Passed the basic checks")}</h2>
-          <p className="tabular-nums text-[12.5px] text-fg-3">{t("fresh pump.fun launches · live from the chain")}</p>
+          <p className="tabular-nums text-[13px] text-fg-3">{t("fresh pump.fun launches · live from the chain")}</p>
         </div>
         <p className="mb-5 max-w-3xl text-[13px] font-normal leading-relaxed text-fg-3">
           {t("10 to 180 minutes old, the creator has not sold, the wallet is not a serial launcher, 25+ buyers with no five of them holding most of it, buys ahead of sells.")}{" "}
@@ -216,9 +216,9 @@ export default function AskPage() {
               <li key={c.mint} className="rounded-2xl bg-black/40 px-4 py-3 ring-1 ring-white/10">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-display truncate text-[17px]">${c.symbol}</span>
-                  <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{t("{n} min old", { n: c.ageMin })}</span>
+                  <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{t("{n} min old", { n: c.ageMin })}</span>
                 </div>
-                <p className="tabular-nums mt-1 text-[12px] text-fg-3">
+                <p className="tabular-nums mt-1 text-[13px] text-fg-3">
                   {t("{b} buyers · {r} came back · top 5 hold {p}", { b: c.buyersMore ? `${c.buyers}+` : c.buyers, r: c.repeatBuyers, p: pctOf(c.top5Share) })}
                 </p>
                 <button
@@ -229,7 +229,7 @@ export default function AskPage() {
                     window.scrollTo({ top: 0, behavior: "smooth" });
                     void askAbout(c.mint);
                   }}
-                  className="tabular-nums mt-2 text-[12.5px] text-warn underline decoration-amber-100/30 underline-offset-4 hover:text-warn disabled:opacity-50"
+                  className="tabular-nums mt-2 text-[13px] text-warn underline decoration-amber-100/30 underline-offset-4 hover:text-warn disabled:opacity-50"
                 >
                   {t("ask the beaver →")}
                 </button>
@@ -243,7 +243,7 @@ export default function AskPage() {
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-2xl">{t("Recent questions")}</h2>
           {recent && (
-            <p className="tabular-nums text-[12.5px] text-fg-3">
+            <p className="tabular-nums text-[13px] text-fg-3">
               {t("{n} asked · beaver on asks:", { n: recent.asked.toLocaleString("en-US") })}{" "}
               {recent.record.graded ? t("{p} balanced · {n} graded", { p: pctOf(recent.record.skill), n: recent.record.graded }) : t("first grades after a day")}
             </p>
@@ -266,9 +266,9 @@ export default function AskPage() {
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="font-display truncate text-[17px]">${a.symbol}</span>
-                    <span className={`tabular-nums shrink-0 text-[12.5px] ${TONE[a.verdict].text}`}>{t(TONE[a.verdict].label)}</span>
+                    <span className={`tabular-nums shrink-0 text-[13px] ${TONE[a.verdict].text}`}>{t(TONE[a.verdict].label)}</span>
                   </div>
-                  <p className="tabular-nums mt-1 truncate text-[12px] text-fg-4">{graded(a)}</p>
+                  <p className="tabular-nums mt-1 truncate text-[13px] text-fg-4">{graded(a)}</p>
                 </button>
               </li>
             ))}

@@ -100,7 +100,7 @@ export function XRayShowcase() {
     [f.poolSol != null && f.curveSol ? `${Math.round(f.curveSol)} → ${f.poolSol < 1 ? f.poolSol.toFixed(2) : Math.round(f.poolSol)}` : "-", t("SOL in the pool, graduation to now")],
   ];
   return (
-    <section className="relative px-5 py-24 sm:px-8 sm:py-32">
+    <section className="relative px-5 py-16 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-7xl">
         <p className="text-[15px] text-fg-3">{t("A real one, from the last few hours")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-[40px] font-semibold leading-[1.02] text-white sm:text-[64px]">
@@ -181,9 +181,9 @@ export function Products() {
     { icon: ICONS.chrome, name: t("Chrome extension"), text: t("The verdict right on gmgn, Axiom, pump.fun and DexScreener, and a tag next to every CA on X."), href: EXTENSION_URL, cta: t("Add to Chrome"), ext: true },
   ];
   return (
-    <section className="relative px-5 py-24 sm:px-8 sm:py-32">
+    <section className="relative px-5 py-16 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-7xl">
-        <p className="text-[15px] text-[#a3aaa6]">{t("Same check, wherever you trade")}</p>
+        <p className="text-[15px] text-[#b8beba]">{t("Same check, wherever you trade")}</p>
         <h2 className="font-display mt-3 max-w-3xl text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[60px]">
           {t("One X-Ray. Three places to run it.")}
         </h2>
@@ -226,7 +226,7 @@ export function Holders() {
     { k: t("A real vote"), v: t("Holders pick the order of what we build next. Signed votes, counted in public.") },
   ];
   return (
-    <section className="relative px-5 py-24 sm:px-8 sm:py-32">
+    <section className="relative px-5 py-16 sm:px-8 sm:py-32">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-20">
         <div>
           <p className="text-[15px] text-fg-3">$ZOOAGENCY</p>

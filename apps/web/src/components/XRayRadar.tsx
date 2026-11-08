@@ -23,7 +23,7 @@ export const KIND: Record<Kind, { color: string; label: string; what: string }> 
   crew: { color: "#ff8a7e", label: "creator's crew", what: "snipes this creator's other launches too: the creator's own wallet" },
   ring: { color: "#ffc27a", label: "sniper ring", what: "has sniped launches together with other wallets here before: one operator" },
   serial: { color: "#c9b48a", label: "serial sniper", what: "buys launches in the first seconds to sell to whoever comes next" },
-  bundle: { color: "#a3aaa6", label: "launch block", what: "bought in the same block the token was created" },
+  bundle: { color: "#b8beba", label: "launch block", what: "bought in the same block the token was created" },
   early: { color: "#e6e9e7", label: "first 5 s", what: "bought before the token showed up anywhere" },
 };
 const ORDER: Kind[] = ["crew", "ring", "serial", "bundle", "early"];
@@ -216,11 +216,11 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             className="pointer-events-none absolute z-10 w-[220px] rounded-xl border border-white/10 bg-[#070a09]/95 px-3.5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
             style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%`, transform: `translate(${tip.x > W * 0.6 ? "-108%" : "12%"}, -50%)` }}
           >
-            <p className="tabular-nums text-[12.5px] text-fg-2">{short(tip.e.wallet)}</p>
-            <p className="tabular-nums mt-0.5 text-[12px]" style={{ color: KIND[tip.k].color }}>
+            <p className="tabular-nums text-[13px] text-fg-2">{short(tip.e.wallet)}</p>
+            <p className="tabular-nums mt-0.5 text-[13px]" style={{ color: KIND[tip.k].color }}>
               {t(KIND[tip.k].label)}
             </p>
-            <div className="tabular-nums mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
+            <div className="tabular-nums mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
               <span className="text-fg-3">{t("in at")}</span>
               <span className="text-right text-fg-2">{tip.e.afterSec}s</span>
               <span className="text-fg-3">{t("took")}</span>
@@ -232,12 +232,12 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
               <span className="text-fg-3">{t("snipes 48h")}</span>
               <span className="text-right text-fg-2">{tip.e.snipes48h}</span>
             </div>
-            {!onSelect && <p className="mt-2 text-[12px] font-normal text-fg-4">{t(KIND[tip.k].what)}</p>}
+            {!onSelect && <p className="mt-2 text-[13px] font-normal text-fg-4">{t(KIND[tip.k].what)}</p>}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="tabular-nums mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
+      <div className="tabular-nums mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
         {ORDER.filter((k) => present.has(k)).map((k) => (
           <button
             key={k}
@@ -253,7 +253,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>
-      <p className="tabular-nums mt-2 text-[11.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
+      <p className="tabular-nums mt-2 text-[12.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
     </div>
   );
 }

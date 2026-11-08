@@ -53,7 +53,7 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
     <Section className="!pt-2">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="font-display text-2xl">{t("Try one from the chain, right now")}</h2>
-        <p className="tabular-nums text-[12.5px] text-fg-3">{t("live from Solana · tap to x-ray")}</p>
+        <p className="tabular-nums text-[13px] text-fg-3">{t("live from Solana · tap to x-ray")}</p>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {!moments && Array.from({ length: 4 }, (_, i) => <div key={i} className="bg-night-surface border border-white/[0.08] h-[84px] animate-pulse rounded-2xl opacity-60" />)}
@@ -66,18 +66,18 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
           >
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
-              <span className="tabular-nums shrink-0 text-[12px] text-fg-4">{minAgo(m.at)}</span>
+              <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{minAgo(m.at)}</span>
             </div>
-            <p className="mt-1.5 truncate text-[12.5px] font-normal text-fg-4">{tChain(m.text)}</p>
+            <p className="mt-1.5 truncate text-[13px] font-normal text-fg-4">{tChain(m.text)}</p>
             <div className="mt-2.5 flex items-center justify-between gap-2">
               {verdicts[m.mint] ? (
-                <span className="tabular-nums rounded-full px-2 py-0.5 text-[11.5px] tracking-[0.06em] ring-1" style={{ color: TONE[verdicts[m.mint]!].color, boxShadow: "none", borderColor: "transparent", background: "rgba(255,255,255,0.03)" }}>
+                <span className="tabular-nums rounded-full px-2 py-0.5 text-[12.5px] tracking-[0.06em] ring-1" style={{ color: TONE[verdicts[m.mint]!].color, boxShadow: "none", borderColor: "transparent", background: "rgba(255,255,255,0.03)" }}>
                   {t(TONE[verdicts[m.mint]!].label)}
                 </span>
               ) : (
-                <span className="tabular-nums text-[11.5px] text-fg-4">{t("checking…")}</span>
+                <span className="tabular-nums text-[12.5px] text-fg-4">{t("checking…")}</span>
               )}
-              <span className="tabular-nums text-[12px] text-fg-4 group-hover:text-fg-3">{t("x-ray it →")}</span>
+              <span className="tabular-nums text-[13px] text-fg-4 group-hover:text-fg-3">{t("x-ray it →")}</span>
             </div>
           </button>
         ))}
