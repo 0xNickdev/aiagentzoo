@@ -3,7 +3,7 @@ import { printWarning, type PrintRecord } from "./fingerprint.ts";
 import { operatorWarning, type OperatorRecord } from "./operators.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport, TokenRights } from "./holders.ts";
-import { handWarning, type HandReport } from "./hand.ts";
+import { handNote, handWarning, type HandReport } from "./hand.ts";
 import type { LineageView } from "./lineage.ts";
 import { deployerOf } from "./exchanges.ts";
 import type { AccountRecord } from "./socials.ts";
@@ -413,6 +413,10 @@ export function checkToken(
   // One hand dressed as a crowd: the biggest buyers paid from one wallet, however far apart their buys were spaced.
   const hand = handWarning(opts.hand);
   if (hand) flag(hand.avoid ? avoid : caution, hand.text, hand.avoid ? WEIGHT.handAvoid : WEIGHT.handCaution);
+  else {
+    const said = handNote(opts.hand);
+    if (said) notes.push(said);
+  }
 
   // Dev gone, holders carry it: a serial dumper's coin they fully left, that graduated and grew on its own. Their record
   // still shows, but it no longer decides: whoever holds it now does. Only when the holders were read.

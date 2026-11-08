@@ -30,6 +30,8 @@ export interface HandReport {
   missed?: { none: number; rpc: number; long: number };
   /** The first failed reads, as the RPC gave them. */
   errors?: string[];
+  /** The trace outlasted the request: nothing was judged this time, it finishes in the background for the next check. */
+  late?: boolean;
   group: HandGroup | null;
 }
 
@@ -142,4 +144,28 @@ export function handWarning(r: HandReport | null | undefined): { text: string; a
   const from = g.dev ? "the dev's own wallet" : g.hops === 1 ? "one wallet" : `one wallet up to ${g.hops} hops back`;
   const text = `${g.wallets.length} of its ${r!.checked} biggest buyers were paid from ${from} and took ${pct(g.took)}% of the supply; they still hold ${pct(g.held)}%`;
   return { text, avoid: g.wallets.length >= HAND.avoidWallets && g.held >= HAND.avoidHeld };
+}
+
+/** handOf, given at most `ms`: a trace still running then comes back as `late` rather than as no answer. */
+export async function handWithin(mint: string, buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, ms = 5_000): Promise<HandReport | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<"late">((r) => (timer = setTimeout(() => r("late"), ms)));
+  const r = await Promise.race([handOf(mint, buyers, creator), late]);
+  clearTimeout(timer);
+  return r === "late" ? { checked: Math.min(buyers.length, HAND.wallets), traced: 0, late: true, group: null } : r;
+}
+
+/**
+ * What the trace says when it flags nothing: that it ran complete and found no hand, or that it could not read some
+ * buyers, so a clean answer is not a clean bill. Said, not scored.
+ */
+export function handNote(r: HandReport | null | undefined): string | null {
+  if (!r || handWarning(r)) return null;
+  if (r.late) return "the money trail of its biggest buyers took too long to read this time, so the one-wallet check is not in this answer: check again in a minute";
+  const rpc = r.missed?.rpc ?? 0;
+  const long = r.missed?.long ?? 0;
+  if (rpc) return `the funding of ${rpc + long} of its ${r.checked} biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute`;
+  if (long) return `the funding of ${long} of its ${r.checked} biggest buyers is too far back in a long history to read, so the one-wallet check is incomplete`;
+  const none = r.missed?.none ?? 0;
+  return `the money of its ${r.checked} biggest buyers was traced up to ${HAND.hops} hops back: no one wallet paid enough of them to flag${none ? ` (${none} had no funding to follow)` : ""}`;
 }

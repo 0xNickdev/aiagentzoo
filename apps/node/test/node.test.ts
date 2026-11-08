@@ -2213,3 +2213,36 @@ test("a funder sent through a program still counts, and a failed read is not tak
   assert.deepEqual(r.missed, { none: 0, rpc: 1, long: 1 });
   assert.equal(r.group!.wallets.length, 4);
 });
+
+test("the one-wallet check says whether it ran complete, missed reads, or ran out of time", async () => {
+  const { traceHand, handNote, handWithin, handWarning } = await import("../src/chain/hand.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  const buyers = Array.from({ length: 12 }, (_, i) => ({ wallet: `C${i}`, took: 0.03, held: 0.03 }));
+  // All twelve read, every one from its own funder: complete, and nothing to flag.
+  const clean = await traceHand(buyers, null, async (w) => (w.startsWith("C") ? `F${w}` : null));
+  assert.equal(clean.traced, 12);
+  assert.match(handNote(clean)!, /^the money of its 12 biggest buyers was traced up to 4 hops back: no one wallet paid enough of them to flag$/);
+  // One read refused: the same clean result is not a clean bill.
+  const gap = await traceHand(buyers, null, async (w) => (w === "C3" ? { funder: null, why: "rpc" } : w.startsWith("C") ? `F${w}` : null));
+  assert.equal(handNote(gap), "the funding of 1 of its 12 biggest buyers could not be read this time, so the one-wallet check is incomplete: check again in a minute");
+  const deep = await traceHand(buyers, null, async (w) => (w === "C3" ? { funder: null, why: "long" } : w.startsWith("C") ? `F${w}` : null));
+  assert.match(handNote(deep)!, /^the funding of 1 of its 12 biggest buyers is too far back/);
+  const bare = await traceHand(buyers, null, async (w) => (w === "C3" ? null : w.startsWith("C") ? `F${w}` : null));
+  assert.match(handNote(bare)!, /no one wallet paid enough of them to flag \(1 had no funding to follow\)$/);
+  // A flagged hand is a reason, not a note.
+  const one = await traceHand(buyers, null, async () => "F");
+  assert.ok(handWarning(one));
+  assert.equal(handNote(one), null);
+  // Out of time: said as late, not as no hand.
+  assert.match(handNote({ checked: 12, traced: 0, late: true, group: null })!, /took too long to read this time/);
+  // With no funding reads on this node there is nothing to wait for: no answer, not a late one.
+  assert.equal(await handWithin("SLOWMINT", buyers, null, 1), null);
+  // The note reaches the check, unscored.
+  const facts = { ageMin: 45, buys: 80, sells: 30, buyers: 60, solIn: 20, solOut: 5, curveSol: 15, creatorSold: 0, creatorLaunches24h: 1, graduated: false, top5Share: 0.3, repeatBuyers: 8, trades15m: 50, bundleWallets: 0, bundleShare: 0, poolSol: null, ammBuys: 0, ammSells: 0, ammSolIn: 0, ammSolOut: 0 } as never;
+  const rec = { wallet: "w", launches24h: 1, launches48h: 1, dumped: 0, medianDumpMin: null, graduated: 0, recent: [] } as never;
+  const a = checkToken("M", { symbol: "OK", facts, creatorRecord: rec }, { hand: clean });
+  const b = checkToken("M", { symbol: "OK", facts, creatorRecord: rec }, { hand: gap });
+  assert.equal(a.verdict, b.verdict);
+  assert.equal(a.score, b.score);
+  assert.ok(b.notes.some((n) => n.includes("one-wallet check is incomplete")));
+});

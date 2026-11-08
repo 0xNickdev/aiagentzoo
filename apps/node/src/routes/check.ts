@@ -5,7 +5,7 @@ import { lineage, type LineageView } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
 import { holderReport, holdersEnabled, mintRights, poolSolOf } from "../chain/holders.ts";
-import { handOf } from "../chain/hand.ts";
+import { handWithin } from "../chain/hand.ts";
 import { CHAIN_NAME, checkToken, oddsRunNote, outsideCheck } from "../chain/check.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "../chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "../chain/base.ts";
@@ -104,7 +104,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const evmLineage = bsc ? bscLineage : baseLineage;
     const evmFunders = bsc ? bscFundersEnabled() : baseFundersEnabled();
     // The biggest buyers' money traced back: a hand spread over wallets and minutes. Solana launches the tape holds.
-    const handP = deep && found && !evm ? within(handOf(mint, tape.bigBuyersOf(mint), found.creator), 5_000) : Promise.resolve(null);
+    const handP = deep && found && !evm ? handWithin(mint, tape.bigBuyersOf(mint), found.creator) : Promise.resolve(null);
     const [holders, , poolSol] = await Promise.all([
       deep && (found || past) && !evm && holdersEnabled()
         ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null))
