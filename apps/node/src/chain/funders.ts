@@ -46,12 +46,36 @@ interface ParsedTx {
   meta?: { err?: unknown; preBalances?: number[]; postBalances?: number[]; innerInstructions?: Array<{ instructions: Ix[] }> };
 }
 
+/**
+ * One pace for every funding read on this node: the history RPC refuses bursts (429), and a refused read is a buyer
+ * left untraced. Calls start at most FUNDING_RPS a second, FUNDING_PARALLEL at once.
+ */
+const RPS = Number(process.env.FUNDING_RPS) || 8;
+const PARALLEL = Number(process.env.FUNDING_PARALLEL) || 4;
+let nextStart = 0;
+let running = 0;
+const waiting: Array<() => void> = [];
+async function paced<T>(fn: () => Promise<T>): Promise<T> {
+  if (running >= PARALLEL) await new Promise<void>((r) => waiting.push(r));
+  running += 1;
+  try {
+    const now = Date.now();
+    const at = Math.max(now, nextStart);
+    nextStart = at + 1000 / RPS;
+    if (at > now) await new Promise((r) => setTimeout(r, at - now));
+    return await fn();
+  } finally {
+    running -= 1;
+    waiting.shift()?.();
+  }
+}
+
 /** An RPC call that tells a failure (rate limit, timeout) apart from an empty answer. */
 async function call<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<{ ok: true; result: T | null } | { ok: false; err: string }> {
   let err = "";
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await fetchFn(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8_000) });
+      const r = await paced(() => fetchFn(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8_000) }));
       if (r.status === 429 || r.status >= 500) throw new Error(`http ${r.status}`);
       const body = (await r.json()) as { result?: T; error?: { code?: number; message?: string } };
       // Method not found or bad params is an answer; anything else (a rate limit inside a 200) is worth asking again.
@@ -60,7 +84,8 @@ async function call<T>(method: string, params: unknown[], fetchFn: typeof fetch)
       return { ok: true, result: body.result ?? null };
     } catch (e) {
       err = `${method}: ${(e as Error).message.slice(0, 80)}`;
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1) ** 2));
+      // A refused burst clears in a second or two.
+      await new Promise((r) => setTimeout(r, 1_000 * 2 ** attempt));
     }
   }
   return { ok: false, err };
@@ -124,8 +149,10 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
     sigs = [...sigs].reverse();
   }
   if (!sigs.length) return { funder: null, why: "none" };
-  // Oldest first, read together: the funding usually comes just before the first buy.
-  const txs = await Promise.all(sigs.slice(0, 6).map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn)));
+  // Oldest first: the funding is nearly always the first or second transaction, so those two are read before the rest.
+  const get = (list: Array<{ signature: string }>) => Promise.all(list.map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn)));
+  const txs = await get(sigs.slice(0, 2));
+  if (!txs.some((t) => t.ok && fundingIn(t.result, wallet))) txs.push(...(await get(sigs.slice(2, 6))));
   let failed = "";
   for (const t of txs) {
     if (!t.ok) {

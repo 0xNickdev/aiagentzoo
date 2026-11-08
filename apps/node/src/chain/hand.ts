@@ -126,6 +126,10 @@ export function handOf(mint: string, buyers: Array<{ wallet: string; took: numbe
   if (hit && now - hit.at < CACHE_MS) return hit.p;
   const p = traceHand(buyers, creator).catch(() => null);
   reports.set(mint, { at: now, p });
+  // A trace with failed reads is kept a minute, not ten: the next X-Ray asks again, and what was read stays cached.
+  void p.then((r) => {
+    if (r?.missed?.rpc && reports.get(mint)?.p === p) reports.set(mint, { at: now - CACHE_MS + 60_000, p });
+  });
   if (reports.size > 2_000) for (const [k, v] of reports) if (now - v.at > CACHE_MS) reports.delete(k);
   return p;
 }
