@@ -39,41 +39,106 @@ export async function rpc<T>(method: string, params: unknown[], fetchFn: typeof 
   }
 }
 
+type Ix = { program?: string; parsed?: { type?: string; info?: { source?: string; destination?: string; lamports?: number } } };
+type Key = string | { pubkey: string; signer?: boolean };
 interface ParsedTx {
-  transaction: { message: { instructions: Array<{ program?: string; parsed?: { type?: string; info?: { source?: string; destination?: string; lamports?: number } } }> } };
-  meta?: { innerInstructions?: Array<{ instructions: Array<{ program?: string; parsed?: { type?: string; info?: { source?: string; destination?: string; lamports?: number } } }> }> };
+  transaction: { message: { accountKeys?: Key[]; instructions: Ix[] } };
+  meta?: { err?: unknown; preBalances?: number[]; postBalances?: number[]; innerInstructions?: Array<{ instructions: Ix[] }> };
 }
 
-/** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
-export async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<string | null> {
+/** An RPC call that tells a failure (rate limit, timeout) apart from an empty answer. */
+async function call<T>(method: string, params: unknown[], fetchFn: typeof fetch): Promise<{ ok: true; result: T | null } | { ok: false }> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetchFn(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8_000) });
+      if (r.status === 429 || r.status >= 500) throw new Error(String(r.status));
+      const body = (await r.json()) as { result?: T; error?: { code?: number } };
+      // -32429 and friends: the provider's own rate limit inside a 200.
+      if (body.error && body.error.code !== -32602 && body.error.code !== -32601) throw new Error("rpc error");
+      if (body.error) return { ok: true, result: null };
+      return { ok: true, result: body.result ?? null };
+    } catch {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1) ** 2));
+    }
+  }
+  return { ok: false };
+}
+
+const MIN_FUNDING = 10_000_000;
+/** Who sent SOL into `wallet` in this transaction: a plain transfer, or failing that, whoever paid when its balance rose. */
+export function fundingIn(tx: ParsedTx | null, wallet: string): string | null {
+  if (!tx || tx.meta?.err) return null;
+  const all = [...tx.transaction.message.instructions, ...(tx.meta?.innerInstructions ?? []).flatMap((i) => i.instructions)];
+  const transfer = all.find((i) => i.program === "system" && i.parsed?.type === "transfer" && i.parsed.info?.destination === wallet && (i.parsed.info.lamports ?? 0) >= MIN_FUNDING);
+  if (transfer?.parsed?.info?.source) return transfer.parsed.info.source;
+  // Money routed through a program (a distributor, a multisend): the wallet's balance rose and it did not sign.
+  const keys = (tx.transaction.message.accountKeys ?? []).map((k) => (typeof k === "string" ? { pubkey: k, signer: false } : { pubkey: k.pubkey, signer: !!k.signer }));
+  const i = keys.findIndex((k) => k.pubkey === wallet);
+  const pre = tx.meta?.preBalances;
+  const post = tx.meta?.postBalances;
+  if (i < 0 || !pre || !post || keys[i]!.signer || (post[i] ?? 0) - (pre[i] ?? 0) < MIN_FUNDING) return null;
+  // The signer whose balance fell the most paid for it.
+  let payer: string | null = null;
+  let fell = 0;
+  keys.forEach((k, j) => {
+    const d = (pre[j] ?? 0) - (post[j] ?? 0);
+    if (k.signer && k.pubkey !== wallet && d > fell) (payer = k.pubkey), (fell = d);
+  });
+  return payer;
+}
+
+export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" | "long" };
+/**
+ * The wallet that first sent SOL into `wallet`, and why not when there is none: "none" is an answer (the history holds
+ * no funding), "rpc" is a failed read worth asking again, "long" a history too deep to page back to its start.
+ */
+export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise<FunderRead> {
   // The funding is the wallet's first transfer in, so read back to the very start of its history:
   // a serial launcher's latest pages are all launches, its funding sits under them.
   let sigs: Array<{ signature: string }> = [];
   // Helius answers oldest-first in one call; any other RPC falls back to paging back through the history.
-  const first = await rpc<{ data?: Array<{ signature: string }> }>("getTransactionsForAddress", [wallet, { sortOrder: "asc", limit: 8, transactionDetails: "signatures" }], fetchFn);
-  if (first?.data?.length) {
-    sigs = [...first.data].reverse();
+  const first = await call<{ data?: Array<{ signature: string }> }>("getTransactionsForAddress", [wallet, { sortOrder: "asc", limit: 8, transactionDetails: "signatures" }], fetchFn);
+  if (first.ok && first.result?.data?.length) sigs = first.result.data;
+  else {
+    let before: string | undefined;
+    let done = false;
+    for (let page = 0; page < 8; page++) {
+      const got = await call<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
+      if (!got.ok) return { funder: null, why: "rpc" };
+      const list = got.result ?? [];
+      if (!list.length) {
+        done = true;
+        break;
+      }
+      sigs = list;
+      before = list[list.length - 1]!.signature;
+      if (list.length < 1000) {
+        done = true;
+        break;
+      }
+    }
+    if (!done) return { funder: null, why: "long" };
+    // Newest first from this call: the start of the history is at the end.
+    sigs = [...sigs].reverse();
   }
-  let before: string | undefined;
-  for (let page = 0; page < 8 && !sigs.length; page++) {
-    const got = await rpc<Array<{ signature: string }>>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before ? { before } : {}) }], fetchFn);
-    if (!got?.length) break;
-    if (got.length < 1000 || page === 7) sigs = got;
-    before = got[got.length - 1]!.signature;
-    if (got.length < 1000) break;
+  if (!sigs.length) return { funder: null, why: "none" };
+  // Oldest first, read together: the funding usually comes just before the first buy.
+  const txs = await Promise.all(sigs.slice(0, 6).map(({ signature }) => call<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn)));
+  let failed = false;
+  for (const t of txs) {
+    if (!t.ok) {
+      failed = true;
+      continue;
+    }
+    const from = fundingIn(t.result, wallet);
+    if (from) return { funder: from, why: "found" };
   }
-  if (!sigs.length) return null;
-  // Oldest first: the funding usually comes just before the first buy.
-  for (const { signature } of [...sigs].reverse().slice(0, 6)) {
-    const tx = await rpc<ParsedTx>("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }], fetchFn);
-    if (!tx) continue;
-    const all = [...tx.transaction.message.instructions, ...(tx.meta?.innerInstructions ?? []).flatMap((i) => i.instructions)];
-    const transfer = all.find(
-      (i) => i.program === "system" && i.parsed?.type === "transfer" && i.parsed.info?.destination === wallet && (i.parsed.info.lamports ?? 0) >= 10_000_000,
-    );
-    if (transfer?.parsed?.info?.source) return transfer.parsed.info.source;
-  }
-  return null;
+  return { funder: null, why: failed ? "rpc" : "none" };
+}
+
+/** The wallet that most recently sent SOL into `wallet` before it started trading, or null. */
+export async function funderOf(wallet: string, fetchFn: typeof fetch): Promise<string | null> {
+  return (await readFunder(wallet, fetchFn)).funder;
 }
 
 /** Traces who funded a bundle's wallets; null when no RPC is configured. */

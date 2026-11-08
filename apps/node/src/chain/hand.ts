@@ -6,7 +6,7 @@
  * were paid by one owner.
  */
 import { exchangeOf, launcherOf } from "./exchanges.ts";
-import { funderOf as readFunder, fundersEnabled } from "./funders.ts";
+import { fundersEnabled, readFunder, type FunderRead } from "./funders.ts";
 
 export const HAND = { hops: 4, wallets: 12, cautionWallets: 4, cautionTook: 0.2, avoidWallets: 6, avoidHeld: 0.3 } as const;
 
@@ -26,16 +26,20 @@ export interface HandReport {
   checked: number;
   /** Of those, the buyers whose funder could be read at all. */
   traced: number;
+  /** Why the rest were not: no funding in their history, a failed read, a history too deep to reach its start. */
+  missed?: { none: number; rpc: number; long: number };
   group: HandGroup | null;
 }
 
-type Funder = (wallet: string) => Promise<string | null>;
-const funders = new Map<string, string | null>();
-/** Funders do not change: a wallet's first money in is read once. */
+type Funder = (wallet: string) => Promise<string | null | FunderRead>;
+const read = (x: string | null | FunderRead): FunderRead => (x === null ? { funder: null, why: "none" } : typeof x === "string" ? { funder: x, why: "found" } : x);
+const funders = new Map<string, FunderRead>();
+/** Funders do not change: a wallet's first money in is read once. A failed read is not kept, so it is asked again. */
 const cachedFunder: Funder = async (w) => {
-  if (funders.has(w)) return funders.get(w)!;
+  const hit = funders.get(w);
+  if (hit) return hit;
   const f = await readFunder(w, fetch);
-  funders.set(w, f);
+  if (f.why !== "rpc") funders.set(w, f);
   if (funders.size > 50_000) funders.delete(funders.keys().next().value!);
   return f;
 };
@@ -45,7 +49,7 @@ export async function chainOf(wallet: string, funder: Funder, hops: number = HAN
   const out: string[] = [];
   let at = wallet;
   for (let i = 0; i < hops; i++) {
-    const f = await funder(at);
+    const f = read(await funder(at)).funder;
     if (!f || f === wallet || out.includes(f) || exchangeOf(f) || launcherOf(f)) break;
     out.push(f);
     at = f;
@@ -57,15 +61,16 @@ export async function chainOf(wallet: string, funder: Funder, hops: number = HAN
 export async function traceHand(buyers: Array<{ wallet: string; took: number; held: number }>, creator: string | null, funder: Funder = cachedFunder): Promise<HandReport> {
   const sample = buyers.slice(0, HAND.wallets);
   const own0 = new Set(sample.map((b) => b.wallet));
-  const read = new Set<string>();
+  const traced = new Set<string>();
+  const why = new Map<string, FunderRead["why"]>();
   const counted: Funder = async (w) => {
-    const f = await funder(w);
-    if (f && own0.has(w)) read.add(w);
+    const f = read(await funder(w));
+    if (own0.has(w)) f.funder ? traced.add(w) : why.set(w, f.why);
     return f;
   };
   const chains: string[][] = [];
   // A few at a time: each hop is RPC reads.
-  for (let i = 0; i < sample.length; i += 4) chains.push(...(await Promise.all(sample.slice(i, i + 4).map((b) => chainOf(b.wallet, counted)))));
+  for (let i = 0; i < sample.length; i += 3) chains.push(...(await Promise.all(sample.slice(i, i + 3).map((b) => chainOf(b.wallet, counted)))));
   // Buyers that share any wallet up their funding are one owner, and so is everyone those share with: a union of chains.
   const parent = sample.map((_, i) => i);
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
@@ -102,7 +107,7 @@ export async function traceHand(buyers: Array<{ wallet: string; took: number; he
     };
     if (!best || g.wallets.length > best.wallets.length) best = g;
   }
-  return { checked: sample.length, traced: read.size, group: best };
+  return { checked: sample.length, traced: traced.size, missed: { none: [...why.values()].filter((x) => x === "none").length, rpc: [...why.values()].filter((x) => x === "rpc").length, long: [...why.values()].filter((x) => x === "long").length }, group: best };
 }
 
 const reports = new Map<string, { at: number; p: Promise<HandReport | null> }>();

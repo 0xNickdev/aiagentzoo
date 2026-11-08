@@ -2187,3 +2187,29 @@ test("one hand in many wallets: buyers whose money comes from one wallet, up to 
   const sold = await traceHand(buyers.map((b) => ({ ...b, held: 0 })), null, async () => "F");
   assert.equal(handWarning(sold)!.avoid, false);
 });
+
+test("a funder sent through a program still counts, and a failed read is not taken for no funder", async () => {
+  const { fundingIn } = await import("../src/chain/funders.ts");
+  const W = "WALLET";
+  const plain = { transaction: { message: { instructions: [{ program: "system", parsed: { type: "transfer", info: { source: "BOSS", destination: W, lamports: 50_000_000 } } }] } } };
+  assert.equal(fundingIn(plain, W), "BOSS");
+  // A multisend program: no system transfer to the wallet at the top level, its balance rises, the signer pays.
+  const routed = {
+    transaction: { message: { accountKeys: [{ pubkey: "BOSS", signer: true }, { pubkey: "PROGRAM", signer: false }, { pubkey: W, signer: false }], instructions: [{ program: "unknown" }] } },
+    meta: { preBalances: [5_000_000_000, 1, 0], postBalances: [4_799_995_000, 1, 200_000_000] },
+  };
+  assert.equal(fundingIn(routed, W), "BOSS");
+  // The wallet signed it: a swap or a sell of its own, not funding.
+  const own = { ...routed, transaction: { message: { ...routed.transaction.message, accountKeys: [{ pubkey: "BOSS", signer: true }, { pubkey: "PROGRAM", signer: false }, { pubkey: W, signer: true }] } } };
+  assert.equal(fundingIn(own, W), null);
+  // Dust is not funding; a failed transaction moved nothing.
+  assert.equal(fundingIn({ ...routed, meta: { preBalances: [5, 1, 0], postBalances: [4, 1, 1_000] } }, W), null);
+  assert.equal(fundingIn({ ...plain, meta: { err: { InstructionError: [0, "x"] } } }, W), null);
+
+  const { traceHand } = await import("../src/chain/hand.ts");
+  const buyers = Array.from({ length: 6 }, (_, i) => ({ wallet: `B${i}`, took: 0.05, held: 0.05 }));
+  const r = await traceHand(buyers, null, async (w) => (w === "B0" ? { funder: null, why: "rpc" } : w === "B1" ? { funder: null, why: "long" } : w.startsWith("B") ? "F" : null));
+  assert.equal(r.traced, 4);
+  assert.deepEqual(r.missed, { none: 0, rpc: 1, long: 1 });
+  assert.equal(r.group!.wallets.length, 4);
+});
