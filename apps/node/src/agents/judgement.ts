@@ -82,9 +82,10 @@ export function balance(cases: Array<{ verdict: Verdict; outcome: Outcome; alrea
   return { ...counts, skill: skillOf(counts) };
 }
 
+/** Balanced accuracy needs both sides: with no living token graded, calling everything dead would read 100%. */
 export function skillOf(t: { dead?: number; deadRight?: number; alive?: number; aliveRight?: number }): number | null {
-  const parts = [t.dead ? (t.deadRight ?? 0) / t.dead : null, t.alive ? (t.aliveRight ?? 0) / t.alive : null].filter((v): v is number => v !== null);
-  return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
+  if (!t.dead || !t.alive) return null;
+  return ((t.deadRight ?? 0) / t.dead + (t.aliveRight ?? 0) / t.alive) / 2;
 }
 
 export interface GuestCase {

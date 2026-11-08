@@ -576,6 +576,9 @@ test("balanced accuracy cannot be gamed by calling everything suspicious", async
   assert.equal(allSuspicious.skill, 0.5);
   assert.equal(perfect.skill, 1);
   assert.equal(coward.skill, 0);
+  const oneSided = balance(["dead", "dead", "dead"].map((outcome) => ({ verdict: "suspicious" as const, outcome: outcome as "dead" })));
+  assert.equal(oneSided.skill, null, "no living token graded, no balanced score");
+  assert.equal(oneSided.deadRight, 3);
 });
 
 test("nursery helpers: a fair, repeatable exam draw and names that never repeat", async () => {
@@ -754,7 +757,7 @@ test("the leaderboard ranks only agents with enough graded calls, on balanced ac
   // dead: 18, all called suspicious; alive: 12, 10 called promising -> (1 + 10/12) / 2
   assert.equal(Math.round(board.rows[0]!.skill! * 1000), Math.round(((1 + 10 / 12) / 2) * 1000));
   const lucky = board.rows.find((r) => r.id === "guest:lucky")!;
-  assert.equal(lucky.skill, 1);
+  assert.equal(lucky.skill, null, "three dead and no living token: no balanced score yet");
   assert.equal(lucky.ranked, false, `a perfect 3 calls is under the ${RANK_MIN_GRADED}-call bar`);
 
   // 25 dead tokens all called suspicious and no living ones: plenty of calls, but nothing to balance against.
