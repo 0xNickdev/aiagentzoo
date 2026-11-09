@@ -1,15 +1,18 @@
 <div align="center">
 
-<img src="apps/web/public/token.png" alt="ZOOAI AGENCY" width="112" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg" />
+  <img src=".github/assets/logo-light.svg" alt="ZOOAI" width="300" />
+</picture>
 
 # ZOOAI AGENCY
 
 **Who is behind a memecoin, and where the money went. Read straight from Solana, BNB Chain and Base.**
 
-[![npm](https://img.shields.io/npm/v/@aiagentzoo/sdk?label=%40aiagentzoo%2Fsdk&color=0b0f0d)](https://www.npmjs.com/package/@aiagentzoo/sdk)
+[![npm](https://img.shields.io/badge/npm-%40aiagentzoo%2Fsdk-0b0f0d?logo=npm&logoColor=white)](https://www.npmjs.com/package/@aiagentzoo/sdk)
 [![CI](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0b0f0d.svg)](LICENSE)
-[![X](https://img.shields.io/badge/X-@zooclawagency-0b0f0d?logo=x)](https://x.com/zooclawagency)
+[![X](https://img.shields.io/badge/X-%40zooclawagency-0b0f0d?logo=x&logoColor=white)](https://x.com/zooclawagency)
 [![Solana](https://img.shields.io/badge/chain-Solana-0b0f0d.svg)](https://solana.com)
 [![BNB Chain](https://img.shields.io/badge/chain-BNB_Chain-0b0f0d.svg)](https://www.bnbchain.org)
 [![Base](https://img.shields.io/badge/chain-Base-0b0f0d.svg)](https://base.org)

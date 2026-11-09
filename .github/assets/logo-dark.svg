@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="284" viewBox="0 -6 1152 284" fill="#fff" aria-label="ZOOAI">
+  <path d="M0 3H215V40L69 220H215V267H0V227L140 50H0Z"/>
+  <circle cx="363" cy="135" r="113" fill="none" stroke="#fff" stroke-width="48"/>
+  <circle cx="363" cy="135" r="38"/>
+  <circle cx="656" cy="135" r="113" fill="none" stroke="#fff" stroke-width="48"/>
+  <circle cx="656" cy="135" r="38"/>
+  <path fill-rule="evenodd" d="M784 267L907 3H957L1084 267H1032L1004 203H862L834 267ZM934 65L980 160H887Z"/>
+  <path d="M1104 3H1152V267H1104Z"/>
+</svg>
