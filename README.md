@@ -362,7 +362,16 @@ The full roadmap, with the commit behind every shipped card: [zooaiagency.com/ro
 
 ## Token
 
-**$ZOOAGENCY** launched on [ClawPump](https://www.clawpump.tech) (CA `2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B`). 61.5% of the creator fees automatically buy it back and burn it; 38.5% are kept. Using the site, the bot and the API is free. Holding 500,000+ $ZOOAGENCY gives holder perks: higher API limits (1,200 checks and 300 deep reads a minute), alerts first, more questions to the beaver and the holder radar. Read [docs/economics.md](docs/economics.md).
+**$ZOOAGENCY** launched on [ClawPump](https://www.clawpump.tech) (CA `2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B`). Using the site, the bot and the API is free.
+
+Two separate money flows touch the token:
+
+| Flow | Where it comes from | What happens to it |
+|---|---|---|
+| Creator fees | ClawPump pays the token's creator fees from trading on the token | 61.5% buys $ZOOAGENCY back and burns it, automatically on ClawPump; 38.5% is kept for the project |
+| Swap fee | the 1% fee in SOL on swaps made through our X-Ray swap | every six hours a tenth buys $ZOOAGENCY into the treasury (not burned), the rest goes to the treasury as SOL; every run is listed at [canyon.zooaiagency.com/v1/buybacks](https://canyon.zooaiagency.com/v1/buybacks) ([`buyback.ts`](apps/node/src/buyback.ts)) |
+
+ Holding 500,000+ $ZOOAGENCY gives holder perks: higher API limits (1,200 checks and 300 deep reads a minute), alerts first, more questions to the beaver and the holder radar. Read [docs/economics.md](docs/economics.md).
 
 ## Contributing
 
