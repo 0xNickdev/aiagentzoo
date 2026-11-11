@@ -1620,6 +1620,11 @@ export class PumpTape {
     };
   }
 
+  /** Whether the tape still tracks this mint: a map lookup, where token() builds the whole creator record. */
+  has(mint: string): boolean {
+    return this.tokens.has(mint);
+  }
+
   /** Every mint the tape holds now, for walking it a slice at a time. */
   mints(): string[] {
     return [...this.tokens.keys()];

@@ -360,7 +360,7 @@ export class FlapFeed {
 
   /** The newest Flap tokens on the tape, for the live Transfer subscription. */
   private followed(): string[] {
-    return [...this.tokens].filter(([m]) => this.tape.token(m)).sort((a, b) => b[1].at - a[1].at).slice(0, FOLLOW_MAX).map(([m]) => m);
+    return [...this.tokens].filter(([m]) => this.tape.has(m)).sort((a, b) => b[1].at - a[1].at).slice(0, FOLLOW_MAX).map(([m]) => m);
   }
 
   private followTransfers(): void {
@@ -431,7 +431,7 @@ export class FlapFeed {
     settle.unref?.();
     // The tape's own pruner (run by the four.meme feed) lets old tokens go; their entries here go with them.
     const prune = setInterval(() => {
-      for (const m of this.tokens.keys()) if (!this.tape.token(m)) this.tokens.delete(m);
+      for (const m of this.tokens.keys()) if (!this.tape.has(m)) this.tokens.delete(m);
     }, 10 * 60_000);
     prune.unref?.();
     this.timers.push(settle, prune);
