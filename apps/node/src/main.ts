@@ -33,6 +33,7 @@ import { SideWallets } from "./chain/sidewallets.ts";
 import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
+import { startCallers } from "./routes/calls.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
@@ -277,6 +278,8 @@ const stopStream =
       : process.env.SHYFT_GRPC_TOKEN
         ? await startPumpStream(tape, { url: process.env.SHYFT_GRPC_URL ?? "https://grpc.eu.shyft.to", token: process.env.SHYFT_GRPC_TOKEN, log: chainLog })
         : null;
+// Calls are followed from the minute they are made, so the node that reads the chain starts on its own.
+if (stopStream) startCallers();
 
 const visitorAgents = enclosure
   .snapshot()

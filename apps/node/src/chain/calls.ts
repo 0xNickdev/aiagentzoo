@@ -212,6 +212,18 @@ export class CalloutFeed {
     if (this.seen.size > 50_000) this.seen = new Set([...this.seen].slice(-20_000));
   }
 
+  /** Every call made at or after a time, in no order. */
+  since(at: number): Callout[] {
+    const out: Callout[] = [];
+    for (const list of this.byMint.values()) for (const c of list) if (c.at >= at) out.push(c);
+    return out;
+  }
+
+  /** A caller's calls by the wallet pump.fun lists for them, newest first. */
+  by(wallet: string): Callout[] {
+    return this.since(0).filter((c) => c.wallet === wallet).sort((a, b) => b.at - a.at);
+  }
+
   of(mint: string): Callout[] {
     return [...(this.byMint.get(mint) ?? [])].sort((a, b) => a.at - b.at);
   }
