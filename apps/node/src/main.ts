@@ -32,6 +32,7 @@ import { labels } from "./chain/labels.ts";
 import { SideWallets } from "./chain/sidewallets.ts";
 import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
+import { feedBody } from "./chain/feed.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
@@ -220,6 +221,14 @@ if (config.role === "north") {
       console.log(`[${config.id}] tape not saved: ${(error as Error).message}`);
     }
   }, 5 * 60_000).unref();
+  // The feed stamps a coin with the cap it first showed at; built here too, so the stamp does not wait for a reader.
+  setInterval(() => {
+    try {
+      feedBody();
+    } catch (error) {
+      console.log(`[${config.id}] feed not built: ${(error as Error).message}`);
+    }
+  }, 15_000).unref();
   setInterval(() => {
     try {
       writeFileSync(`${momentsFile}.tmp`, tape.dump());

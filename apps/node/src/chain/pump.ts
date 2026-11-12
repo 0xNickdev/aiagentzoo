@@ -200,6 +200,11 @@ interface Tracked {
   capDump?: number;
   capLow?: number;
   capHigh?: number;
+  /** The cap the last trade's price put on it, in SOL. */
+  capNow?: number;
+  /** When the live feed first showed it and the cap it had then, in SOL: the reference a reader keeps. */
+  feedAt?: number;
+  feedCap?: number;
   graduated: boolean;
   /** The creator has sold half of what they bought; announced once. */
   dumped: boolean;
@@ -331,6 +336,8 @@ export class PumpTape {
   private earlyPrunedAt = 0;
   /** When this tape began reading bundles; a token launched before it has only part of its life counted. */
   bundleSince = Date.now();
+  /** Since when the feed stamps a coin with the cap it first showed at; older coins were on the board unstamped. */
+  feedSince = Date.now();
   private prunedAt = 0;
   private readonly launchesBy = new Map<string, number[]>();
   /** Newest launches first, mints only. */
@@ -622,6 +629,7 @@ export class PumpTape {
     if (t.capPeak === undefined || sol < 0.001 || tokens < 1) return;
     const cap = (sol / tokens) * supplyOf(t);
     if (!Number.isFinite(cap)) return;
+    t.capNow = cap;
     if (ts - t.createdAt <= 1_000) t.capFirst = Math.max(t.capFirst ?? 0, cap);
     if (cap > t.capPeak) {
       t.capPeak = cap;
@@ -694,6 +702,25 @@ export class PumpTape {
       t.bundledSol = (t.bundledSol ?? 0) + p.sol;
     }
     t.bundlePeak = Math.max(t.bundlePeak ?? 0, t.bundleHeld ?? 0);
+  }
+
+  /** The cap the last trade put on a token, in SOL; null before a trade priced it. */
+  capNow(mint: string): number | null {
+    return this.tokens.get(mint)?.capNow ?? null;
+  }
+
+  /**
+   * The feed is showing this coin: the first time, the cap goes on it for good. A coin that was already out before
+   * stamps were kept gets none, its first showing was not seen.
+   */
+  noteShown(mint: string, capSol: number | null, now = Date.now()): { at: number; capSol: number } | null {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    if (t.feedAt === undefined && capSol !== null && capSol > 0 && t.createdAt >= this.feedSince) {
+      t.feedAt = now;
+      t.feedCap = Math.round(capSol * 10) / 10;
+    }
+    return t.feedAt !== undefined && t.feedCap !== undefined ? { at: t.feedAt, capSol: t.feedCap } : null;
   }
 
   /** A token's main pool, to read its balance from the chain. */
@@ -815,7 +842,7 @@ export class PumpTape {
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
     const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosigners: this.operators.snapshot() });
+    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, feedSince: this.feedSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosigners: this.operators.snapshot() });
   }
 
   load(json: string, now = Date.now()): number {
@@ -827,6 +854,7 @@ export class PumpTape {
         recent?: string[];
         seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
+        feedSince?: number;
         prints?: [string, ToolPrint][];
         cosigners?: Parameters<Operators["load"]>[0];
       };
@@ -836,6 +864,7 @@ export class PumpTape {
       this.operators.load(saved.cosigners);
       // A snapshot from before bundles were read: they are read from now on.
       this.bundleSince = saved.bundleSince ?? now;
+      this.feedSince = saved.feedSince ?? now;
       for (const s of saved.tokens ?? []) {
         if (!s?.mint || now - s.createdAt > KEEP_MS || this.tokens.has(s.mint)) continue;
         // Fields added after a snapshot was written start empty.

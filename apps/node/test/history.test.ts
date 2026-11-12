@@ -271,3 +271,24 @@ test("a recycled ticker: earlier launches under the same symbol, any case, this 
     done();
   }
 });
+
+test("the feed stamps a coin once with the cap it first showed at, and keeps it through a restart", () => {
+  const t = new PumpTape();
+  const t0 = Date.now();
+  t.feedSince = t0 - 1_000;
+  const mint = "StampMint1111111111111111111111111111111pump";
+  t.apply({ kind: "create", name: "stamp", symbol: "STAMP", mint, creator: DEV, ts: t0 }, t0, "s0", 100);
+  t.apply({ kind: "trade", mint, sol: 1, tokens: 20_000_000, isBuy: true, user: SNIPER, ts: t0 + 2_000, curveSol: 31 }, t0 + 2_000, "s1", 101);
+  assert.equal(Math.round(t.capNow(mint)!), 50);
+  assert.deepEqual(t.noteShown(mint, 50, t0 + 3_000), { at: t0 + 3_000, capSol: 50 });
+  // Shown again at a higher cap: the first stamp stays.
+  assert.deepEqual(t.noteShown(mint, 400, t0 + 60_000), { at: t0 + 3_000, capSol: 50 });
+  const back = new PumpTape();
+  back.load(t.snapshot(), t0 + 61_000);
+  assert.deepEqual(back.noteShown(mint, 900, t0 + 62_000), { at: t0 + 3_000, capSol: 50 });
+  // A coin that was out before stamps were kept gets none.
+  const old = new PumpTape();
+  old.feedSince = t0 + 10_000;
+  old.apply({ kind: "create", name: "old", symbol: "OLD", mint, creator: DEV, ts: t0 }, t0, "o0", 100);
+  assert.equal(old.noteShown(mint, 50, t0 + 20_000), null);
+});

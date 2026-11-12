@@ -27,6 +27,9 @@ interface Coin {
   curveSol: number | null;
   progress: number;
   capSol: number | null;
+  /** The cap it had when the feed first showed it, and when. */
+  shownCapSol?: number | null;
+  shownAt?: number | null;
   poolSol: number | null;
   graduated: boolean;
 }
@@ -138,6 +141,9 @@ function Pic({ c }: { c: Coin }) {
 function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; amount: string; onState: (m: string | null) => void }) {
   const pass = c.verdict === "pass";
   const capUsd = c.capSol !== null && solUsd ? c.capSol * solUsd : null;
+  // The cap it first showed up at: the reference once it has moved. Left out while it still reads the same.
+  const shownUsd = c.shownCapSol != null && solUsd ? c.shownCapSol * solUsd : null;
+  const moved = shownUsd !== null && (capUsd === null || usd(shownUsd) !== usd(capUsd));
   return (
     <motion.a
       layout
@@ -185,6 +191,7 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
           </span>
         )}
         {c.graduated && <span className="flex-1 truncate text-[12.5px] text-fg-4">{t("graduated")}</span>}
+        {moved && <span className="tabular-nums shrink-0 text-[12.5px] text-fg-4">{t("first seen at {c}", { c: usd(shownUsd!) })}</span>}
       </div>
       {!pass && c.reason && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-fg-3">{tChain(c.reason)}</p>}
     </motion.a>

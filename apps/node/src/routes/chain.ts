@@ -2,8 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { lineage } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { holderReport, holdersEnabled } from "../chain/holders.ts";
-import { solUsd } from "../chain/price.ts";
-import { checkToken } from "../chain/check.ts";
+import { feedBody } from "../chain/feed.ts";
 import { bscTape } from "../chain/bsc.ts";
 import { baseTape } from "../chain/base.ts";
 import { loopOf, loopEnabled } from "../chain/loop.ts";
@@ -153,43 +152,7 @@ export async function chainBoardRoutes(ctx: RouteContext, req: IncomingMessage, 
   // The live feed: pump.fun's new, soon and migrated boards with the known scams taken out (avoid never shown).
   if (req.method === "GET" && path === "/v1/chain/feed") {
     const now = Date.now();
-    if (!cache.feedCache || now - cache.feedCache.at > 3_000) {
-      const c = tape.feedCandidates(now);
-      const stream = { live: tape.live(now), lastEventSecAgo: Math.round((now - tape.lastEventAt) / 1000) };
-      const row = (mint: string) => {
-        const t = tape.token(mint);
-        if (!t) return null;
-        const check = checkToken(mint, t, { now, stream });
-        if (check.verdict === "avoid" || check.verdict === "unknown") return null;
-        const f = t.facts;
-        const image = socials.image(mint);
-        // The coins on screen get their picture read now, not when the queue gets to them.
-        if (!image) socials.fetchNow(mint, now);
-        // pump.fun's curve: 30 SOL and 1.073B tokens virtual at the start, so the cap in SOL follows from the SOL in it.
-        const capSol = f.graduated ? null : Math.round(((30 + (f.curveSol ?? 0)) ** 2 / 32.19) * 10) / 10;
-        return {
-          mint,
-          symbol: t.symbol,
-          name: t.name,
-          createdAt: t.createdAt,
-          ...(image ? { image } : {}),
-          verdict: check.verdict,
-          score: check.score,
-          reason: check.reasons[0] ?? null,
-          buyers: f.buyers,
-          buys: f.buys,
-          sells: f.sells,
-          devSoldPct: f.creatorSold === null ? null : Math.round(f.creatorSold * 100),
-          curveSol: f.curveSol,
-          progress: f.graduated ? 1 : Math.min(1, Math.round(((f.curveSol ?? 0) / 85) * 100) / 100),
-          capSol,
-          poolSol: f.poolSol,
-          graduated: f.graduated,
-        };
-      };
-      const pick = (list: string[]) => list.map(row).filter(Boolean).slice(0, 40);
-      cache.feedCache = { at: now, body: { stream, solUsd: solUsd(), new: pick(c.fresh), soon: pick(c.soon), migrated: pick(c.migrated) } };
-    }
+    if (!cache.feedCache || now - cache.feedCache.at > 3_000) cache.feedCache = { at: now, body: feedBody(now) };
     res.setHeader("cache-control", "public, max-age=3");
     return json(res, 200, cache.feedCache.body);
   }

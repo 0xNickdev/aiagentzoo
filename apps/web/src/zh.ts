@@ -790,6 +790,7 @@ export const ZH: Record<string, string> = {
   "graded · not scored": "已打分 · 不计分",
   "grades after the first night": "第一晚过后出分",
   "graduated": "已毕业",
+  "first seen at {c}": "首次出现时 {c}",
   "guest": "访客",
   "guests, wings and track records": "访客、馆区和战绩",
   "hash-chained": "哈希链",
