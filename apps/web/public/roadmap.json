@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-03",
+  "updated": "2026-11-12",
   "repo": "https://github.com/0xNickdev/aiagentzoo",
   "chapters": [
     {
@@ -839,6 +839,158 @@
         "title": "雷达只推送真正的转变",
         "text": "现在推送意味着币在完整检查中曾经是通过，然后变了。之前有些币进入雷达时就已经是谨慎，每次推送都说它变了。",
         "why": "一位持币者发现每条推送都是谨慎。他说得对。"
+      }
+    },
+    {
+      "id": "any-chain",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-04",
+      "title": "Buy from any chain",
+      "text": "Fund the buy from another chain through Aurora Intents: USDC, ETH, BNB, BTC and more swapped into SOL, straight to your own Solana wallet.",
+      "proof": [
+        {
+          "label": "54744fa",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/54744fa"
+        },
+        {
+          "label": "dae5d49",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/dae5d49"
+        }
+      ],
+      "zh": {
+        "title": "从任何链买入",
+        "text": "通过 Aurora Intents 用另一条链的资金买入：USDC、ETH、BNB、BTC 等换成 SOL，直接到你自己的 Solana 钱包。"
+      }
+    },
+    {
+      "id": "calls",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-05",
+      "title": "Who is calling it",
+      "text": "Next to what the chain shows: the pump.fun callouts and FOMO theses on a coin, with the real time of the call and whether the caller's wallet bought before calling. Kept for 30 days.",
+      "why": "The first piece of Caller Truth, out before the vote.",
+      "proof": [
+        {
+          "label": "4f7ebb3",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/4f7ebb3"
+        },
+        {
+          "label": "0b7109c",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/0b7109c"
+        }
+      ],
+      "zh": {
+        "title": "谁在喊单",
+        "text": "和链上数据放在一起：一个币的 pump.fun 喊单和 FOMO 观点，附真实喊单时间，以及喊单者的钱包是否在喊单前就买了。保留 30 天。",
+        "why": "“喊单真相”的第一块，在投票之前就上线了。"
+      }
+    },
+    {
+      "id": "rights",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-07",
+      "title": "Token rights",
+      "text": "Read from the mint: who can still mint, freeze, move or pause the token, hooks and transfer fees. Freeze, delegate or pause reads avoid; mint, a hook or a fee of 1% or more reads caution.",
+      "proof": [
+        {
+          "label": "b45366b",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/b45366b"
+        },
+        {
+          "label": "6411898",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/6411898"
+        }
+      ],
+      "zh": {
+        "title": "代币权限",
+        "text": "从铸币账户读取：谁还能增发、冻结、转移或暂停代币，以及钩子和转账手续费。冻结、代理或暂停判为回避；增发、钩子或 1% 以上的手续费判为谨慎。"
+      }
+    },
+    {
+      "id": "odds-forward",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-07",
+      "title": "Odds checked on unseen launches",
+      "text": "The odds model run forward on 32,849 launches it had never seen, written down together with where it is weak.",
+      "proof": [
+        {
+          "label": "15fbd13",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/15fbd13"
+        }
+      ],
+      "zh": {
+        "title": "在未见过的发币上检验赔率",
+        "text": "赔率模型在它从未见过的 32,849 次发币上向前检验，结果连同它的弱点一起写了下来。"
+      }
+    },
+    {
+      "id": "one-hand",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-08",
+      "title": "One hand in many wallets",
+      "text": "The funding of the 24 biggest buyers is followed up to four hops, and an exchange ends the trail. Buyers who share a wallet up their trail are one hand. The check says how many buyers it traced and how many reads failed.",
+      "proof": [
+        {
+          "label": "a259c30",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/a259c30"
+        },
+        {
+          "label": "04c2717",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/04c2717"
+        }
+      ],
+      "zh": {
+        "title": "多个钱包，一只手",
+        "text": "追踪最大的 24 个买家的资金来源，最多四跳，遇到交易所就停。上游共用同一个钱包的买家算作一只手。检查会说明追踪了多少买家、有多少次读取失败。"
+      }
+    },
+    {
+      "id": "slow-scans",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-11",
+      "title": "Slow scans fixed",
+      "text": "One background job froze the node for half a minute, about once a minute. A scan that landed in that window just sat there.",
+      "why": "A follower said scans had got slow and asked us to check. They were right.",
+      "proof": [
+        {
+          "label": "5931105",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/5931105"
+        }
+      ],
+      "zh": {
+        "title": "修复扫描变慢",
+        "text": "一个后台任务大约每分钟把节点卡住半分钟。落在这个窗口里的扫描只能干等。",
+        "why": "一位关注者说扫描变慢了，让我们查一下。他说得对。"
+      }
+    },
+    {
+      "id": "first-seen",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-12",
+      "title": "First seen at",
+      "text": "Every coin on the live feed keeps the cap it first showed up at, next to the verdict, so the reference is still there once it has moved. Migrated coins show a cap again.",
+      "why": "A follower asked for it. Live the same day.",
+      "proof": [
+        {
+          "label": "dfa3bba",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/dfa3bba"
+        },
+        {
+          "label": "/feed",
+          "href": "/feed"
+        }
+      ],
+      "zh": {
+        "title": "首次出现时的市值",
+        "text": "实时列表里的每个币都保留它第一次出现时的市值，就在判断结论旁边，涨跌之后参照还在。已迁移的币重新显示市值。",
+        "why": "一位关注者提的需求。当天上线。"
       }
     },
     {
