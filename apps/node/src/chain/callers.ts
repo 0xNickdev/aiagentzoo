@@ -124,14 +124,14 @@ export class CallerLedger {
 
   start(everyMs = 60_000): void {
     if (this.timer) return;
-    // A ledger with nothing in it yet starts from the calls of the last two days, not from an empty page.
-    let fresh = this.outcomes.size === 0;
+    // A ledger with nothing in it yet starts from the calls of the last two days, not from an empty page. It looks
+    // that far back for its first ten minutes: the feed may still be reading older calls in.
+    let wide = this.outcomes.size === 0 ? 10 : 0;
     this.timer = setInterval(() => {
       try {
         // No price yet, no look: a call closed without a cap would stay that way.
         if (this.deps.ready && !this.deps.ready()) return;
-        this.tick(Date.now(), fresh ? 47 * HOUR : undefined);
-        fresh = false;
+        this.tick(Date.now(), wide-- > 0 ? 47 * HOUR : undefined);
         // The file is written every fifth look: a minute of outcomes lost on a crash is read again from the tape.
         if (++this.ticks % 5 === 0) this.save();
       } catch (e) {
