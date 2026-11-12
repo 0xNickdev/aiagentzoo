@@ -59,6 +59,49 @@ const usd = (s: string | undefined) => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
+/** "$26.8K", "$1.2M", "$39 335": a dollar figure as the channel writes it. */
+const money = (s: string | undefined) => {
+  const m = /([\d][\d.,\s]*)\s*([KMB])?/i.exec(s ?? "");
+  if (!m) return null;
+  const n = Number(m[1]!.replace(/[,\s]/g, "")) * ({ K: 1e3, M: 1e6, B: 1e9 }[(m[2] ?? "").toUpperCase()] ?? 1);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+};
+const B58 = "[1-9A-HJ-NP-Za-km-z]{32,44}";
+
+/**
+ * The channel's layout since 11 Nov 2026: "CALLOUT #3 · Name ($SYM)", the call's text, then one line each for the
+ * caller (name · followers · @x), the caps (MC · called at), the coin, and the caller's wallet after a briefcase.
+ */
+function parseCompact(text: string, id: number, postedAt: number): Callout | null {
+  const lines = text.split("\n").map((l) => l.trim());
+  const head = /CALLOUT\s*#(\d+)\s*·\s*(.*)$/.exec(lines.find((l) => /CALLOUT\s*#\d+\s*·/.test(l)) ?? "");
+  const mint = lines.find((l) => new RegExp(`^${B58}$`).test(l));
+  if (!head || !mint) return null;
+  const whoAt = lines.findIndex((l) => l.startsWith("👤"));
+  const who = whoAt < 0 ? [] : lines[whoAt]!.slice(2).split("·").map((p) => p.trim());
+  const caps = lines.find((l) => l.startsWith("💰")) ?? "";
+  const ago = /🕒\s*(\d+|a|an)\s*(second|minute|hour|day)s?\s+ago/i.exec(text);
+  const back = ago ? (/^\d+$/.test(ago[1]!) ? Number(ago[1]) : 1) * (AGO[ago[2]!.toLowerCase()] ?? 0) : 0;
+  const headAt = lines.findIndex((l) => /CALLOUT\s*#\d+\s*·/.test(l));
+  const said = cleanMentions(lines.slice(headAt + 1, whoAt < 0 ? headAt + 1 : whoAt).join("\n").trim());
+  return {
+    post: id,
+    mint,
+    symbol: /\(\s*\$([^)\n]{1,24})\)/.exec(head[2]!)?.[1]?.trim() ?? "",
+    text: said.slice(0, 400),
+    caller: who[0] ?? "",
+    followers: money(who.find((p) => /followers/i.test(p))),
+    twitter: who.find((p) => /^@\w{1,30}$/.test(p)) ?? null,
+    wallet: new RegExp(`💼\\s*(${B58})`).exec(text)?.[1] ?? null,
+    calledMcUsd: money(/called at\s*\$([^·\n]+)/i.exec(caps)?.[1]),
+    mcUsd: money(/MC\s*\$([^·\n]+)/.exec(caps)?.[1]),
+    nth: Number(head[1]) || null,
+    at: postedAt - back,
+    postedAt,
+    url: `https://t.me/pumpfun_lp/${id}`,
+  };
+}
+
 /** One channel page: every callout post on it, oldest first. Posts that are not callouts are skipped. */
 export function parseChannel(html: string): Callout[] {
   const out: Callout[] = [];
@@ -69,6 +112,12 @@ export function parseChannel(html: string): Callout[] {
     const end = block.indexOf("tgme_widget_message_footer", start);
     const text = strip(block.slice(block.indexOf(">", start) + 1, end > 0 ? end : undefined));
     if (!/CALLOUT/.test(text)) continue;
+    if (/CALLOUT\s*#\d+\s*·/.test(text)) {
+      const stamp = /<time datetime="([^"]+)"/.exec(block)?.[1];
+      const c = parseCompact(text, Number(id[1]), stamp ? Date.parse(stamp) : Date.now());
+      if (c) out.push(c);
+      continue;
+    }
     const line = (label: RegExp) => label.exec(text)?.[1]?.trim();
     const mint = /CONTRACT\s*\n+\s*([1-9A-HJ-NP-Za-km-z]{32,44})/.exec(text)?.[1] ?? /pump\.fun\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})/.exec(block)?.[1];
     if (!mint) continue;
@@ -156,7 +205,17 @@ export class CalloutFeed {
   add(calls: Callout[]): number {
     let added = 0;
     for (const c of calls) {
-      if (this.seen.has(c.post)) continue;
+      if (this.seen.has(c.post)) {
+        // A post kept without its caller (read while the channel's layout was not understood) is replaced by a whole one.
+        if (!c.wallet) continue;
+        const had = this.byMint.get(c.mint);
+        const i = had?.findIndex((x) => x.post === c.post && !x.wallet && !x.caller) ?? -1;
+        if (i < 0) continue;
+        had![i] = c;
+        this.dirty = true;
+        added++;
+        continue;
+      }
       this.seen.add(c.post);
       const list = this.byMint.get(c.mint) ?? [];
       list.push(c);
@@ -192,6 +251,7 @@ export class CalloutFeed {
         if (!calls.length || (calls[0]?.post ?? oldest) >= oldest) break;
         this.add(calls);
       }
+      await this.mend(page, calls[0]?.post);
       this.prune();
       this.save();
     } catch (e) {
@@ -199,6 +259,31 @@ export class CalloutFeed {
     } finally {
       this.busy = false;
     }
+  }
+
+  private mended = false;
+
+  /**
+   * Once per start: posts kept without a caller are read again. The channel is walked back from where this poll
+   * stopped to the oldest such post, a page a second, at most 400 pages.
+   */
+  private async mend(page: (before?: number) => Promise<Callout[]>, from: number | undefined): Promise<void> {
+    if (this.mended) return;
+    this.mended = true;
+    let oldestBroken = Infinity;
+    for (const list of this.byMint.values()) for (const c of list) if (!c.wallet && !c.caller) oldestBroken = Math.min(oldestBroken, c.post);
+    if (!Number.isFinite(oldestBroken)) return;
+    let before = from ?? this.last;
+    let fixed = 0;
+    for (let i = 0; i < 400 && before > oldestBroken; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      // A page that does not load ends the walk; what was read so far is kept.
+      const calls = await page(before).catch(() => []);
+      if (!calls.length || calls[0]!.post >= before) break;
+      fixed += this.add(calls);
+      before = calls[0]!.post;
+    }
+    this.log(`callouts: ${fixed} calls read again with their caller`);
   }
 
   private prune(): void {

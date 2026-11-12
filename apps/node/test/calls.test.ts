@@ -135,3 +135,25 @@ test("a call is followed for 24 hours and lands in its caller's record; a repeat
   assert.equal(r.soldWithinHour, 1);
   assert.equal(r.devDumpedAfter, 1);
 });
+
+test("the channel's compact layout is read too, and a post kept without its caller is replaced by the whole one", () => {
+  const mint = "2JikijgimhBc3xzzviEh4cJJEV3SzvKi6U8KJbVhpump";
+  const html = `<div class="tgme_widget_message" data-post="pumpfun_lp/99"><div class="tgme_widget_message_text js-message_text" dir="auto"><i class="emoji"><b>🚨</b></i> <b>CALLOUT #3</b> · <b>Tim Chip (&#036;CHIP)</b><br/><blockquote>Tim chip is good</blockquote><br/><i class="emoji"><b>👤</b></i> <b>otis93finity</b> · 18,411 followers · <a href="https://x.com/Lolzmag274039">@Lolzmag274039</a><br/><i class="emoji"><b>💰</b></i> MC <b>&#036;6.1K</b> · called at &#036;1.25M · <b>0.78x</b><br/><i class="emoji"><b>🚀</b></i> Pump.fun 39% · <i class="emoji"><b>🕒</b></i> 1 minute ago<br/><code>${mint}</code><br/><i class="emoji"><b>💼</b></i> <code>GDRS2UQfxxzDtjSNFChFiUG4E3Eie8RNeb5dRHWTvBDN</code><br/><i>6 minutes ago: This should be runner</i></div><div class="tgme_widget_message_footer"><time datetime="2026-11-12T16:00:00+00:00"></time></div></div>`;
+  const c = parseChannel(html)[0]!;
+  assert.equal(c.mint, mint);
+  assert.equal(c.symbol, "CHIP");
+  assert.equal(c.text, "Tim chip is good");
+  assert.equal(c.caller, "otis93finity");
+  assert.equal(c.followers, 18411);
+  assert.equal(c.twitter, "@Lolzmag274039");
+  assert.equal(c.wallet, "GDRS2UQfxxzDtjSNFChFiUG4E3Eie8RNeb5dRHWTvBDN");
+  assert.equal(c.calledMcUsd, 1_250_000);
+  assert.equal(c.mcUsd, 6100);
+  assert.equal(c.nth, 3);
+  assert.equal(c.at, Date.parse("2026-11-12T15:59:00Z"));
+  const feed = new CalloutFeed();
+  feed.add([{ ...c, caller: "", wallet: null, followers: null, twitter: null, calledMcUsd: null }]);
+  assert.equal(feed.add([c]), 1);
+  assert.equal(feed.of(mint).length, 1);
+  assert.equal(feed.of(mint)[0]!.caller, "otis93finity");
+});
