@@ -127,8 +127,8 @@ export class CallerLedger {
   start(everyMs = 60_000): void {
     if (this.timer) return;
     // A ledger with nothing in it yet starts from the calls of the last two days, not from an empty page. It looks
-    // that far back for its first ten minutes: the feed may still be reading older calls in.
-    let wide = this.outcomes.size === 0 ? 10 : 0;
+    // that far back for its first half hour: the feed may still be reading older calls in.
+    let wide = this.outcomes.size === 0 ? 30 : 0;
     this.timer = setInterval(() => {
       try {
         // No price yet, no look: a call closed without a cap would stay that way.

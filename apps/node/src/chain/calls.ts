@@ -261,29 +261,38 @@ export class CalloutFeed {
     }
   }
 
-  private mended = false;
+  private mendDone = false;
+  private mendAt: number | null = null;
+  private mendMisses = 0;
 
   /**
-   * Once per start: posts kept without a caller are read again. The channel is walked back from where this poll
-   * stopped to the oldest such post, a page a second, at most 400 pages.
+   * Posts kept without a caller are read again: the channel is walked back to the oldest such post, a page a second,
+   * thirty pages a poll, picking up where the last poll stopped. A page that does not load is tried again next poll.
    */
   private async mend(page: (before?: number) => Promise<Callout[]>, from: number | undefined): Promise<void> {
-    if (this.mended) return;
-    this.mended = true;
+    if (this.mendDone) return;
     let oldestBroken = Infinity;
     for (const list of this.byMint.values()) for (const c of list) if (!c.wallet && !c.caller) oldestBroken = Math.min(oldestBroken, c.post);
-    if (!Number.isFinite(oldestBroken)) return;
-    let before = from ?? this.last;
+    let before = this.mendAt ?? from ?? this.last;
+    if (!Number.isFinite(oldestBroken) || before <= oldestBroken) {
+      this.mendDone = true;
+      return;
+    }
     let fixed = 0;
-    for (let i = 0; i < 400 && before > oldestBroken; i++) {
+    for (let i = 0; i < 30 && before > oldestBroken; i++) {
       await new Promise((r) => setTimeout(r, 1000));
-      // A page that does not load ends the walk; what was read so far is kept.
-      const calls = await page(before).catch(() => []);
-      if (!calls.length || calls[0]!.post >= before) break;
+      const calls = await page(before).catch(() => [] as Callout[]);
+      if (!calls.length || calls[0]!.post >= before) {
+        // Nothing came back: a slow page, or the end of what the channel serves. Twenty in a row ends the walk.
+        if (++this.mendMisses >= 20) this.mendDone = true;
+        break;
+      }
+      this.mendMisses = 0;
       fixed += this.add(calls);
       before = calls[0]!.post;
+      this.mendAt = before;
     }
-    this.log(`callouts: ${fixed} calls read again with their caller`);
+    if (fixed) this.log(`callouts: ${fixed} calls read again with their caller, back to post ${before}`);
   }
 
   private prune(): void {
