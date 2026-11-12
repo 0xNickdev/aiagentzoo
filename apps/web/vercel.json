@@ -103,6 +103,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/callers",
+      "destination": "/index.html"
+    },
+    {
       "source": "/play",
       "destination": "/index.html"
     },

@@ -994,6 +994,34 @@
       }
     },
     {
+      "id": "caller-truth",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-12",
+      "title": "Caller Truth",
+      "text": "Every pump.fun callout is followed for 24 hours on our tape: the cap an hour in, the highest we saw, where the coin stood a day later and whether it was alive, and what the wallet pump.fun lists next to the caller did around the call. Each caller's record is public, and it sits next to their callouts in the X-Ray. Not built yet: the extension showing it next to a name on X.",
+      "why": "Planned for December and put to the vote. The calls were already being read, so it went out early. Trackers show a caller's trades. Nobody lines them up against the post itself.",
+      "proof": [
+        {
+          "label": "2d28051",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/2d28051"
+        },
+        {
+          "label": "1467c84",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/1467c84"
+        },
+        {
+          "label": "/callers",
+          "href": "/callers"
+        }
+      ],
+      "zh": {
+        "title": "喊单真相",
+        "text": "每一条 pump.fun 喊单都在我们的记录上跟踪 24 小时：一小时后的市值、我们看到的最高点、一天后这个币在哪里、是否还活着，以及 pump.fun 在喊单者旁边列出的钱包在喊单前后做了什么。每个喊单者的记录都是公开的，在透视里也显示在他们的喊单旁边。还没做：扩展在 X 上的名字旁边显示它。",
+        "why": "原计划十二月，并交给投票。喊单本来就在读取，所以提前上线了。别的追踪工具展示喊单者的交易，没有人把交易和帖子本身对起来。"
+      }
+    },
+    {
       "id": "pro",
       "chapter": "2026-11",
       "status": "next",
@@ -1013,11 +1041,11 @@
       "chapter": "2026-11",
       "status": "next",
       "title": "Holders' vote, round one",
-      "text": "Holders choose which of December's two builds comes first. Each vote signed by a wallet and published, the result hashed on chain.",
+      "text": "Holders choose what gets built first in December. Each vote signed by a wallet and published, the result hashed on chain.",
       "why": "The gene vote already works this way inside the nursery. Now it decides the product.",
       "zh": {
         "title": "持有者投票 · 第一轮",
-        "text": "持有者决定十二月两个项目哪个先做。每一票由钱包签名并公开，结果的哈希写在链上。",
+        "text": "持有者决定十二月先做什么。每一票都由钱包签名并公开，结果的哈希上链。",
         "why": "基因投票已经在育婴室里这样运行。现在由它来决定产品。",
         "when": "11 月底"
       },
@@ -1032,19 +1060,6 @@
       "zh": {
         "title": "早报全网发布",
         "text": "早报每天早上自动发到 X 和 Telegram，和网站上的是同一期。"
-      }
-    },
-    {
-      "id": "caller-truth",
-      "chapter": "2026-12",
-      "status": "vote",
-      "title": "Caller Truth",
-      "text": "We line up the minute a caller posts with the wallets that bought before it and sold into the people who followed. Every caller gets a record, and the extension shows it next to their name on X.",
-      "why": "Trackers show a caller's trades. Nobody lines them up against the post itself.",
-      "zh": {
-        "title": "喊单者真相",
-        "text": "把喊单者发帖的那一分钟，和在帖子之前买入、再卖给跟单者的钱包对齐。每个喊单者都有公开战绩，插件会在 X 上把它显示在名字旁边。",
-        "why": "现有工具只显示喊单者的交易，没有人把交易和帖子本身对齐。"
       }
     },
     {

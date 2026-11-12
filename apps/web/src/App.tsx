@@ -20,6 +20,7 @@ const Play = lazy(() => import("./components/Play"));
 const Connect = lazy(() => import("./components/Connect"));
 const Stats = lazy(() => import("./components/Stats"));
 const X402 = lazy(() => import("./components/X402"));
+const Callers = lazy(() => import("./components/Callers"));
 const RoadmapPage = lazy(() => import("./components/roadmap/RoadmapPage"));
 const Radar = lazy(() => import("./components/Radar"));
 const Feed = lazy(() => import("./components/Feed"));
@@ -55,6 +56,7 @@ const PAGES: Record<Route, React.ComponentType> = {
   "/radar": Radar,
   "/feed": Feed,
   "/x402": X402,
+  "/callers": Callers,
 };
 
 export default function App() {

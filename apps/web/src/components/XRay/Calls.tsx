@@ -23,6 +23,8 @@ export interface Callout {
   walletSoldOut?: boolean | null;
   walletExitAt?: number | null;
   walletSeen?: boolean;
+  /** What became of this caller's earlier calls a day later, once five of them have run their day. */
+  record?: { settled: number; dead: number; alive: number; medianX: number | null } | null;
 }
 export interface Thesis {
   id: string;
@@ -176,6 +178,12 @@ export function CallsTab({ r, calls, market }: { r: XRayReport; calls: Calls | n
                     {when && <span className={when.bad ? "text-[#ff8a7e]" : "text-fg-3"}>{when.label}</span>}
                     <span className={inside?.bad ? "text-[#ff8a7e]" : "text-fg-4"}>{inside ? inside.label : t("not in the first seconds or the bundles")}</span>
                   </div>
+                  {c.record && c.wallet && (
+                    <a href={`/callers?wallet=${c.wallet}`} className="tabular-nums mt-2 inline-block text-[13px] text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
+                      {t("their earlier calls: {d} of {n} dead a day later", { d: c.record.dead, n: c.record.settled })}
+                      {c.record.medianX !== null ? ` · ${t("median {x}× of the called cap", { x: c.record.medianX.toFixed(2) })}` : ""}
+                    </a>
+                  )}
                 </li>
               );
             })}
