@@ -96,7 +96,7 @@ test("a call is followed for 24 hours and lands in its caller's record; a repeat
   const t0 = Date.parse("2026-11-10T00:00:00Z");
   const call = (post: number, mint: string, at: number, calledMcUsd = 10_000) => ({ post, mint, symbol: "X", text: "", caller: "anna", followers: 10, twitter: null, wallet: W, calledMcUsd, mcUsd: calledMcUsd, nth: 1, at, postedAt: at, url: "" });
   const calls = [call(1, "A", t0), call(2, "A", t0 + 60_000), call(3, "B", t0), call(4, "GONE", t0)];
-  const state: Record<string, { capUsd: number | null; alive: boolean; dumpedAt: number | null }> = { A: { capUsd: 12_000, alive: true, dumpedAt: null }, B: { capUsd: 9_000, alive: true, dumpedAt: null } };
+  const state: Record<string, { capUsd: number | null; state: "alive" | "dead" | "between"; dumpedAt: number | null }> = { A: { capUsd: 12_000, state: "alive", dumpedAt: null }, B: { capUsd: 9_000, state: "alive", dumpedAt: null } };
   const ledger = new CallerLedger({
     callsSince: (since) => calls.filter((c) => c.at >= since),
     look: (mint) => state[mint] ?? null,
@@ -112,7 +112,7 @@ test("a call is followed for 24 hours and lands in its caller's record; a repeat
   assert.equal(ledger.outcomeOf(1)!.peakUsd, 40_000);
   // A day on: A ended at half the called cap and alive, B was dumped by the dev and died.
   state.A!.capUsd = 5_000;
-  state.B = { capUsd: 2_000, alive: false, dumpedAt: t0 + 5 * 60_000 };
+  state.B = { capUsd: 2_000, state: "dead", dumpedAt: t0 + 5 * 60_000 };
   ledger.tick(t0 + FOLLOW_MS + 61_000);
   const a = ledger.outcomeOf(1)!;
   assert.equal(a.done, true);
@@ -127,6 +127,7 @@ test("a call is followed for 24 hours and lands in its caller's record; a repeat
   assert.equal(r.coins, 3);
   assert.equal(r.settled, 2);
   assert.equal(r.dead, 1);
+  assert.equal(r.alive, 1);
   assert.equal(r.up, 0);
   assert.equal(r.medianX, 0.35);
   assert.equal(r.bestX, 4);

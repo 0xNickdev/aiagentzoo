@@ -28,7 +28,7 @@ function sources(): { feed: CalloutFeed | null; fomo: FomoTheses; ledger: Caller
           look: (mint) => {
             const l = tape.callLook(mint);
             const usd = solUsd();
-            return l ? { capUsd: l.capSol !== null && usd ? l.capSol * usd : null, alive: l.alive, dumpedAt: l.dumpedAt } : null;
+            return l ? { capUsd: l.capSol !== null && usd ? l.capSol * usd : null, state: l.state, dumpedAt: l.dumpedAt } : null;
           },
           buyer: (mint, wallet) => tape.buyerOf(mint, wallet),
           ready: () => solUsd() !== null && tape.live(Date.now()),

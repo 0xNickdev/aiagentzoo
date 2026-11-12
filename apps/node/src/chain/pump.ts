@@ -705,15 +705,23 @@ export class PumpTape {
   }
 
   /**
-   * A coin as a call on it is followed: its cap in SOL now, whether it is alive by our lines, and when the dev dumped.
-   * Null when the tape does not hold it, or it trades against something other than SOL.
+   * A coin as a call on it is followed: its cap in SOL now, where it stands by the lines the zoo grades by (alive,
+   * dead, or between the two), and when the dev dumped. Null when the tape does not hold it, or it trades against
+   * something other than SOL.
    */
-  callLook(mint: string): { capSol: number | null; alive: boolean; dumpedAt: number | null } | null {
+  callLook(mint: string): { capSol: number | null; state: "alive" | "dead" | "between"; dumpedAt: number | null } | null {
     const t = this.tokens.get(mint);
     if (!t || t.quote) return null;
     // On pump.fun's curve the cap follows from the SOL in it; anywhere else the last trade says it.
     const capSol = !t.graduated && !t.venue ? curveCapOf(t.curveSol ?? 0) : (t.capNow ?? null);
-    return { capSol, alive: this.aliveNow(t), dumpedAt: t.dumpedAt };
+    let state: "alive" | "dead" | "between" = "between";
+    if (t.graduated) {
+      if (t.poolSol !== null) state = t.poolSol >= POOL_ALIVE_SOL ? "alive" : t.poolSol < POOL_DEAD_SOL ? "dead" : "between";
+    } else if (!t.venue) {
+      const cap = curveCapOf(t.curveSol ?? 0);
+      state = cap >= CURVE_ALIVE_SOL ? "alive" : cap < CURVE_DEAD_SOL ? "dead" : "between";
+    }
+    return { capSol, state, dumpedAt: t.dumpedAt };
   }
 
   /** The cap the last trade put on a token, in SOL; null before a trade priced it. */

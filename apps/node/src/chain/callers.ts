@@ -20,7 +20,8 @@ export const MIN_SETTLED = 5;
 /** A coin as the tape sees it now. */
 export interface CallLook {
   capUsd: number | null;
-  alive: boolean;
+  /** By the zoo's own lines: alive, dead, or between the two. */
+  state: "alive" | "dead" | "between";
   dumpedAt: number | null;
 }
 
@@ -38,7 +39,7 @@ export interface CallOutcome {
   h1Usd: number | null;
   peakUsd: number | null;
   endUsd: number | null;
-  alive: boolean;
+  state: "alive" | "dead" | "between";
   /** The dev dumped it after the call was made. */
   devDumpedAt: number | null;
   /** The caller's listed wallet on this coin: seen among the buyers we track, its first buy, when it sold out. */
@@ -59,6 +60,7 @@ export interface CallerRecord {
   coins: number;
   /** Coins whose first call ran its 24 hours on our tape. */
   settled: number;
+  alive: number;
   dead: number;
   up: number;
   /** The median of cap at the end over cap when called, across settled calls. */
@@ -175,12 +177,12 @@ export class CallerLedger {
         continue;
       }
       if (!o) {
-        o = { post: c.post, mint: c.mint, symbol: c.symbol, wallet: c.wallet, at: c.at, calledUsd: c.calledMcUsd, firstAt: now, endAt: now, h1Usd: null, peakUsd: null, endUsd: null, alive: look.alive, devDumpedAt: null, walletSeen: false, boughtAt: null, exitAt: null, done: false };
+        o = { post: c.post, mint: c.mint, symbol: c.symbol, wallet: c.wallet, at: c.at, calledUsd: c.calledMcUsd, firstAt: now, endAt: now, h1Usd: null, peakUsd: null, endUsd: null, state: look.state, devDumpedAt: null, walletSeen: false, boughtAt: null, exitAt: null, done: false };
         this.outcomes.set(c.post, o);
       }
       const age = now - c.at;
       o.endAt = now;
-      o.alive = look.alive;
+      o.state = look.state;
       if (look.capUsd !== null) {
         o.endUsd = Math.round(look.capUsd);
         o.peakUsd = Math.max(o.peakUsd ?? 0, o.endUsd);
@@ -227,7 +229,7 @@ export class CallerLedger {
       const first = new Map<string, Callout>();
       for (const c of calls) if (!first.has(c.mint)) first.set(c.mint, c);
       const last = calls[calls.length - 1]!;
-      const rec: CallerRecord = { wallet, name: last.caller, twitter: last.twitter, followers: last.followers, calls: calls.length, coins: first.size, settled: 0, dead: 0, up: 0, medianX: null, bestX: null, walletSeen: 0, boughtBefore: 0, soldWithinHour: 0, soldAfter: 0, devDumpedAfter: 0, lastAt: last.at };
+      const rec: CallerRecord = { wallet, name: last.caller, twitter: last.twitter, followers: last.followers, calls: calls.length, coins: first.size, settled: 0, alive: 0, dead: 0, up: 0, medianX: null, bestX: null, walletSeen: 0, boughtBefore: 0, soldWithinHour: 0, soldAfter: 0, devDumpedAfter: 0, lastAt: last.at };
       const xs: number[] = [];
       for (const c of first.values()) {
         const o = this.outcomes.get(c.post);
@@ -243,7 +245,8 @@ export class CallerLedger {
         if (o.peakUsd !== null && o.firstAt - o.at <= LATE_MS) rec.bestX = Math.max(rec.bestX ?? 0, r2(o.peakUsd / o.calledUsd));
         if (!this.settled(o)) continue;
         rec.settled++;
-        if (!o.alive) rec.dead++;
+        if (o.state === "dead") rec.dead++;
+        else if (o.state === "alive") rec.alive++;
         if (o.devDumpedAt !== null) rec.devDumpedAfter++;
         if (o.endUsd !== null) {
           xs.push(o.endUsd / o.calledUsd);
