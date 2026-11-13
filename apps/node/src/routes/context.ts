@@ -207,26 +207,29 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
   // How much the X-Ray is actually used, by day: calls served and the distinct callers that made them (hashed, never the raw address).
   const h12 = (v: string) => { let h = 0x811c9dc5; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); };
   const usage = {
-    mem: new Map<string, { xrays: number; checks: number; callers: Set<string> }>(),
+    mem: new Map<string, { xrays: number; checks: number; callers: Set<string>; by: Record<string, { xrays: number; checks: number }> }>(),
     dirty: new Set<string>(),
     day: () => new Date().toISOString().slice(0, 10),
-    async bump(deep: boolean, caller: string) {
+    async bump(deep: boolean, caller: string, chain = "solana") {
       if (caller === "peer") return;
       const d = usage.day();
       let u = usage.mem.get(d);
       if (!u) {
-        const saved = await enclosure.store.get<{ xrays: number; checks: number; callers: string[] }>(`usage:${d}`);
-        u = { xrays: saved?.xrays ?? 0, checks: saved?.checks ?? 0, callers: new Set(saved?.callers ?? []) };
+        const saved = await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }> }>(`usage:${d}`);
+        u = { xrays: saved?.xrays ?? 0, checks: saved?.checks ?? 0, callers: new Set(saved?.callers ?? []), by: saved?.by ?? {} };
         usage.mem.set(d, u);
       }
       if (deep) u.xrays += 1; else u.checks += 1;
+      // The same count split by chain, kept since 2026-11-13: earlier days have no split.
+      const c = (u.by[chain] ??= { xrays: 0, checks: 0 });
+      if (deep) c.xrays += 1; else c.checks += 1;
       if (u.callers.size < 200_000) u.callers.add(h12(caller));
       usage.dirty.add(d);
     },
     async flush() {
       for (const d of usage.dirty) {
         const u = usage.mem.get(d)!;
-        await enclosure.store.set(`usage:${d}`, { xrays: u.xrays, checks: u.checks, callers: [...u.callers] });
+        await enclosure.store.set(`usage:${d}`, { xrays: u.xrays, checks: u.checks, callers: [...u.callers], by: u.by });
       }
       usage.dirty.clear();
     },
@@ -234,15 +237,21 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
       await usage.flush();
       const rows = [];
       let xrays = 0, checks = 0; const users = new Set<string>();
+      const byChain: Record<string, { xrays: number; checks: number }> = {};
       for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
-        const u = usage.mem.get(d) ?? (await enclosure.store.get<{ xrays: number; checks: number; callers: string[] }>(`usage:${d}`));
+        const u = usage.mem.get(d) ?? (await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }> }>(`usage:${d}`));
         const list = u ? (u.callers instanceof Set ? [...u.callers] : u.callers) : [];
-        rows.push({ day: d, xrays: u?.xrays ?? 0, checks: u?.checks ?? 0, users: list.length });
+        rows.push({ day: d, xrays: u?.xrays ?? 0, checks: u?.checks ?? 0, users: list.length, ...(u?.by && Object.keys(u.by).length ? { byChain: u.by } : {}) });
+        for (const [k, v] of Object.entries(u?.by ?? {})) {
+          const t = (byChain[k] ??= { xrays: 0, checks: 0 });
+          t.xrays += v.xrays;
+          t.checks += v.checks;
+        }
         xrays += u?.xrays ?? 0; checks += u?.checks ?? 0;
         for (const c of list) users.add(c);
       }
-      return { days: rows, last7: { xrays, checks, users: users.size } };
+      return { days: rows, last7: { xrays, checks, users: users.size, byChain } };
     },
   };
   const cache: RouteCache = { checkRecord: null, feedCache: null };

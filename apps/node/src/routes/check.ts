@@ -90,7 +90,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       const paidRoute = x402 && !evm ? x402.paymentRequired(x402.routes[deep ? "xray" : "check"]!, mint) : null;
       return json(res, 429, { error: `slow down: ${what} a minute on the ${tier.tier} tier`, retryAfterMs: wait, access: tier, ...(holder ? {} : { more: "https://zooaiagency.com/connect#api" }), ...(paidRoute ? { orPay: { x402: paidRoute.resource.url, price: paidRoute.accepts[0]!.amount, asset: "USDC", menu: paidRoute.resource.url.replace(/\/(xray|check)\/[^/]+$/, "") } } : {}) });
     }
-    void usage.bump(deep, caller);
+    void usage.bump(deep, caller, chain);
     // four.meme and Clanker go quiet for minutes at night where pump.fun never does: their streams count as live for longer.
     const liveMs = evm ? 5 * 60_000 : 60_000;
     const stream = { live: chainTape.connected && Date.now() - chainTape.lastEventAt < liveMs, lastEventSecAgo: Math.round((Date.now() - chainTape.lastEventAt) / 1000) };

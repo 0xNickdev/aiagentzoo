@@ -246,6 +246,7 @@ export class BscFeed {
   private pairSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
   /** The Transfer subscription over every token on the tape, renewed as launches come and go. */
   private transferSub: { ws: WebSocket; id: string | null; wanted: number } | null = null;
+  private transferFails = 0;
   private transferTimer: ReturnType<typeof setInterval> | null = null;
   private readonly book: PositionBook;
   private pruner: ReturnType<typeof setInterval> | null = null;
@@ -515,8 +516,19 @@ export class BscFeed {
         }
         if (msg.id === 3 || msg.id === 5) return;
         if (msg.id === 4) {
-          if (!msg.error && this.transferSub?.ws === ws) this.transferSub.id = String(msg.result);
-          else if (msg.error) this.opts.log(`[bsc] transfers not followed: ${msg.error.message}`);
+          if (!msg.error && this.transferSub?.ws === ws) {
+            this.transferSub.id = String(msg.result);
+            this.transferFails = 0;
+          } else if (msg.error) {
+            // The provider refuses this now and then. Asking again waits for nothing but a short pause, growing if it keeps refusing.
+            const wait = Math.min(60_000, 5_000 * 2 ** this.transferFails++);
+            this.opts.log(`[bsc] transfers not followed: ${msg.error.message}; asking again in ${wait / 1000}s`);
+            const sub = this.transferSub;
+            if (sub?.ws === ws) {
+              sub.wanted = -1;
+              setTimeout(() => this.followTransfers(), wait).unref();
+            }
+          }
           return;
         }
         if (msg.id === 1) {

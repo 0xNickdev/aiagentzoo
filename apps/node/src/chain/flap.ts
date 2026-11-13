@@ -200,6 +200,7 @@ export class FlapFeed {
   /** Flap's tokens on the tape, with what their launch said; newest last. */
   readonly tokens = new Map<string, { quote: string | null; taxBps: number; migrator: number; at: number; launcher?: string; signer?: string | null }>();
   private transferSub: { ws: WebSocket; id: string | null; wanted: string } | null = null;
+  private transferFails = 0;
   /** When the next receipts batch may go, and how long to hold off after a 429. */
   private receiptsAt = 0;
   private busy = false;
@@ -502,8 +503,18 @@ export class FlapFeed {
         }
         if (msg.id === 5) return;
         if (msg.id === 4) {
-          if (!msg.error && this.transferSub?.ws === ws) this.transferSub.id = String(msg.result);
-          else if (msg.error) this.opts.log(`[flap] transfers not followed: ${msg.error.message}`);
+          if (!msg.error && this.transferSub?.ws === ws) {
+            this.transferSub.id = String(msg.result);
+            this.transferFails = 0;
+          } else if (msg.error) {
+            const wait = Math.min(60_000, 5_000 * 2 ** this.transferFails++);
+            this.opts.log(`[flap] transfers not followed: ${msg.error.message}; asking again in ${wait / 1000}s`);
+            const sub = this.transferSub;
+            if (sub?.ws === ws) {
+              sub.wanted = "";
+              setTimeout(() => this.followTransfers(), wait).unref();
+            }
+          }
           return;
         }
         if (msg.id === 1) {
