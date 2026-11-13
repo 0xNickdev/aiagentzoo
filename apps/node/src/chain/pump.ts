@@ -240,6 +240,8 @@ interface Tracked {
   bundledSol?: number;
   bundleHeld?: number;
   bundlePeak?: number;
+  /** Which timed readings were taken of it: 1 for five minutes in, 2 for twenty. */
+  marked?: number;
   /** The block being read and who bought in it. Not saved. */
   bslot?: number;
   bpend?: Map<string, { tok: number; sol: number }>;
@@ -1653,6 +1655,26 @@ export class PumpTape {
   }
 
   /** One token as the tape knows it, for questions about a single mint. */
+  /**
+   * Launches that reached five or twenty minutes old since the last call, each handed out once. A reading is taken
+   * within two minutes of the mark or not at all: a late one would not say how the coin stood then.
+   */
+  dueMarks(now = Date.now()): Array<{ mint: string; min: 5 | 20 }> {
+    const out: Array<{ mint: string; min: 5 | 20 }> = [];
+    for (const mint of this.recent) {
+      const t = this.tokens.get(mint);
+      if (!t || t.venue || t.quote) continue;
+      const age = now - t.createdAt;
+      if (age > 22 * 60_000) break;
+      for (const [min, bit] of [[5, 1], [20, 2]] as const) {
+        if ((t.marked ?? 0) & bit || age < min * 60_000 || age >= (min + 2) * 60_000) continue;
+        t.marked = (t.marked ?? 0) | bit;
+        out.push({ mint, min });
+      }
+    }
+    return out;
+  }
+
   token(mint: string, now = Date.now()) {
     const t = this.tokens.get(mint);
     if (!t) return null;

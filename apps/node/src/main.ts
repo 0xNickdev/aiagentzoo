@@ -33,6 +33,7 @@ import { SideWallets } from "./chain/sidewallets.ts";
 import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
+import { writeMarks } from "./chain/marks.ts";
 import { startCallers } from "./routes/calls.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -230,6 +231,14 @@ if (config.role === "north") {
       console.log(`[${config.id}] feed not built: ${(error as Error).message}`);
     }
   }, 15_000).unref();
+  // How each launch stood five and twenty minutes in, and the verdict it had then: kept to test rules against later.
+  setInterval(() => {
+    try {
+      writeMarks(join(config.dataDir, "chain-marks.jsonl"));
+    } catch (error) {
+      console.log(`[${config.id}] marks not written: ${(error as Error).message}`);
+    }
+  }, 30_000).unref();
   setInterval(() => {
     try {
       writeFileSync(`${momentsFile}.tmp`, tape.dump());

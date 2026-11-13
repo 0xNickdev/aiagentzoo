@@ -660,6 +660,18 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   assert.equal(f.creatorSold, 0.8);
   assert.equal(f.curveSol, 12);
   assert.equal(tape.launches(5)[0]!.symbol, "SILK");
+
+  // Timed readings: a launch is handed out once at five minutes and once at twenty, and never late.
+  assert.deepEqual(tape.dueMarks(now + 4 * 60_000), []);
+  assert.deepEqual(tape.dueMarks(now + 5 * 60_000 + 20_000), [{ mint: MINT, min: 5 }]);
+  assert.deepEqual(tape.dueMarks(now + 5 * 60_000 + 50_000), []);
+  assert.deepEqual(tape.dueMarks(now + 12 * 60_000), []);
+  assert.deepEqual(tape.dueMarks(now + 21 * 60_000), [{ mint: MINT, min: 20 }]);
+  assert.deepEqual(tape.dueMarks(now + 21 * 60_000 + 30_000), []);
+  // A node that was down through the mark takes no reading of it afterwards.
+  const late = new PumpTape();
+  for (const e of events) late.apply(e, now);
+  assert.deepEqual(late.dueMarks(now + 8 * 60_000), []);
   assert.ok(tape.live(now));
   assert.ok(ruleFlags(obs({ chain: f, hasSocials: true })).includes("creator sold 80% of their bag"));
 
