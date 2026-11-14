@@ -130,7 +130,7 @@ const saveTapeGently = async () => {
     const tmp = `${tapeFile}.part`;
     const fd = openSync(tmp, "w");
     try {
-      for (const piece of tape.snapshotChunks()) {
+      for (const piece of tape.snapshotChunks(100)) {
         writeSync(fd, piece);
         await breathe();
       }
@@ -138,39 +138,52 @@ const saveTapeGently = async () => {
       closeSync(fd);
     }
     renameSync(tmp, tapeFile);
-    await breathe();
-    saveTape(false);
+    for (const step of saveSteps) {
+      await breathe();
+      step();
+    }
   } finally {
     saving = false;
   }
 };
-const saveTape = (withTape = true) => {
-  if (withTape) {
-    writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
-    renameSync(`${tapeFile}.tmp`, tapeFile);
-  }
-  writeFileSync(`${sideFile}.tmp`, sideWallets.snapshot());
-  renameSync(`${sideFile}.tmp`, sideFile);
-  if (bscFeed) {
+/** Everything kept beside the tape, one file a step, so the gentle save can let requests through between them. */
+const saveSteps: Array<() => void> = [
+  () => {
+    writeFileSync(`${sideFile}.tmp`, sideWallets.snapshot());
+    renameSync(`${sideFile}.tmp`, sideFile);
+  },
+  () => {
+    if (!bscFeed) return;
     writeFileSync(`${bscTapeFile}.tmp`, bscTape.snapshot());
     renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
     writeFileSync(`${bscCursorFile}.tmp`, JSON.stringify({ cursor: bscFeed.cursor, at: Date.now() }));
     renameSync(`${bscCursorFile}.tmp`, bscCursorFile);
-  }
-  if (flapFeed) {
+  },
+  () => {
+    if (!flapFeed) return;
     writeFileSync(`${flapCursorFile}.tmp`, JSON.stringify({ cursor: flapFeed.cursor, at: Date.now() }));
     renameSync(`${flapCursorFile}.tmp`, flapCursorFile);
-  }
-  if (baseFeed) {
+  },
+  () => {
+    if (!baseFeed) return;
     writeFileSync(`${baseTapeFile}.tmp`, baseTape.snapshot());
     renameSync(`${baseTapeFile}.tmp`, baseTapeFile);
     writeFileSync(`${baseFeedFile}.tmp`, baseFeed.snapshot());
     renameSync(`${baseFeedFile}.tmp`, baseFeedFile);
-  }
-  writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
-  renameSync(`${lineageFile}.tmp`, lineageFile);
-  writeFileSync(`${socialsFile}.tmp`, socials.snapshot());
-  renameSync(`${socialsFile}.tmp`, socialsFile);
+  },
+  () => {
+    writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
+    renameSync(`${lineageFile}.tmp`, lineageFile);
+  },
+  () => {
+    writeFileSync(`${socialsFile}.tmp`, socials.snapshot());
+    renameSync(`${socialsFile}.tmp`, socialsFile);
+  },
+];
+const saveTape = () => {
+  writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
+  renameSync(`${tapeFile}.tmp`, tapeFile);
+  for (const step of saveSteps) step();
 };
 if (config.role === "north") {
   // Every trade on $ZOOAGENCY's pool, for the buy bot in the holders' group.
