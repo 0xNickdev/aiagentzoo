@@ -850,6 +850,14 @@ export class PumpTape {
    * Maps become arrays; what can be rebuilt (creators' mints, pools) is rebuilt on load.
    */
   snapshot(): string {
+    return [...this.snapshotChunks()].join("");
+  }
+
+  /**
+   * The same snapshot in pieces of a few hundred tokens, so the five-minute save can hand the event loop back between
+   * them: written whole, half a gigabyte of JSON held every request for as long as it took to build.
+   */
+  *snapshotChunks(size = 300): Generator<string> {
     // Amounts trimmed so two days of tokens stay a file the volume can write every five minutes.
     // Zeros and the obvious are left out: a trade count equal to the buys, nothing sold, nothing taken out.
     const slim = (b: Buyer): Buyer => ({
@@ -863,8 +871,15 @@ export class PumpTape {
       ...(b.exitAt !== undefined ? { exitAt: b.exitAt } : {}),
       ...(b.peak ? { peak: Math.round(b.peak) } : {}),
     });
-    const tokens = [...this.tokens.values()].map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
-    return JSON.stringify({ v: 1, tokens, launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, feedSince: this.feedSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosigners: this.operators.snapshot() });
+    const list = [...this.tokens.values()];
+    yield '{"v":1,"tokens":[';
+    for (let i = 0; i < list.length; i += size) {
+      const part = list.slice(i, i + size).map((t) => ({ ...t, last: undefined, crew: undefined, buyers: [...t.buyers].map(([w, b]) => [w, slim(b)]), moreBuyers: t.moreBuyers ? [...t.moreBuyers] : undefined, launchBuys: [...t.launchBuys], bundlers: t.bundlers ? [...t.bundlers] : undefined, bpend: undefined, bslot: undefined }));
+      // The array's own brackets come off: the pieces are joined into one array in the file.
+      yield (i ? "," : "") + JSON.stringify(part).slice(1, -1);
+    }
+    const rest = JSON.stringify({ launchesBy: [...this.launchesBy], recent: this.recent, seen: this.seen, bundleSince: this.bundleSince, feedSince: this.feedSince, prints: [...this.prints].filter(([k]) => this.byPrint.has(k)), cosigners: this.operators.snapshot() });
+    yield `],${rest.slice(1)}`;
   }
 
   load(json: string, now = Date.now()): number {

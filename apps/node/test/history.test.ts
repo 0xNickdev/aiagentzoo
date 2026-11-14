@@ -284,6 +284,8 @@ test("the feed stamps a coin once with the cap it first showed at, and keeps it 
   // Shown again at a higher cap: the first stamp stays.
   assert.deepEqual(t.noteShown(mint, 400, t0 + 60_000), { at: t0 + 3_000, capSol: 50 });
   const back = new PumpTape();
+  // The save in pieces is the same file as the save in one go, however small the pieces.
+  assert.deepEqual(JSON.parse([...t.snapshotChunks(1)].join("")), JSON.parse(t.snapshot()));
   back.load(t.snapshot(), t0 + 61_000);
   assert.deepEqual(back.noteShown(mint, 900, t0 + 62_000), { at: t0 + 3_000, capSol: 50 });
   // A coin that was out before stamps were kept gets none.

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import {
   Enclosure,
@@ -117,9 +117,38 @@ let baseFeed: BaseFeed | null = null;
 // Who funded the first-second wallets: slow to learn (RPC calls), so it is kept too.
 const sideFile = join(config.dataDir, "chain-sidewallets.json");
 const sideWallets = new SideWallets(labels);
-const saveTape = () => {
-  writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
-  renameSync(`${tapeFile}.tmp`, tapeFile);
+/**
+ * The five-minute save, without the stall: the tape goes to disk a few hundred tokens at a time and every request
+ * waiting gets its turn between the pieces. The save on the way down stays the plain one below, since nothing waits then.
+ */
+let saving = false;
+const saveTapeGently = async () => {
+  if (saving) return;
+  saving = true;
+  const breathe = () => new Promise<void>((r) => setImmediate(r));
+  try {
+    const tmp = `${tapeFile}.part`;
+    const fd = openSync(tmp, "w");
+    try {
+      for (const piece of tape.snapshotChunks()) {
+        writeSync(fd, piece);
+        await breathe();
+      }
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(tmp, tapeFile);
+    await breathe();
+    saveTape(false);
+  } finally {
+    saving = false;
+  }
+};
+const saveTape = (withTape = true) => {
+  if (withTape) {
+    writeFileSync(`${tapeFile}.tmp`, tape.snapshot());
+    renameSync(`${tapeFile}.tmp`, tapeFile);
+  }
   writeFileSync(`${sideFile}.tmp`, sideWallets.snapshot());
   renameSync(`${sideFile}.tmp`, sideFile);
   if (bscFeed) {
@@ -217,11 +246,7 @@ if (config.role === "north") {
   // Each new launch's metadata, for the X accounts and Telegram groups it links to.
   socials.start(Number(process.env.ZOO_SOCIALS_PER_SEC ?? 1));
   setInterval(() => {
-    try {
-      saveTape();
-    } catch (error) {
-      console.log(`[${config.id}] tape not saved: ${(error as Error).message}`);
-    }
+    void saveTapeGently().catch((error) => console.log(`[${config.id}] tape not saved: ${(error as Error).message}`));
   }, 5 * 60_000).unref();
   // The feed stamps a coin with the cap it first showed at; built here too, so the stamp does not wait for a reader.
   setInterval(() => {

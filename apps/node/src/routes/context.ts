@@ -207,29 +207,35 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
   // How much the X-Ray is actually used, by day: calls served and the distinct callers that made them (hashed, never the raw address).
   const h12 = (v: string) => { let h = 0x811c9dc5; for (let i = 0; i < v.length; i++) { h ^= v.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); };
   const usage = {
-    mem: new Map<string, { xrays: number; checks: number; callers: Set<string>; by: Record<string, { xrays: number; checks: number }> }>(),
+    mem: new Map<string, { xrays: number; checks: number; callers: Set<string>; by: Record<string, { xrays: number; checks: number }>; who: Record<string, [number, number]> }>(),
     dirty: new Set<string>(),
     day: () => new Date().toISOString().slice(0, 10),
-    async bump(deep: boolean, caller: string, chain = "solana") {
+    async bump(deep: boolean, caller: string, chain = "solana", source = "api") {
       if (caller === "peer") return;
       const d = usage.day();
       let u = usage.mem.get(d);
       if (!u) {
-        const saved = await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }> }>(`usage:${d}`);
-        u = { xrays: saved?.xrays ?? 0, checks: saved?.checks ?? 0, callers: new Set(saved?.callers ?? []), by: saved?.by ?? {} };
+        const saved = await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }>; who?: Record<string, [number, number]> }>(`usage:${d}`);
+        u = { xrays: saved?.xrays ?? 0, checks: saved?.checks ?? 0, callers: new Set(saved?.callers ?? []), by: saved?.by ?? {}, who: saved?.who ?? {} };
         usage.mem.set(d, u);
       }
       if (deep) u.xrays += 1; else u.checks += 1;
       // The same count split by chain, kept since 2026-11-13: earlier days have no split.
       const c = (u.by[chain] ??= { xrays: 0, checks: 0 });
       if (deep) c.xrays += 1; else c.checks += 1;
-      if (u.callers.size < 200_000) u.callers.add(h12(caller));
+      const h = h12(caller);
+      if (u.callers.size < 200_000) u.callers.add(h);
+      // Who made the calls, kept since 2026-11-14: x-rays and checks per hashed caller and where they came from
+      // (the site, the extension, a holder's key, or the bare API), so one bot is not read as a crowd.
+      const k = `${source}|${h}`;
+      const w = u.who[k] ?? (u.callers.size < 200_000 ? (u.who[k] = [0, 0]) : null);
+      if (w) w[deep ? 0 : 1] += 1;
       usage.dirty.add(d);
     },
     async flush() {
       for (const d of usage.dirty) {
         const u = usage.mem.get(d)!;
-        await enclosure.store.set(`usage:${d}`, { xrays: u.xrays, checks: u.checks, callers: [...u.callers], by: u.by });
+        await enclosure.store.set(`usage:${d}`, { xrays: u.xrays, checks: u.checks, callers: [...u.callers], by: u.by, who: u.who });
       }
       usage.dirty.clear();
     },
@@ -237,12 +243,36 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
       await usage.flush();
       const rows = [];
       let xrays = 0, checks = 0; const users = new Set<string>();
+      // Calls by source and the share the busiest callers made, from one or more days of `who`.
+      const split = (who: Record<string, [number, number]>) => {
+        const bySource: Record<string, { xrays: number; checks: number; users: number }> = {};
+        const per = new Map<string, [number, number]>();
+        for (const [k, [x, c]] of Object.entries(who)) {
+          const [src, h] = k.split("|") as [string, string];
+          const t = (bySource[src] ??= { xrays: 0, checks: 0, users: 0 });
+          t.xrays += x; t.checks += c; t.users += 1;
+          const p = per.get(h) ?? [0, 0];
+          per.set(h, [p[0] + x, p[1] + c]);
+        }
+        const share = (i: 0 | 1, n: number) => {
+          const all = [...per.values()].map((v) => v[i]).sort((a, b) => b - a);
+          const total = all.reduce((a, b) => a + b, 0);
+          return total ? Math.round((all.slice(0, n).reduce((a, b) => a + b, 0) / total) * 100) / 100 : 0;
+        };
+        return { bySource, top: { xrays1: share(0, 1), xrays10: share(0, 10), checks1: share(1, 1), checks10: share(1, 10) } };
+      };
+      const who7: Record<string, [number, number]> = {};
       const byChain: Record<string, { xrays: number; checks: number }> = {};
       for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
-        const u = usage.mem.get(d) ?? (await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }> }>(`usage:${d}`));
+        const u = usage.mem.get(d) ?? (await enclosure.store.get<{ xrays: number; checks: number; callers: string[]; by?: Record<string, { xrays: number; checks: number }>; who?: Record<string, [number, number]> }>(`usage:${d}`));
         const list = u ? (u.callers instanceof Set ? [...u.callers] : u.callers) : [];
-        rows.push({ day: d, xrays: u?.xrays ?? 0, checks: u?.checks ?? 0, users: list.length, ...(u?.by && Object.keys(u.by).length ? { byChain: u.by } : {}) });
+        const who = u?.who && Object.keys(u.who).length ? u.who : null;
+        rows.push({ day: d, xrays: u?.xrays ?? 0, checks: u?.checks ?? 0, users: list.length, ...(u?.by && Object.keys(u.by).length ? { byChain: u.by } : {}), ...(who ? split(who) : {}) });
+        for (const [k, v] of Object.entries(who ?? {})) {
+          const t = (who7[k] ??= [0, 0]);
+          t[0] += v[0]; t[1] += v[1];
+        }
         for (const [k, v] of Object.entries(u?.by ?? {})) {
           const t = (byChain[k] ??= { xrays: 0, checks: 0 });
           t.xrays += v.xrays;
@@ -251,7 +281,7 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
         xrays += u?.xrays ?? 0; checks += u?.checks ?? 0;
         for (const c of list) users.add(c);
       }
-      return { days: rows, last7: { xrays, checks, users: users.size, byChain } };
+      return { days: rows, last7: { xrays, checks, users: users.size, byChain, ...(Object.keys(who7).length ? split(who7) : {}) } };
     },
   };
   const cache: RouteCache = { checkRecord: null, feedCache: null };

@@ -1,9 +1,11 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, renameSync, statSync } from "node:fs";
 import { checkToken } from "./check.ts";
 import { tape } from "./pump.ts";
 
 /** A coin with fewer buyers than this at the mark is not written down: nobody was looking at it. */
 const MIN_BUYERS = 10;
+/** The readings file is turned over at this size, so it never fills the disk. */
+const MAX_BYTES = 400 * 1024 * 1024;
 
 /**
  * Timed readings: how a launch stood five and twenty minutes in, and what the check said of it then. The tape keeps
@@ -47,6 +49,14 @@ export function writeMarks(file: string, now = Date.now()): number {
     })}\n`;
     n++;
   }
-  if (lines) appendFileSync(file, lines);
+  if (lines) {
+    // About 16 MB a day: past 400 MB the file is set aside as .old (the one before it is dropped) and a new one begins.
+    try {
+      if (statSync(file).size > MAX_BYTES) renameSync(file, `${file}.old`);
+    } catch {
+      /* no file yet */
+    }
+    appendFileSync(file, lines);
+  }
   return n;
 }
