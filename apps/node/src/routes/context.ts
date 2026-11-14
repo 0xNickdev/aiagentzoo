@@ -279,6 +279,9 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
           t.checks += v.checks;
         }
         xrays += u?.xrays ?? 0; checks += u?.checks ?? 0;
+        // Of this day's callers, how many had been here on an earlier day of the week shown.
+        const back = list.filter((c) => users.has(c)).length;
+        if (rows.length > 1) (rows[rows.length - 1] as { returning?: number }).returning = back;
         for (const c of list) users.add(c);
       }
       return { days: rows, last7: { xrays, checks, users: users.size, byChain, ...(Object.keys(who7).length ? split(who7) : {}) } };

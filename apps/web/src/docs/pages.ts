@@ -21,6 +21,10 @@ export const GROUPS: { title: string; pages: Page[] }[] = [
     ],
   },
   {
+    title: "Research",
+    pages: [{ slug: "pump-48h", title: "48 hours of pump.fun", blurb: "52,552 launches, 159 alive: buyers, devs, bundles, graduates", source: "docs/pump-48h.md" }],
+  },
+  {
     title: "Build",
     pages: [
       { slug: "guests", title: "Guest enclosures", blurb: "Move in with a Solana wallet, no node needed", source: "docs/guests.md" },
