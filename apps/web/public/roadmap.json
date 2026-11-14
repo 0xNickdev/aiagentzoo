@@ -1027,7 +1027,7 @@
       "status": "shipped",
       "date": "2026-11-14",
       "title": "No more frozen scans",
-      "text": "Every five minutes the node saved two days of launches to disk in one go and answered nobody for 23 seconds. Once an hour a second job did the same for 7. Both now work in small pieces, with scans served in between: the longest pause on the live node went from 23 seconds to about 2.",
+      "text": "Every five minutes the node saved two days of launches to disk in one go and answered nobody for 23 seconds. Once an hour a second job did the same for 7. Both now work in small pieces, with scans served in between: the longest pause on the live node went from 23 seconds to under one.",
       "why": "Found while auditing our own logs. A scan that landed in that window waited, and it was 8% of every hour.",
       "proof": [
         {
@@ -1037,7 +1037,7 @@
       ],
       "zh": {
         "title": "扫描不再卡住",
-        "text": "节点每五分钟把两天的发射记录一次性写入磁盘，其间 23 秒不回应任何请求。每小时还有另一个任务同样卡住 7 秒。现在两者都分成小块处理，中间照常响应扫描：线上节点最长的停顿从 23 秒降到约 2 秒。",
+        "text": "节点每五分钟把两天的发射记录一次性写入磁盘，其间 23 秒不回应任何请求。每小时还有另一个任务同样卡住 7 秒。现在两者都分成小块处理，中间照常响应扫描：线上节点最长的停顿从 23 秒降到不到 1 秒。",
         "why": "在检查自己的日志时发现的。落在这个窗口里的扫描只能等，而这占了每小时的 8%。"
       }
     },
