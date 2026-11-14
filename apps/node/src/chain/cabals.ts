@@ -35,6 +35,10 @@ const MAX_WALLETS = 400;
 const DEGREE_STEPS = [40, 24, 16, 10, 6, 4];
 const MEMBERS_KEPT = 200;
 const SLICE = 400;
+/** Rows read between two turns of the event loop. */
+const ROWS = 4_000;
+/** A wallet id and a creator id as one number: ids stay far under this. */
+const PAIR = 2 ** 26;
 const F_RING = 4;
 
 const pause = () => new Promise<void>((r) => setImmediate(r));
@@ -136,37 +140,58 @@ export class CabalIndex {
       const hot = (w: string) => exchangeOf(w) !== null || launcherOf(w) !== null;
       // Hubs: launchpad deployers, ticker farms and bots that snipe everything would glue every cabal into one.
       const hubs = new Set<number>();
-      for (const r of this.db.prepare("SELECT id, wallet, launches, snipes FROM wallets WHERE launches >= ? OR snipes >= ?").all(HUB_LAUNCHES, HUB_SNIPES) as Array<{ id: number; wallet: string; launches: number; snipes: number }>) hubs.add(Number(r.id));
-      for (const r of this.db.prepare("SELECT id, wallet FROM wallets").all() as Array<{ id: number; wallet: string }>) if (deployerOf(r.wallet) || hot(r.wallet)) hubs.add(Number(r.id));
+      // Every read below is walked a few thousand rows at a time: read whole, each one held the node for seconds,
+      // once an hour, and a scan that landed there waited.
+      const each = async <T>(sql: string, args: Array<number | string>, row: (r: T) => void): Promise<number> => {
+        let n = 0;
+        for (const r of this.db.prepare(sql).iterate(...args)) {
+          row(r as T);
+          if (++n % ROWS === 0) await pause();
+        }
+        await pause();
+        return n;
+      };
+      await each<{ id: number; wallet: string }>("SELECT id, wallet FROM wallets WHERE launches >= ? OR snipes >= ?", [HUB_LAUNCHES, HUB_SNIPES], (r) => hubs.add(Number(r.id)));
+      await each<{ id: number; wallet: string }>("SELECT id, wallet FROM wallets", [], (r) => {
+        if (deployerOf(r.wallet) || hot(r.wallet)) hubs.add(Number(r.id));
+      });
       const edges: Array<[number, number]> = [];
       const tie = (a: number, b: number) => {
         if (a !== b && !hubs.has(a) && !hubs.has(b)) edges.push([a, b]);
       };
       await pause();
       // Ties through a funder: every creator a wallet paid for, unless that wallet is everyone's.
-      const funded = this.db.prepare("SELECT funder, creator_id FROM tokens WHERE funder IS NOT NULL").all() as Array<{ funder: string; creator_id: number }>;
       const byFunder = new Map<string, Set<number>>();
-      for (const r of funded) {
-        if (hot(r.funder)) continue;
+      const funded = await each<{ funder: string; creator_id: number }>("SELECT funder, creator_id FROM tokens WHERE funder IS NOT NULL", [], (r) => {
+        if (hot(r.funder)) return;
         const set = byFunder.get(r.funder) ?? new Set();
         set.add(Number(r.creator_id));
         byFunder.set(r.funder, set);
-      }
+      });
       for (const set of byFunder.values()) {
         const list = [...set].filter((c) => !hubs.has(c));
         for (let k = 1; k < list.length; k++) tie(list[0]!, list[k]!);
       }
       await pause();
       // Crew: a wallet in a creator's launches again and again.
-      const crew = this.db.prepare("SELECT wt.wallet_id AS w, t.creator_id AS c FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 3").all() as Array<{ w: number; c: number }>;
-      for (const r of crew) tie(Number(r.w), Number(r.c));
-      await pause();
-      // The launch block, twice for the same creator.
-      const bundles = this.db.prepare("SELECT wt.wallet_id AS w, t.creator_id AS c, count(*) AS n FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 2 GROUP BY wt.wallet_id, t.creator_id HAVING n >= 2").all() as Array<{ w: number; c: number; n: number }>;
-      for (const r of bundles) tie(Number(r.w), Number(r.c));
-      await pause();
+      const crew = await each<{ w: number; c: number }>("SELECT wt.wallet_id AS w, t.creator_id AS c FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 3", [], (r) => tie(Number(r.w), Number(r.c)));
+      // The launch block, twice for the same creator. Counted here, row by row: grouped in SQL, nothing came back
+      // until the whole table had been sorted. Wallet and creator ids are small integers, so a pair fits one number.
+      const once = new Set<number>();
+      const twice = new Set<number>();
+      await each<{ w: number; c: number }>("SELECT wt.wallet_id AS w, t.creator_id AS c FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.role = 2", [], (r) => {
+        const k = Number(r.w) * PAIR + Number(r.c);
+        if (!once.has(k)) once.add(k);
+        else if (!twice.has(k)) {
+          twice.add(k);
+          tie(Number(r.w), Number(r.c));
+        }
+      });
+      const bundles = twice.size;
+      once.clear();
       // Rings: first-second wallets flagged as sniping together, token by token, a slice at a time.
-      const ids = (this.db.prepare("SELECT id FROM tokens ORDER BY id").all() as Array<{ id: number }>).map((r) => Number(r.id));
+      const ids: number[] = [];
+      await each<{ id: number }>("SELECT id FROM tokens ORDER BY id", [], (r) => ids.push(Number(r.id)));
       const bodyOf = this.db.prepare("SELECT body FROM tokens WHERE id = ?");
       for (let i = 0; i < ids.length; i += SLICE) {
         for (const id of ids.slice(i, i + SLICE)) {
@@ -249,7 +274,7 @@ export class CabalIndex {
       }
       this.load();
       this.builtAt = now;
-      log(`cabals: ${this.list.length} from ${funded.length} funded launches, ${crew.length} crew hits, ${bundles.length} repeat bundlers`);
+      log(`cabals: ${this.list.length} from ${funded} funded launches, ${crew} crew hits, ${bundles} repeat bundlers`);
       return this.list.length;
     } finally {
       this.building = false;

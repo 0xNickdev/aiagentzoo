@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-12",
+  "updated": "2026-11-14",
   "repo": "https://github.com/0xNickdev/aiagentzoo",
   "chapters": [
     {
@@ -1019,6 +1019,26 @@
         "title": "喊单真相",
         "text": "每一条 pump.fun 喊单都在我们的记录上跟踪 24 小时：一小时后的市值、我们看到的最高点、一天后这个币在哪里、是否还活着，以及 pump.fun 在喊单者旁边列出的钱包在喊单前后做了什么。每个喊单者的记录都是公开的，在透视里也显示在他们的喊单旁边。还没做：扩展在 X 上的名字旁边显示它。",
         "why": "原计划十二月，并交给投票。喊单本来就在读取，所以提前上线了。别的追踪工具展示喊单者的交易，没有人把交易和帖子本身对起来。"
+      }
+    },
+    {
+      "id": "no-stalls",
+      "chapter": "2026-11",
+      "status": "shipped",
+      "date": "2026-11-14",
+      "title": "No more frozen scans",
+      "text": "Every five minutes the node saved two days of launches to disk in one go and answered nobody for 23 seconds. Once an hour a second job did the same for 7. Both now work in small pieces, with scans served in between: the longest pause went from 23 seconds to a third of a second.",
+      "why": "Found while auditing our own logs. A scan that landed in that window waited, and it was 8% of every hour.",
+      "proof": [
+        {
+          "label": "721c9f5",
+          "href": "https://github.com/0xNickdev/aiagentzoo/commit/721c9f5"
+        }
+      ],
+      "zh": {
+        "title": "扫描不再卡住",
+        "text": "节点每五分钟把两天的发射记录一次性写入磁盘，其间 23 秒不回应任何请求。每小时还有另一个任务同样卡住 7 秒。现在两者都分成小块处理，中间照常响应扫描：最长的停顿从 23 秒降到三分之一秒。",
+        "why": "在检查自己的日志时发现的。落在这个窗口里的扫描只能等，而这占了每小时的 8%。"
       }
     },
     {
