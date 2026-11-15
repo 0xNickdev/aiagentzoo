@@ -141,7 +141,8 @@ export default function Volume() {
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] text-fg">${p.symbol || short(p.mint)}</span>
                   <span className="block truncate text-fg-4">
-                    <span className="font-mono">{short(p.mint)}</span> · {t("opened {s} ago", { s: span(now - (r?.openedAt ?? p.createdAt)) })}
+                    <span className="hidden font-mono sm:inline">{short(p.mint)} · </span>
+                    {t("opened {s} ago", { s: span(now - (r?.openedAt ?? p.createdAt)) })}
                   </span>
                 </span>
                 <span className="text-right text-fg-2">{usd(p.volumeUsd)}</span>
@@ -153,7 +154,7 @@ export default function Volume() {
                 <div className="px-5 pb-4 text-[13px]">
                   <div className="grid gap-x-8 sm:grid-cols-2">
                     <div>
-                      <Fact k={t("market cap now")}>{usd(p.fdvUsd)}</Fact>
+                      {!r?.taken && <Fact k={t("market cap now")}>{usd(p.fdvUsd)}</Fact>}
                       <Fact k={t("buyers and sellers, 24 h")}>
                         {num(p.buyers)} · {num(p.sellers)}
                       </Fact>
