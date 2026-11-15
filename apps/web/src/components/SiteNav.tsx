@@ -41,6 +41,7 @@ const GROUPS: Array<{ label: string; items: Item[] }> = [
     items: [
       { section: "Tools", label: "Holder radar", href: "/radar", note: "know first when a coin turns" },
       { section: "Tools", label: "Caller Truth", href: "/callers", note: "what happened after the call" },
+      { section: "Tools", label: "Real volume", href: "/volume", note: "top volume, read from the chain" },
       { section: "Tools", label: "Wall of cabals", href: "/cabals", note: "wallets that work as one, 90 days" },
       { section: "Tools", label: "Stats", href: "/stats", note: "our numbers, live" },
       { section: "Tools", label: "Roadmap", href: "/roadmap", note: "what we build next" },

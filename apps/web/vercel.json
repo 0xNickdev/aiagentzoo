@@ -107,6 +107,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/volume",
+      "destination": "/index.html"
+    },
+    {
       "source": "/play",
       "destination": "/index.html"
     },

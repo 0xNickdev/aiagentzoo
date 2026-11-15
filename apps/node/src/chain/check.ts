@@ -599,3 +599,46 @@ export function outsideCheck(
     ...(h !== undefined ? { holders: h ? { top10Pct: pct1(h.top10Share)!, topWalletPct: pct1(h.topShare)!, creatorHoldsPct: pct1(h.creatorShare), programPct: pct1(h.programShare)!, ...(h.lockedShare !== undefined ? { lockedPct: pct1(h.lockedShare)! } : {}), ...(h.creatorLockedShare !== undefined ? { devLockedPct: pct1(h.creatorLockedShare)! } : {}) } : null } : {}),
   };
 }
+
+/** What the node read about a pool opened straight on PumpSwap, as much of it as the verdict needs. */
+export interface PoolFacts {
+  symbol: string;
+  solIn: number;
+  taken: { sol: number; at: number } | null;
+  sample: { n: number; passes: number };
+  /** Pools this opener closed, this one left out. */
+  otherTaken: number;
+}
+
+/**
+ * The check for a token that trades in a pool opened straight on PumpSwap: no launch on record, so the verdict rests
+ * on what the pool's own transactions show. It can say avoid or caution; it never says pass.
+ */
+export function poolCheck(mint: string, p: PoolFacts, opts: { now?: number; stream?: TokenCheck["stream"]; chain?: Chain } = {}): TokenCheck {
+  const avoid: string[] = [];
+  const caution: string[] = [];
+  const weights: number[] = [];
+  const sol = (n: number) => (n >= 100 ? Math.round(n) : Math.round(n * 10) / 10);
+  if (p.taken) (avoid.push(`the wallet that opened this pool took the liquidity back: ${sol(p.taken.sol)} SOL out after ${sol(p.solIn)} SOL in`), weights.push(60));
+  if (p.otherTaken > 0) (avoid.push(`the wallet that opened this pool opened and emptied ${p.otherTaken} other ${p.otherTaken === 1 ? "pool" : "pools"} in the last three days`), weights.push(50));
+  const share = p.sample.n >= 20 ? p.sample.passes / p.sample.n : 0;
+  const passed = `${p.sample.passes} of ${p.sample.n} trades drawn at random passed one bag between two wallets through the pool, so most of the volume shown is not buying`;
+  if (share >= 0.5) (avoid.push(passed), weights.push(40));
+  else if (share >= 0.2) (caution.push(passed.replace(", so most of the volume shown is not buying", "")), weights.push(20));
+  const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "unknown";
+  return {
+    version: CHECK_VERSION,
+    mint,
+    chain: opts.chain ?? "solana",
+    checkedAt: opts.now ?? Date.now(),
+    more: "https://zooaiagency.com/skill.md",
+    stream: opts.stream ?? { live: true, lastEventSecAgo: null },
+    symbol: p.symbol || null,
+    verdict,
+    score: scoreOf(verdict, weights),
+    proceed: verdict === "avoid" ? false : null,
+    reasons: [...avoid, ...caution],
+    notes: ["its pool was opened straight on PumpSwap, outside the launchpads the stream reads: this is what the pool's own transactions show, with no launch on record"],
+    facts: null,
+  };
+}

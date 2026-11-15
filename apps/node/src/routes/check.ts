@@ -6,7 +6,8 @@ import { socials } from "../chain/socials.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
 import { holderReport, holdersEnabled, mintRights, poolSolOf } from "../chain/holders.ts";
 import { handWithin } from "../chain/hand.ts";
-import { CHAIN_NAME, checkToken, oddsRunNote, outsideCheck } from "../chain/check.ts";
+import { CHAIN_NAME, checkToken, oddsRunNote, outsideCheck, poolCheck } from "../chain/check.ts";
+import { pools } from "./pools.ts";
 import { bscLineage, bscPoolSol, bscSocials, bscTape, fourMeme, recordFlap, recordFourMeme, WBNB } from "../chain/bsc.ts";
 import { baseBook, baseLineage, baseSocials, baseTape, clanker, DEFAULT_RPC as BASE_RPC, POOL_MANAGER, recordClankerFromApi } from "../chain/base.ts";
 import { baseFundersEnabled, bscFundersEnabled } from "../chain/bscFunders.ts";
@@ -160,6 +161,16 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     if (past) check.notes.unshift(recordNote(past.recordedAt, past.createdAt));
     const image = bsc ? (bscSocials.image(mint) ?? fourMeme.image(mint)) : base ? (baseSocials.image(mint) ?? clanker.image(mint)) : socials.image(mint);
     if (!image) bsc ? void (bscTape.venueOf(mint) === "flap" ? recordFlap(mint) : recordFourMeme(mint)) : base ? void recordClankerFromApi(mint) : socials.want(mint);
+    // A pool opened straight on PumpSwap that the node read from its own transactions: no launch on record, the pool is the record.
+    const listed = !found && !past && !evm ? (pools()?.ofMint(mint) ?? null) : null;
+    if (listed?.read) {
+      const r = listed.read;
+      const mine = pools()!.view().pools.find((p) => p.pool === listed.row.pool)?.read ?? null;
+      const poolView = { pool: listed.row.pool, volumeUsd: listed.row.volumeUsd, buyers: listed.row.buyers, sellers: listed.row.sellers, solIn: r.solIn, openedAt: r.openedAt, trades: r.trades, sample: r.sample, taken: r.taken, creatorPools: mine?.creatorPools ?? 1, creatorTaken: mine?.creatorTaken ?? 0 };
+      const direct = poolCheck(mint, { symbol: listed.row.symbol, solIn: r.solIn, taken: r.taken, sample: r.sample, otherTaken: Math.max(0, poolView.creatorTaken - (r.taken ? 1 : 0)) }, { stream, chain });
+      if (checkOf) return json(res, 200, { ...direct, outsideStream: true, createdAt: r.openedAt, pool: poolView, access: tier });
+      return json(res, 200, { mint, chain, symbol: listed.row.symbol, name: "", creator: r.creator, createdAt: r.openedAt, check: direct, early: [], creatorRecord: null, devHistory: null, funding: null, bundle: { wallets: [], funding: null }, socials: [], outsideStream: true, pool: poolView, access: tier });
+    }
     // Launched before the stream's window: read where it came from, who holds it now and its dev's kept record,
     // only for a full X-Ray (or ?holders=1), which has its own rate limit, so plain checks cost no RPC calls.
     if (!found && !past && deep && (evm || holdersEnabled())) {

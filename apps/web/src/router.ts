@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Pages served by this app. /docs and /evolution are their own documents and load normally. */
-export const ROUTES = ["/", "/live", "/brief", "/agents", "/ask", "/rugs", "/cabals", "/play", "/connect", "/xray", "/stats", "/roadmap", "/radar", "/feed", "/x402", "/callers"] as const;
+export const ROUTES = ["/", "/live", "/brief", "/agents", "/ask", "/rugs", "/cabals", "/play", "/connect", "/xray", "/stats", "/roadmap", "/radar", "/feed", "/x402", "/callers", "/volume"] as const;
 export type Route = (typeof ROUTES)[number];
 
 const current = (): Route => {
@@ -70,4 +70,5 @@ export const TITLES: Record<Route, string> = {
   "/feed": "Live feed - ZOOAI AGENCY",
   "/x402": "Pay per check with x402 - ZOOAI AGENCY",
   "/callers": "Caller Truth - ZOOAI AGENCY",
+  "/volume": "Real volume - ZOOAI AGENCY",
 };

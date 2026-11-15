@@ -35,6 +35,7 @@ import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
 import { writeMarks } from "./chain/marks.ts";
 import { startCallers } from "./routes/calls.ts";
+import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
 import { tickGene } from "./gene.ts";
@@ -327,6 +328,8 @@ const stopStream =
         : null;
 // Calls are followed from the minute they are made, so the node that reads the chain starts on its own.
 if (stopStream) startCallers();
+// Pools opened straight on PumpSwap never cross the launchpad stream: the node that reads the chain reads the biggest of them by hand.
+if (stopStream && config.role === "north") startPools((m) => console.log(`[${config.id}] ${m}`));
 
 const visitorAgents = enclosure
   .snapshot()

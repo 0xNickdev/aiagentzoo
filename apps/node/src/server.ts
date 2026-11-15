@@ -10,6 +10,7 @@ import { cabalRoutes, chainBoardRoutes, chainReadRoutes, tapeRoutes } from "./ro
 import { checkRoutes } from "./routes/check.ts";
 import { walletRoutes } from "./routes/wallets.ts";
 import { callRoutes } from "./routes/calls.ts";
+import { poolRoutes } from "./routes/pools.ts";
 import { askRoutes } from "./routes/ask.ts";
 import { guestWardenRoutes, wardenRoutes } from "./routes/warden.ts";
 
@@ -21,6 +22,7 @@ type Route = (ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url:
 const ROUTES: Route[] = [
   x402Routes,
   callRoutes,
+  poolRoutes,
   nodeRoutes,
   boardRoutes,
   agentRoutes,
