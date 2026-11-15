@@ -105,6 +105,8 @@ export function kindOf(tx: ParsedTx, pool: string, mint: string): "pass" | "buy"
   return "other";
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function rpc<T>(fetchFn: Fetch, url: string, method: string, params: unknown[]): Promise<T> {
   let last: Error = new Error("no answer");
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -126,7 +128,10 @@ async function rpc<T>(fetchFn: Fetch, url: string, method: string, params: unkno
 export async function listTop(fetchFn: Fetch = fetch): Promise<PoolRow[]> {
   const rows: PoolRow[] = [];
   for (const page of [1, 2, 3]) {
-    const r = await fetchFn(`${LIST}${page}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(20_000) });
+    if (page > 1) await sleep(2_500);
+    let r = await fetchFn(`${LIST}${page}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(20_000) });
+    // The list allows a few calls a minute: one refusal is waited out, a second one ends the round.
+    if (r.status === 429) (await sleep(20_000), (r = await fetchFn(`${LIST}${page}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(20_000) })));
     if (!r.ok) throw new Error(`pool list ${r.status}`);
     const body = (await r.json()) as { data?: Array<{ attributes: Record<string, any>; relationships: Record<string, { data: { id: string } }> }> };
     for (const p of body.data ?? []) {
@@ -148,8 +153,6 @@ export async function listTop(fetchFn: Fetch = fetch): Promise<PoolRow[]> {
   }
   return rows.sort((a, b) => b.volumeUsd - a.volumeUsd);
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** The newest transactions on the pool that show its opener taking the SOL out. */
 async function takenBy(fetchFn: Fetch, url: string, pool: string, creator: string, solIn: number, newest: Sig[]): Promise<PoolRead["taken"]> {
@@ -211,7 +214,7 @@ export class PoolBook {
   private readonly fetchFn: Fetch;
   private readonly url: string;
 
-  constructor(file: string | null = null, log: (m: string) => void = () => {}, fetchFn: Fetch = fetch, url: string = process.env.POOLS_RPC_URL || DEFAULT_RPC) {
+  constructor(file: string | null = null, log: (m: string) => void = () => {}, fetchFn: Fetch = fetch, url: string = process.env.POOLS_RPC_URL || process.env.SOLANA_RPC_URL || DEFAULT_RPC) {
     this.file = file;
     this.log = log;
     this.fetchFn = fetchFn;
@@ -243,12 +246,19 @@ export class PoolBook {
     if (this.busy) return;
     this.busy = true;
     try {
-      const rows = await listTop(this.fetchFn);
-      for (const row of rows) this.entries.set(row.pool, { row, read: this.entries.get(row.pool)?.read ?? null, seenAt: now });
+      // A round the list refused still reads the pools the last list named.
+      let current = Math.max(0, ...[...this.entries.values()].map((e) => e.seenAt));
+      try {
+        const rows = await listTop(this.fetchFn);
+        for (const row of rows) this.entries.set(row.pool, { row, read: this.entries.get(row.pool)?.read ?? null, seenAt: now });
+        if (rows.length) current = now;
+      } catch (error) {
+        this.log(`pool list not read: ${(error as Error).message}`);
+      }
       for (const [pool, e] of this.entries) if (now - e.seenAt > READ_WINDOW_MS) this.entries.delete(pool);
       let reads = 0;
       for (const e of [...this.entries.values()].sort((a, b) => b.row.volumeUsd - a.row.volumeUsd)) {
-        if (e.seenAt !== now || now - e.row.createdAt > READ_WINDOW_MS) continue;
+        if (e.seenAt !== current || now - e.row.createdAt > READ_WINDOW_MS) continue;
         try {
           if (!e.read) {
             if (reads >= READS_PER_PASS) continue;
@@ -267,7 +277,7 @@ export class PoolBook {
         }
         this.save();
       }
-      this.builtAt = now;
+      if (current) this.builtAt = now;
       this.save();
     } catch (error) {
       this.log(`pools pass failed: ${(error as Error).message}`);
