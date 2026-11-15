@@ -154,7 +154,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** The newest transactions on the pool that show its opener taking the SOL out. */
 async function takenBy(fetchFn: Fetch, url: string, pool: string, creator: string, solIn: number, newest: Sig[]): Promise<PoolRead["taken"]> {
   for (const s of newest.filter((x) => !x.err).slice(0, 25)) {
-    const tx = await rpc<ParsedTx | null>(fetchFn, url, "getTransaction", [s.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }]);
+    const tx = await rpc<ParsedTx | null>(fetchFn, url, "getTransaction", [s.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }]);
     await sleep(120);
     if (!tx || signerOf(tx) !== creator) continue;
     const out = -poolSol(tx, pool);
@@ -177,7 +177,7 @@ export async function readPool(row: PoolRow, fetchFn: Fetch = fetch, url: string
   }
   const ok = sigs.filter((s) => !s.err);
   if (ok.length < 3) return null;
-  const get = (s: Sig) => rpc<ParsedTx | null>(fetchFn, url, "getTransaction", [s.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }]);
+  const get = (s: Sig) => rpc<ParsedTx | null>(fetchFn, url, "getTransaction", [s.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }]);
   const first = await get(ok[ok.length - 1]!);
   const creator = first ? signerOf(first) : null;
   if (!first || !creator) return null;
