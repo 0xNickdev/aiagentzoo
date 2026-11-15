@@ -26,7 +26,7 @@ export function KeyFacts({ r, go }: { r: XRayReport; go: (id: string) => void })
       id: "xr-five",
       k: "The first 5 seconds",
       v: old ? "-" : r.early.length ? t("{n} wallets", { n: r.early.length }) : t("nobody"),
-      sub: old ? t("before our stream") : r.early.length ? t("took {a} · hold {b}", { a: pctFine(took), b: pctFine(holds) }) : t("no one bought before it was visible"),
+      sub: old ? t(r.pool ? "not on record" : "before our stream") : r.early.length ? t("took {a} · hold {b}", { a: pctFine(took), b: pctFine(holds) }) : t("no one bought before it was visible"),
       bad: took >= 0.25 || (f?.creatorCrew ?? 0) >= 2,
     },
     {

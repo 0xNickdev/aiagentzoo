@@ -120,6 +120,8 @@ export interface XRayReport {
   bundle: { wallets: Array<{ wallet: string; share: number }>; funding: { groups: Array<{ funder: string; wallets: string[] }>; linked: number; checked: number } | null };
   /** Launched before the stream's window: no launch record, only who holds it now and the dev's kept record. */
   outsideStream?: boolean;
+  /** Trades in a pool opened straight on PumpSwap that the node read from its own transactions; the launchpad stream never saw it. */
+  pool?: { pool: string; solIn: number; trades: number; sample: { n: number; passes: number }; taken: { sol: number; at: number } | null; creatorPools: number; creatorTaken: number };
   /** Read from the long memory, as it stood when last written, not from the live tape. */
   fromHistory?: boolean;
   devHistory?: { launches: number; dumped: number } | null;

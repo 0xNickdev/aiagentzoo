@@ -32,7 +32,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
   const bsc = chain !== "solana";
   const where = chainName(r.mint);
   // The launchpad by name: the token's own venue when the stream saw it, else the one the zoo reads on that chain.
-  const venue = f?.venue && f.venue !== "pump.fun" ? (VENUE[f.venue] ?? venueOfChain(r.mint)) : venueOfChain(r.mint);
+  const venue = r.pool ? "PumpSwap" : f?.venue && f.venue !== "pump.fun" ? (VENUE[f.venue] ?? venueOfChain(r.mint)) : venueOfChain(r.mint);
   const tone = TONE[c.verdict];
   const early = r.early;
   const took = early.reduce((n, e) => n + e.bought, 0);
@@ -78,10 +78,10 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
     { id: "overview", k: "Overview", sub: c.reasons.length ? t("{n} reasons", { n: c.reasons.length }) : old ? t("only holders read") : t("no red flags") },
     { id: "calls", k: "Who's calling it", sub: !calls ? t("reading…") : callLine ? callLine.text : t("no calls seen"), bad: callLine?.bad },
     { id: "network", k: "Network", sub: t("who is behind it, on one map") },
-    { id: "dev", k: "The dev", sub: old ? (r.devHistory ? t("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches }) : t("before our stream")) : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
-    { id: "five", k: "First 5 seconds", sub: old ? t("before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pctFine(took) }) : t("nobody"), bad: fiveBad },
+    { id: "dev", k: "The dev", sub: old ? (r.devHistory ? t("{d} of {n} dumped", { d: r.devHistory.dumped, n: r.devHistory.launches }) : t(r.pool ? "not on record" : "before our stream")) : rec ? t("{d} of {n} dumped", { d: rec.dumped, n: rec.launches48h }) : t("first launch"), bad: devBad },
+    { id: "five", k: "First 5 seconds", sub: old ? t(r.pool ? "not on record" : "before our stream") : early.length ? t("{n} wallets · took {p}", { n: early.length, p: pctFine(took) }) : t("nobody"), bad: fiveBad },
     ...(early.length ? [{ id: "map" as Tab, k: "Money map", sub: t("who paid, who sold") }] : []),
-    { id: "bundles", k: "Bundles & volume", sub: old ? t("before our stream") : f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
+    { id: "bundles", k: "Bundles & volume", sub: old ? t(r.pool ? "not on record" : "before our stream") : f?.bundlers ? t("{n} bundle wallets", { n: f.bundlers }) : t("{n} buyers", { n: f?.buyers ?? 0 }), bad: bundleBad },
     { id: "holders", k: "Holders", sub: !c.holders ? "-" : c.holders.top10Pct === 0 ? t("nobody holds it") : t("top 10 hold {p}%", { p: c.holders.top10Pct }), bad: holdBad },
     ...(early.length ? [{ id: "wallets" as Tab, k: "All wallets", sub: t("{n} in the first 5 s", { n: early.length }) }] : []),
   ];
@@ -108,7 +108,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5">
             <b className="text-[17px] font-semibold tracking-[-0.01em] text-fg">${r.symbol.replace(/^\$/, "")}</b>
             <span className="tabular-nums truncate text-[13px] text-fg-3">
-              {r.name}{r.name ? " · " : ""}{ageOf(r)} · {venueLabel(f)}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
+              {r.name}{r.name ? " · " : ""}{ageOf(r)} · {r.pool ? "PumpSwap" : venueLabel(f)}{pool ? ` → ${pool}` : ""}{f?.mayhem ? ` · ${t("Mayhem Mode")}` : ""}
             </span>
           </div>
           <CopyCa mint={r.mint} />
@@ -151,7 +151,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               </p>
               <p className="tabular-nums flex justify-between text-fg-3">
                 {t("token")}
-                <a href={!f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : f.venue === "fourmeme" ? `https://four.meme/token/${r.mint}` : f.venue === "flap" ? `https://flap.sh/bnb/${r.mint}` : f.venue === "clanker" ? `https://www.clanker.world/clanker/${r.mint}` : chart(r.mint)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={r.pool ? chart(r.mint) : !f?.venue || f.venue === "pump.fun" ? `https://pump.fun/coin/${r.mint}` : f.venue === "fourmeme" ? `https://four.meme/token/${r.mint}` : f.venue === "flap" ? `https://flap.sh/bnb/${r.mint}` : f.venue === "clanker" ? `https://www.clanker.world/clanker/${r.mint}` : chart(r.mint)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
                   {short(r.mint)} ↗
                 </a>
               </p>
@@ -186,7 +186,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
               {tab === "dev" && (
                 <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
                   <div id="xr-creator" className="[&>*]:h-full">
-                    <Panel title="The creator" note={r.outsideStream ? "before our stream" : "last 48 hours"}>
+                    <Panel title="The creator" note={r.pool ? "not on record" : r.outsideStream ? "before our stream" : "last 48 hours"}>
               {r.outsideStream ? (
                 <>
                   <p className="text-[13px] font-normal leading-relaxed text-fg-3">{t("This coin launched before our stream, so we did not see the dev launch it or sell. What we have is the dev's record in the launches we kept.")}</p>
@@ -453,7 +453,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
 
         {/* the status line */}
         <div className="tabular-nums relative flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 text-[12.5px] leading-relaxed text-fg-4 sm:px-5">
-          <span className="min-w-0 flex-1 basis-[60%]">{bsc ? (r.outsideStream ? t("How we know: this coin launched on {venue} before our two-day window, so what happened at launch is not on record; the dev's record is what the stream kept of their earlier launches.", { venue }) : t("How we know: every {venue} launch, buy and sell read from {chain} as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who holds it now is read at x-ray time; who paid for the dev is traced when a key for {chain} is set.", { venue, chain: where })) : r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
+          <span className="min-w-0 flex-1 basis-[60%]">{bsc ? (r.outsideStream ? t("How we know: this coin launched on {venue} before our two-day window, so what happened at launch is not on record; the dev's record is what the stream kept of their earlier launches.", { venue }) : t("How we know: every {venue} launch, buy and sell read from {chain} as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who holds it now is read at x-ray time; who paid for the dev is traced when a key for {chain} is set.", { venue, chain: where })) : r.pool ? t("How we know: this token trades in a pool opened straight on PumpSwap, which the launchpad stream does not read. Who opened the pool, the SOL that went in and came out, and a draw of 60 of its trades are read from the pool's own transactions.") : r.outsideStream ? t("How we know: who holds it now is read from Solana at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.") : r.fromHistory ? t("How we know: this coin was read from Solana as it launched and kept in the long memory, where a launch stays 90 days; this is its record as it stood when last written. Who holds it now is read at check time; who paid for the dev is traced from the dev wallet's own transfers.") : t("How we know: every pump.fun, LaunchLab and Meteora transaction read from Solana as it happens, kept 48 hours on the live tape and 90 days in the long memory. The dev's record and the first-seconds wallets come from that stream; who paid for the dev is traced from the dev wallet's own transfers.")}</span>
           <span className="font-mono text-fg-3">{NORTH.replace(/^https?:\/\//, "")}/v1/xray/{short(r.mint)}</span>
           <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#a6e3b4]" />{t("3 nodes · one operator")} · {t("Not financial advice.")}</span>
         </div>

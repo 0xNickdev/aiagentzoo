@@ -46,7 +46,7 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
     <div className="relative border-b border-white/[0.07] px-4 py-4 sm:px-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
         <p className="text-[12px] uppercase tracking-[0.14em] text-fg-4">{t("What the chain shows")}</p>
-        {market && market.mcapUsd !== null && (
+        {market && market.mcapUsd !== null && !r.pool?.taken && (
           <p className="tabular-nums text-[13px] text-fg-3">
             <span className="text-fg">{t("mcap {m}", { m: usdShort(market.mcapUsd) })}</span>
             {market.m5 !== null && <span className={market.m5 >= 0 ? "text-[#a6e3b4]" : "text-[#ff8a7e]"}> · 5m {pctMove(market.m5)}</span>}
@@ -99,7 +99,7 @@ export function Summary({ r, market, calls, open }: { r: XRayReport; market: Mar
       {c.notes.length > 0 && !r.outsideStream && <p className="mt-3 text-[13px] leading-relaxed text-fg-4">{c.notes.map(tChain).join(" · ")}</p>}
       {r.outsideStream && (
         <p className="mt-3 text-[13px] leading-relaxed text-fg-4">
-          {t("Launched {day}, before our stream's window.", { day: new Date(r.createdAt).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) })}
+          {t(r.pool ? "Pool opened {day} straight on PumpSwap: no launch on record, this is what the pool's own transactions show." : "Launched {day}, before our stream's window.", { day: new Date(r.createdAt).toLocaleDateString(lang() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) })}
         </p>
       )}
     </div>
