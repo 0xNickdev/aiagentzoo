@@ -32,7 +32,8 @@ test("posts that are not callouts are skipped, and the same post is kept once", 
 
 test("FOMO theses are cached per coin and stop at the daily budget", async () => {
   let calls = 0;
-  const fake = (async () => {
+  const fake = (async (u: string) => {
+    if (String(u).endsWith("/v2/me")) return new Response("{}", { status: 500 });
     calls++;
     return new Response(JSON.stringify({ theses: [{ id: "t1", text: "games good", handle: "olivi", tradeUsd: 84.5, unrealizedPnlUsd: 9.4, isDev: false, likes: 1, ts: "2026-11-05T00:56:56Z" }] }));
   }) as typeof fetch;
@@ -76,9 +77,32 @@ test("calls survive a restart: saved after a poll, read back by the next feed", 
   assert.equal(b.of("84sWQfNG5jBghw76FYdE5MpmtRPNEwZrxBZQ3KhQpump")[0]?.text, "fresh call");
 });
 
+test("the daily FOMO budget is what the keys have left over the days to the refill, and a cached ask pays nothing", async () => {
+  const left: Record<string, number> = { "Bearer a": 0, "Bearer b": 12_500, "Bearer c": 25_000 };
+  const paid: string[] = [];
+  const fake = (async (u: string, o: { headers: { authorization: string } }) => {
+    if (u.endsWith("/v2/me")) return new Response(JSON.stringify({ credits: { remaining: left[o.headers.authorization] } }));
+    paid.push(o.headers.authorization);
+    return new Response(JSON.stringify({ theses: [] }));
+  }) as unknown as typeof fetch;
+  const f = new FomoTheses("a, b, c", 100, fake);
+  assert.equal((await f.of("m0", "likes", false)).status, "idle", "nothing read yet and nothing paid");
+  assert.equal(paid.length, 0);
+  // 30 pages left in all; the month has at most 31 days, so at least one day's share is 0 or 1 page, never the ceiling of 100.
+  const now = new Date();
+  const daysLeft = Math.max(1, Math.ceil((Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1) - now.getTime()) / 86_400_000));
+  const share = Math.floor(30 / daysLeft);
+  let ok = 0;
+  for (let i = 0; i < 40; i++) if ((await f.of(`m${i}`)).status === "ok") ok++;
+  assert.equal(ok, share);
+  assert.ok(paid.every((k) => k === "Bearer b"), "the spent key is skipped from the start");
+  if (share > 0) assert.equal((await f.of("m0", "likes", false)).status, "ok", "what was read is served to a cached ask");
+});
+
 test("FOMO moves to the next key when one is refused, and keeps it", async () => {
   const used: string[] = [];
-  const fake = (async (_u: string, o: { headers: { authorization: string } }) => {
+  const fake = (async (u: string, o: { headers: { authorization: string } }) => {
+    if (u.endsWith("/v2/me")) return new Response("{}", { status: 500 });
     used.push(o.headers.authorization);
     return o.headers.authorization.endsWith("a") ? new Response("{}", { status: 402 }) : new Response(JSON.stringify({ theses: [] }));
   }) as unknown as typeof fetch;

@@ -352,10 +352,13 @@ export function meaningful(text: string): boolean {
 const TTL = 60 * 60_000;
 /** What the API answers when a key can no longer read: bad key, out of credits, or held back. */
 const REFUSED = new Set([401, 402, 403, 429]);
+/** What one page of theses costs on fomoapi.io. */
+const PAGE_CREDITS = 1250;
 
 /**
  * FOMO theses for a coin, through fomoapi.io (unofficial). A page costs credits, so each coin is read at most once an
- * hour per sort and the node stops at a daily budget (FOMO_DAILY_CALLS, default 30, inside the free plan). A coin
+ * hour per sort and the node stops at a daily budget: the credits the keys have left spread over the days until the
+ * monthly refill, never above FOMO_DAILY_CALLS (default 30). A coin
  * under two hours old is read newest first, an older one by likes; the two merge by id. FOMO_API_KEY can list several
  * keys, comma separated: when the API refuses one (credits gone), the next takes over.
  */
@@ -366,11 +369,13 @@ export class FomoTheses {
   private keys: string[];
   private active = 0;
   private dailyBudget: number;
+  private ceiling: number;
   private fetchFn: typeof fetch;
 
   constructor(key: string, dailyBudget = 30, fetchFn: typeof fetch = fetch) {
     this.keys = key.split(",").map((k) => k.trim()).filter(Boolean);
     this.dailyBudget = dailyBudget;
+    this.ceiling = dailyBudget;
     this.fetchFn = fetchFn;
   }
 
@@ -378,14 +383,47 @@ export class FomoTheses {
     return this.keys.length > 0;
   }
 
-  async of(mint: string, sort: "recent" | "likes" = "likes"): Promise<{ theses: Thesis[]; status: "ok" | "off" | "budget" | "error" }> {
+  /**
+   * What the keys can still pay for, spread over the days left until the monthly refill, so the last day of the
+   * month still has reads. Asked once a day (the account read is free); the env number stays as the ceiling.
+   */
+  private async allowance(now: number): Promise<number> {
+    const pages = await Promise.all(
+      this.keys.map(async (k) => {
+        try {
+          const r = await this.fetchFn("https://api.fomoapi.io/v2/me", { headers: { authorization: `Bearer ${k}` }, signal: AbortSignal.timeout(8_000) });
+          if (!r.ok) return null;
+          const left = ((await r.json()) as { credits?: { remaining?: unknown } }).credits?.remaining;
+          return typeof left === "number" && Number.isFinite(left) ? Math.floor(left / PAGE_CREDITS) : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    if (pages.some((p) => p === null)) return this.ceiling;
+    const first = pages.findIndex((p) => (p ?? 0) > 0);
+    if (first < 0) return 0;
+    this.active = first;
+    const d = new Date(now);
+    const refill = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    const daysLeft = Math.max(1, Math.ceil((refill - now) / 86_400_000));
+    return Math.min(this.ceiling, Math.floor(pages.reduce<number>((n, p) => n + (p ?? 0), 0) / daysLeft));
+  }
+
+  /** `spend: false` answers from what is already read and never pays for a page: the report's summary asks this way. */
+  async of(mint: string, sort: "recent" | "likes" = "likes", spend = true): Promise<{ theses: Thesis[]; status: "ok" | "off" | "budget" | "error" | "idle" }> {
     if (!this.enabled) return { theses: [], status: "off" };
     const hit = this.cache.get(mint);
     const fresh = hit && Date.now() - hit.at < TTL ? hit : null;
     const list = (h: typeof hit) => [...(h?.theses.values() ?? [])].sort((a, b) => b.at - a.at);
     if (fresh?.sorts.has(sort)) return { theses: list(fresh), status: "ok" };
+    if (!spend) return { theses: list(hit), status: "idle" };
     const today = new Date().toISOString().slice(0, 10);
-    if (today !== this.day) (this.day = today), (this.spent = 0);
+    if (today !== this.day) {
+      this.day = today;
+      this.spent = 0;
+      this.dailyBudget = await this.allowance(Date.now());
+    }
     if (this.spent >= this.dailyBudget) return { theses: list(hit), status: "budget" };
     this.spent++;
     try {

@@ -46,7 +46,7 @@ export function Report({ r, onPick }: { r: XRayReport; onPick: (mint: string) =>
   };
   const [tab, setTab] = useState<Tab>(askedTab);
   const market = useMarket(r.mint);
-  const calls = useCalls(r.mint);
+  const calls = useCalls(r.mint, tab === "calls");
   const callLine = callsLine(r, calls);
   const [sel, setSelState] = useState<string | null>(null);
   // Where the wallet was picked: on the map its dossier opens beside the map, in the list it opens under its row.

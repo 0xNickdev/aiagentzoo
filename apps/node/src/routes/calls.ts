@@ -91,7 +91,8 @@ export async function callRoutes(_ctx: RouteContext, req: IncomingMessage, res: 
   const s = sources();
   // A young coin is read newest first; an older one by likes, where the theses that mattered sit.
   const age = tape.facts(mint, Date.now(), true)?.ageMin ?? Infinity;
-  const theses = await s.fomo.of(mint, age < 120 ? "recent" : "likes");
+  // The summary of a report asks with ?theses=cached and costs nothing; a page is paid for when the calls tab is opened.
+  const theses = await s.fomo.of(mint, age < 120 ? "recent" : "likes", url.searchParams.get("theses") !== "cached");
   // Each caller's wallet against the tape: did it buy this coin, when, and has it sold out since.
   const callouts = (s.feed?.of(mint) ?? []).map((c) => {
     const b = c.wallet ? tape.buyerOf(mint, c.wallet) : null;

@@ -43,23 +43,24 @@ export interface Thesis {
 export interface Calls {
   callouts: Callout[];
   theses: Thesis[];
-  thesesStatus: "ok" | "off" | "budget" | "error";
+  thesesStatus: "ok" | "off" | "budget" | "error" | "idle";
 }
 
 /** Callouts and theses for a coin, from the node. Null until it answers; an old node without the route answers nothing. */
-export function useCalls(mint: string): Calls | null {
+export function useCalls(mint: string, full = true): Calls | null {
   const [c, setC] = useState<Calls | null>(null);
+  useEffect(() => setC(null), [mint]);
   useEffect(() => {
-    setC(null);
     let gone = false;
-    fetch(`${NORTH}/v1/calls/${mint}`, { signal: AbortSignal.timeout(10_000) })
+    // The summary asks for what the node already holds; FOMO theses are read (and paid for) when the calls tab opens.
+    fetch(`${NORTH}/v1/calls/${mint}${full ? "" : "?theses=cached"}`, { signal: AbortSignal.timeout(10_000) })
       .then((r) => (r.ok ? r.json() : null))
       .then((x: Calls | null) => !gone && setC(x ?? { callouts: [], theses: [], thesesStatus: "error" }))
       .catch(() => !gone && setC({ callouts: [], theses: [], thesesStatus: "error" }));
     return () => {
       gone = true;
     };
-  }, [mint]);
+  }, [mint, full]);
   return c;
 }
 
