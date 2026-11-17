@@ -161,6 +161,21 @@ test("a call is followed for 24 hours and lands in its caller's record; a repeat
   assert.equal(r.devDumpedAfter, 1);
 });
 
+test("a compact post whose head carries no call number is read with its caller and wallet", () => {
+  const mint = "4imYg1JtbvaepB2oiep3Te6NW18M2h8pdEPo5BvYpump";
+  const html = `<div class="tgme_widget_message" data-post="pumpfun_lp/1441567"><div class="tgme_widget_message_text js-message_text" dir="auto"><i class="emoji"><b>🚨</b></i> <b>CALLOUT</b> · <b>Dora the Backpacker (&#036;Dora)</b><br/><blockquote>yo</blockquote><br/><i class="emoji"><b>👤</b></i> <b>lollipop12</b> · 7,082 followers · <a href="https://x.com/Echoo99x">@Echoo99x</a><br/><i class="emoji"><b>💰</b></i> MC <b>&#036;8.8K</b> · called at &#036;9.4K · <b>0.94x</b><br/><i class="emoji"><b>🚀</b></i> Pump.fun 53% · <i class="emoji"><b>🕒</b></i> 1 minute ago<br/><code>${mint}</code><br/><i class="emoji"><b>💼</b></i> <code>CoDdw3cAX13dxwahw2C16ohsVhrDdrN3UVb4mvNLo9wD</code></div><div class="tgme_widget_message_footer"><time datetime="2026-11-17T14:53:14+00:00"></time></div></div>`;
+  const c = parseChannel(html)[0]!;
+  assert.equal(c.mint, mint);
+  assert.equal(c.symbol, "Dora");
+  assert.equal(c.text, "yo");
+  assert.equal(c.caller, "lollipop12");
+  assert.equal(c.followers, 7082);
+  assert.equal(c.twitter, "@Echoo99x");
+  assert.equal(c.wallet, "CoDdw3cAX13dxwahw2C16ohsVhrDdrN3UVb4mvNLo9wD");
+  assert.equal(c.calledMcUsd, 9400);
+  assert.equal(c.nth, null);
+});
+
 test("the channel's compact layout is read too, and a post kept without its caller is replaced by the whole one", () => {
   const mint = "2JikijgimhBc3xzzviEh4cJJEV3SzvKi6U8KJbVhpump";
   const html = `<div class="tgme_widget_message" data-post="pumpfun_lp/99"><div class="tgme_widget_message_text js-message_text" dir="auto"><i class="emoji"><b>🚨</b></i> <b>CALLOUT #3</b> · <b>Tim Chip (&#036;CHIP)</b><br/><blockquote>Tim chip is good</blockquote><br/><i class="emoji"><b>👤</b></i> <b>otis93finity</b> · 18,411 followers · <a href="https://x.com/Lolzmag274039">@Lolzmag274039</a><br/><i class="emoji"><b>💰</b></i> MC <b>&#036;6.1K</b> · called at &#036;1.25M · <b>0.78x</b><br/><i class="emoji"><b>🚀</b></i> Pump.fun 39% · <i class="emoji"><b>🕒</b></i> 1 minute ago<br/><code>${mint}</code><br/><i class="emoji"><b>💼</b></i> <code>GDRS2UQfxxzDtjSNFChFiUG4E3Eie8RNeb5dRHWTvBDN</code><br/><i>6 minutes ago: This should be runner</i></div><div class="tgme_widget_message_footer"><time datetime="2026-11-12T16:00:00+00:00"></time></div></div>`;

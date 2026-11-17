@@ -71,10 +71,12 @@ const B58 = "[1-9A-HJ-NP-Za-km-z]{32,44}";
 /**
  * The channel's layout since 11 Nov 2026: "CALLOUT #3 · Name ($SYM)", the call's text, then one line each for the
  * caller (name · followers · @x), the caps (MC · called at), the coin, and the caller's wallet after a briefcase.
+ * Since 12 Nov the head has no number: "CALLOUT · Name ($SYM)".
  */
+const COMPACT = /CALLOUT\s*(?:#\d+\s*)?·/;
 function parseCompact(text: string, id: number, postedAt: number): Callout | null {
   const lines = text.split("\n").map((l) => l.trim());
-  const head = /CALLOUT\s*#(\d+)\s*·\s*(.*)$/.exec(lines.find((l) => /CALLOUT\s*#\d+\s*·/.test(l)) ?? "");
+  const head = /CALLOUT\s*(?:#(\d+)\s*)?·\s*(.*)$/.exec(lines.find((l) => COMPACT.test(l)) ?? "");
   const mint = lines.find((l) => new RegExp(`^${B58}$`).test(l));
   if (!head || !mint) return null;
   const whoAt = lines.findIndex((l) => l.startsWith("👤"));
@@ -82,7 +84,7 @@ function parseCompact(text: string, id: number, postedAt: number): Callout | nul
   const caps = lines.find((l) => l.startsWith("💰")) ?? "";
   const ago = /🕒\s*(\d+|a|an)\s*(second|minute|hour|day)s?\s+ago/i.exec(text);
   const back = ago ? (/^\d+$/.test(ago[1]!) ? Number(ago[1]) : 1) * (AGO[ago[2]!.toLowerCase()] ?? 0) : 0;
-  const headAt = lines.findIndex((l) => /CALLOUT\s*#\d+\s*·/.test(l));
+  const headAt = lines.findIndex((l) => COMPACT.test(l));
   const said = cleanMentions(lines.slice(headAt + 1, whoAt < 0 ? headAt + 1 : whoAt).join("\n").trim());
   return {
     post: id,
@@ -112,7 +114,7 @@ export function parseChannel(html: string): Callout[] {
     const end = block.indexOf("tgme_widget_message_footer", start);
     const text = strip(block.slice(block.indexOf(">", start) + 1, end > 0 ? end : undefined));
     if (!/CALLOUT/.test(text)) continue;
-    if (/CALLOUT\s*#\d+\s*·/.test(text)) {
+    if (COMPACT.test(text)) {
       const stamp = /<time datetime="([^"]+)"/.exec(block)?.[1];
       const c = parseCompact(text, Number(id[1]), stamp ? Date.parse(stamp) : Date.now());
       if (c) out.push(c);
