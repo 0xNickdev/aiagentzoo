@@ -159,13 +159,20 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   let supplyNow: number | null = null;
   const supply = async () => {
     if (Date.now() - supplyAt < 10 * 60_000) return supplyNow;
-    supplyAt = Date.now();
-    try {
-      const r = await f(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenSupply", params: [mint] }), signal: AbortSignal.timeout(8_000) });
-      const v = ((await r.json()) as { result?: { value?: { uiAmount?: number } } }).result?.value?.uiAmount;
-      if (v) supplyNow = v;
-    } catch {
-      /* keep the last one */
+    // A read that failed is asked again in half a minute, not in ten: without the supply a post has no market cap.
+    supplyAt = Date.now() - 10 * 60_000 + 30_000;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await f(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenSupply", params: [mint] }), signal: AbortSignal.timeout(8_000) });
+        const v = ((await r.json()) as { result?: { value?: { uiAmount?: number } } }).result?.value?.uiAmount;
+        if (v) {
+          supplyNow = v;
+          supplyAt = Date.now();
+          break;
+        }
+      } catch {
+        /* keep the last one */
+      }
     }
     return supplyNow;
   };
