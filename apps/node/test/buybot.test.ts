@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PumpTape } from "../src/chain/pump.ts";
-import { bills, buyMessage, compact, holderLine } from "../src/buybot.ts";
+import { bills, buyMessage, compact, holderLine, ownEmoji } from "../src/buybot.ts";
 
 const POOL = "CpZyjihejMJ8i6xRFL6Znmpt4HdgGirMvQh5QqdgJZ2v";
 const MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -48,4 +48,9 @@ test("a buy message has the size, the buyer, the cap and no ads", () => {
   assert.doesNotMatch(text, /Price/);
   assert.match(text, /Market Cap \$17K/);
   assert.doesNotMatch(text, /Volume Bot|Marketing|trending/i);
+});
+
+test("our own emoji wrap the plain ones, which stay inside as the fallback, and leave the rest of the post alone", () => {
+  const out = ownEmoji("💰💰\n📈 Market Cap $30.4K <b>x</b> 🚀");
+  assert.equal(out, '<tg-emoji emoji-id="5469812130456841247">💰</tg-emoji><tg-emoji emoji-id="5469812130456841247">💰</tg-emoji>\n<tg-emoji emoji-id="5469737243407065908">📈</tg-emoji> Market Cap $30.4K <b>x</b> 🚀');
 });

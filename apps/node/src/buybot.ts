@@ -67,6 +67,23 @@ export function bills(sol: number): string {
   return "💰".repeat(Math.max(1, Math.min(40, Math.round(sol * 10))));
 }
 
+/** Our own emoji pack (t.me/addemoji/zooagency): the plain emoji stays inside as what a client without them shows. */
+const OWN: Record<string, string> = {
+  "💰": "5469812130456841247",
+  "💲": "5472354184160389247",
+  "🪙": "5471945741360476628",
+  "👀": "5469671534702404076",
+  "🆕": "5471901481722489818",
+  "👜": "5472129205183490372",
+  "📈": "5469737243407065908",
+  "📊": "5471971433854838060",
+  "🛒": "5472194346952466853",
+  "🔎": "5469955131392961273",
+};
+export function ownEmoji(html: string): string {
+  return html.replace(/💰|💲|🪙|👀|🆕|👜|📈|📊|🛒|🔎/gu, (e) => `<tg-emoji emoji-id="${OWN[e]}">${e}</tg-emoji>`);
+}
+
 export function buyMessage(f: BuyFacts): string {
   const s = f.swap;
   const price = s.tokens > 0 ? s.sol / s.tokens : 0;
@@ -92,18 +109,22 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   const symbol = opts.symbol ?? "ZOOAGENCY";
   const minSol = opts.minSol ?? 1;
   // Telegram colours buttons with a style (green for buy, blue for ours); older clients just ignore it.
-  const keyboard = [
+  const buttons: { icon: string; text: string; url: string; style?: string }[][] = [
     [
-      { text: `🛒 Buy $${symbol}`, url: `https://jup.ag/swap/SOL-${mint}`, style: "success" },
-      { text: "📈 Chart", url: `https://dexscreener.com/solana/${mint}` },
+      { icon: "🛒", text: `Buy $${symbol}`, url: `https://jup.ag/swap/SOL-${mint}`, style: "success" },
+      { icon: "📊", text: "Chart", url: `https://dexscreener.com/solana/${mint}` },
     ],
-    [{ text: "🔎 X-Ray any coin before you ape", url: `${SITE}/xray`, style: "primary" }],
+    [{ icon: "🔎", text: "X-Ray any coin before you ape", url: `${SITE}/xray`, style: "primary" }],
   ];
+  // With our own icons, with colours only, or plain: each step down is taken once Telegram refuses or drops the step above.
+  const iconed = buttons.map((row) => row.map(({ icon, ...b }) => ({ ...b, icon_custom_emoji_id: OWN[icon] })));
+  const keyboard = buttons.map((row) => row.map(({ icon, text, ...b }) => ({ ...b, text: `${icon} ${text}` })));
 
+  type Sent = { entities?: { type: string }[]; caption_entities?: { type: string }[]; reply_markup?: { inline_keyboard?: { icon_custom_emoji_id?: string }[][] } };
   const tg = async (method: string, body: Record<string, unknown>) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const r = await f(`${API}/bot${opts.token}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000) });
-      const out = (await r.json()) as { ok: boolean; description?: string; parameters?: { retry_after?: number } };
+      const out = (await r.json()) as { ok: boolean; description?: string; parameters?: { retry_after?: number }; result?: Sent };
       if (out.ok) return out;
       // Telegram asks for a pause when a group gets many posts at once.
       const wait = out.parameters?.retry_after;
@@ -113,14 +134,16 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
     throw new Error(`telegram ${method}: still limited`);
   };
   let styled = true;
+  let icons = true;
+  let told = false;
   const plain = keyboard.map((row) => row.map(({ style: _style, ...button }) => button));
   const send = async (text: string) => {
-    const base = { chat_id: opts.chat, parse_mode: "HTML", reply_markup: { inline_keyboard: styled ? keyboard : plain }, ...(opts.thread ? { message_thread_id: opts.thread } : {}) };
+    const base = { chat_id: opts.chat, parse_mode: "HTML", reply_markup: { inline_keyboard: styled ? (icons ? iconed : keyboard) : plain }, ...(opts.thread ? { message_thread_id: opts.thread } : {}) };
     if (opts.image) {
       try {
         return await tg("sendPhoto", { ...base, photo: opts.image, caption: text });
       } catch (error) {
-        if (/button|style|markup/i.test((error as Error).message)) throw error;
+        if (/button|style|markup|icon|emoji|entit/i.test((error as Error).message)) throw error;
         log(`[buybot] picture failed, posting text: ${(error as Error).message}`);
       }
     }
@@ -128,10 +151,22 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   };
   const post = async (text: string) => {
     try {
-      return await send(text);
+      const out = await send(text);
+      const sent = out.result;
+      // Telegram answers with what it kept: icons it dropped go back into the button text from the next post on.
+      if (icons && styled && sent && !sent.reply_markup?.inline_keyboard?.some((row) => row.some((b) => b.icon_custom_emoji_id))) {
+        icons = false;
+        log("[buybot] button icons were dropped by Telegram, the emoji go back into the text");
+      }
+      if (!told && sent && text.includes("<tg-emoji")) {
+        told = true;
+        const kept = [...(sent.entities ?? []), ...(sent.caption_entities ?? [])].filter((e) => e.type === "custom_emoji").length;
+        log(`[buybot] own emoji kept by Telegram: ${kept}`);
+      }
+      return out;
     } catch (error) {
       // A Telegram that does not know coloured buttons: from now on without colours.
-      if (!styled || !/button|style|markup/i.test((error as Error).message)) throw error;
+      if (!styled || !/button|style|markup|icon/i.test((error as Error).message)) throw error;
       styled = false;
       log(`[buybot] coloured buttons refused, posting plain ones: ${(error as Error).message}`);
       return send(text);
@@ -196,7 +231,10 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
       for (const swap of buys.slice(0, PER_ROUND)) {
         const balance = await balanceOf(swap.user, f, Date.now(), true);
         const text = buyMessage({ swap, symbol, mint, balance, solUsd: usdNow, supply: supplyNow });
-        await post(text).catch((e) => log(`[buybot] post failed: ${(e as Error).message}`));
+        // Our own emoji first; a Telegram that will not parse them gets the plain ones.
+        await post(ownEmoji(text))
+          .catch((e) => (/emoji|entit|parse/i.test((e as Error).message) ? post(text) : Promise.reject(e)))
+          .catch((e) => log(`[buybot] post failed: ${(e as Error).message}`));
       }
       const rest = buys.slice(PER_ROUND);
       if (rest.length) {
