@@ -1,6 +1,6 @@
 import type { StateStore } from "@aiagentzoo/sdk";
 import type { FollowedSwap } from "./chain/pump.ts";
-import { balanceOf, TOKEN_MINT } from "./holders.ts";
+import { balanceOf, rpcRead, TOKEN_MINT } from "./holders.ts";
 
 /**
  * The buy bot in the holders' group: every buy of $ZOOAGENCY above a floor, posted by the zoo's own Telegram bot.
@@ -10,7 +10,6 @@ import { balanceOf, TOKEN_MINT } from "./holders.ts";
 
 const API = "https://api.telegram.org";
 const SITE = "https://zooaiagency.com";
-const RPC = process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 /** At most this many buys posted one by one per round; the rest are summed in one line. */
 const PER_ROUND = 6;
 
@@ -192,18 +191,10 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
     if (Date.now() - supplyAt < 10 * 60_000) return supplyNow;
     // A read that failed is asked again in half a minute, not in ten: without the supply a post has no market cap.
     supplyAt = Date.now() - 10 * 60_000 + 30_000;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const r = await f(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenSupply", params: [mint] }), signal: AbortSignal.timeout(8_000) });
-        const v = ((await r.json()) as { result?: { value?: { uiAmount?: number } } }).result?.value?.uiAmount;
-        if (v) {
-          supplyNow = v;
-          supplyAt = Date.now();
-          break;
-        }
-      } catch {
-        /* keep the last one */
-      }
+    const v = (await rpcRead<{ value?: { uiAmount?: number } }>("getTokenSupply", [mint], f))?.value?.uiAmount;
+    if (v) {
+      supplyNow = v;
+      supplyAt = Date.now();
     }
     return supplyNow;
   };
