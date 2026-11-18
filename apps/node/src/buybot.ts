@@ -67,9 +67,6 @@ export function bills(sol: number): string {
   return "💰".repeat(Math.max(1, Math.min(40, Math.round(sol * 10))));
 }
 
-/** 0.0000180583 -> $0.0000180583: six significant digits, never in exponent form. */
-const priceUsd = (n: number) => `$${n.toFixed(Math.max(2, 5 - Math.floor(Math.log10(n))))}`;
-
 export function buyMessage(f: BuyFacts): string {
   const s = f.swap;
   const price = s.tokens > 0 ? s.sol / s.tokens : 0;
@@ -84,7 +81,6 @@ export function buyMessage(f: BuyFacts): string {
     `🪙 ${compact(s.tokens)} ${esc(f.symbol)}`,
     `👀 ${wallet}${s.tx ? ` | <a href="https://solscan.io/tx/${s.tx}">Txn</a>` : ""}`,
     ...(holder ? [holder === "new holder" ? "🆕 New holder!" : `👜 ${holder[0]!.toUpperCase()}${holder.slice(1)}`] : []),
-    ...(f.solUsd && price ? [`📊 Price ${priceUsd(price * f.solUsd)}`] : []),
     ...(cap ? [`📈 Market Cap ${usd(cap)}`] : []),
   ].join("\n");
 }

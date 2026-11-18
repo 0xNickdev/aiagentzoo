@@ -45,7 +45,7 @@ test("a buy message has the size, the buyer, the cap and no ads", () => {
   assert.match(text, /6\.14M ZOOAGENCY/);
   assert.match(text, /WsUA…agTN<\/a> \| <a href="https:\/\/solscan\.io\/tx\/sig">Txn<\/a>/);
   assert.match(text, /New holder!/);
-  assert.match(text, /Price \$0\.0000180\d+/);
+  assert.doesNotMatch(text, /Price/);
   assert.match(text, /Market Cap \$17K/);
   assert.doesNotMatch(text, /Volume Bot|Marketing|trending/i);
 });
