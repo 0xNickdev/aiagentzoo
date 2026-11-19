@@ -850,7 +850,9 @@ export function evolutionAgent(cfg: EvolutionConfig): AgentDefinition {
             // Verdicts stay sealed while holders can still answer the same exam; the hash commits to them until grading.
             await ctx.trace("evo.answered", { id: c.id, name: c.name, count: parsed.length, sealed: sealed(parsed) });
           } catch (error) {
-            await ctx.trace("evo.answer.skipped", { id: c.id, reason: (error as Error).message.slice(0, 200) });
+            // The time goes in so a model that is down for hours is not read as the agent spinning: it must keep
+            // waking to set the next exam and to answer once the model is back.
+            await ctx.trace("evo.answer.skipped", { id: c.id, at: ctx.now, reason: (error as Error).message.slice(0, 200) });
             break;
           }
         }
