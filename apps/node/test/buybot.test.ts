@@ -52,5 +52,5 @@ test("a buy message has the size, the buyer, the cap and no ads", () => {
 
 test("our own emoji wrap the plain ones, which stay inside as the fallback, and leave the rest of the post alone", () => {
   const out = ownEmoji("💰💰\n📈 Market Cap $30.4K <b>x</b> 🚀");
-  assert.equal(out, '<tg-emoji emoji-id="5469812130456841247">💰</tg-emoji><tg-emoji emoji-id="5469812130456841247">💰</tg-emoji>\n<tg-emoji emoji-id="5469737243407065908">📈</tg-emoji> Market Cap $30.4K <b>x</b> 🚀');
+  assert.equal(out, '<tg-emoji emoji-id="5472307506455817334">💰</tg-emoji><tg-emoji emoji-id="5472307506455817334">💰</tg-emoji>\n<tg-emoji emoji-id="5469737243407065908">📈</tg-emoji> Market Cap $30.4K <b>x</b> 🚀');
 });

@@ -68,7 +68,7 @@ export function bills(sol: number): string {
 
 /** Our own emoji pack (t.me/addemoji/zooagency): the plain emoji stays inside as what a client without them shows. */
 const OWN: Record<string, string> = {
-  "💰": "5469812130456841247",
+  "💰": "5472307506455817334",
   "💲": "5472354184160389247",
   "🪙": "5471945741360476628",
   "👀": "5469671534702404076",
