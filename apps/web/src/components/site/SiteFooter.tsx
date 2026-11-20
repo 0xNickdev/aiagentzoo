@@ -74,7 +74,8 @@ export default function SiteFooter() {
               </ul>
             </nav>
           ))}
-          <TokenCard id="footer-ca" className="self-start" />
+          {/* The home page has its own $ZOOAGENCY panel right above, so the footer card stays off there. */}
+          {typeof window !== "undefined" && window.location.pathname === "/" ? null : <TokenCard id="footer-ca" className="self-start" />}
         </div>
         <div className="mt-12 flex flex-wrap items-end justify-between gap-3 border-t border-line py-5 text-[12px] text-faint">
           <span>ZOOAI AGENCY · 2026 · MIT</span>
