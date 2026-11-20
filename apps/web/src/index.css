@@ -24,6 +24,8 @@ body {
 html,
 body {
   overflow-x: hidden;
+  /* clip, not hidden, where it is supported: hidden makes the body a scroll box and breaks position: sticky */
+  overflow-x: clip;
 }
 
 /* Display type: a tight grotesque for headings. */
@@ -155,4 +157,20 @@ body {
 /* With motion off the strip stands still and scrolls by hand instead. */
 @media (prefers-reduced-motion: reduce) {
   .marquee { overflow-x: auto; }
+}
+
+/* The home's story: a quiet scroll cue under the hero, and headings that rise out of a mask as they come into view. */
+@keyframes scroll-cue {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+.scroll-cue { animation: scroll-cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.rv { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.rv > span { display: inline-block; transform: translateY(105%); color: #4a524e; transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), color 1.1s ease 0.25s; }
+.rv[data-in] > span { transform: none; color: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue { animation: none; }
+  .rv > span { transform: none; color: inherit; transition: none; }
 }

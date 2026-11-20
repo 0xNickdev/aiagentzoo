@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { BOT_URL, EXTENSION_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../links";
 import { t } from "../i18n";
 import { num } from "../format";
 import { ago, compact, SITE_XRAY, useNorth, useNow } from "../components/home/live";
 import { More, Panel, Tile } from "../components/site/Panel";
 import { CaRow, BuyButton, TokenDot } from "../components/site/ZooToken";
-import Hero from "../components/home/Hero";
-import HowItWorks from "../components/home/HowItWorks";
+import Story from "../components/home/Story";
 import { opponentOf, pct, timeLeft, type HumansView, useContestApi, type Weekly } from "../components/contests/data";
 
 /* ---------- what the home reads ---------- */
@@ -54,6 +53,56 @@ const VERDICT: Record<FeedVerdict, { label: string; dot: string; text: string }>
 
 const clean = (s: string) => s.replace(/^\$+/, "").replace(/[\sㅤᅟᅠ​-‍﻿]+/g, " ").trim();
 
+/** A heading that rises out of its mask and inks in, once, when it scrolls into view. */
+function Reveal({ children }: { children: ReactNode }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const e = el.current;
+    if (!e) return;
+    const io = new IntersectionObserver(
+      ([x]) => {
+        if (!x?.isIntersecting) return;
+        e.setAttribute("data-in", "");
+        io.disconnect();
+      },
+      { rootMargin: "0px 0px -8% 0px" },
+    );
+    io.observe(e);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <span ref={el} className="rv">
+      <span>{children}</span>
+    </span>
+  );
+}
+
+/** How far an element has come up through the viewport, 0..1, for drawing on scroll. */
+function useScrollIn<T extends HTMLElement>() {
+  const el = useRef<T>(null);
+  const [k, setK] = useState(() => (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0));
+  useEffect(() => {
+    const e = el.current;
+    if (!e || k === 1) return;
+    let raf = 0;
+    const read = () => {
+      raf = 0;
+      const r = e.getBoundingClientRect();
+      setK(Math.min(1, Math.max(0, (innerHeight - r.top) / (innerHeight * 0.55))));
+    };
+    const on = () => {
+      if (!raf) raf = requestAnimationFrame(read);
+    };
+    addEventListener("scroll", on, { passive: true });
+    read();
+    return () => {
+      removeEventListener("scroll", on);
+      cancelAnimationFrame(raf);
+    };
+  }, [k]);
+  return [el, k] as const;
+}
+
 /* ---------- the numbers ---------- */
 
 function Numbers({ usage, chain, record }: { usage: Usage | null; chain: Chain | null; record: CheckRecord | null }) {
@@ -65,7 +114,7 @@ function Numbers({ usage, chain, record }: { usage: Usage | null; chain: Chain |
   ].filter(Boolean) as Array<{ k: string; v: string; sub?: string; tone?: "danger" }>;
   if (tiles.length < 2) return null;
   return (
-    <Panel title={t("In numbers")} meta={t("live from the node")} className="lg:col-span-4" bodyClass="grid grid-cols-2">
+    <Panel title={<Reveal>{t("In numbers")}</Reveal>} meta={t("live from the node")} className="lg:col-span-4" bodyClass="grid grid-cols-2">
       {tiles.map((x, i) => (
         <Tile key={x.k} k={x.k} v={x.v} sub={x.sub} tone={x.tone ?? "fg"} className={`border-line ${i % 2 ? "" : "border-r"} ${i < tiles.length - 2 || (tiles.length % 2 === 1 && i < tiles.length - 1) ? "border-b" : ""}`} />
       ))}
@@ -84,20 +133,21 @@ const AUC = [
 function Record({ record }: { record: CheckRecord | null }) {
   const read = record ? record.flaggedAvoid.n - (record.flaggedAvoid.unread ?? 0) : 0;
   const deadShare = record && read ? record.flaggedAvoid.dead / read : null;
+  const [bars, k] = useScrollIn<HTMLDivElement>();
   return (
-    <Panel title={t("Track record")} meta={t("odds vs verdict · AUC, published 28 Oct")} className="lg:col-span-8" bodyClass={`grid grid-cols-1 ${deadShare !== null ? "md:grid-cols-2" : ""}`}>
+    <Panel title={<Reveal>{t("Track record")}</Reveal>} meta={t("odds vs verdict · AUC, published 28 Oct")} className="lg:col-span-8" bodyClass={`grid grid-cols-1 ${deadShare !== null ? "md:grid-cols-2" : ""}`}>
       <div className="p-3.5">
       <p className="text-[12.5px] leading-[1.45] text-dim">{t("How well each ranks the coins that lived above the ones that died. 0.5 is a coin flip, 1 is perfect.")}</p>
-      <div className="mt-4 grid gap-3.5">
+      <div ref={bars} className="mt-4 grid gap-3.5">
         {AUC.map((a) => (
           <div key={a.k}>
             <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
               <span className="text-fg-2">{t(a.k)}</span>
-              <span className={`text-[22px] font-medium leading-none tracking-[-0.03em] ${a.text}`}>{a.v.toFixed(2)}</span>
+              <span className={`text-[22px] font-medium leading-none tracking-[-0.03em] ${a.text}`}>{(0.5 + (a.v - 0.5) * k).toFixed(2)}</span>
             </div>
             {/* Scale 0.5 to 1: the bar's length is how far past a coin flip it ranks. */}
             <div className="relative h-2 rounded-sm bg-night-raised">
-              <div className={`absolute inset-y-0 left-0 rounded-sm ${a.tone}`} style={{ width: `${((a.v - 0.5) / 0.5) * 100}%` }} />
+              <div className={`absolute inset-y-0 left-0 rounded-sm ${a.tone}`} style={{ width: `${((a.v - 0.5) / 0.5) * 100 * k}%` }} />
             </div>
           </div>
         ))}
@@ -150,7 +200,7 @@ function LiveStrip({ coins, live }: { coins: FeedCoin[]; live: boolean }) {
       title={
         <span className="flex items-center gap-2">
           <span className={`h-1.5 w-1.5 rounded-full ${live ? "live-dot bg-moss" : "bg-warn"}`} />
-          {t("Live feed")}
+          <Reveal>{t("Live feed")}</Reveal>
         </span>
       }
       meta={t("{n} fresh pump.fun launches · avoid already taken out", { n: coins.length })}
@@ -194,7 +244,7 @@ function Contests({ humans, weekly }: { humans: HumansView | null; weekly: Weekl
   const ends = weekly?.week.endsAt ?? humans?.week.endsAt;
   return (
     <Panel
-      title={t("Contests")}
+      title={<Reveal>{t("Contests")}</Reveal>}
       meta={ends ? t("this week ends in {t}", { t: timeLeft(ends, now) }) : undefined}
       action={<More href="/contests">{t("All standings →")}</More>}
       className="lg:col-span-8"
@@ -242,7 +292,7 @@ function Contests({ humans, weekly }: { humans: HumansView | null; weekly: Weekl
 
 function Token({ wide }: { wide: boolean }) {
   return (
-    <Panel title={<span className="flex items-center gap-2"><TokenDot />$ZOOAGENCY</span>} meta={t("on ClawPump")} className={wide ? "lg:col-span-12" : "lg:col-span-4"} bodyClass={wide ? "grid grid-cols-1 gap-x-6 p-3.5 md:grid-cols-2" : "flex flex-col p-3.5"}>
+    <Panel title={<span className="flex items-center gap-2"><TokenDot /><Reveal>$ZOOAGENCY</Reveal></span>} meta={t("on ClawPump")} className={wide ? "lg:col-span-12" : "lg:col-span-4"} bodyClass={wide ? "grid grid-cols-1 gap-x-6 p-3.5 md:grid-cols-2" : "flex flex-col p-3.5"}>
       <ul className="border-t border-line">
         {["Pro at half price", "The weekly human contest", "Bot alerts 10 minutes first"].map((f) => (
           <li key={f} className="flex items-baseline justify-between gap-3 border-b border-line py-1.5 text-[12.5px]">
@@ -263,7 +313,7 @@ function Token({ wide }: { wide: boolean }) {
   );
 }
 
-/** The home: the hero with the scene and the search, how it works, then the tape, the numbers, the record and the rest. Every number is read live; a part that cannot be read is left out. */
+/** The home: the hero and the scroll story of one real token on one pinned stage, then the tape, the numbers, the record and the rest. Every number is read live; a part that cannot be read is left out. */
 export default function Home() {
   const feedBody = useNorth<FeedBody>("/v1/chain/feed", 15_000);
   const usage = useNorth<Usage>("/v1/usage", 120_000);
@@ -279,18 +329,11 @@ export default function Home() {
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 30);
   }, [feedBody]);
-  // One coin for the examples, picked once: the newest that is past its first five minutes, so its odds are the 5-minute ones.
-  const [sample, setSample] = useState<FeedCoin | undefined>();
-  useEffect(() => {
-    if (sample || !coins.length) return;
-    setSample(coins.find((c) => Date.now() - c.createdAt > 5 * 60_000) ?? coins[0]);
-  }, [coins, sample]);
 
   return (
     <>
-      <Hero chain={chain} sample={coins[0]} />
+      <Story chain={chain} sample={coins[0]} />
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-3 px-4 pb-8 pt-4 sm:px-5 lg:grid-cols-12">
-        <HowItWorks sample={sample} />
         <LiveStrip coins={coins} live={!!feedBody?.stream?.live} />
         <Record record={record} />
         <Numbers usage={usage} chain={chain} record={record} />
