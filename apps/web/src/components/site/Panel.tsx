@@ -24,7 +24,7 @@ export function Panel({
     <section id={id} className={`flex min-w-0 scroll-mt-20 flex-col rounded-[12px] border border-line bg-night-surface ${className}`}>
       <div className="flex h-10 shrink-0 items-center gap-2.5 border-b border-line px-3.5">
         <h2 className="whitespace-nowrap text-[13px] font-medium text-white">{title}</h2>
-        {tag && <span className="rounded-[4px] border border-moss-edge px-[5px] text-[10.5px] leading-4 text-moss">{tag}</span>}
+        {tag && <span className="rounded-[4px] border border-lit-edge px-[5px] text-[10.5px] leading-4 text-lit">{tag}</span>}
         {meta && <span className="ml-auto min-w-0 truncate text-[11.5px] text-faint">{meta}</span>}
         {action && <span className={`${meta ? "" : "ml-auto"} shrink-0 text-[11.5px]`}>{action}</span>}
       </div>
@@ -34,15 +34,15 @@ export function Panel({
 }
 
 /** A labelled number over a thin meter, as in the dashboard's "Right now" tiles. */
-export function Tile({ k, v, sub, tone = "fg", meter, className = "" }: { k: string; v: ReactNode; sub?: ReactNode; tone?: "fg" | "danger" | "warn" | "moss"; meter?: number | null; className?: string }) {
-  const color = { fg: "text-white", danger: "text-danger", warn: "text-warn", moss: "text-moss" }[tone];
+export function Tile({ k, v, sub, tone = "fg", meter, className = "" }: { k: string; v: ReactNode; sub?: ReactNode; tone?: "fg" | "danger" | "warn" | "lit"; meter?: number | null; className?: string }) {
+  const color = { fg: "text-white", danger: "text-danger", warn: "text-warn", lit: "text-lit" }[tone];
   return (
     <div className={`flex min-h-[92px] min-w-0 flex-col justify-between gap-2.5 p-3.5 ${className}`}>
       <span className="text-[12px] text-dim">{k}</span>
       <span className={`text-[28px] font-medium leading-none tracking-[-0.035em] ${color}`}>{v}</span>
       {meter != null && (
         <span className="block h-[3px] overflow-hidden rounded-sm bg-night-raised">
-          <span className={`block h-full ${tone === "fg" ? "bg-dim" : tone === "danger" ? "bg-danger" : tone === "warn" ? "bg-warn" : "bg-moss"}`} style={{ width: `${Math.max(1, Math.min(100, meter * 100))}%` }} />
+          <span className={`block h-full ${tone === "fg" ? "bg-dim" : tone === "danger" ? "bg-danger" : tone === "warn" ? "bg-warn" : "bg-lit"}`} style={{ width: `${Math.max(1, Math.min(100, meter * 100))}%` }} />
         </span>
       )}
       {sub && <span className="truncate text-[11.5px] text-faint">{sub}</span>}
@@ -76,9 +76,9 @@ export function Page({ title, lead, side, children }: { title: ReactNode; lead?:
   );
 }
 
-/** A quiet button in the dashboard's style; `primary` is the moss one. */
+/** A quiet button in the dashboard's style; `primary` is the white one. */
 export function Btn({ href, onClick, primary, children, className = "" }: { href?: string; onClick?: () => void; primary?: boolean; children: ReactNode; className?: string }) {
-  const cls = `${primary ? "btn-moss" : "border border-line-2 bg-night-raised text-white hover:border-[#3a4640]"} inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] px-3 text-[12.5px] font-medium ${className}`;
+  const cls = `${primary ? "btn-primary" : "border border-line-2 bg-transparent text-white hover:border-[#4a524e]"} inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] px-3 text-[12.5px] font-medium ${className}`;
   if (href) {
     const ext = href.startsWith("http");
     return (

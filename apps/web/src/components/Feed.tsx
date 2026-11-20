@@ -122,7 +122,7 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
     }
   };
   return (
-    <button type="button" onClick={go} disabled={busy !== null} className="btn-moss h-8 shrink-0 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
+    <button type="button" onClick={go} disabled={busy !== null} className="btn-primary h-8 shrink-0 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
       {busy ?? t("Buy {s}", { s: amount })}
     </button>
   );
@@ -183,14 +183,14 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
         {swapEnabled() && <Buy coin={c} amount={amount} onState={onState} />}
       </div>
       <div className="mt-2.5 flex items-center gap-2.5">
-        <span className={`inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[4px] border px-1.5 text-[11.5px] font-medium ${pass ? "border-moss-edge text-moss" : "border-[#4a3a22] text-warn"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${pass ? "bg-moss" : "bg-warn"}`} />
+        <span className={`inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[4px] border px-1.5 text-[11.5px] font-medium ${pass ? "border-lit-edge text-lit" : "border-[#4a3a22] text-warn"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${pass ? "bg-lit" : "bg-warn"}`} />
           {pass ? t("no red flags") : t("caution")}
           {c.odds && Number.isFinite(c.odds.run) ? <span className="font-normal text-fg-2">· {t("{p}% alive tomorrow", { p: oddsPct(c.odds.run) })}</span> : null}
         </span>
         {!c.graduated && (
           <span className="h-[3px] flex-1 overflow-hidden rounded-sm bg-night-raised" title={t("bonding curve")}>
-            <span className="block h-full bg-[#5d6b63]" style={{ width: `${Math.round(c.progress * 100)}%` }} />
+            <span className="block h-full bg-[#59605c]" style={{ width: `${Math.round(c.progress * 100)}%` }} />
           </span>
         )}
         {c.graduated && <span className="flex-1 truncate text-[11.5px] text-dim">{t("graduated")}</span>}
@@ -243,7 +243,7 @@ export default function Feed() {
       side={
         <>
           <span className="flex items-center gap-2 text-[12px] text-dim">
-            <span className={`h-1.5 w-1.5 rounded-full ${data?.stream.live ? "animate-pulse bg-moss" : "bg-warn"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${data?.stream.live ? "animate-pulse bg-lit" : "bg-warn"}`} />
             {t("Live feed · fresh Solana launches · avoid is never shown")}
           </span>
           <div className="flex rounded-[7px] border border-line p-0.5 text-[12px]">
@@ -255,7 +255,7 @@ export default function Feed() {
             </button>
           </div>
           {swapEnabled() && (
-            <label className="flex h-8 items-center gap-2 rounded-[7px] border border-line px-2.5 text-[12px] text-dim focus-within:border-moss-edge">
+            <label className="flex h-8 items-center gap-2 rounded-[7px] border border-line px-2.5 text-[12px] text-dim focus-within:border-lit-edge">
               {t("quick buy")}
               <input
                 value={amount}

@@ -35,10 +35,10 @@ html, body { overflow-x: clip; }
 .doc a:not(.anchor) {
   color: #fff;
   text-decoration: underline;
-  text-decoration-color: #2f4637;
+  text-decoration-color: #333b37;
   text-underline-offset: 4px;
 }
-.doc a:not(.anchor):hover { text-decoration-color: #a6e3b4; }
+.doc a:not(.anchor):hover { text-decoration-color: #f4f5f4; }
 .doc ul, .doc ol { padding-left: 1.3rem; }
 .doc ul { list-style: none; }
 .doc ul > li { position: relative; }
@@ -50,7 +50,7 @@ html, body { overflow-x: clip; }
   width: 5px;
   height: 5px;
   border-radius: 999px;
-  background: #a6e3b4;
+  background: #f4f5f4;
 }
 .doc ol { list-style: decimal; }
 .doc ol > li::marker { color: #b8beba; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.85em; }
@@ -111,7 +111,7 @@ html, body { overflow-x: clip; }
 .doc td { padding: 0.65rem 0.9rem; border-top: 1px solid #18201c; vertical-align: top; }
 .doc blockquote {
   padding: 0.2rem 0 0.2rem 1.1rem;
-  border-left: 2px solid #2f4637;
+  border-left: 2px solid #333b37;
   color: #aab2ad;
 }
 .doc hr { border: 0; border-top: 1px solid #18201c; margin: 2.5rem 0; }

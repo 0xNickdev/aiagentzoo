@@ -221,7 +221,7 @@ export function OddsPanel({ r }: Ctx) {
     );
   }
   const avg = o.average ?? AVG;
-  const color = o.run < avg ? "#ff8a7e" : c.verdict === "pass" ? "#a6e3b4" : "#e6e9e7";
+  const color = o.run < avg ? "#ff5a4f" : c.verdict === "pass" ? "#f4f5f4" : "#e6e9e7";
   return (
     <Pn span="x-s3" title={t("Odds")} meta={t("alive tomorrow · log scale")}>
       <div className="x-gwrap">
@@ -275,7 +275,7 @@ function Tile({ k, v, unit, tone, meter, color }: { k: string; v: string; unit?:
     </div>
   );
 }
-const COL = { d: "var(--danger)", w: "var(--warn)", up: "var(--moss)", "": "var(--fg-3)" } as const;
+const COL = { d: "var(--danger)", w: "var(--warn)", up: "var(--lit)", "": "var(--fg-3)" } as const;
 
 export function RightNowPanel({ r }: Ctx) {
   const c = r.check;
@@ -349,8 +349,8 @@ const spanOf = (s: number) => (s < 120 ? `${s}s` : s < 7200 ? `${Math.round(s / 
 const TL_CLASS = { d: "", g: "ok", a: "al", u: "op" } as const;
 const TL_LEGEND: Array<["d" | "g" | "a" | "u", string, string]> = [
   ["d", "dumped {n}", "var(--danger)"],
-  ["g", "graduated {n}", "var(--moss)"],
-  ["a", "alive {n}", "#5f8a6b"],
+  ["g", "graduated {n}", "var(--lit)"],
+  ["a", "alive {n}", "#6b736f"],
   ["u", "under 15 min {n}", "transparent"],
 ];
 
@@ -380,7 +380,7 @@ function Timeline({ codes, label }: { codes: Array<"d" | "g" | "a" | "u">; label
   );
 }
 
-/** One square per launch: dumped in red, the rest in moss. Without a timeline the node gives counts, not the order, so they are grouped. */
+/** One square per launch: dumped in red, the rest in white. Without a timeline the node gives counts, not the order, so they are grouped. */
 function Squares({ total, dumped, label }: { total: number; dumped: number; label: string }) {
   const per = Math.max(1, Math.ceil(total / 732));
   const n = Math.ceil(total / per);
@@ -396,7 +396,7 @@ function Squares({ total, dumped, label }: { total: number; dumped: number; labe
         <span>
           <i style={{ background: "var(--danger)" }} />
           {t("dumped {n}", { n: dumped.toLocaleString("en-US") })}
-          <i style={{ background: "var(--moss)", marginLeft: 12 }} />
+          <i style={{ background: "var(--lit)", marginLeft: 12 }} />
           {t("did not dump {n}", { n: (total - dumped).toLocaleString("en-US") })}
         </span>
         <span>{per > 1 ? t("one square = {n} launches · {l}", { n: per, l: label }) : t("one square per launch · {l}", { l: label })}</span>
@@ -531,7 +531,7 @@ export function SetupPanel({ r, go, full }: Ctx & { full?: boolean }) {
           <div className="x-donut">
             <svg viewBox="0 0 80 80" aria-hidden="true">
               <circle cx="40" cy="40" r="32" fill="none" stroke="#18201c" strokeWidth="7" />
-              {tp.settled > 0 && <circle data-x="dring" cx="40" cy="40" r="32" fill="none" stroke={bad ? "#ff8a7e" : pct >= 50 ? "#ffc27a" : "#aab2ad"} strokeWidth="7" pathLength="100" strokeDasharray={`${pct.toFixed(1)} 100`} transform="rotate(-90 40 40)" />}
+              {tp.settled > 0 && <circle data-x="dring" cx="40" cy="40" r="32" fill="none" stroke={bad ? "#ff5a4f" : pct >= 50 ? "#e8a23a" : "#aab2ad"} strokeWidth="7" pathLength="100" strokeDasharray={`${pct.toFixed(1)} 100`} transform="rotate(-90 40 40)" />}
             </svg>
             <div>
               {tp.common ? (
@@ -716,7 +716,7 @@ export function TraceGraph({ r, deep, onSol }: { r: XRayReport; deep: boolean; o
               const fy = y + (i === 1 ? 40 : -30);
               return <path key={`f${b.wallet}`} d={`M${x} ${y} L ${fx} ${fy}`} stroke="#2a332e" strokeDasharray="3 4" />;
             })}
-          {deep && fund?.funder ? <path data-x="edge" pathLength={1} d={`M${dev[0]} ${dev[1]} L ${fp[0]} ${fp[1] + 8}`} stroke="#ffc27a" /> : <path d={`M${dev[0]} ${dev[1]} L ${fp[0]} ${fp[1] + 10}`} stroke="#2a332e" strokeDasharray="3 4" />}
+          {deep && fund?.funder ? <path data-x="edge" pathLength={1} d={`M${dev[0]} ${dev[1]} L ${fp[0]} ${fp[1] + 8}`} stroke="#e8a23a" /> : <path d={`M${dev[0]} ${dev[1]} L ${fp[0]} ${fp[1] + 10}`} stroke="#2a332e" strokeDasharray="3 4" />}
           <path d={`M${dev[0]} ${dev[1]} Q 300 210 ${sol[0] - 4} ${sol[1] - 6}`} stroke={deep ? "#4a5a52" : "#2a332e"} strokeDasharray={deep ? undefined : "3 4"} />
         </g>
         <g>
@@ -737,8 +737,8 @@ export function TraceGraph({ r, deep, onSol }: { r: XRayReport; deep: boolean; o
           })}
           {deep && fund?.funder ? (
             <g>
-              <circle cx={fp[0]} cy={fp[1]} r={6} fill="#ffc27a" />
-              {label(fp[0] + 0, fp[1] - 12, t("funded by {x}", { x: funderLabel }), "#ffc27a", "fl")}
+              <circle cx={fp[0]} cy={fp[1]} r={6} fill="#e8a23a" />
+              {label(fp[0] + 0, fp[1] - 12, t("funded by {x}", { x: funderLabel }), "#e8a23a", "fl")}
             </g>
           ) : deep ? (
             <g>
@@ -750,8 +750,8 @@ export function TraceGraph({ r, deep, onSol }: { r: XRayReport; deep: boolean; o
           )}
           {deep ? (
             <g onClick={onSol} style={{ cursor: onSol ? "pointer" : undefined }}>
-              <circle cx={sol[0]} cy={sol[1]} r={6} fill="none" stroke="#a6e3b4" />
-              {label(sol[0], sol[1] + 22, t("where the SOL went →"), "#a6e3b4", "sl")}
+              <circle cx={sol[0]} cy={sol[1]} r={6} fill="none" stroke="#f4f5f4" />
+              {label(sol[0], sol[1] + 22, t("where the SOL went →"), "#f4f5f4", "sl")}
             </g>
           ) : (
             <>
@@ -759,9 +759,9 @@ export function TraceGraph({ r, deep, onSol }: { r: XRayReport; deep: boolean; o
               {label(sol[0], sol[1] + 26, t("where the SOL went"), "#7d8681", "sl")}
             </>
           )}
-          <circle cx={dev[0]} cy={dev[1]} r={14} fill="none" stroke="#ff8a7e" strokeOpacity={0.35} />
-          <circle cx={dev[0]} cy={dev[1]} r={7} fill="#ff8a7e" />
-          {label(dev[0], dev[1] + 28, t("dev {a}", { a: short(r.creator) }), "#ff8a7e", "dl")}
+          <circle cx={dev[0]} cy={dev[1]} r={14} fill="none" stroke="#ff5a4f" strokeOpacity={0.35} />
+          <circle cx={dev[0]} cy={dev[1]} r={7} fill="#ff5a4f" />
+          {label(dev[0], dev[1] + 28, t("dev {a}", { a: short(r.creator) }), "#ff5a4f", "dl")}
         </g>
       </svg>
     </div>

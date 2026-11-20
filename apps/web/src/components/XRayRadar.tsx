@@ -20,8 +20,8 @@ export interface EarlyWallet {
 export type Kind = "crew" | "ring" | "serial" | "bundle" | "early";
 export const kindOf = (e: EarlyWallet): Kind => (e.crew ? "crew" : e.ring ? "ring" : e.serial ? "serial" : e.bundle ? "bundle" : "early");
 export const KIND: Record<Kind, { color: string; label: string; what: string }> = {
-  crew: { color: "#ff8a7e", label: "creator's crew", what: "snipes this creator's other launches too: the creator's own wallet" },
-  ring: { color: "#ffc27a", label: "sniper ring", what: "has sniped launches together with other wallets here before: one operator" },
+  crew: { color: "#ff5a4f", label: "creator's crew", what: "snipes this creator's other launches too: the creator's own wallet" },
+  ring: { color: "#e8a23a", label: "sniper ring", what: "has sniped launches together with other wallets here before: one operator" },
   serial: { color: "#c9b48a", label: "serial sniper", what: "buys launches in the first seconds to sell to whoever comes next" },
   bundle: { color: "#b8beba", label: "launch block", what: "bought in the same block the token was created" },
   early: { color: "#e6e9e7", label: "first 5 s", what: "bought before the token showed up anywhere" },
@@ -134,7 +134,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         ))}
         <line x1={CX - rOf(5) - 10} y1={CY} x2={CX + rOf(5) + 10} y2={CY} stroke="#18201c" />
         <line x1={CX} y1={CY - rOf(5) - 10} x2={CX} y2={CY + rOf(5) + 10} stroke="#18201c" />
-        {playing && <circle cx={CX} cy={CY} r={rOf(clock)} fill="none" stroke="#ffc27a" strokeOpacity="0.55" strokeWidth="1.2" />}
+        {playing && <circle cx={CX} cy={CY} r={rOf(clock)} fill="none" stroke="#e8a23a" strokeOpacity="0.55" strokeWidth="1.2" />}
 
         {/* ring members tied around their circle, crew tied to the dev */}
         {ties
@@ -177,8 +177,8 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
               {hover === n.e.wallet && !isSel && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="#e6e9e7" strokeWidth="1" />}
               {isSel && (
                 <>
-                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#ffc27a" strokeWidth="1.6" />
-                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#ffc27a" strokeOpacity="0.5" strokeWidth="1">
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#e8a23a" strokeWidth="1.6" />
+                  <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#e8a23a" strokeOpacity="0.5" strokeWidth="1">
                     <animate attributeName="r" from={n.size + 7} to={n.size + 20} dur="1.4s" repeatCount="indefinite" />
                     <animate attributeName="stroke-opacity" from="0.5" to="0" dur="1.4s" repeatCount="indefinite" />
                   </circle>
@@ -193,7 +193,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
         <text x={CX} y={CY + 4} textAnchor="middle" className="tabular-nums" fontSize="11" fill="#e6e9e7">
           dev
         </text>
-        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill={playing ? "#ffc27a" : "#7d8681"} fontFamily="Geist Mono, ui-monospace, monospace">
+        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill={playing ? "#e8a23a" : "#7d8681"} fontFamily="Geist Mono, ui-monospace, monospace">
           {`t+${clock.toFixed(1)}s`}
         </text>
       </svg>
@@ -243,7 +243,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             {t(KIND[k].label)} {nodes.filter((n) => has(n.e, k)).length}
           </button>
         ))}
-        <button type="button" onClick={replay} className="ml-auto flex h-[22px] items-center rounded-full border border-[#4a3a24] px-2 text-warn hover:border-warn">
+        <button type="button" onClick={replay} className="ml-auto flex h-[22px] items-center rounded-full border border-[#4d3a1c] px-2 text-warn hover:border-warn">
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>

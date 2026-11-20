@@ -33,9 +33,9 @@ export const VWORD: Record<string, { w: string; long?: boolean }> = {
 };
 
 export const TONE: Record<Verdict, { label: string; color: string }> = {
-  avoid: { label: "AVOID", color: "#ff8a7e" },
-  caution: { label: "CAUTION", color: "#ffc27a" },
-  pass: { label: "NO RED FLAGS", color: "#a6e3b4" },
+  avoid: { label: "AVOID", color: "#ff5a4f" },
+  caution: { label: "CAUTION", color: "#e8a23a" },
+  pass: { label: "NO RED FLAGS", color: "#f4f5f4" },
   unknown: { label: "NOT ON THE STREAM", color: "#e6e9e7" },
 };
 
@@ -43,7 +43,7 @@ export function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t border-line py-2 first:border-t-0">
       <span className="text-[13px] font-normal text-fg-4">{t(k)}</span>
-      <span className={`tabular-nums text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
+      <span className={`tabular-nums text-[13px] ${bad ? "text-[#ff5a4f]" : "text-fg-2"}`}>{v}</span>
     </div>
   );
 }
@@ -79,7 +79,7 @@ export function Outcome({ x }: { x: Parameters<typeof launchOutcome>[0] }) {
   const o = launchOutcome(x);
   return (
     <span className="tabular-nums shrink-0 text-right text-[13px] leading-snug">
-      <span className={o.dumped ? "text-[#ff8a7e]" : "text-fg-3"}>{o.head}</span>
+      <span className={o.dumped ? "text-[#ff5a4f]" : "text-fg-3"}>{o.head}</span>
       {o.tail && <span className="block text-[12.5px] text-fg-4">{o.tail}</span>}
     </span>
   );
@@ -113,7 +113,7 @@ export function HoldStrip({ c }: { c: XRayReport["check"] }) {
       <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
         {cells.map((x) => (
           <div key={x.k} className="min-w-0">
-            <p className={`tabular-nums text-[15px] leading-none ${x.bad ? "text-[#ff8a7e]" : "text-fg"}`}>{x.v}%</p>
+            <p className={`tabular-nums text-[15px] leading-none ${x.bad ? "text-[#ff5a4f]" : "text-fg"}`}>{x.v}%</p>
             <p className="mt-1 truncate text-[12px] font-normal text-fg-4">{x.k}</p>
           </div>
         ))}

@@ -195,9 +195,9 @@ const vert = /* glsl */ `
   varying vec3 vCol;
   varying float vAlpha;
 
-  const vec3 DANGER = vec3(1.0, 0.541, 0.494);
-  const vec3 MOSS = vec3(0.651, 0.89, 0.706);
-  const vec3 WARN = vec3(1.0, 0.761, 0.478);
+  const vec3 DANGER = vec3(1.0, 0.353, 0.31);
+  const vec3 ALIVE = vec3(0.94, 0.95, 0.945);
+  const vec3 WARN = vec3(0.91, 0.635, 0.227);
 
   vec3 drift(vec3 p, float amp) {
     float t = uTime * 0.18;
@@ -237,7 +237,7 @@ const vert = /* glsl */ `
     if (aS2k > 2.5) return vec3(1.0);
     vec3 c = vec3(0.78, 0.82, 0.8);
     if (aS2k < 0.5) return mix(c, DANGER * 1.05, st);
-    if (aS2k < 1.5) return mix(c, MOSS * 1.6, st);
+    if (aS2k < 1.5) return mix(c, ALIVE * 1.3, st);
     return mix(c, vec3(0.26), st);
   }
   vec3 jit() { return (fract(sin(vec3(aSeed * 91.0, aSeed * 57.0, aSeed * 13.0)) * 43758.5453) - 0.5) * 2.4; }
@@ -398,7 +398,7 @@ export function startScene(host: HTMLElement, o: SceneOptions): Scene {
     uMouse: { value: new THREE.Vector3(9999, 9999, 0) },
     uS: { value: 0 }, uLook: { value: 0 }, uPupil: { value: 1 }, uEyeK: { value: 1 }, uLookDir: { value: new THREE.Vector2(-1, -0.3) },
     uGrow: { value: 0 }, uFall: { value: 0 }, uDraw: { value: 0 }, uDraw2: { value: 0 }, uWarn: { value: 0 },
-    uBend: { value: 0 }, uNeedle: { value: 0 }, uOdds: { value: 0 }, uVerdict: { value: new THREE.Color(1, 0.541, 0.494) },
+    uBend: { value: 0 }, uNeedle: { value: 0 }, uOdds: { value: 0 }, uVerdict: { value: new THREE.Color(1, 0.353, 0.31) },
   };
   const mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const pts = new THREE.Points(geo, mat);
@@ -502,7 +502,7 @@ export function startScene(host: HTMLElement, o: SceneOptions): Scene {
     });
     text.funders.forEach((t, k) => {
       const p = b.funders[k]!;
-      labels.push({ el: mk(esc(t), `font:500 ${small ? 10.5 : 12}px ${sans};color:#ffc27a;text-align:right`), x: p[0] - 11, y: p[1], z: 0, ch: 3, align: "r", show: (bt) => Math.min(1, bt.draw2 * 3) });
+      labels.push({ el: mk(esc(t), `font:500 ${small ? 10.5 : 12}px ${sans};color:#e8a23a;text-align:right`), x: p[0] - 11, y: p[1], z: 0, ch: 3, align: "r", show: (bt) => Math.min(1, bt.draw2 * 3) });
     });
     labels.push({
       el: mk(`<div style="font:600 ${small ? 30 : 44}px/1 ${sans};letter-spacing:-.04em;color:${o.verdictColor(d.verdict)}">${esc(text.odds)}</div><div style="font:400 ${small ? 11.5 : 13}px ${sans};color:#aab2ad;margin-top:6px">${esc(text.oddsSub)}</div>`, "text-align:center"),

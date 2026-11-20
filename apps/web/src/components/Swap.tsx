@@ -162,7 +162,7 @@ export default function Swap({ mint, symbol }: { mint: string; symbol: string })
         type="button"
         onClick={() => void go()}
         disabled={!q || busy === "sign" || busy === "wait" || short || solShort}
-        className="mt-1 w-full flex h-9 items-center justify-center rounded-[8px] bg-moss px-4 text-[12.5px] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] text-moss-ink transition hover:bg-moss-hover disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-1 w-full flex h-9 items-center justify-center rounded-[8px] bg-lit px-4 text-[12.5px] font-medium text-lit-ink transition hover:bg-lit-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {!wallet ? t("Connect wallet to trade") : busy === "sign" ? t("Sign in your wallet…") : busy === "wait" ? t("Landing…") : side === "buy" ? t("Buy {s}", { s: sym }) : t("Sell {s}", { s: sym })}
       </button>

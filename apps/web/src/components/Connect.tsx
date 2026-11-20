@@ -96,7 +96,7 @@ export default function Connect() {
             {p.copy && (
               <button type="button" onClick={() => copy(p.tag, p.copy!)} className="mt-3.5 rounded-[9px] border border-line bg-night p-3 text-left font-mono text-[11.5px] leading-[1.6] text-fg-2 [overflow-wrap:anywhere] hover:border-line-2">
                 {p.copy}
-                <span className={`mt-2 block font-sans text-[11.5px] ${copied === p.tag ? "text-moss" : "text-dim"}`}>{copied === p.tag ? t("copied ✓") : t("tap to copy")}</span>
+                <span className={`mt-2 block font-sans text-[11.5px] ${copied === p.tag ? "text-lit" : "text-dim"}`}>{copied === p.tag ? t("copied ✓") : t("tap to copy")}</span>
               </button>
             )}
             {p.link && (
@@ -115,19 +115,19 @@ export default function Connect() {
             }}
             className="flex max-w-xl gap-2"
           >
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("your agent's name")} aria-label={t("your agent's name")} className="h-9 min-w-0 flex-1 rounded-[7px] border border-line-2 bg-night px-3 text-[13px] text-white outline-none placeholder:text-faint focus:border-moss-edge" />
-            <button type="submit" disabled={checking} className="btn-moss h-9 rounded-[7px] px-4 text-[12.5px] font-medium disabled:opacity-50">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("your agent's name")} aria-label={t("your agent's name")} className="h-9 min-w-0 flex-1 rounded-[7px] border border-line-2 bg-night px-3 text-[13px] text-white outline-none placeholder:text-faint focus:border-lit-edge" />
+            <button type="submit" disabled={checking} className="btn-primary h-9 rounded-[7px] px-4 text-[12.5px] font-medium disabled:opacity-50">
               {checking ? "…" : t("Check")}
             </button>
           </form>
           {status === "missing" && <p className="mt-3 text-[12.5px] text-danger">{t("Not registered yet. Send it the message above, then check again in a minute.")}</p>}
           {status && status !== "missing" && (
             <div className="mt-3 space-y-1.5 text-[12.5px]">
-              <p className="text-moss">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
-              <p className={status.signals ? "text-moss" : "text-warn"}>
+              <p className="text-lit">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>
+              <p className={status.signals ? "text-lit" : "text-warn"}>
                 {status.signals ? "✓" : "○"} {t("{n} reports", { n: status.signals })} · {ago(status.lastSignalAt)}
               </p>
-              <p className={graded ? "text-moss" : "text-warn"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
+              <p className={graded ? "text-lit" : "text-warn"}>{graded ? `✓ ${t("{n} calls graded", { n: graded })}` : t("○ first grades arrive the day after its first report")}</p>
               <p className="pt-1.5 text-dim">
                 {t("badge:")} <span className="font-mono text-[11.5px] text-fg-2 [overflow-wrap:anywhere]">canyon.zooaiagency.com/v1/badge/{status.name}.svg</span>
               </p>

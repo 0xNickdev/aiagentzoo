@@ -50,13 +50,13 @@ function ago(ts: number | null): string {
 
 const VERDICT_TONE: Record<RecordItem["verdict"], string> = {
   suspicious: "text-danger ring-rose-200/25",
-  promising: "text-moss ring-emerald-200/25",
+  promising: "text-lit ring-white/20",
   watch: "text-fg-4 ring-line-2",
 };
 
 function result(i: RecordItem, night: string, today: string): { text: string; tone: string } {
   if (i.verdict === "watch") return { text: t("not scored"), tone: "text-fg-4" };
-  if (i.hit === true) return { text: t(i.outcome === "dead" ? "✓ it died" : "✓ still alive"), tone: "text-moss" };
+  if (i.hit === true) return { text: t(i.outcome === "dead" ? "✓ it died" : "✓ still alive"), tone: "text-lit" };
   if (i.hit === false) return { text: t(i.outcome === "dead" ? "✗ it died" : "✗ still alive"), tone: "text-danger" };
   if (i.outcome === "unknown") return { text: t("no market to judge"), tone: "text-fg-4" };
   return { text: t(night >= today ? "checked tomorrow" : "checking"), tone: "text-fg-3" };

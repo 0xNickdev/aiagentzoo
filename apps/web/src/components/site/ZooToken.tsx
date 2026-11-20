@@ -54,8 +54,9 @@ export function CaRow({ id, className = "" }: { id: string; className?: string }
         type="button"
         onClick={copy}
         aria-label={t("Copy the $ZOOAGENCY address")}
-        className={`h-[22px] min-w-[52px] shrink-0 rounded-[5px] border bg-night-raised px-2 text-[11.5px] ${ok ? "border-moss-edge text-moss" : "border-line-2 text-fg-2 hover:text-white"}`}
+        className={`inline-flex h-[22px] min-w-[52px] shrink-0 items-center justify-center gap-1 rounded-[5px] border border-line-2 bg-transparent px-2 text-[11.5px] ${ok ? "text-white" : "text-fg-2 hover:text-white"}`}
       >
+        {ok && <CopyIcon ok />}
         {label}
       </button>
     </div>
@@ -68,7 +69,7 @@ export function BuyButton({ className = "" }: { className?: string }) {
       href={ZOOAGENCY_CLAWPUMP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`btn-moss inline-flex h-8 items-center justify-center whitespace-nowrap rounded-[7px] px-3 text-[12.5px] font-medium ${className}`}
+      className={`btn-primary inline-flex h-8 items-center justify-center whitespace-nowrap rounded-[7px] px-3 text-[12.5px] font-medium ${className}`}
     >
       {t("Buy on ClawPump")}
     </a>
@@ -108,14 +109,14 @@ export function TokenChip() {
           <span className="sr-only">{ZOOAGENCY_MINT}</span>
           <span aria-hidden>{ZOOAGENCY_MINT.slice(0, 4)}…{ZOOAGENCY_MINT.slice(-4)}</span>
         </code>
-        <span className={ok ? "text-moss" : "text-faint group-hover:text-fg-2"}><CopyIcon ok={ok} /></span>
+        <span className={ok ? "text-white" : "text-faint group-hover:text-fg-2"}><CopyIcon ok={ok} /></span>
       </button>
       <span aria-hidden className="h-4 w-px bg-line-2" />
       <a
         href={ZOOAGENCY_CLAWPUMP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-full items-center gap-1 rounded-r-full pl-3 pr-3.5 text-[12.5px] font-medium text-moss hover:bg-white/[0.03]"
+        className="flex h-full items-center gap-1 rounded-r-full pl-3 pr-3.5 text-[12.5px] font-medium text-white hover:bg-white/[0.03]"
       >
         {t("Buy")}
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M7 17 17 7M8 7h9v9" /></svg>

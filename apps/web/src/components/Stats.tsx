@@ -61,7 +61,7 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
               return (
                 <div key={d.day} className="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end" title={`${d.day}: ${num(v)}`}>
                   <span className="mb-1 text-[10.5px] text-dim sm:text-[11.5px]">{num(v)}</span>
-                  <div className={`w-full max-w-[48px] rounded-t-[3px] transition ${d.day === today ? "bg-moss-edge" : "bg-[#5d6b63]"} group-hover:bg-moss`} style={{ height: `${Math.max(2, (v / max) * 100)}%` }} />
+                  <div className={`w-full max-w-[48px] rounded-t-[3px] transition ${d.day === today ? "bg-fg-3" : "bg-[#59605c]"} group-hover:bg-white`} style={{ height: `${Math.max(2, (v / max) * 100)}%` }} />
                 </div>
               );
             })}
@@ -95,7 +95,7 @@ export default function Stats() {
     <Page
       title={t("Stats")}
       lead={t("How much the X-Ray is used, what the chain stream sees and how our verdicts held up, read from the same public endpoints anyone can open.")}
-      side={<span className="flex items-center gap-2 text-[12px] text-dim"><span className="h-1.5 w-1.5 rounded-full bg-moss" />{t("live · refreshed every minute")}</span>}
+      side={<span className="flex items-center gap-2 text-[12px] text-dim"><span className="h-1.5 w-1.5 rounded-full bg-lit" />{t("live · refreshed every minute")}</span>}
     >
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <section className="grid grid-cols-2 overflow-hidden rounded-[12px] border border-line bg-night-surface lg:col-span-12 lg:grid-cols-4">
@@ -120,7 +120,7 @@ export default function Stats() {
           </div>
           {[
             [t("flagged avoid"), a, "text-danger"],
-            [t("not flagged"), n, "text-moss"],
+            [t("not flagged"), n, "text-lit"],
           ].map(([label, s, tone]) => {
             const v = s ? tally(s as Side) : null;
             return (

@@ -84,7 +84,7 @@ const HOUR = 3_600_000;
 function state(o: Outcome | null): { text: string; tone: string } {
   if (!o) return { text: t("not followed"), tone: "text-dim" };
   if (!o.done) return { text: t("following"), tone: "text-fg-3" };
-  return o.state === "alive" ? { text: t("alive"), tone: "text-moss" } : o.state === "dead" ? { text: t("dead"), tone: "text-danger" } : { text: t("in between"), tone: "text-fg-3" };
+  return o.state === "alive" ? { text: t("alive"), tone: "text-lit" } : o.state === "dead" ? { text: t("dead"), tone: "text-danger" } : { text: t("in between"), tone: "text-fg-3" };
 }
 
 /** What the listed wallet did around the call, in words; empty when it was not among the buyers we track. */

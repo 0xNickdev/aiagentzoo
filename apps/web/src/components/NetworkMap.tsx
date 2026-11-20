@@ -43,8 +43,8 @@ interface DevProfile {
   launches: Array<{ mint: string; symbol: string; dumpedAfterMin: number | null; graduated: boolean }>;
 }
 
-// The brand's four: danger for the dev and his people, warn for the regulars and the block, moss for money's source, white for the rest.
-const COLOR: Record<Kind, string> = { dev: "#ff8a7e", crew: "#ff8a7e", ring: "#ffc27a", bundle: "#ffc27a", serial: "#d9dddb", early: "#e6e9e7", funder: "#a6e3b4", sibling: "#ff8a7e", coin: "#ff8a7e" };
+// The brand's four: danger for the dev and his people, warn for the regulars and the block, white for money's source, white for the rest.
+const COLOR: Record<Kind, string> = { dev: "#ff5a4f", crew: "#ff5a4f", ring: "#e8a23a", bundle: "#e8a23a", serial: "#d9dddb", early: "#e6e9e7", funder: "#f4f5f4", sibling: "#ff5a4f", coin: "#ff5a4f" };
 const rgba = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
@@ -205,7 +205,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
       funder: { color: COLOR.funder, title: t("Same funder"), sub: sibs.length ? t("paid for {n} other devs · {d} dumps", { n: sibs.length, d: sibs.reduce((a, x) => a + (x.dumped ?? 0), 0) }) : t("one wallet paid for these") },
       coin: { color: COLOR.coin, title: t("His last launches"), sub: t("{n} shown · {d} of {b} dumped", { n: count("coin"), d: record.dumped, b: record.launches }) },
     };
-    const colOf = (n: Node) => (n.kind === "coin" ? (n.outcome === "graduated" ? "#a6e3b4" : n.outcome === "dumped" ? "#ff8a7e" : "#e6e9e7") : COLOR[n.kind]);
+    const colOf = (n: Node) => (n.kind === "coin" ? (n.outcome === "graduated" ? "#f4f5f4" : n.outcome === "dumped" ? "#ff5a4f" : "#e6e9e7") : COLOR[n.kind]);
     const sprites = new Map<Node, HTMLCanvasElement>();
     nodes.forEach((n, i) => sprites.set(n, sprite(colOf(n), R(n), i + 1, n.kind === "dev")));
     // where each group's name goes: above its highest member
@@ -302,7 +302,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
           const w = ctx.measureText(label).width + 16;
           const lx = x + rad + 10, ly = y;
           ctx.fillStyle = "rgba(20,8,7,0.8)";
-          ctx.strokeStyle = "rgba(255,138,126,0.55)";
+          ctx.strokeStyle = "rgba(255, 90, 79,0.55)";
           ctx.beginPath();
           ctx.roundRect(lx, ly - 11, w, 22, 11);
           ctx.fill();
@@ -459,7 +459,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
             {n.kind === "coin" && <p className={n.outcome === "dumped" ? "text-danger" : ""}>{n.outcome === "dumped" ? t("dev dumped it") : n.outcome === "graduated" ? t("graduated") : t("dev still holding")}</p>}
           </div>
           {n.kind !== "dev" && (
-            <button type="button" onClick={() => (n.kind === "coin" ? onPick(n.id.slice(2)) : onWallet(n.id))} className="mt-3 text-[12.5px] font-medium text-moss hover:underline">
+            <button type="button" onClick={() => (n.kind === "coin" ? onPick(n.id.slice(2)) : onWallet(n.id))} className="mt-3 text-[12.5px] font-medium text-lit hover:underline">
               {n.kind === "coin" ? t("Open X-Ray") : t("Open the wallet")} →
             </button>
           )}

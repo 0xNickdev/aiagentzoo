@@ -14,9 +14,9 @@ export interface ChainNow {
 
 const NAV = 60;
 const VERDICT: Record<Verdict, { word: string; color: string; text: string }> = {
-  avoid: { word: "Avoid", color: "#ff8a7e", text: "text-danger" },
-  caution: { word: "Caution", color: "#ffc27a", text: "text-warn" },
-  pass: { word: "No red flags", color: "#a6e3b4", text: "text-moss" },
+  avoid: { word: "Avoid", color: "#ff5a4f", text: "text-danger" },
+  caution: { word: "Caution", color: "#e8a23a", text: "text-warn" },
+  pass: { word: "No red flags", color: "#f4f5f4", text: "text-lit" },
 };
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const dateOf = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -33,7 +33,7 @@ function Search({ id }: { id?: string }) {
   };
   return (
     <form onSubmit={go} className="flex w-full flex-col gap-2 sm:flex-row" role="search">
-      <label className="flex h-12 min-w-0 shrink-0 items-center gap-2.5 rounded-[9px] border border-line-2 bg-night-surface px-3.5 focus-within:border-[#3f5a48] sm:flex-1">
+      <label className="flex h-12 min-w-0 shrink-0 items-center gap-2.5 rounded-[9px] border border-line-2 bg-night-surface px-3.5 focus-within:border-[#4a524e] sm:flex-1">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 text-faint">
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
@@ -50,7 +50,7 @@ function Search({ id }: { id?: string }) {
           className="min-w-0 flex-1 bg-transparent font-mono text-[13.5px] tracking-[-0.01em] text-white placeholder:text-faint focus:outline-none"
         />
       </label>
-      <button type="submit" className="btn-moss h-12 shrink-0 rounded-[9px] px-6 text-[14px] font-medium">
+      <button type="submit" className="btn-primary h-12 shrink-0 rounded-[9px] px-6 text-[14px] font-medium">
         {t("X-Ray it")}
       </button>
     </form>
@@ -101,7 +101,7 @@ function textOf(d: StoryData): StoryText {
 /* ---------- pieces of the stage ---------- */
 
 /** Headline lines rising out of their masks and inking from grey to white as `r` goes 0..1. */
-function Lines({ lines, r, className }: { lines: string[]; r: number; className: string }) {
+export function Lines({ lines, r, className }: { lines: string[]; r: number; className: string }) {
   return (
     <h2 className={className}>
       {lines.map((l, i) => {
@@ -179,7 +179,7 @@ function StillStory({ d }: { d: StoryData }) {
         </p>
         <svg className="mt-3 w-full max-w-[520px]" viewBox={`0 0 ${cols * 8} ${Math.ceil(d.timeline.length / cols) * 8}`} aria-hidden>
           {d.timeline.map((m, i) => (
-            <circle key={i} cx={(i % cols) * 8 + 4} cy={Math.floor(i / cols) * 8 + 4} r={2.4} fill={m === "d" ? "#ff8a7e" : m === "u" ? "#2f3833" : "#a6e3b4"} />
+            <circle key={i} cx={(i % cols) * 8 + 4} cy={Math.floor(i / cols) * 8 + 4} r={2.4} fill={m === "d" ? "#ff5a4f" : m === "u" ? "#2f3833" : "#f4f5f4"} />
           ))}
         </svg>
       </StillFrame>
@@ -364,7 +364,7 @@ export default function Story({ chain, sample }: { chain: ChainNow | null; sampl
         <div className={`mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[12.5px] text-dim ${v[0] > 0.5 ? "pointer-events-auto" : ""}`}>
           {chain && (
             <span>
-              <span className={`mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full align-middle ${chain.live ? "live-dot bg-moss" : "bg-warn"}`} />
+              <span className={`mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full align-middle ${chain.live ? "live-dot bg-lit" : "bg-warn"}`} />
               {chain.live ? t("Reading Solana now") : t("Stream reconnecting")}
               {perMin != null && perMin > 0 && <span className="text-faint"> · {t("{n} launches a minute", { n: full(perMin) })}</span>}
               {launches != null && <span className="text-faint"> · {t("{n} launches read", { n: compact(launches) })}</span>}
@@ -434,7 +434,7 @@ export default function Story({ chain, sample }: { chain: ChainNow | null; sampl
                   <span className="block" style={{ clipPath: `inset(0 calc(${data.mint.length - typed} * 1ch) 0 0)` }}>
                     {data.mint}
                   </span>
-                  <span className="absolute top-[0.25em] h-[1.1em] w-[2px] bg-moss" style={{ left: `${typed}ch`, opacity: bt.type < 1 || Math.floor(performance.now() / 500) % 2 ? 1 : 0 }} />
+                  <span className="absolute top-[0.25em] h-[1.1em] w-[2px] bg-lit" style={{ left: `${typed}ch`, opacity: bt.type < 1 || Math.floor(performance.now() / 500) % 2 ? 1 : 0 }} />
                 </div>
                 <p className="mt-3 text-[13px] text-dim sm:text-[14px]" style={{ opacity: clamp((bt.type - 0.85) / 0.15) }}>
                   {ticker(data.symbol, data.mint)}

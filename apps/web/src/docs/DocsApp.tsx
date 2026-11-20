@@ -216,7 +216,7 @@ export default function DocsApp() {
                     <a
                       href={`#${h.id}`}
                       className={`-ml-px block border-l py-0.5 pl-3 text-[12.5px] transition ${
-                        active === h.id ? "border-moss text-white" : "border-transparent text-dim hover:text-white"
+                        active === h.id ? "border-lit text-white" : "border-transparent text-dim hover:text-white"
                       }`}
                     >
                       {h.text}

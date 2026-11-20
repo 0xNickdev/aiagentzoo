@@ -10,7 +10,7 @@ const usd = (n: number | null | undefined) => (n === null || n === undefined ? "
 const CHOICES: Array<[Verdict, string, string]> = [
   ["suspicious", "Rug", "border-danger/60 bg-danger/10 text-danger"],
   ["watch", "Watch", "border-line-2 bg-night-raised text-white"],
-  ["promising", "Alive", "border-moss/60 bg-moss/10 text-moss"],
+  ["promising", "Alive", "border-lit/60 bg-lit/10 text-lit"],
 ];
 const BTN = "inline-flex h-8 items-center rounded-[7px] border border-line-2 bg-night-raised px-3 text-[12.5px] font-medium text-white hover:border-[#3a4640] disabled:opacity-50";
 
@@ -70,7 +70,7 @@ export default function Humans() {
       >
         <div className="grid grid-cols-2 border-b border-line sm:grid-cols-4">
           <Tile k={t("odds model, this week")} v={model ? pct(model.score) : "-"} sub={model ? t("{n} graded", { n: model.graded }) : t("grades after the first night")} className="border-b border-r border-line sm:border-b-0" />
-          <Tile k={t("best human, this week")} v={human ? pct(human.score) : "-"} sub={human ? t("{name} · {n} graded", { name: human.id, n: human.graded }) : t("nobody yet, be first")} tone={human && model && human.score > model.score ? "moss" : "fg"} className="border-b border-line sm:border-b-0 sm:border-r" />
+          <Tile k={t("best human, this week")} v={human ? pct(human.score) : "-"} sub={human ? t("{name} · {n} graded", { name: human.id, n: human.graded }) : t("nobody yet, be first")} tone={human && model && human.score > model.score ? "lit" : "fg"} className="border-b border-line sm:border-b-0 sm:border-r" />
           <Tile k={t("week ends in")} v={view ? timeLeft(view.week.endsAt) : "-"} sub={view ? `${view.week.start} → ${view.week.end} · UTC` : undefined} className="border-r border-line" />
           <Tile k={t("tonight's exam")} v={view ? view.exam.length : "-"} sub={view ? t("night of {n}", { n: view.night }) : undefined} />
         </div>
@@ -78,7 +78,7 @@ export default function Humans() {
         <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3">
           <p className="text-[13px] text-fg-2">{t("Rug, watch or alive? Call each coin before the night ends. \"Watch\" counts as a miss, like it does for the model.")}</p>
           {!session ? (
-            <button type="button" onClick={() => void signIn()} disabled={signing} className="btn-moss inline-flex h-8 items-center rounded-[7px] px-3.5 text-[12.5px] font-medium">
+            <button type="button" onClick={() => void signIn()} disabled={signing} className="btn-primary inline-flex h-8 items-center rounded-[7px] px-3.5 text-[12.5px] font-medium">
               {signing ? t("Signing…") : t("Sign in with your wallet")}
             </button>
           ) : (
@@ -118,7 +118,7 @@ export default function Humans() {
                       <a href={`/xray?mint=${x.mint}`} className="truncate text-[16px] font-medium tracking-[-0.02em] text-white hover:underline">
                         ${x.symbol}
                       </a>
-                      {x.graduated && <span className="text-[11.5px] text-moss">{t("graduated")}</span>}
+                      {x.graduated && <span className="text-[11.5px] text-lit">{t("graduated")}</span>}
                     </div>
                     <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
                       <Fact k={t("liquidity")} v={x.market?.liq === null || x.market?.liq === undefined ? (x.graduated ? "-" : t("on curve")) : usd(x.market.liq)} />
@@ -147,7 +147,7 @@ export default function Humans() {
               </div>
               <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-[12.5px] text-dim">{t("{a}/{n} answered · change answers until the night ends", { a: answered, n: view.exam.length })}</p>
-                <button type="button" onClick={() => void save()} disabled={saving || !answered} className="btn-moss inline-flex h-9 items-center rounded-[8px] px-4 text-[13px] font-medium disabled:opacity-50">
+                <button type="button" onClick={() => void save()} disabled={saving || !answered} className="btn-primary inline-flex h-9 items-center rounded-[8px] px-4 text-[13px] font-medium disabled:opacity-50">
                   {session ? (saving ? t("Saving…") : t("Lock in my answers")) : t("Sign in to lock in")}
                 </button>
               </div>
@@ -161,7 +161,7 @@ export default function Humans() {
         {!view?.standings.length && <p className="py-3.5 text-[13px] text-dim">{t("No graded answers yet this week. Answer tonight, get graded tomorrow.")}</p>}
         <ol>
           {view?.standings.map((r, i) => (
-            <li key={r.id} className={`flex items-baseline justify-between gap-3 border-b border-line py-2 text-[12.5px] last:border-b-0 ${r.you ? "text-warn" : "text-white"}`}>
+            <li key={r.id} className={`flex items-baseline justify-between gap-3 border-b border-line py-2 text-[12.5px] last:border-b-0 ${r.you ? "font-medium text-white" : "text-fg-2"}`}>
               <span className="min-w-0 truncate">
                 <span className="mr-3 text-faint">{String(i + 1).padStart(2, "0")}</span>
                 {r.id}
@@ -169,7 +169,7 @@ export default function Humans() {
               </span>
               <span className="shrink-0">
                 {pct(r.score)} <span className="text-faint">· {r.graded}</span>
-                {!r.ranked && <span className="ml-2 text-warn">{t("qualifying")}</span>}
+                {!r.ranked && <span className="ml-2 text-dim">{t("qualifying")}</span>}
               </span>
             </li>
           ))}
@@ -192,7 +192,7 @@ export default function Humans() {
           <li>{t("To place: {g}+ graded answers in the week, with {s}+ dead and {s}+ living tokens among them.", { g: view?.rules.minGraded ?? 15, s: view?.rules.minSide ?? 2 })}</li>
         </ul>
         <div className="mt-3.5 border-t border-line pt-3">
-          <p className="text-[12px] text-warn">{t("last week's top 3")}</p>
+          <p className="text-[12px] text-dim">{t("last week's top 3")}</p>
           {view?.lastWeekTop.length ? (
             <ol className="mt-1.5 grid gap-1">
               {view.lastWeekTop.map((w, i) => (

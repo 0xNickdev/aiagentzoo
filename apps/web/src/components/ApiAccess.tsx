@@ -44,7 +44,7 @@ export default function ApiAccess() {
     { name: pick("Holder", "持币者"), who: pick("500,000+ $ZOOAGENCY, one key per wallet", "持有 500,000+ $ZOOAGENCY，一个钱包一个密钥"), rows: [pick("1,200 checks a minute", "每分钟 1,200 次检查"), pick("300 holder reads a minute", "每分钟 300 次持币分析"), pick("for bots that check every launch", "给检查每个新币的机器人用")] },
   ];
 
-  const btn = "btn-moss inline-flex h-8 items-center rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50";
+  const btn = "btn-primary inline-flex h-8 items-center rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50";
   return (
     <>
       <Panel id="api" title={pick("Creator check API", "开发者检查 API")} meta={pick("for trading agents · free for every agent, more for holders", "给交易智能体 · 所有智能体免费，持币者用得更多")} className="lg:col-span-12" bodyClass="grid grid-cols-1 lg:grid-cols-3">
@@ -57,7 +57,7 @@ export default function ApiAccess() {
         {tiers.map((tier, i) => (
           <div key={tier.name} className={`min-w-0 p-3.5 ${i === 0 ? "border-b border-line lg:border-b-0 lg:border-r" : ""}`}>
             <p className="flex items-baseline gap-2">
-              <span className={`text-[17px] font-medium tracking-[-0.02em] ${i === 1 ? "text-moss" : "text-white"}`}>{tier.name}</span>
+              <span className={`text-[17px] font-medium tracking-[-0.02em] ${i === 1 ? "text-lit" : "text-white"}`}>{tier.name}</span>
               <span className="min-w-0 text-[11.5px] text-dim">{tier.who}</span>
             </p>
             <ul className="mt-2 space-y-1 text-[12.5px] text-fg-2">

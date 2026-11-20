@@ -180,7 +180,7 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           </div>
           <p className="font-mono mt-2 break-all text-[12px] text-fg-2">{wallet}</p>
           <div className="mt-5">
-            <p className={`flex items-center gap-2 text-[12px] font-medium [&::first-letter]:uppercase ${l.tone === "bad" ? "text-danger" : l.tone === "good" ? "text-moss" : "text-dim"}`}>
+            <p className={`flex items-center gap-2 text-[12px] font-medium [&::first-letter]:uppercase ${l.tone === "bad" ? "text-danger" : l.tone === "good" ? "text-lit" : "text-dim"}`}>
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {l.tag}
             </p>

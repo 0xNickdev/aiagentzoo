@@ -9,10 +9,10 @@ import { pctFine, short } from "../format";
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const sol = (x: number) => (x >= 100 ? Math.round(x).toLocaleString("en-US") : x >= 10 ? x.toFixed(1) : x.toFixed(2));
 
-const RED = "#ff8a7e";
-const AMBER = "#ffc27a";
+const RED = "#ff5a4f";
+const AMBER = "#e8a23a";
 const WHITE = "#d9dddb";
-const MOSS = "#a6e3b4";
+const MOSS = "#f4f5f4";
 
 interface Group {
   key: string;
@@ -169,7 +169,7 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
 
   const funderTitle = fund?.funder ? (fund.funderLabel ? fund.funderLabel : fund.funderIsHot ? t("An exchange") : short(fund.funder)) : t("No transfer found");
   const funderSub = fund?.funder && !fund.funderIsHot && fund.siblings.length ? t("also funded {n} other devs", { n: fund.siblings.length }) : fund?.funderLabel ? t("exchange withdrawal") : fund?.funderIsHot ? t("hot wallet, many users") : t("who paid the dev");
-  // where the money came from sets the first band's colour: an exchange in amber, a private wallet in moss, one that funds other devs in red
+  // where the money came from sets the first band's colour: an exchange in amber, a private wallet in white, one that funds other devs in red
   const funderColor = !fund?.funder ? WHITE : fund.funderIsHot ? AMBER : fund.siblings.length ? RED : MOSS;
   const devSold = f?.creatorSoldPct != null ? t("sold {p}% of their bag", { p: f.creatorSoldPct }) : "";
   const devRecord = rec ? t("{d} of {n} dumped, 48h", { d: rec.dumped, n: rec.launches48h }) : "";
@@ -468,7 +468,7 @@ function Outflows({ r }: { r: XRayReport }) {
 
 function CabalChip({ id }: { id: number }) {
   return (
-    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full border border-[#4a3a24] px-1.5 text-[11px] leading-[18px] text-warn hover:text-white" title={t("part of a cabal the memory ties together")}>
+    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full border border-[#4d3a1c] px-1.5 text-[11px] leading-[18px] text-warn hover:text-white" title={t("part of a cabal the memory ties together")}>
       {t("cabal #{c}", { c: id })}
     </a>
   );

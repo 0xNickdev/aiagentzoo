@@ -199,7 +199,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
             type="button"
             onClick={() => (wallet ? void start() : onConnect())}
             disabled={!!wallet && (!preview || phase !== "idle")}
-            className="mt-1 w-full flex h-9 items-center justify-center rounded-[8px] bg-moss px-4 text-[12.5px] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] text-moss-ink transition hover:bg-moss-hover disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-1 w-full flex h-9 items-center justify-center rounded-[8px] bg-lit px-4 text-[12.5px] font-medium text-lit-ink transition hover:bg-lit-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {!wallet
               ? t("Connect Solana wallet")
@@ -232,7 +232,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
                 </a>
               </p>
             )}
-            <p className={`mt-1.5 ${phase === "done" ? "text-moss" : phase === "failed" ? "text-danger" : "text-fg-2"}`}>
+            <p className={`mt-1.5 ${phase === "done" ? "text-lit" : phase === "failed" ? "text-danger" : "text-fg-2"}`}>
               {phase === "waiting" && <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warn align-middle" />}
               {phase === "done" ? t("{n} SOL delivered to your wallet. The buy above is filled with it.", { n: got ?? "" }) : t(STATE[st ?? "PENDING_DEPOSIT"])}
             </p>

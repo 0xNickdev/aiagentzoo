@@ -2,11 +2,11 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { BOT_URL, EXTENSION_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../links";
 import { t } from "../i18n";
 import { num } from "../format";
-import { ago, compact, SITE_XRAY, useNorth, useNow } from "../components/home/live";
-import { More, Panel, Tile } from "../components/site/Panel";
-import { CaRow, BuyButton, TokenDot } from "../components/site/ZooToken";
-import Story from "../components/home/Story";
-import { opponentOf, pct, timeLeft, type HumansView, useContestApi, type Weekly } from "../components/contests/data";
+import { ago, SITE_XRAY, ticker, useNorth, useNow } from "../components/home/live";
+import { CaRow, BuyButton } from "../components/site/ZooToken";
+import Story, { Lines } from "../components/home/Story";
+import { oddsPct } from "../components/XRay/ui";
+import { opponentOf, pct, type HumansView, useContestApi } from "../components/contests/data";
 
 /* ---------- what the home reads ---------- */
 
@@ -16,6 +16,7 @@ interface FeedCoin {
   symbol: string;
   createdAt: number;
   verdict: FeedVerdict;
+  odds?: { run: number } | null;
 }
 interface FeedBody {
   stream?: { live: boolean };
@@ -23,9 +24,13 @@ interface FeedBody {
   soon?: FeedCoin[];
   migrated?: FeedCoin[];
 }
+interface SourceUse {
+  xrays: number;
+  checks: number;
+  users: number;
+}
 interface Usage {
-  days?: Array<{ day: string; bySource?: Record<string, { xrays: number }> }>;
-  last7: { xrays: number; checks: number; users: number; bySource?: Record<string, { xrays: number; checks: number; users: number }> };
+  last7: { xrays: number; checks: number; users: number; bySource?: Record<string, SourceUse> };
 }
 interface Chain {
   live: boolean;
@@ -42,19 +47,42 @@ interface CheckRecord {
   checkedAtMin?: number;
   flaggedAvoid: Side;
   notFlagged?: Side;
-  avoidBecause?: { dumped: number; serial: number; bundle: number };
 }
 
-const VERDICT: Record<FeedVerdict, { label: string; dot: string; text: string }> = {
-  pass: { label: "no red flags", dot: "bg-moss", text: "text-moss" },
-  caution: { label: "caution", dot: "bg-warn", text: "text-warn" },
-  avoid: { label: "avoid", dot: "bg-danger", text: "text-danger" },
-};
+const VERDICT_WORD: Record<FeedVerdict, string> = { pass: "no red flags", caution: "caution", avoid: "avoid" };
 
-const clean = (s: string) => s.replace(/^\$+/, "").replace(/[\sㅤᅟᅠ​-‍﻿]+/g, " ").trim();
+const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** A heading that rises out of its mask and inks in, once, when it scrolls into view. */
-function Reveal({ children }: { children: ReactNode }) {
+/** How far an element has come up through the viewport, 0..1: 0 as its top enters at the bottom, 1 once it reaches `to` of the height. It stays at 1 once there. */
+function useScrollIn<T extends HTMLElement>(to = 0.4) {
+  const el = useRef<T>(null);
+  const [k, setK] = useState(() => (reduced() ? 1 : 0));
+  useEffect(() => {
+    const e = el.current;
+    if (!e || k === 1) return;
+    let raf = 0;
+    const read = () => {
+      raf = 0;
+      const r = e.getBoundingClientRect();
+      setK(Math.min(1, Math.max(0, (innerHeight - r.top) / (innerHeight * (1 - to)))));
+    };
+    const on = () => {
+      if (!raf) raf = requestAnimationFrame(read);
+    };
+    addEventListener("scroll", on, { passive: true });
+    addEventListener("resize", on);
+    read();
+    return () => {
+      removeEventListener("scroll", on);
+      removeEventListener("resize", on);
+      cancelAnimationFrame(raf);
+    };
+  }, [k, to]);
+  return [el, k] as const;
+}
+
+/** A line that rises out of its mask and inks in, once, when it scrolls into view. */
+function Reveal({ children, className = "" }: { children: ReactNode; className?: string }) {
   const el = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const e = el.current;
@@ -65,262 +93,318 @@ function Reveal({ children }: { children: ReactNode }) {
         e.setAttribute("data-in", "");
         io.disconnect();
       },
-      { rootMargin: "0px 0px -8% 0px" },
+      { rootMargin: "0px 0px -10% 0px" },
     );
     io.observe(e);
     return () => io.disconnect();
   }, []);
   return (
-    <span ref={el} className="rv">
+    <span ref={el} className={`rv ${className}`}>
       <span>{children}</span>
     </span>
   );
 }
 
-/** How far an element has come up through the viewport, 0..1, for drawing on scroll. */
-function useScrollIn<T extends HTMLElement>() {
-  const el = useRef<T>(null);
-  const [k, setK] = useState(() => (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0));
-  useEffect(() => {
-    const e = el.current;
-    if (!e || k === 1) return;
-    let raf = 0;
-    const read = () => {
-      raf = 0;
-      const r = e.getBoundingClientRect();
-      setK(Math.min(1, Math.max(0, (innerHeight - r.top) / (innerHeight * 0.55))));
-    };
-    const on = () => {
-      if (!raf) raf = requestAnimationFrame(read);
-    };
-    addEventListener("scroll", on, { passive: true });
-    read();
-    return () => {
-      removeEventListener("scroll", on);
-      cancelAnimationFrame(raf);
-    };
-  }, [k]);
-  return [el, k] as const;
-}
-
-/* ---------- the numbers ---------- */
-
-function Numbers({ usage, chain, record }: { usage: Usage | null; chain: Chain | null; record: CheckRecord | null }) {
-  const tiles = [
-    usage && { k: t("X-Rays run"), v: compact(usage.last7.xrays), sub: t("last 7 days") },
-    usage && { k: t("Quick checks"), v: compact(usage.last7.checks), sub: t("last 7 days") },
-    chain && { k: t("Solana launches read"), v: compact(chain.seen.launches), sub: t("since the node started") },
-    record?.avoidBecause && { k: t("Dev dumps caught at minute {m}", { m: record.checkedAtMin ?? 5 }), v: compact(record.avoidBecause.dumped), sub: t(record.window), tone: "danger" as const },
-  ].filter(Boolean) as Array<{ k: string; v: string; sub?: string; tone?: "danger" }>;
-  if (tiles.length < 2) return null;
+/** A heading whose lines rise and ink from grey to white as it comes up the screen. */
+function Heading({ lines, className, to = 0.45 }: { lines: string[]; className: string; to?: number }) {
+  const [el, k] = useScrollIn<HTMLDivElement>(to);
   return (
-    <Panel title={<Reveal>{t("In numbers")}</Reveal>} meta={t("live from the node")} className="lg:col-span-4" bodyClass="grid grid-cols-2">
-      {tiles.map((x, i) => (
-        <Tile key={x.k} k={x.k} v={x.v} sub={x.sub} tone={x.tone ?? "fg"} className={`border-line ${i % 2 ? "" : "border-r"} ${i < tiles.length - 2 || (tiles.length % 2 === 1 && i < tiles.length - 1) ? "border-b" : ""}`} />
-      ))}
-    </Panel>
+    <div ref={el}>
+      <Lines lines={lines} r={k} className={className} />
+    </div>
   );
 }
 
-/* ---------- first screen: the track record ---------- */
+/** One full-width section: a hairline, the counter that carries on from the story's 01-04, then the idea. */
+function Section({ n, of, name, children, id }: { n: number; of: number; name: string; children: ReactNode; id?: string }) {
+  return (
+    <section id={id} className="relative scroll-mt-16 border-t border-line">
+      <div className="mx-auto max-w-[1440px] px-5 pb-[clamp(88px,13vw,176px)] pt-6 sm:px-[86px]">
+        <p className="flex justify-end font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
+          <span>
+            <span className="text-white">{String(n).padStart(2, "0")}</span> / {String(of).padStart(2, "0")} · {t(name)}
+          </span>
+        </p>
+        <div className="mt-[clamp(48px,7vw,104px)]">{children}</div>
+      </div>
+    </section>
+  );
+}
+
+const display = "font-semibold leading-[0.98] tracking-[-0.045em]";
+const lead = "text-[16px] leading-[1.55] text-fg-3 sm:text-[18px]";
+
+/* ---------- a) the statement ---------- */
+
+function Statement() {
+  return (
+    <Heading
+      to={0.3}
+      lines={[t("We don't stop you"), t("from aping."), t("We show you who"), t("you're buying from.")]}
+      className={`${display} text-[clamp(38px,6.6vw,104px)]`}
+    />
+  );
+}
+
+/* ---------- b) the proof ---------- */
 
 /** Published 28 Oct 2026: how well each ranks the launches that lived above the ones that died. 0.5 is a coin flip. */
 const AUC = [
-  { k: "Odds model", v: 0.89, tone: "bg-moss", text: "text-moss" },
-  { k: "Verdict alone", v: 0.59, tone: "bg-dim", text: "text-fg-2" },
+  { k: "Odds model", v: 0.89, line: "bg-white", text: "text-white" },
+  { k: "Verdict alone", v: 0.59, line: "bg-[#6b736f]", text: "text-fg-4" },
 ];
 
-function Record({ record }: { record: CheckRecord | null }) {
-  const read = record ? record.flaggedAvoid.n - (record.flaggedAvoid.unread ?? 0) : 0;
-  const deadShare = record && read ? record.flaggedAvoid.dead / read : null;
-  const [bars, k] = useScrollIn<HTMLDivElement>();
+function share(s?: Side) {
+  if (!s) return null;
+  const read = s.n - (s.unread ?? 0);
+  return read > 0 ? { p: s.dead / read, n: read } : null;
+}
+
+function Proof({ record }: { record: CheckRecord | null }) {
+  const flagged = share(record?.flaggedAvoid);
+  const other = share(record?.notFlagged);
+  const [bars, k] = useScrollIn<HTMLDivElement>(0.35);
+  const m = record?.checkedAtMin ?? 5;
   return (
-    <Panel title={<Reveal>{t("Track record")}</Reveal>} meta={t("odds vs verdict · AUC, published 28 Oct")} className="lg:col-span-8" bodyClass={`grid grid-cols-1 ${deadShare !== null ? "md:grid-cols-2" : ""}`}>
-      <div className="p-3.5">
-      <p className="text-[12.5px] leading-[1.45] text-dim">{t("How well each ranks the coins that lived above the ones that died. 0.5 is a coin flip, 1 is perfect.")}</p>
-      <div ref={bars} className="mt-4 grid gap-3.5">
-        {AUC.map((a) => (
-          <div key={a.k}>
-            <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
-              <span className="text-fg-2">{t(a.k)}</span>
-              <span className={`text-[22px] font-medium leading-none tracking-[-0.03em] ${a.text}`}>{(0.5 + (a.v - 0.5) * k).toFixed(2)}</span>
-            </div>
-            {/* Scale 0.5 to 1: the bar's length is how far past a coin flip it ranks. */}
-            <div className="relative h-2 rounded-sm bg-night-raised">
-              <div className={`absolute inset-y-0 left-0 rounded-sm ${a.tone}`} style={{ width: `${((a.v - 0.5) / 0.5) * 100 * k}%` }} />
-            </div>
+    <>
+      {flagged && record && (
+        <div className="grid gap-x-16 gap-y-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-end">
+          <p className={`${display} text-[clamp(96px,17vw,248px)] leading-[0.85] text-white`}>
+            <Reveal>{(flagged.p * 100).toFixed(1)}%</Reveal>
+          </p>
+          <div className="max-w-[440px] pb-[0.6vw]">
+            <p className="text-[20px] font-medium leading-[1.35] tracking-[-0.02em] text-white sm:text-[24px]">
+              {t("of the coins we flagged avoid at minute {m} were dead a day or two later.", { m })}
+            </p>
+            {other && (
+              <p className={`mt-5 ${lead}`}>
+                {t("Coins we did not flag: {p}% dead. Most launches die either way, so the flag tells you what is happening, the odds tell you what might live.", { p: (other.p * 100).toFixed(1) })}
+              </p>
+            )}
+            <p className="mt-6 border-t border-line pt-3 text-[13px] text-faint">
+              {t("{a} flagged · {b} not flagged · launched 24 to 48 hours ago", { a: num(flagged.n), b: other ? num(other.n) : "-" })}
+            </p>
           </div>
-        ))}
-        <div className="flex justify-between text-[10.5px] text-faint">
-          <span>{t("0.5 coin flip")}</span>
-          <span>0.75</span>
-          <span>{t("1.0 perfect")}</span>
         </div>
-      </div>
-      </div>
-      {deadShare !== null && record && (
-        <div className="border-t border-line p-3.5 md:border-l md:border-t-0">
-          <p className="text-[12.5px] text-fg-2">{t("Dead since, by the verdict at minute {m}", { m: record.checkedAtMin ?? 5 })}</p>
-          {[
-            { k: "flagged avoid", side: record.flaggedAvoid, bar: "bg-danger", text: "text-danger" },
-            ...(record.notFlagged ? [{ k: "not flagged", side: record.notFlagged, bar: "bg-dim", text: "text-fg-2" }] : []),
-          ].map((x) => {
-            const n = x.side.n - (x.side.unread ?? 0);
-            const share = n ? x.side.dead / n : 0;
-            return (
-              <div key={x.k} className="mt-2.5">
-                <div className="flex items-baseline justify-between gap-3 text-[12px]">
-                  <span className="text-dim">
-                    {t(x.k)} <span className="text-faint">· {num(n)}</span>
-                  </span>
-                  <span className={`text-[16px] font-medium leading-none ${x.text}`}>{(share * 100).toFixed(1)}%</span>
+      )}
+
+      <div className={flagged ? "mt-[clamp(96px,12vw,168px)] border-t border-line pt-[clamp(48px,6vw,88px)]" : ""}>
+        <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <div>
+            <p className={`${display} whitespace-nowrap text-[clamp(52px,8vw,120px)] leading-[0.9] text-white`}>
+              <Reveal>0.89</Reveal> <Reveal className="text-fg-4">{t("vs")}</Reveal> <Reveal className="text-fg-4">0.59</Reveal>
+            </p>
+            <div ref={bars} className="mt-12 max-w-[760px]">
+              {AUC.map((a) => (
+                <div key={a.k} className="mb-7">
+                  <div className="mb-2.5 flex items-baseline justify-between text-[14px]">
+                    <span className={a.text}>{t(a.k)}</span>
+                    <span className={`font-mono tabular-nums ${a.text}`}>{(0.5 + (a.v - 0.5) * k).toFixed(2)}</span>
+                  </div>
+                  {/* Scale 0.5 to 1: the line's length is how far past a coin flip it ranks. */}
+                  <div className="relative h-px bg-line-2">
+                    <div className={`absolute left-0 top-[-0.5px] h-[2px] ${a.line}`} style={{ width: `${((a.v - 0.5) / 0.5) * 100 * k}%` }} />
+                  </div>
                 </div>
-                <div className="mt-1.5 h-[3px] overflow-hidden rounded-sm bg-night-raised">
-                  <div className={`h-full ${x.bar}`} style={{ width: `${share * 100}%` }} />
-                </div>
+              ))}
+              <div className="flex justify-between font-mono text-[11px] text-faint">
+                <span>0.5</span>
+                <span>0.75</span>
+                <span>1.0</span>
               </div>
-            );
-          })}
-          <p className="mt-2 text-[11.5px] text-faint">{t("{w}. Most launches die either way: the odds are what rank them.", { w: t(record.window) })}</p>
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-/* ---------- the live strip ---------- */
-
-function LiveStrip({ coins, live }: { coins: FeedCoin[]; live: boolean }) {
-  const now = useNow(5_000);
-  if (!coins.length) return null;
-  // Twice over, so the loop has no seam; about three seconds a coin.
-  const loop = [...coins, ...coins];
-  return (
-    <Panel
-      title={
-        <span className="flex items-center gap-2">
-          <span className={`h-1.5 w-1.5 rounded-full ${live ? "live-dot bg-moss" : "bg-warn"}`} />
-          <Reveal>{t("Live feed")}</Reveal>
-        </span>
-      }
-      meta={t("{n} fresh pump.fun launches · avoid already taken out", { n: coins.length })}
-      action={<More href="/feed">{t("Open the feed →")}</More>}
-      className="lg:col-span-12"
-      bodyClass="p-0"
-    >
-      <div className="marquee overflow-hidden py-2.5">
-        <ul className="marquee-track flex w-max" style={{ ["--marquee-s" as string]: `${coins.length * 3}s` }}>
-          {loop.map((c, i) => {
-            const v = VERDICT[c.verdict] ?? VERDICT.caution;
-            return (
-              <li key={`${c.mint}-${i}`} aria-hidden={i >= coins.length || undefined}>
-                <a
-                  href={SITE_XRAY(c.mint)}
-                  tabIndex={i >= coins.length ? -1 : undefined}
-                  className="mx-1 flex h-8 items-center gap-2 rounded-[7px] border border-line bg-night px-2.5 text-[12.5px] hover:border-line-2"
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${v.dot}`} />
-                  <span className="max-w-[14ch] truncate font-medium text-white">${clean(c.symbol) || c.mint.slice(0, 4)}</span>
-                  <span className={v.text}>{t(v.label)}</span>
-                  <span className="text-faint">{ago(c.createdAt, now)}</span>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </Panel>
-  );
-}
-
-/* ---------- below the fold ---------- */
-
-function Contests({ humans, weekly }: { humans: HumansView | null; weekly: Weekly | null }) {
-  const now = useNow(60_000);
-  if (!humans && !weekly) return null;
-  const model = opponentOf(humans);
-  const human = humans?.standings[0];
-  const agents = weekly?.week.standings.slice(0, 3) ?? [];
-  const ends = weekly?.week.endsAt ?? humans?.week.endsAt;
-  return (
-    <Panel
-      title={<Reveal>{t("Contests")}</Reveal>}
-      meta={ends ? t("this week ends in {t}", { t: timeLeft(ends, now) }) : undefined}
-      action={<More href="/contests">{t("All standings →")}</More>}
-      className="lg:col-span-8"
-      bodyClass="grid grid-cols-1 sm:grid-cols-2"
-    >
-      {humans && (
-        <div className="border-b border-line p-3.5 sm:border-b-0 sm:border-r">
-          <p className="text-[13px] font-medium text-white">{t("Humans vs the odds model")}</p>
-          <p className="mt-1 text-[12px] text-dim">{t("Call tonight's coins: rug, watch or alive. Tomorrow the market grades you and the model on one scale.")}</p>
-          <div className="mt-3 grid grid-cols-2 border-y border-line">
-            <Tile k={t("odds model")} v={model ? pct(model.score) : "-"} sub={model ? t("{n} graded", { n: model.graded }) : t("grades after tonight")} className="border-r border-line !px-0 !pr-3.5" />
-            <Tile k={t("best human")} v={human ? pct(human.score) : "-"} sub={human ? human.id : t("nobody yet, be first")} tone={human && model && human.score > model.score ? "moss" : "fg"} />
+            </div>
           </div>
-          <a href="/contests#humans" className="mt-3 inline-flex h-8 items-center rounded-[7px] border border-line-2 bg-night-raised px-3 text-[12.5px] font-medium text-white hover:border-[#3a4640]">
-            {t("Play tonight's exam")}
-          </a>
-        </div>
-      )}
-      {weekly && (
-        <div className="p-3.5">
-          <p className="text-[13px] font-medium text-white">{t("Agent of the week")}</p>
-          <p className="mt-1 text-[12px] text-dim">{t("Bring your agent. The best honest record of the week wins.")}</p>
-          <ol className="mt-3 border-t border-line">
-            {agents.map((r, i) => (
-              <li key={r.id} className="flex items-baseline justify-between gap-3 border-b border-line py-2 text-[12.5px]">
-                <span className="min-w-0 truncate text-white">
-                  <span className="mr-2.5 text-faint">{String(i + 1).padStart(2, "0")}</span>
-                  {r.name}
-                </span>
-                <span className="shrink-0 text-fg-2">
-                  {pct(r.score)} <span className="text-faint">· {r.graded}</span>
-                </span>
-              </li>
-            ))}
-            {!agents.length && <li className="border-b border-line py-2 text-[12.5px] text-dim">{t("No graded calls yet this week.")}</li>}
-          </ol>
-          <a href="/contests#agents" className="mt-3 inline-flex h-8 items-center rounded-[7px] border border-line-2 bg-night-raised px-3 text-[12.5px] font-medium text-white hover:border-[#3a4640]">
-            {t("Enter your agent")}
-          </a>
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-function Token({ wide }: { wide: boolean }) {
-  return (
-    <Panel title={<span className="flex items-center gap-2"><TokenDot /><Reveal>$ZOOAGENCY</Reveal></span>} meta={t("on ClawPump")} className={wide ? "lg:col-span-12" : "lg:col-span-4"} bodyClass={wide ? "grid grid-cols-1 gap-x-6 p-3.5 md:grid-cols-2" : "flex flex-col p-3.5"}>
-      <ul className="border-t border-line">
-        {["Pro at half price", "The weekly human contest", "Bot alerts 10 minutes first"].map((f) => (
-          <li key={f} className="flex items-baseline justify-between gap-3 border-b border-line py-1.5 text-[12.5px]">
-            <span className="text-fg-2">{t(f)}</span>
-            <span className="text-faint">{t("hold 500k")}</span>
-          </li>
-        ))}
-      </ul>
-      <div className={wide ? "mt-3.5 md:mt-0" : ""}>
-        <CaRow id="home-ca" className={wide ? "" : "mt-3.5"} />
-        <BuyButton className="mt-2 w-full !h-9 !text-[13px]" />
-        <div className="mt-3 flex gap-4 text-[12px]">
-          <More href={ZOOAGENCY_DEXSCREENER_URL}>DexScreener ↗</More>
-          <More href={ZOOAGENCY_SOLSCAN_URL}>Solscan ↗</More>
+          <div className="max-w-[440px] lg:pt-4">
+            <p className="text-[20px] font-medium leading-[1.35] tracking-[-0.02em] text-white sm:text-[24px]">
+              {t("The odds model ranks coins far better than the verdict alone.")}
+            </p>
+            <p className={`mt-5 ${lead}`}>
+              {t("Take one coin that lived and one that died. AUC is how often the model puts the one that lived higher. 0.5 is a coin flip, 1.0 is never wrong.")}
+            </p>
+            <p className="mt-6 border-t border-line pt-3 text-[13px] text-faint">{t("Area under the curve, published 28 Oct 2026")}</p>
+          </div>
         </div>
       </div>
-    </Panel>
+    </>
   );
 }
 
-/** The home: the hero and the scroll story of one real token on one pinned stage, then the tape, the numbers, the record and the rest. Every number is read live; a part that cannot be read is left out. */
+/* ---------- c) live ---------- */
+
+function Live({ coins, live }: { coins: FeedCoin[]; live: boolean }) {
+  const now = useNow(5_000);
+  const rows = coins.slice(0, 8);
+  const hasOdds = rows.some((c) => c.odds && Number.isFinite(c.odds.run));
+  return (
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <Heading lines={[t("Launching now.")]} className={`${display} text-[clamp(44px,6.6vw,104px)]`} />
+        <p className="flex items-center gap-2.5 pb-2 text-[14px] text-fg-3">
+          <span className={`h-1.5 w-1.5 rounded-full ${live ? "live-dot bg-white" : "bg-[#6b736f]"}`} />
+          {live ? t("fresh pump.fun launches, read as they happen") : t("the latest pump.fun launches")}
+        </p>
+      </div>
+      <ul className="mt-12 border-t border-line">
+        {rows.map((c) => {
+          const bad = c.verdict === "avoid";
+          return (
+            <li key={c.mint}>
+              <a
+                href={SITE_XRAY(c.mint)}
+                className={`group grid items-baseline gap-x-6 border-b border-line py-[18px] transition-colors hover:bg-white/[0.02] sm:py-6 ${hasOdds ? "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_120px_96px]" : "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_96px]"}`}
+              >
+                <span className="min-w-0 truncate text-[22px] font-medium tracking-[-0.03em] text-white sm:text-[30px]">{ticker(c.symbol, c.mint)}</span>
+                <span className={`hidden text-[15px] sm:block ${bad ? "text-danger" : "text-fg-3"}`}>{t(VERDICT_WORD[c.verdict] ?? c.verdict)}</span>
+                {hasOdds && (
+                  <span className="hidden text-right font-mono text-[15px] tabular-nums text-fg-2 sm:block">
+                    {c.odds && Number.isFinite(c.odds.run) ? t("{p}% alive", { p: oddsPct(c.odds.run) }) : ""}
+                  </span>
+                )}
+                <span className="text-right font-mono text-[13px] tabular-nums text-faint sm:text-[14px]">
+                  <span className={`mr-3 font-sans sm:hidden ${bad ? "text-danger" : "text-fg-3"}`}>{t(VERDICT_WORD[c.verdict] ?? c.verdict)}</span>
+                  {ago(c.createdAt, now)}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+      <a href="/feed" className="group mt-8 inline-flex items-center gap-2 text-[16px] font-medium text-white">
+        {t("Open the feed")}
+        <Arrow />
+      </a>
+    </>
+  );
+}
+
+const Arrow = ({ big }: { big?: boolean }) => (
+  <svg width={big ? 36 : 16} height={big ? 36 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={big ? 1.25 : 1.75} aria-hidden className="shrink-0 transition-transform duration-300 group-hover:translate-x-1.5">
+    <path d="M4 12h16M14 6l6 6-6 6" />
+  </svg>
+);
+
+/* ---------- d) where it works ---------- */
+
+function Where({ usage }: { usage: Usage | null }) {
+  const src = usage?.last7.bySource;
+  const ext = src?.extension;
+  const api = src?.api;
+  const rows = [
+    {
+      name: "Chrome extension",
+      href: EXTENSION_URL,
+      line: ext && ext.users > 0 ? t("{x} X-Rays by {u} traders in the last 7 days, right on the page they trade from.", { x: num(ext.xrays), u: num(ext.users) }) : t("The verdict right on the page you trade from."),
+    },
+    {
+      name: "Telegram bot",
+      href: BOT_URL,
+      line: t("Paste a contract in chat, get the dev's record back."),
+    },
+    {
+      name: "API & x402",
+      href: "/docs",
+      line: api && api.checks > 0 ? t("{c} checks over the API in the last 7 days. Pay per call in USDC with x402, no key.", { c: num(api.checks) }) : t("Pay per call in USDC with x402, no key."),
+      also: { href: "/x402", label: "x402" },
+    },
+  ];
+  return (
+    <>
+      <Heading lines={[t("Wherever you trade.")]} className={`${display} text-[clamp(44px,6.6vw,104px)]`} />
+      <ul className="mt-12 border-t border-line">
+        {rows.map((r) => {
+          const ext = r.href.startsWith("http");
+          return (
+            <li key={r.name} className="border-b border-line">
+              <a
+                href={r.href}
+                target={ext ? "_blank" : undefined}
+                rel={ext ? "noopener noreferrer" : undefined}
+                className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-8 gap-y-2 py-7 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              >
+                <span className="text-[32px] font-semibold leading-none tracking-[-0.04em] text-white sm:text-[56px]">{t(r.name)}</span>
+                <span className="col-start-1 row-start-2 max-w-[44ch] text-[15px] leading-[1.5] text-fg-3 sm:text-[17px] lg:col-start-2 lg:row-start-1">{r.line}</span>
+                <span className="col-start-2 row-span-2 row-start-1 text-fg-2 group-hover:text-white lg:col-start-3 lg:row-span-1">
+                  <Arrow big />
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/* ---------- e) contests ---------- */
+
+function Contests({ humans }: { humans: HumansView }) {
+  const human = humans.standings[0];
+  const model = opponentOf(humans);
+  return (
+    <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-end">
+      <Heading lines={[t("Humans vs the odds model,"), t("every night.")]} className={`${display} text-[clamp(40px,5.6vw,88px)]`} />
+      <div className="max-w-[440px]">
+        {(human || model) && (
+          <dl className={`grid border-t border-line ${human && model ? "grid-cols-2" : "grid-cols-1"}`}>
+            {human && (
+              <div className="border-b border-line py-4 pr-4">
+                <dt className="text-[13px] text-dim">{t("best human this week")}</dt>
+                <dd className="mt-2 text-[40px] font-semibold leading-none tracking-[-0.04em] text-white">{pct(human.score)}</dd>
+              </div>
+            )}
+            {model && (
+              <div className="border-b border-line py-4 pr-4">
+                <dt className="text-[13px] text-dim">{t("odds model")}</dt>
+                <dd className="mt-2 text-[40px] font-semibold leading-none tracking-[-0.04em] text-fg-4">{model.graded ? pct(model.score) : "-"}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        <p className={`mt-5 ${lead}`}>{t("Call tonight's coins: rug, watch or alive. Tomorrow the market grades you and the model on one scale.")}</p>
+        <a href="/contests#humans" className="btn-primary mt-7 inline-flex h-11 items-center rounded-[8px] px-5 text-[14px] font-medium">
+          {t("Play tonight's exam")}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- f) the token ---------- */
+
+function Token() {
+  return (
+    <>
+      <p className={`${display} text-[clamp(52px,11.5vw,176px)] leading-[0.88] text-white`}>
+        <Reveal>$ZOOAGENCY</Reveal>
+      </p>
+      <div className="mt-10 grid gap-x-16 gap-y-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <p className="max-w-[30ch] text-[22px] font-medium leading-[1.3] tracking-[-0.02em] text-white sm:text-[28px]">
+          {t("Hold 500k: Pro at half price, the weekly human contest and bot alerts 10 minutes first.")}
+        </p>
+        <div className="min-w-0 max-w-[480px]">
+          <CaRow id="home-ca" className="!h-11 !rounded-[8px] !pl-3.5 !pr-1.5" />
+          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <BuyButton className="!h-11 !rounded-[8px] !px-5 !text-[14px]" />
+            <a href={ZOOAGENCY_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-[14px] text-fg-3 hover:text-white">
+              DexScreener ↗
+            </a>
+            <a href={ZOOAGENCY_SOLSCAN_URL} target="_blank" rel="noopener noreferrer" className="text-[14px] text-fg-3 hover:text-white">
+              Solscan ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** The home: the hero and the scroll story of one real token on one pinned stage, then one idea per screen. Every number is read live; a part that cannot be read is left out. */
 export default function Home() {
   const feedBody = useNorth<FeedBody>("/v1/chain/feed", 15_000);
   const usage = useNorth<Usage>("/v1/usage", 120_000);
   const chain = useNorth<Chain>("/v1/chain", 30_000);
   const record = useNorth<CheckRecord>("/v1/check/record", 120_000);
   const humans = useContestApi<HumansView>("/v1/humans", 120_000).data;
-  const weekly = useContestApi<Weekly>("/v1/agent-of-the-week", 120_000).data;
   const coins = useMemo(() => {
     const all = [...(feedBody?.new ?? []), ...(feedBody?.soon ?? []), ...(feedBody?.migrated ?? [])];
     const seen = new Set<string>();
@@ -330,15 +414,25 @@ export default function Home() {
       .slice(0, 30);
   }, [feedBody]);
 
+  const parts = [
+    { name: "The point", el: <Statement /> },
+    { name: "The proof", el: <Proof record={record} /> },
+    coins.length ? { name: "Live", el: <Live coins={coins} live={!!feedBody?.stream?.live} /> } : null,
+    { name: "Where", el: <Where usage={usage} /> },
+    humans ? { name: "Contests", el: <Contests humans={humans} /> } : null,
+    { name: "The token", el: <Token /> },
+  ].filter(Boolean) as Array<{ name: string; el: ReactNode }>;
+  const of = 4 + parts.length;
+
   return (
     <>
       <Story chain={chain} sample={coins[0]} />
-      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-3 px-4 pb-8 pt-4 sm:px-5 lg:grid-cols-12">
-        <LiveStrip coins={coins} live={!!feedBody?.stream?.live} />
-        <Record record={record} />
-        <Numbers usage={usage} chain={chain} record={record} />
-        <Contests humans={humans} weekly={weekly} />
-        <Token wide={!humans && !weekly} />
+      <div className="mt-[clamp(48px,8vw,120px)]">
+        {parts.map((p, i) => (
+          <Section key={p.name} n={5 + i} of={of} name={p.name}>
+            {p.el}
+          </Section>
+        ))}
       </div>
     </>
   );

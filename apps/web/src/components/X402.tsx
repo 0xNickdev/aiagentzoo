@@ -37,7 +37,7 @@ interface Receipts {
 const MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 const DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 
-const VERDICT: Record<string, string> = { avoid: "text-danger", caution: "text-warn", pass: "text-moss" };
+const VERDICT: Record<string, string> = { avoid: "text-danger", caution: "text-warn", pass: "text-lit" };
 
 function Card({ title, note, className = "", children }: { title: string; note?: string; className?: string; children: React.ReactNode }) {
   return (
@@ -100,8 +100,8 @@ function Probe() {
           void run();
         }}
       >
-        <input value={mint} onChange={(e) => setMint(e.target.value)} placeholder={t("token address")} aria-label={t("token address")} className="h-9 min-w-0 shrink-0 rounded-[7px] border border-line-2 bg-night px-3 font-mono sm:flex-1 text-[12.5px] text-white outline-none placeholder:font-sans placeholder:text-faint focus:border-moss-edge" />
-        <button disabled={busy} className="btn-moss h-9 rounded-[7px] px-4 text-[12.5px] font-medium disabled:opacity-50">
+        <input value={mint} onChange={(e) => setMint(e.target.value)} placeholder={t("token address")} aria-label={t("token address")} className="h-9 min-w-0 shrink-0 rounded-[7px] border border-line-2 bg-night px-3 font-mono sm:flex-1 text-[12.5px] text-white outline-none placeholder:font-sans placeholder:text-faint focus:border-lit-edge" />
+        <button disabled={busy} className="btn-primary h-9 rounded-[7px] px-4 text-[12.5px] font-medium disabled:opacity-50">
           {busy ? t("Asking…") : t("Ask without paying")}
         </button>
       </form>
@@ -136,7 +136,7 @@ function AgentPrompt() {
       <p className="text-[12.5px] leading-[1.6] text-fg-2">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
       <pre className={`mt-3 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] ${PRE}`}>{text ?? t("Loading…")}</pre>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button onClick={() => void copy()} disabled={!text} className="btn-moss h-8 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
+        <button onClick={() => void copy()} disabled={!text} className="btn-primary h-8 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
           {copied ? t("Copied") : t("Copy the prompt")}
         </button>
         <a href="/x402-agent-prompt.txt" target="_blank" rel="noopener noreferrer" className={`text-[12px] text-dim ${LINK}`}>
@@ -166,14 +166,14 @@ export default function X402() {
       lead={t("A trading agent asks who is behind a coin before it buys and pays for the answer in USDC over plain HTTP. The node verifies the payment, builds the report, and settles only when there is a report to deliver.")}
       side={
         <span className="flex items-center gap-2 text-[12px] text-dim">
-          <span className="h-1.5 w-1.5 rounded-full bg-moss" />
+          <span className="h-1.5 w-1.5 rounded-full bg-lit" />
           {clusters ? t("x402 · Solana {c} · live", { c: clusters }) : t("x402 · Solana · live")}
         </span>
       }
     >
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <section className="grid grid-cols-2 overflow-hidden rounded-[12px] border border-line bg-night-surface lg:col-span-12 lg:grid-cols-4">
-          <Tile k={t("paid on mainnet")} v={tot ? String(real?.paid ?? 0) : "-"} sub={tot ? t("{u} real USDC", { u: (real?.usdc ?? 0).toFixed(3) }) : ""} tone={real?.paid ? "moss" : "fg"} className="border-b border-r border-line lg:border-b-0" />
+          <Tile k={t("paid on mainnet")} v={tot ? String(real?.paid ?? 0) : "-"} sub={tot ? t("{u} real USDC", { u: (real?.usdc ?? 0).toFixed(3) }) : ""} tone={real?.paid ? "lit" : "fg"} className="border-b border-r border-line lg:border-b-0" />
           <Tile k={t("paid on devnet")} v={tot ? String(test?.paid ?? 0) : "-"} sub={tot ? t("{u} test USDC", { u: (test?.usdc ?? 0).toFixed(3) }) : ""} className="border-b border-line lg:border-b-0 lg:border-r" />
           <Tile k={t("not charged")} v={tot ? String(tot.refusedBeforeSettle) : "-"} sub={t("verified, but nothing to sell")} className="border-r border-line" />
           <Tile k={t("settlements failed")} v={tot ? String(tot.settleFailed) : "-"} sub={t("report withheld")} tone={tot?.settleFailed ? "danger" : "fg"} />
@@ -185,7 +185,7 @@ export default function X402() {
               <li key={r.url} className="py-2.5 first:pt-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <code className="min-w-0 truncate font-mono text-[12px] text-white">GET {r.url.replace("https://north.zooaiagency.com", "")}</code>
-                  <span className="shrink-0 text-[13px] font-medium text-moss">{r.price.usdc} USDC</span>
+                  <span className="shrink-0 text-[13px] font-medium text-lit">{r.price.usdc} USDC</span>
                 </div>
                 <p className="mt-1 text-[12px] leading-[1.55] text-dim">{t(r.description)}</p>
               </li>

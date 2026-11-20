@@ -106,7 +106,7 @@ export default function FactorsCard({ r }: { r: XRayReport }) {
               <dt className="text-[13px] text-fg-2">{x.k}</dt>
               <p className="mt-0.5 text-[12.5px] leading-snug text-faint">{x.d}</p>
             </div>
-            <dd className={`tabular-nums shrink-0 text-right text-[15px] font-medium ${x.bad ? "text-danger" : x.good ? "text-moss" : "text-fg"}`}>{x.v}</dd>
+            <dd className={`tabular-nums shrink-0 text-right text-[15px] font-medium ${x.bad ? "text-danger" : x.good ? "text-lit" : "text-fg"}`}>{x.v}</dd>
           </div>
         ))}
       </dl>

@@ -30,9 +30,9 @@ export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promis
     const a = -Math.PI / 2 + (i / Math.max(1, early.length)) * Math.PI * 2;
     const x = cx + Math.cos(a) * ring * 1.15;
     const y = cy + Math.sin(a) * ring;
-    const color = crew ? "#ff8a7e" : e.ring ? "#ffc27a" : e.serial ? "#c9b48a" : "#a6e3b4";
+    const color = crew ? "#ff5a4f" : e.ring ? "#e8a23a" : e.serial ? "#c9b48a" : "#f4f5f4";
     if (crew) {
-      ctx.strokeStyle = "rgba(255,138,126,0.45)";
+      ctx.strokeStyle = "rgba(255, 90, 79,0.45)";
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(x, y);
@@ -135,7 +135,7 @@ export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promis
   facts.forEach(([k, v, bad], i) => {
     const x = L + i * 210;
     ctx.font = '600 30px "Geist", sans-serif';
-    ctx.fillStyle = bad ? "#ff8a7e" : "#fff";
+    ctx.fillStyle = bad ? "#ff5a4f" : "#fff";
     ctx.fillText(v, x, top + 50);
     ctx.font = small(14);
     ctx.fillStyle = FG4;

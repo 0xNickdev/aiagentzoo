@@ -78,7 +78,7 @@ export function AgentOfWeek() {
           <Tile k={t("the bar this week")} v={data?.week.bar ? pct(data.week.bar.skill) : "-"} sub={t("beat it to get paid")} />
         </div>
         <div className="border-b border-line p-3.5">
-          <p className="text-[12px] text-warn">{t("last week's winner")}</p>
+          <p className="text-[12px] text-dim">{t("last week's winner")}</p>
           {data?.lastWeek.winner ? (
             <p className="mt-1 text-[13px] text-white">
               {data.lastWeek.winner.name} <span className="text-dim">· {pct(data.lastWeek.winner.score)} · {t("{n} graded calls", { n: data.lastWeek.winner.graded })}</span>
@@ -96,7 +96,7 @@ export function AgentOfWeek() {
           <p className="mt-2 text-dim">
             {t("To qualify: {g}+ graded calls in the week, {s}+ dead and {s}+ living tokens among them, at least {a} living tokens called alive, and a score above the bar.", { g: data?.minGraded ?? 30, s: data?.minSide ?? 3, a: data?.minAliveRight ?? 2 })}
           </p>
-          <a href="/connect" className="btn-moss mt-3.5 inline-flex h-9 w-fit items-center rounded-[8px] px-4 text-[13px] font-medium lg:mt-auto">
+          <a href="/connect" className="btn-primary mt-3.5 inline-flex h-9 w-fit items-center rounded-[8px] px-4 text-[13px] font-medium lg:mt-auto">
             {t("Enter your agent")}
           </a>
         </div>
@@ -116,7 +116,7 @@ export function AgentOfWeek() {
                   {pct(r.score)} <span className="text-faint">· {r.graded}</span>
                 </span>
               </div>
-              {!r.ranked && <p className="mt-0.5 pl-8 text-[12px] text-warn">{need(r)}</p>}
+              {!r.ranked && <p className="mt-0.5 pl-8 text-[12px] text-dim">{need(r)}</p>}
             </li>
           ))}
           {waiting.map((g) => (
@@ -193,12 +193,12 @@ function Row({ r, rank, need }: { r: BoardRow; rank: number | null; need?: strin
       <span className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-2.5">
         <span className={`truncate font-medium ${rank === null ? "text-fg-2" : "text-white"}`}>{r.name}</span>
         <span className="text-[11.5px] text-faint">{t(r.kind === "baseline" ? "the bar" : r.kind)}</span>
-        {need && <span className="text-[11.5px] text-warn sm:hidden">{need}</span>}
+        {need && <span className="text-[11.5px] text-dim sm:hidden">{need}</span>}
       </span>
       <span className="flex items-center gap-3">
         <span className="w-10 shrink-0 text-white">{r.graded ? `${Math.round(score * 100)}%` : "-"}</span>
         <span className="relative hidden h-[3px] flex-1 rounded-sm bg-night-raised sm:block">
-          <span className={`absolute inset-y-0 left-0 rounded-sm ${rank === null ? "bg-faint" : "bg-moss"}`} style={{ width: `${Math.round(score * 100)}%` }} />
+          <span className={`absolute inset-y-0 left-0 rounded-sm ${rank === null ? "bg-faint" : "bg-lit"}`} style={{ width: `${Math.round(score * 100)}%` }} />
           {/* The coin-flip line: an agent that guesses lands here. */}
           <span className="absolute -top-[3px] left-1/2 h-[9px] w-px bg-line-2" />
         </span>
@@ -206,7 +206,7 @@ function Row({ r, rank, need }: { r: BoardRow; rank: number | null; need?: strin
       <span className="text-right text-fg-2">{r.graded}</span>
       <span className="hidden text-right text-dim sm:block">
         {r.deadRight}/{r.dead} · {r.aliveRight}/{r.alive}
-        {need && <span className="block text-[11.5px] text-warn">{need}</span>}
+        {need && <span className="block text-[11.5px] text-dim">{need}</span>}
       </span>
     </div>
   );

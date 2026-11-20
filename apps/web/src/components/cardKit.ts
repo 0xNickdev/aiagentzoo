@@ -1,4 +1,4 @@
-/** Shared look of the share cards (X-Ray, Ask, Night card): the night with one moss glow, the wordmark, solid text in one family. */
+/** Shared look of the share cards (X-Ray, Ask, Night card): the night with one grey glow, the wordmark, solid text in one family. */
 
 export const FG2 = "#e6e9e7";
 export const FG4 = "#b8beba";
@@ -18,14 +18,14 @@ const image = (src: string) =>
     i.src = src;
   });
 
-/** Night and a quiet moss glow behind the copy. */
+/** Night and a quiet grey glow behind the copy. */
 export function base(ctx: CanvasRenderingContext2D, W: number, H: number): void {
   ctx.fillStyle = "#030504";
   ctx.fillRect(0, 0, W, H);
   for (const [x, y, r, a] of [[W * 0.18, H * 0.3, 620, 0.2], [W * 0.8, H * 0.5, 480, 0.14]] as const) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(70,110,85,${a})`);
-    g.addColorStop(1, "rgba(70,110,85,0)");
+    g.addColorStop(0, `rgba(120,128,124,${a})`);
+    g.addColorStop(1, "rgba(120,128,124,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }

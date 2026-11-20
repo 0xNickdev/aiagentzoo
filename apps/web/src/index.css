@@ -74,9 +74,9 @@ body {
   letter-spacing: 0;
 }
 
-/* One keyboard focus ring everywhere: moss, only when the keyboard is used. */
+/* One keyboard focus ring everywhere: a grey ring, only when the keyboard is used. */
 :focus-visible {
-  outline: 2px solid #a6e3b4;
+  outline: 2px solid #d9dddb;
   outline-offset: 2px;
 }
 
@@ -108,19 +108,19 @@ body {
   transition: background 0.3s;
 }
 .glass-bar[data-under="true"]::after {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14) 30%, rgba(166, 227, 180, 0.25) 50%, rgba(255, 255, 255, 0.14) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14) 30%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.14) 70%, transparent);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass-bar { background: rgba(3, 5, 4, 0.95); }
 }
 
-/* A primary button: moss with a thin top light. */
-.btn-moss {
-  background: #a6e3b4;
-  color: #06120b;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+/* A primary button: white with near-black ink. */
+.btn-primary {
+  background: #ffffff;
+  color: #030504;
+  transition: background-color 0.15s ease;
 }
-.btn-moss:hover { background: #b9ecc5; }
+.btn-primary:hover { background: #e6e9e7; }
 
 /* The live strip: one slow loop that stops while a pointer is on it. */
 @keyframes marquee {
@@ -149,7 +149,7 @@ body {
   position: absolute;
   inset: -4px;
   border-radius: 9999px;
-  border: 1px solid #a6e3b4;
+  border: 1px solid #b8beba;
   opacity: 0;
   animation: ping-soft 2.4s ease-out infinite;
 }

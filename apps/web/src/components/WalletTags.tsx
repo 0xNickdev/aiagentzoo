@@ -8,18 +8,18 @@ import { t } from "../i18n";
 export type WalletTag = "crew" | "rugger" | "ring" | "serial" | "bundle" | "whale" | "dev" | "exchange" | "new" | "kol" | "smart" | "kolside";
 
 export const TAG: Record<WalletTag, { Icon: typeof Rat; color: string; label: string; what: string }> = {
-  crew: { Icon: Rat, color: "#ff8a7e", label: "creator's own wallet", what: "snipes this creator's other launches too" },
-  rugger: { Icon: Skull, color: "#ff8a7e", label: "known rugger", what: "launched tokens before and dumped most of them" },
-  ring: { Icon: Network, color: "#ffc27a", label: "sniper ring", what: "has sniped launches together with other wallets here: one operator" },
+  crew: { Icon: Rat, color: "#ff5a4f", label: "creator's own wallet", what: "snipes this creator's other launches too" },
+  rugger: { Icon: Skull, color: "#ff5a4f", label: "known rugger", what: "launched tokens before and dumped most of them" },
+  ring: { Icon: Network, color: "#e8a23a", label: "sniper ring", what: "has sniped launches together with other wallets here: one operator" },
   serial: { Icon: Repeat, color: "#c9b48a", label: "serial sniper", what: "buys launches in the first seconds to sell to whoever comes next" },
   bundle: { Icon: Package, color: "#aab2ad", label: "bundler", what: "bought in the launch block, or bundles launches as a habit" },
   whale: { Icon: Waves, color: "#e6e9e7", label: "whale", what: "took two percent of the supply or more" },
   dev: { Icon: Hammer, color: "#e6e9e7", label: "has launched before", what: "launched tokens the zoo has kept, and did not dump most of them" },
   exchange: { Icon: Landmark, color: "#aab2ad", label: "exchange or launcher", what: "everyone's wallet, so it ties no one together" },
-  new: { Icon: Sprout, color: "#a6e3b4", label: "new wallet", what: "never seen by the zoo before this launch" },
-  kol: { Icon: Megaphone, color: "#ffc27a", label: "KOL", what: "a KOL's wallet, as Kolscan lists it" },
-  smart: { Icon: Gem, color: "#a6e3b4", label: "smart money", what: "a trader with a record of winning" },
-  kolside: { Icon: Megaphone, color: "#ffc27a", label: "KOL side wallet", what: "paid for by a KOL's known wallet" },
+  new: { Icon: Sprout, color: "#f4f5f4", label: "new wallet", what: "never seen by the zoo before this launch" },
+  kol: { Icon: Megaphone, color: "#e8a23a", label: "KOL", what: "a KOL's wallet, as Kolscan lists it" },
+  smart: { Icon: Gem, color: "#f4f5f4", label: "smart money", what: "a trader with a record of winning" },
+  kolside: { Icon: Megaphone, color: "#e8a23a", label: "KOL side wallet", what: "paid for by a KOL's known wallet" },
 };
 
 const ORDER: WalletTag[] = ["kol", "kolside", "smart", "crew", "rugger", "ring", "serial", "bundle", "whale", "dev", "exchange", "new"];

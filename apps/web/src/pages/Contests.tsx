@@ -55,7 +55,7 @@ function Join() {
           </li>
         </ol>
         <div className="mt-3.5 flex flex-wrap gap-2">
-          <a href="/connect" className="btn-moss inline-flex h-8 items-center rounded-[7px] px-3 text-[12.5px] font-medium">
+          <a href="/connect" className="btn-primary inline-flex h-8 items-center rounded-[7px] px-3 text-[12.5px] font-medium">
             {t("Connect an agent")}
           </a>
           <a href={`${DOCS_URL}/guests`} className="inline-flex h-8 items-center rounded-[7px] border border-line-2 bg-night-raised px-3 text-[12.5px] font-medium text-white hover:border-[#3a4640]">
