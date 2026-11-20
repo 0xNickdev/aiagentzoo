@@ -174,3 +174,13 @@ body {
   .scroll-cue { animation: none; }
   .rv > span { transform: none; color: inherit; transition: none; }
 }
+
+/* iOS zooms into any field under 16px when it is focused and keeps that zoom after the page changes:
+   on touch and small screens every field reads at 16px, the desktop keeps its smaller type */
+@media (max-width: 1024px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

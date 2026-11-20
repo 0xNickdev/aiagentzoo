@@ -302,7 +302,31 @@ export default function Story({ chain, sample }: { chain: ChainNow | null; sampl
     const tr = track.current;
     if (reduce || !tr) return;
     let cur = 0, target = 0, raf = 0;
+    // while a search on the stage is being typed into, the story holds still: on phones the keyboard opens and the
+    // browser scrolls the field into view, and that scroll must not carry the story on and take the field away
+    let held = false, heldY = 0, release = 0;
+    const typing = () => {
+      const a = document.activeElement;
+      return a instanceof HTMLInputElement && !!stage.current?.contains(a);
+    };
+    const onFocusIn = () => {
+      if (!typing()) return;
+      clearTimeout(release);
+      if (!held) heldY = scrollY;
+      held = true;
+    };
+    const onFocusOut = () => {
+      clearTimeout(release);
+      release = window.setTimeout(() => {
+        if (typing()) return;
+        held = false;
+        // put the page back where it was before the keyboard moved it, so the story picks up where it was
+        if (Math.abs(scrollY - heldY) > 2) scrollTo({ top: heldY, behavior: "instant" as ScrollBehavior });
+        onScroll();
+      }, 350);
+    };
     const read = () => {
+      if (held) return;
       const r = tr.getBoundingClientRect();
       const range = r.height - (stage.current?.offsetHeight ?? innerHeight);
       target = clamp((NAV - r.top) / Math.max(1, range));
@@ -321,10 +345,15 @@ export default function Story({ chain, sample }: { chain: ChainNow | null; sampl
     };
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", onScroll);
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
     onScroll();
     return () => {
       removeEventListener("scroll", onScroll);
       removeEventListener("resize", onScroll);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      clearTimeout(release);
       cancelAnimationFrame(raf);
     };
   }, [reduce]);
