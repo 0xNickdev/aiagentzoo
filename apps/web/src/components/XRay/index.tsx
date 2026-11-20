@@ -224,9 +224,20 @@ export default function XRay() {
       href={href(s)}
       className={r && sec === s ? "on" : ""}
       aria-current={r && sec === s ? "page" : undefined}
-      aria-disabled={!report}
+      data-empty={!report || undefined}
+      title={!report ? t("Paste a token first") : undefined}
       onClick={(e) => {
         e.preventDefault();
+        if (!report) {
+          // No token yet: point at the search instead of doing nothing.
+          const f = field.current;
+          f?.focus();
+          const form = f?.closest("form");
+          form?.classList.remove("x-nudge");
+          void form?.getBoundingClientRect();
+          form?.classList.add("x-nudge");
+          return;
+        }
         go(s);
       }}
     >

@@ -56,7 +56,11 @@
 .x-navl a:hover { background: var(--surface); color: var(--fg-2); }
 .x-navl a.on { background: var(--raised); color: var(--fg); }
 .x-navl a.on::before { content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px; background: var(--moss); }
-.x-navl a[aria-disabled="true"] { pointer-events: none; color: var(--fg-4); }
+.x-navl a[data-empty] { color: var(--fg-4); }
+.x-navl a[data-empty] .x-ic, .x-navl a[data-empty] svg { opacity: .55; }
+.x-search.x-nudge { animation: x-nudge .9s ease-out; }
+@keyframes x-nudge { 0% { border-color: var(--moss); box-shadow: 0 0 0 3px #a6e3b433; } 100% { border-color: rgba(255,255,255,.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); } }
+@media (prefers-reduced-motion: reduce) { .x-search.x-nudge { animation: none; border-color: var(--moss); } }
 .x-navl .x-ic { width: 15px; height: 15px; flex: none; }
 .x-navl .x-ct { margin-left: auto; font: 500 11px var(--mono); color: var(--fg-4); }
 .x-navl .x-ct.x-d { color: var(--danger); }
