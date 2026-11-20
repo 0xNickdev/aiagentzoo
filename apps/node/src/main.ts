@@ -1,31 +1,16 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync, writeSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, renameSync, writeFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
-import {
-  Enclosure,
-  FeedLedger,
-  HttpTransport,
-  type ModelProvider,
-  PeerDirectory,
-  PublicLog,
-} from "@aiagentzoo/sdk";
+import { Enclosure, FeedLedger, HttpTransport, PeerDirectory, PublicLog } from "@aiagentzoo/sdk";
 import { nightWatch } from "./agents/nightWatch.ts";
 import { loadConfig } from "./config.ts";
-import { BriefIndex } from "./briefs.ts";
 import { GuestHouse } from "./guests.ts";
-import { AskDesk } from "./ask.ts";
-import { evolutionView } from "./agents/evolution.ts";
 import { startTelegram } from "./telegram.ts";
 import { startWatchdog } from "./watchdog.ts";
-import { koiView } from "./agents/koi.ts";
-import { agentOfWeek, beaverRecord, canyonStats, leaderboard } from "./stats.ts";
+import { agentOfWeek, canyonStats, leaderboard, oddsRecord } from "./stats.ts";
 import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
-import { BscFeed, bscLineage, bscTape, recordFlap, recordFourMeme } from "./chain/bsc.ts";
-import { FlapFeed } from "./chain/flap.ts";
-import { bscBook } from "./chain/bscHolders.ts";
-import { BaseFeed, baseLineage, baseTape, type Pool, recordClanker } from "./chain/base.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
@@ -38,8 +23,7 @@ import { startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
-import { tickGene } from "./gene.ts";
-import { balanceOf, TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
+import { TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
 import { startBuyBot } from "./buybot.ts";
 import { buybackView, startBuyback } from "./buyback.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
@@ -51,22 +35,13 @@ process.on("unhandledRejection", (reason) => console.error(`unhandled rejection:
 const config = loadConfig();
 const db = openDatabase(join(config.dataDir, "node.db"));
 
-let model: ModelProvider | undefined;
-if (process.env.OPENAI_API_KEY) {
-  const { OpenAIProvider } = await import("@aiagentzoo/sdk/openai");
-  model = new OpenAIProvider({ model: process.env.ZOO_MODEL });
-} else if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
-  const { ClaudeProvider } = await import("@aiagentzoo/sdk/claude");
-  model = new ClaudeProvider({ model: process.env.ZOO_MODEL, effort: "low" });
-}
+// No model: every kept feature runs on the chain, rules and arithmetic (2026-11-20). OPENAI_API_KEY, ANTHROPIC_API_KEY and
+// ZOO_MODEL are no longer read.
 
-// Free by default: no feed, no stake; per-session budgets and visitor limits cap the model cost.
+// Free by default: no feed, no stake.
 // ZOO_FEED_MODE=credits switches on the old internal credit ledger, kept for the agent network's tests.
 const ledger = config.feedMode === "credits" ? new FeedLedger() : undefined;
 ledger?.deposit(config.keeper, config.feedGrant, "boot-grant");
-
-const briefsDir = join(config.dataDir, "briefs");
-mkdirSync(briefsDir, { recursive: true });
 
 // The north node streams the chain; others read its fresh clean launches over the private network.
 const northPeerUrl = config.peers.find((p) => p.id === "north.zoo")?.url;
@@ -78,7 +53,6 @@ const enclosure = new Enclosure({
   store: new SqliteStateStore(db),
   log: new PublicLog(new SqliteLogStore(db)),
   ledger,
-  model,
   peers: new PeerDirectory(config.peers),
   transport: new HttpTransport(),
   tools: [...allTools, chainClean(northPeerUrl)],
@@ -87,9 +61,7 @@ const enclosure = new Enclosure({
     nodes: config.nodes,
     briefAt: config.briefAt,
     scanEveryMs: config.scanEveryMs,
-    judgeEveryMs: Number(process.env.ZOO_JUDGE_EVERY_MS ?? 30 * 60_000),
     obsCap: Number(process.env.ZOO_OBS_CAP ?? 4000),
-    onBrief: (id, markdown) => writeFileSync(join(briefsDir, `${id}.md`), markdown),
   }),
 });
 
@@ -104,17 +76,6 @@ const tapeFile = join(config.dataDir, "chain-tape.json");
 // Who funded which creator: slow to learn (RPC calls), so it is kept too.
 const lineageFile = join(config.dataDir, "chain-lineage.json");
 const socialsFile = join(config.dataDir, "chain-socials.json");
-// BNB Chain has its own tape, and a cursor: the last block read, so a restart resumes there instead of two days back.
-const bscTapeFile = join(config.dataDir, "chain-tape-bsc.json");
-const bscCursorFile = join(config.dataDir, "chain-bsc-cursor.json");
-let bscFeed: BscFeed | null = null;
-// Flap shares the BNB Chain tape and has its own cursor.
-const flapCursorFile = join(config.dataDir, "chain-flap-cursor.json");
-let flapFeed: FlapFeed | null = null;
-// Base too: its tape, and the feed's cursor with the Uniswap pools it follows (a pool id is not on the tape).
-const baseTapeFile = join(config.dataDir, "chain-tape-base.json");
-const baseFeedFile = join(config.dataDir, "chain-base-feed.json");
-let baseFeed: BaseFeed | null = null;
 // Who funded the first-second wallets: slow to learn (RPC calls), so it is kept too.
 const sideFile = join(config.dataDir, "chain-sidewallets.json");
 const sideWallets = new SideWallets(labels);
@@ -154,25 +115,6 @@ const saveSteps: Array<() => void> = [
     renameSync(`${sideFile}.tmp`, sideFile);
   },
   () => {
-    if (!bscFeed) return;
-    writeFileSync(`${bscTapeFile}.tmp`, bscTape.snapshot());
-    renameSync(`${bscTapeFile}.tmp`, bscTapeFile);
-    writeFileSync(`${bscCursorFile}.tmp`, JSON.stringify({ cursor: bscFeed.cursor, at: Date.now() }));
-    renameSync(`${bscCursorFile}.tmp`, bscCursorFile);
-  },
-  () => {
-    if (!flapFeed) return;
-    writeFileSync(`${flapCursorFile}.tmp`, JSON.stringify({ cursor: flapFeed.cursor, at: Date.now() }));
-    renameSync(`${flapCursorFile}.tmp`, flapCursorFile);
-  },
-  () => {
-    if (!baseFeed) return;
-    writeFileSync(`${baseTapeFile}.tmp`, baseTape.snapshot());
-    renameSync(`${baseTapeFile}.tmp`, baseTapeFile);
-    writeFileSync(`${baseFeedFile}.tmp`, baseFeed.snapshot());
-    renameSync(`${baseFeedFile}.tmp`, baseFeedFile);
-  },
-  () => {
     writeFileSync(`${lineageFile}.tmp`, lineage.snapshot());
     renameSync(`${lineageFile}.tmp`, lineageFile);
   },
@@ -191,52 +133,6 @@ if (config.role === "north") {
   tape.follow(TOKEN_MINT, TOKEN_POOL);
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
-  if (process.env.ZOO_BSC !== "off") {
-    if (existsSync(bscTapeFile)) console.log(`[${config.id}] bsc tape restored: ${bscTape.load(readFileSync(bscTapeFile, "utf8"))} tokens`);
-    let cursor: number | null = null;
-    try {
-      if (existsSync(bscCursorFile)) cursor = Number(JSON.parse(readFileSync(bscCursorFile, "utf8")).cursor) || null;
-    } catch {
-      /* two days are read again */
-    }
-    bscFeed = new BscFeed(bscTape, { cursor, wsUrl: process.env.BSC_WS_URL, rpcUrl: process.env.BSC_RPC_URL, logsUrl: process.env.BSC_LOGS_URL, log: (m) => console.log(`[${config.id}] ${m}`) });
-    if (process.env.ZOO_FLAP !== "off") {
-      let flapCursor: number | null = null;
-      try {
-        if (existsSync(flapCursorFile)) flapCursor = Number(JSON.parse(readFileSync(flapCursorFile, "utf8")).cursor) || null;
-      } catch {
-        /* two days are read again */
-      }
-      const feed = bscFeed;
-      flapFeed = new FlapFeed(bscTape, {
-        cursor: flapCursor,
-        logsUrl: process.env.BSC_LOGS_URL,
-        book: bscBook,
-        onPair: (mint, pool, quote, ts, tx, block) => feed.followPair(mint, pool, quote, ts, tx, block),
-        // Each launch's accounts and picture from its metadata, half a minute in, once the feed is live.
-        onLaunch: (l) => {
-          if (flapFeed?.backfilled) setTimeout(() => void recordFlap(l.mint), 30_000).unref();
-        },
-        log: (m) => console.log(`[${config.id}] ${m}`),
-      });
-    }
-  }
-  if (process.env.ZOO_BASE !== "off") {
-    if (existsSync(baseTapeFile)) console.log(`[${config.id}] base tape restored: ${baseTape.load(readFileSync(baseTapeFile, "utf8"))} tokens`);
-    let cursor: number | null = null;
-    let pools: Array<[string, Pool]> = [];
-    try {
-      if (existsSync(baseFeedFile)) {
-        const saved = JSON.parse(readFileSync(baseFeedFile, "utf8")) as { cursor?: number; pools?: Array<[string, Pool]> };
-        cursor = Number(saved.cursor) || null;
-        pools = Array.isArray(saved.pools) ? saved.pools : [];
-      }
-    } catch {
-      /* two days are read again */
-    }
-    // Each launch's accounts and picture come with the factory's own log: no API to ask.
-    baseFeed = new BaseFeed(baseTape, { cursor, pools, wsUrl: process.env.BASE_WS_URL, rpcUrl: process.env.BASE_RPC_URL, onLaunch: recordClanker, log: (m) => console.log(`[${config.id}] ${m}`) });
-  }
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
   // Every launch's first-second and launch-block wallets, traced to their funder a minute and a half in.
@@ -290,21 +186,6 @@ if (config.role === "north") {
 // The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
 const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
-// The same long memory keeps four.meme launches: addresses never collide across the two chains.
-const stopBscHistory = history && bscFeed ? startHistory(history, bscTape, { funderOf: (c) => bscLineage.funderOf(c), log: (m) => console.log(`[${config.id}] bsc ${m}`) }) : null;
-const stopBaseHistory = history && baseFeed ? startHistory(history, baseTape, { funderOf: (c) => baseLineage.funderOf(c), log: (m) => console.log(`[${config.id}] base ${m}`) }) : null;
-if (bscFeed) {
-  // Each launch's accounts and picture from four.meme, half a minute in, when its API has the token.
-  const previous = bscTape.onMoment;
-  bscTape.onMoment = (e) => {
-    previous?.(e);
-    // four.meme's own API for its launches; Flap's feed reads its launches' metadata itself.
-    if ((e.kind === "launch" || e.kind === "serial") && bscFeed?.backfilled && bscTape.venueOf(e.mint) === "fourmeme") setTimeout(() => void recordFourMeme(e.mint), 30_000).unref();
-  };
-}
-const stopBsc = bscFeed?.start() ?? null;
-const stopFlap = flapFeed?.start() ?? null;
-const stopBase = baseFeed?.start() ?? null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
 const mentions = history ? new Mentions(history.db) : null;
@@ -336,7 +217,7 @@ const visitorAgents = enclosure
   .filter((a) => a.species === "sentinel")
   .map((a) => a.name);
 
-// The canyon hosts the guest wing: outside agents report to the beaver, whose brief names them.
+// The canyon hosts the guest wing: outside agents report to the beaver, and the next-day regrade scores them.
 const guests =
   config.role === "canyon" && process.env.ZOO_GUESTS !== "off"
     ? await GuestHouse.open(enclosure, {
@@ -347,40 +228,18 @@ const guests =
 
 // Guests with a webhook hear when their calls are graded.
 if (guests) setInterval(() => void notifyGraded(enclosure, guests, config.briefAt).catch(() => {}), 10 * 60_000);
-// The holders' weekly vote on the nursery's next gene: last week closes, this week opens.
-if (config.role === "canyon") {
-  const gene = () => void tickGene(enclosure.store, config.briefAt, (w) => balanceOf(w), model).catch((e) => console.log(`[${config.id}] gene: ${(e as Error).message}`));
-  setTimeout(gene, 60_000);
-  setInterval(gene, 10 * 60_000);
-}
-
-// The beaver answers anyone's question about a token, on the canyon where it lives.
+// The bot lives on the canyon, with the contests; every x-ray it shows is read from north.
 const northUrl = config.peers.find((p) => p.id === "north.zoo")?.url;
-const briefs = await BriefIndex.build(enclosure);
-const asks = config.role === "canyon" ? new AskDesk({ enclosure, model, northUrl, perDay: Number(process.env.ZOO_ASK_PER_DAY ?? 500) }) : undefined;
-const stopTelegram =
-  asks && process.env.TELEGRAM_BOT_TOKEN
-    ? startTelegram({
-        token: process.env.TELEGRAM_BOT_TOKEN,
-        desk: asks,
-        store: enclosure.store,
-        northUrl,
-        log: (m) => console.log(`[${config.id}] ${m}`),
-        data: {
-          board: leaderboard(enclosure, config.briefAt),
-          stats: canyonStats(enclosure, config.briefAt, guests),
-          evolution: () => evolutionView(enclosure.store, config.briefAt),
-          koi: () => koiView(enclosure.store, config.briefAt),
-          latestBrief: async () => {
-            const ref = briefs.list(1)[0];
-            if (!ref) return null;
-            const entry = await briefs.get(ref.id);
-            const sec = (entry?.event.payload as { content?: { sections?: { launches?: number; graduated?: unknown[]; wentToZero?: unknown[]; counts?: { graduated: number; wentToZero: number } } } } | undefined)?.content?.sections;
-            return { id: ref.id, night: ref.night, launches: sec?.launches, graduated: sec?.counts?.graduated ?? sec?.graduated?.length, wentToZero: sec?.counts?.wentToZero ?? sec?.wentToZero?.length };
-          },
-        },
-      })
-    : null;
+const telegramHere = config.role === "canyon" && Boolean(process.env.TELEGRAM_BOT_TOKEN);
+const stopTelegram = telegramHere
+  ? startTelegram({
+      token: process.env.TELEGRAM_BOT_TOKEN!,
+      store: enclosure.store,
+      northUrl,
+      log: (m) => console.log(`[${config.id}] ${m}`),
+      data: { board: leaderboard(enclosure, config.briefAt) },
+    })
+  : null;
 
 // The buy bot: $ZOOAGENCY buys posted to the holders' group by the zoo's own bot, on the canyon where the bot lives.
 const buyChat = Number(process.env.ZOO_BUYBOT_CHAT ?? 0);
@@ -407,16 +266,13 @@ const stopBuyback =
     : null;
 const feeHot = process.env.ZOO_FEE_WALLET_PUBKEY ?? null;
 
-// The zoo watching itself: model failures, a silent stream, a node down, a late brief, straight to the operators.
+// The zoo watching itself: a silent stream or a node down, straight to the operators.
 const alertChats = String(process.env.ZOO_ALERT_CHAT ?? "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n !== 0);
 const stopWatchdog =
   config.role === "canyon" && process.env.TELEGRAM_BOT_TOKEN && alertChats.length
     ? startWatchdog({
         token: process.env.TELEGRAM_BOT_TOKEN,
         chats: alertChats,
-        briefAt: config.briefAt,
-        subscribe: (fn) => void enclosure.log.subscribe(fn),
-        latestBriefNight: briefs.list(1)[0]?.night ?? null,
         northUrl,
         peers: config.peers.map((p) => ({ name: p.id, url: p.url })),
         log: (m) => console.log(`[${config.id}] ${m}`),
@@ -432,11 +288,11 @@ const server = createNodeServer({
   x402,
   adminToken: config.adminToken,
   corsOrigin: config.corsOrigin,
-  meta: { role: config.role, ai: Boolean(model), visitorAgents },
+  meta: { role: config.role, ai: false, visitorAgents },
   passports: await PassportIndex.build(enclosure),
-  briefs,
   guests,
-  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), beaverHistory: beaverRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), asks, evolution: { briefAt: config.briefAt } } : {}),
+  telegram: telegramHere,
+  ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), oddsHistory: oddsRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), contest: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
   ...(cabals ? { cabals } : {}),
@@ -454,7 +310,7 @@ const server = createNodeServer({
 server.listen(config.port, () => {
   console.log(
     `[${config.id}] ${config.name} listening on :${config.port} - key ${config.identity.publicKey.slice(0, 12)}… - ` +
-      `${config.peers.length} peer(s) - model ${model?.id ?? "none"}`,
+      `${config.peers.length} peer(s)`,
   );
 });
 
@@ -468,9 +324,6 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     enclosure.stop();
     stopStream?.();
-    stopBsc?.();
-    stopFlap?.();
-    stopBase?.();
     if (config.role === "north") {
       try {
         saveTape();
@@ -479,8 +332,6 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       }
       try {
         stopHistory?.();
-        stopBscHistory?.();
-        stopBaseHistory?.();
         stopCabals?.();
         stopLabels?.();
         stopBuyback?.();

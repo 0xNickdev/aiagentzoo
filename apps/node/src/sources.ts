@@ -147,22 +147,6 @@ export const dexMarkets = defineTool<{ mints: string[] }, Market[]>({
   },
 });
 
-interface DexProfile {
-  chainId: string;
-  tokenAddress: string;
-}
-
-/** Tokens that just bought a DexScreener profile, a cheap marketing tell. */
-export const dexNewProfiles = defineTool<void, string[]>({
-  name: "dex.profiles",
-  capability: "sources:read",
-  description: "Solana tokens with freshly created DexScreener profiles",
-  async run(_input, { signal }) {
-    const profiles = await getJson<DexProfile[]>(`${DEX_API}/token-profiles/latest/v1`, signal);
-    return profiles.filter((p) => p.chainId === "solana").map((p) => p.tokenAddress);
-  },
-});
-
 function toLaunch(c: PumpCoin): Launch {
   return {
     mint: c.mint,
@@ -210,4 +194,4 @@ export function chainClean(northUrl?: string) {
   });
 }
 
-export const allTools = [pumpLatest, dexMarkets, dexNewProfiles, chainFacts];
+export const allTools = [pumpLatest, dexMarkets, chainFacts];

@@ -1,10 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
-import { isEvm } from "../chain/check.ts";
 
 export const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-/** A token or wallet on either chain the zoo reads: base58 on Solana, 0x and forty hex digits on BNB Chain. */
-const ADDR = "([1-9A-HJ-NP-Za-km-z]{32,44}|0x[0-9a-fA-F]{40})";
+/** A token or wallet on Solana, base58. A 0x address is answered 410 before any route sees it (see goneRoutes). */
+const ADDR = "([1-9A-HJ-NP-Za-km-z]{32,44})";
 export const route = (pattern: string) => new RegExp(`^${pattern.replace("ADDR", ADDR)}$`);
 export const ROUTE = {
   chainToken: route("/v1/chain/token/ADDR"),
@@ -17,8 +16,8 @@ export const ROUTE = {
   bundle: route("/v1/chain/bundle/ADDR"),
   x402: route("/v1/x402/(xray|check)/ADDR"),
 };
-/** EVM addresses are case-insensitive, so one spelling keys everything: lowercase. Solana addresses stay as they are. */
-export const norm = (address: string) => (isEvm(address) ? address.toLowerCase() : address);
+/** Solana addresses are case-sensitive and stay as they are; kept as a seam for the routes that call it. */
+export const norm = (address: string) => address;
 
 const MAX_BODY = 256 * 1024;
 

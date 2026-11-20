@@ -1,8 +1,8 @@
 import type { StateStore } from "@aiagentzoo/sdk";
-import { HUMANS } from "./agents/evolution.ts";
+import { HUMANS } from "./contest/exam.ts";
 /**
- * Holder perks: a wallet holding enough $ZOOAGENCY gets more of the zoo (more questions to the beaver, more tokens
- * under watch). No contract, no staking: the balance is read from Solana and cached for a few minutes.
+ * Holder perks: a wallet holding enough $ZOOAGENCY gets more of the zoo (higher x-ray limits, alerts first, the humans'
+ * contest). No contract, no staking: the balance is read from Solana and cached for a few minutes.
  */
 
 export const TOKEN_MINT = process.env.ZOO_TOKEN_MINT ?? "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";

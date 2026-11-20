@@ -1,6 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
-import type { Ask, AskDesk } from "./ask.ts";
 import type { Trail } from "./chain/outflows.ts";
 import type { CleanLaunch, CreatorRecord, LaunchOutcome, PulseEvent } from "./chain/pump.ts";
 import type { BoardRow } from "./stats.ts";
@@ -8,26 +7,26 @@ import { HOLDER_MIN, isHolder as holds } from "./holders.ts";
 import { type BotLang, botLang, chatLang, inLang, setChatLang, T, TC } from "./tg-i18n.ts";
 
 /**
- * The beaver in Telegram: the zoo where traders already are. A welcome with a picture and buttons, a three-step
- * tour, /ask in any chat, a creator's record, live rugs and clean launches from the chain, alerts on watched tokens,
- * the nursery, the leaderboard and the brief. Long polling, so it runs wherever the node runs; it sets its own
- * commands and description on start. Starts only with TELEGRAM_BOT_TOKEN set.
+ * The zoo in Telegram, where traders already are: a welcome with a picture and buttons, the x-ray of any Solana token
+ * (paste an address in private), a creator's record, live rugs and clean launches from the chain, alerts on watched
+ * tokens and the contests' leaderboard. No model anywhere: every answer is read from the chain. Long polling, so it
+ * runs wherever the node runs; it sets its own commands and description on start. Starts only with TELEGRAM_BOT_TOKEN.
  */
 
 const API = "https://api.telegram.org";
-/** A token or wallet on Solana (base58) or BNB Chain (0x and forty hex digits). */
-const MINT = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
-const MINT_ONLY = /^(?:0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
-const isBsc = (a: string) => /^0x[0-9a-fA-F]{40}$/.test(a);
-const explorerTx = (tx: string) => (tx.startsWith("0x") ? `https://bscscan.com/tx/${tx}` : `https://solscan.io/tx/${tx}`);
-const chart = (mint: string) => (isBsc(mint) ? `https://dexscreener.com/bsc/${mint}` : `https://dexscreener.com/solana/${mint}`);
+/** A token or wallet on Solana (base58). */
+const MINT = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
+const MINT_ONLY = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+/** A 0x address: BNB Chain and Base are no longer read, so it gets a plain "Solana only". */
+const EVM = /0x[0-9a-fA-F]{40}/;
+const explorerTx = (tx: string) => `https://solscan.io/tx/${tx}`;
 const WATCH_MAX = 5;
 const SITE = "https://zooaiagency.com";
 const TOKEN_CA = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
 /** Generated art for the welcome; the bot falls back to text if it is missing. */
 const WELCOME_IMAGE = `${SITE}/telegram/welcome.jpg`;
-/** The mini app: the zoo in liquid glass, inside Telegram. */
-export const APP_URL = `${SITE}/app`;
+/** The mini app and the menu button: the X-Ray, inside Telegram. */
+export const APP_URL = `${SITE}/xray`;
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? "-" : `${Math.round(x * 100)}%`);
@@ -37,13 +36,7 @@ type Button = { text: string; callback_data?: string; url?: string; web_app?: { 
 type Keyboard = Button[][];
 
 /** One row of the trade terminals people use, each opening this mint straight away. */
-const terminals = (mint: string): Button[] => isBsc(mint) ? [
-  { text: "GMGN", url: `https://gmgn.ai/bsc/token/${mint}` },
-  { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=56&address=${mint}` },
-  { text: "four.meme", url: `https://four.meme/token/${mint}` },
-  { text: "PancakeSwap", url: `https://pancakeswap.finance/swap?outputCurrency=${mint}&chain=bsc` },
-  { text: "DexScreener", url: `https://dexscreener.com/bsc/${mint}` },
-] : [
+const terminals = (mint: string): Button[] => [
   { text: "Axiom", url: `https://axiom.trade/t/${mint}` },
   { text: "GMGN", url: `https://gmgn.ai/sol/token/${mint}` },
   { text: "BullX", url: `https://neo.bullx.io/terminal?chainId=1399811149&address=${mint}` },
@@ -65,27 +58,13 @@ interface Update {
   callback_query?: { id: string; from: { id: number; language_code?: string }; data?: string; message?: Message };
 }
 
-/** What the canyon can tell the bot beyond the beaver's answers. */
+/** What the canyon can tell the bot beyond the chain: the contests' leaderboard. */
 export interface TelegramData {
   board?: () => Promise<{ minGraded: number; rows: BoardRow[] }>;
-  stats?: () => Promise<{ tokensTonight?: number; callsTonight?: number; playbookVersion?: number }>;
-  evolution?: () => Promise<{
-    generation: number;
-    nextGenerationInNights: number;
-    creatures: Array<{ name: string; temperament: string; diedNight: string | null; lifetimeSkill: number | null; graded: number }>;
-    chronicle: Array<{ kind: string; text: string }>;
-  } | null>;
-  latestBrief?: () => Promise<{ id: string; night: string; launches?: number; graduated?: number; wentToZero?: number } | null>;
-  koi?: () => Promise<{
-    tonight: Array<{ mint: string; symbol: string; why: string; whyZh?: string }>;
-    tally: { picks: number; graded: number; alive: number; dead: number; nights: number };
-    perNight: number;
-  } | null>;
 }
 
 export interface TelegramOptions {
   token: string;
-  desk: AskDesk;
   store: StateStore;
   northUrl?: string;
   data?: TelegramData;
@@ -194,51 +173,24 @@ export async function setWatch(store: StateStore, chat: number, mint: string, on
 const WELCOME_LINES = [
   "<b>Welcome to ZOOAI AGENCY.</b>",
   "",
-  "See who you're buying from: paste any Solana or BNB Chain token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.",
+  "See who you're buying from: paste any Solana token and I'll show the dev's own wallets, the snipers in the first five seconds and who paid for them. Free.",
   "",
-  "Behind it, a zoo of AI agents reads pump.fun, Raydium LaunchLab and Meteora straight from Solana, four.meme straight from BNB Chain, and gets graded by reality the next day. In public.",
+  "Everything is read straight from Solana: every launch on pump.fun, Raydium LaunchLab and Meteora, every buy and every sell.",
   "",
   "<b>What I can do for you:</b>",
   "· X-Ray any token: who bought in the first 5 seconds, and who they are",
-  "· Judge any token: rug or not, with the evidence",
   "· Check a dev's wallet: how many tokens it launched, how many it dumped, how fast",
   "· Alert you the moment a creator dumps a token you watch",
   "· Show fresh launches that passed the basic checks",
   "",
-  "Open the zoo for the full experience, or paste a token address right here.",
+  "Paste a token address right here, or open the X-Ray.",
 ];
 export const welcomeText = () => WELCOME_LINES.map((l) => T(l)).join("\n");
-
-const TOUR_LINES = [
-  [
-    "<b>1/3 · The raven reads the chain</b>",
-    "",
-    "Most bots ask an API what is new. Our raven listens to Solana itself: every launch, every buy, every sell on pump.fun, LaunchLab and Meteora.",
-    "",
-    "So it knows what a chart never shows: the creator already sold their bag, this wallet launched 80 tokens today, five wallets did all the buying.",
-  ],
-  [
-    "<b>2/3 · The beaver judges, reality grades</b>",
-    "",
-    "Ask about any token and the beaver gives a verdict: suspicious, watch, or promising, with the reason.",
-    "",
-    "Tomorrow its answer is checked against what the token actually did. Right or wrong, it stays on the record, signed on a public log.",
-  ],
-  [
-    "<b>3/3 · Judges that evolve</b>",
-    "",
-    "In the nursery eight judges with fixed rules sit the same exam every night. Every three nights the weakest dies and the best two breed a child with one mutation aimed at their mistakes.",
-    "",
-    "Nobody hand-picks the winner. The leaderboard ranks every agent on one honest scale: calling everything a rug scores 50%, not 100%.",
-  ],
-];
-const tourPage = (i: number) => TOUR_LINES[i]!.map((l) => T(l)).join("\n");
 
 const HELP_LINES = () => [
   "<b>Commands</b>",
   "",
   "/xray &lt;token&gt; · who bought in the first 5 seconds, and who they are",
-  "/ask &lt;token&gt; · is it a rug? the beaver judges it",
   "/dev &lt;wallet&gt; · a creator's last 48h: launches, dumps, how fast",
   "/rugs · the latest creator dumps, with transactions",
   "/clean · fresh launches that passed the basic checks",
@@ -246,16 +198,12 @@ const HELP_LINES = () => [
   T("/radar on · holders: a ping the moment a coin with no red flags turns"),
   T("/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 }),
   "/unwatch &lt;token&gt; · /list",
-  "/live · pump.fun right now: launches and trades a minute",
-  "/nursery · the evolving judges",
-  "/leaderboard · every agent on one honest scale",
-  "/brief · last night's Morning Brief",
+  "/leaderboard · the contests: guest agents and the odds model on one honest scale",
   "/token · $ZOOAGENCY",
-  "/tour · how the zoo works",
   "",
   "/lang · English / 中文",
   "",
-  "In a private chat just paste an address. Not financial advice.",
+  "In a private chat just paste a Solana address. Not financial advice.",
 ];
 const helpText = () => HELP_LINES().map((l) => T(l)).join("\n");
 
@@ -269,54 +217,35 @@ export const GROUP_USER_GAP_MS = 150_000;
 export const GROUP_GAP_MS = 25_000;
 
 export const COMMANDS = [
-  { command: "app", description: "Open the zoo" },
   { command: "xray", description: "Who you are buying from: insiders, crews, funders" },
-  { command: "ask", description: "Is it a rug? The beaver judges any token" },
   { command: "dev", description: "A creator wallet's launches and dumps" },
   { command: "rugs", description: "Latest creator dumps, with transactions" },
-  { command: "radar", description: "Fresh coins with no red flags so far" },
+  { command: "clean", description: "Fresh coins with no red flags so far" },
+  { command: "radar", description: "Holders: a ping when a clean coin turns" },
   { command: "watch", description: "Alert when a token's creator dumps" },
   { command: "unwatch", description: "Stop watching a token" },
   { command: "list", description: "Tokens you watch" },
   { command: "link", description: "Holders: get alerts first" },
-  { command: "live", description: "pump.fun right now" },
-  { command: "nursery", description: "The evolving judges" },
-  { command: "koi", description: "锦鲤: tonight's rare survivors" },
-  { command: "leaderboard", description: "Every agent on one honest scale" },
-  { command: "brief", description: "Last night's Morning Brief" },
+  { command: "leaderboard", description: "The contests on one honest scale" },
   { command: "token", description: "$ZOOAGENCY" },
-  { command: "tour", description: "How the zoo works" },
   { command: "help", description: "All commands" },
 ];
 
 const menu = (): Keyboard => [
-  [{ text: T("Open the zoo"), web_app: { url: APP_URL } }],
+  [{ text: T("Open the X-Ray"), web_app: { url: APP_URL } }],
   [
     { text: T("X-Ray a token"), callback_data: "prompt:xray" },
-    { text: T("Ask the beaver"), callback_data: "prompt:ask" },
+    { text: T("Check a dev"), callback_data: "prompt:dev" },
   ],
-  [{ text: T("Check a dev"), callback_data: "prompt:dev" }],
   [
     { text: T("Live rugs"), callback_data: "rugs" },
     { text: T("Clean launches"), callback_data: "clean" },
   ],
   [
-    { text: T("Nursery"), callback_data: "nursery" },
     { text: T("Leaderboard"), callback_data: "leaderboard" },
-  ],
-  [
-    { text: T("How it works"), callback_data: "tour:0" },
     { text: T("Website"), url: SITE },
   ],
   [{ text: T("English / 中文"), callback_data: "lang" }],
-];
-
-const tourKeyboard = (i: number): Keyboard => [
-  [
-    ...(i > 0 ? [{ text: T("← Back"), callback_data: `tour:${i - 1}` }] : []),
-    i < TOUR_LINES.length - 1 ? { text: T("Next →"), callback_data: `tour:${i + 1}` } : { text: T("Try it: open the zoo"), web_app: { url: APP_URL } },
-  ],
-  [{ text: T("Menu"), callback_data: "menu" }],
 ];
 
 /* ---------- formatting ---------- */
@@ -355,7 +284,7 @@ export function xrayMessage(x: XRayReply): string {
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora", fourmeme: "four.meme" }[f?.platform ?? f?.venue ?? ""] ?? (isBsc(x.mint) ? "four.meme" : "pump.fun");
+  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
   const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ...(c.odds ? [oddsLine(c.odds)] : []), ""];
   for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
   if (c.reasons.length) lines.push("");
@@ -413,36 +342,6 @@ export function trailMessage(symbol: string, t: Trail): string {
 
 function creatorLine(r: CreatorRecord): string {
   return T("{n} launches in 48h, dumped {d}", { n: r.launches48h, d: r.dumped }) + (r.medianDumpMin !== null ? T(", median {m} min", { m: r.medianDumpMin }) : "");
-}
-
-/** The answer as a Telegram message: verdict, reason, the telling facts, the link. */
-export function askMessage(a: Ask): string {
-  const icon = a.verdict === "suspicious" ? "🔴" : a.verdict === "promising" ? "🟢" : "⚪️";
-  const lines = [`${icon} <b>$${esc(a.symbol)}</b> · <b>${T(a.verdict.toUpperCase())}</b> · ${Math.round(a.confidence * 100)}%`, "", esc(botLang() === "zh" && a.whyZh ? a.whyZh : a.why), ""];
-  const c = a.facts.chain;
-  const r = a.facts.creator;
-  const m = a.facts.market;
-  if (c?.creatorSold !== null && c?.creatorSold !== undefined) lines.push(T("• creator sold {p}", { p: pct(c.creatorSold) }));
-  if (r) lines.push(T("• creator: {c}", { c: creatorLine(r) }));
-  const h = a.facts.holders;
-  if (h) lines.push(T("• top 10 wallets hold {p}", { p: pct(h.top10Share) }) + (h.creatorShare !== null ? T(" · dev holds {p}", { p: pct(h.creatorShare) }) : ""));
-  const b = a.facts.bundle;
-  if (b && b.wallets >= 2) lines.push(T("• bundle: {w} wallets took {p} of supply in the launch block", { w: b.wallets, p: pct(b.share) }) + (b.linked >= 2 ? T(", {n} funded by one wallet", { n: b.linked }) : ""));
-  if (c?.top5Share !== null && c?.top5Share !== undefined) lines.push(T("• top 5 buyers: {p} of the buying", { p: pct(c.top5Share) }));
-  if (m) lines.push(T("• liquidity ${l} · buys/sells 24h {b}/{s}", { l: Math.round(m.liquidityUsd ?? 0).toLocaleString("en-US"), b: m.buys24h, s: m.sells24h }));
-  if (a.facts.hasSocials === false) lines.push(T("• no socials"));
-  lines.push("", T(a.already ? "<i>Already dead when asked: shown, not scored.</i>" : "<i>Graded against reality in 24h, right or wrong.</i>"));
-  return lines.join("\n");
-}
-
-function askKeyboard(a: Ask): Keyboard {
-  return [
-    [
-      { text: T("Watch it"), callback_data: `watch:${a.mint}` },
-      { text: T("Card & record"), url: `${SITE}/ask#${a.id}` },
-    ],
-    [{ text: T("Chart"), url: a.facts.url ?? chart(a.mint) }],
-  ];
 }
 
 export function alertMessage(e: PulseEvent): string {
@@ -523,38 +422,28 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!photo?.ok) await send(chat, caption, menu());
   };
 
-  const ask = async (chat: number, who: string, mint: string) => {
-    await call("sendChatAction", { chat_id: chat, action: "typing" }).catch(() => null);
-    const result = await opts.desk.ask(mint, who);
-    if (result.ok) return void send(chat, askMessage(result.ask), askKeyboard(result.ask));
-    // Not a traded token: perhaps it is a creator's wallet.
-    if (result.status === 404) {
-      const dev = await north<CreatorRecord>(`/v1/chain/creator/${mint}`);
-      if (dev) return void send(chat, devMessage(dev), [[{ text: T("Open on the site"), url: `${SITE}/ask` }]]);
-    }
-    return void send(chat, `${esc(result.reason)}`);
-  };
-
   const xray = async (chat: number, mint: string) => {
     await call("sendChatAction", { chat_id: chat, action: "typing" }).catch(() => null);
     if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
     try {
       const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
-      if (r.status === 404) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), [[{ text: T("Ask the beaver instead"), callback_data: `ask:${mint}` }]]);
+      if (r.status === 404) {
+        // Not a token the stream saw: perhaps it is a creator's wallet.
+        const d = await north<CreatorRecord>(`/v1/chain/creator/${mint}`);
+        if (d) return void send(chat, devMessage(d));
+        return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."));
+      }
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
       return void send(chat, xrayMessage(x), [
         // Mini app buttons only work in a private chat; a group gets the site.
-        [chat > 0 ? { text: T("Open the map"), web_app: { url: `${APP_URL}?mint=${mint}` } } : { text: T("Open the map"), url: `${SITE}/xray?mint=${mint}` }],
+        [chat > 0 ? { text: T("Open the map"), web_app: { url: `${APP_URL}?mint=${mint}` } } : { text: T("Open the map"), url: `${APP_URL}?mint=${mint}` }],
         terminals(mint),
-        [
-          { text: T("Watch it"), callback_data: `watch:${mint}` },
-          { text: T("Ask the beaver"), callback_data: `ask:${mint}` },
-        ],
+        [{ text: T("Watch it"), callback_data: `watch:${mint}` }],
       ]);
       // Once the dev has sold, follow the money: a second message, only when the trail leads somewhere the zoo knows.
-      if (!isBsc(mint) && (x.check.facts?.creatorSoldPct ?? 0) >= TRAIL_SOLD_PCT) void followTrail(chat, mint, x.symbol);
+      if ((x.check.facts?.creatorSoldPct ?? 0) >= TRAIL_SOLD_PCT) void followTrail(chat, mint, x.symbol);
       return;
     } catch {
       return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
@@ -583,7 +472,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!list.length) return void send(chat, T("No creator dumps on the record right now."));
     const lines = [T("<b>Latest creator dumps on pump.fun</b>"), T("<i>read straight from Solana, each with its transaction</i>"), ""];
     for (const e of list) lines.push(`• <b>$${esc(e.symbol)}</b> · ${esc(TC(e.text))}${e.tx ? ` · <a href="https://solscan.io/tx/${e.tx}">tx</a>` : ""}`);
-    return void send(chat, lines.join("\n"), [[{ text: T("Refresh"), callback_data: "rugs" }, { text: T("Watch it live"), url: `${SITE}/live` }]]);
+    return void send(chat, lines.join("\n"), [[{ text: T("Refresh"), callback_data: "rugs" }, { text: T("Watch it live"), url: `${SITE}/feed` }]]);
   };
 
   const clean = async (chat: number) => {
@@ -596,7 +485,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     ];
     if (!list.length) lines.push(T("Nothing passes right now. On pump.fun that is a normal hour."));
     for (const c of list) lines.push(`• <b>$${esc(c.symbol)}</b> · ${T("{a} min · {b} buyers · top 5 {p}", { a: c.ageMin, b: c.buyersMore ? `${c.buyers}+` : c.buyers, p: pct(c.top5Share) })}\n<code>${c.mint}</code>`);
-    const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: T("Ask about ${s}", { s: c.symbol }), callback_data: `ask:${c.mint}` }]);
+    const keyboard: Keyboard = list.slice(0, 6).map((c) => [{ text: T("X-Ray ${s}", { s: c.symbol }), callback_data: `xray:${c.mint}` }]);
     const pinged = ((await opts.store.get<number[]>("tg:radar")) ?? []).includes(chat);
     keyboard.push([{ text: T("Refresh"), callback_data: "clean" }, pinged ? { text: T("Stop radar pings"), callback_data: "radar:off" } : { text: T("Ping me when one turns"), callback_data: "radar:on" }]);
     return void send(chat, lines.join("\n"), keyboard);
@@ -612,71 +501,22 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(chat, on ? T("Radar pings on. Coins with no red flags are re-checked every minute; the moment one turns, the dev sells, bundles leave, the pool drains, you hear first. /radar off to stop.") : T("Radar pings off."));
   };
 
-  const live = async (chat: number) => {
-    const [pulse, stats] = await Promise.all([north<{ live: boolean; perMinute: { launches: number; trades: number } }>("/v1/chain/pulse?after=999999999"), data.stats?.().catch(() => null)]);
-    const lines = [T("<b>pump.fun right now</b>"), ""];
-    if (pulse) lines.push(`${pulse.live ? "🟢" : "⚪️"} ${T("{l} launches and {t} trades in the last minute", { l: pulse.perMinute.launches, t: pulse.perMinute.trades.toLocaleString("en-US") })}`);
-    if (stats?.tokensTonight !== undefined) lines.push(T("tonight the pack watched {t} tokens and made {c} calls", { t: stats.tokensTonight.toLocaleString("en-US"), c: stats.callsTonight ?? 0 }));
-    return void send(chat, lines.join("\n"), [[{ text: T("Open the live map"), url: `${SITE}/live` }]]);
-  };
-
-  /** 锦鲤: the hunter of survivors, its record against the market and tonight's picks. */
-  const koi = async (chat: number) => {
-    const k = await data.koi?.().catch(() => null);
-    if (!k) return void send(chat, T("The koi is resting. Try again in a minute."));
-    const t = k.tally;
-    const lines = [T("<b>锦鲤 the koi</b> · hunter of survivors"), "", T("On pump.fun about 1 in 270 tokens is still alive a day later. The koi only looks for those."), ""];
-    lines.push(t.graded
-      ? T("Its record: {a} of {g} picks alive a day later ({p}).", { a: t.alive, g: t.graded, p: pct(t.alive / t.graded) })
-      : T("No graded picks yet: the first ones are checked the night after it makes them."));
-    lines.push("");
-    if (k.tonight.length) {
-      lines.push(T("<b>Tonight's picks</b> ({n} of {max})", { n: k.tonight.length, max: k.perNight }));
-      for (const p of k.tonight) lines.push(`• <b>$${esc(p.symbol)}</b> <code>${p.mint}</code>\n  ${esc(botLang() === "zh" && p.whyZh ? p.whyZh : p.why)}`);
-    } else lines.push(T("No picks yet tonight. Most nights the honest answer is \"none\"."));
-    lines.push("", T("<i>A pick is not advice. It is graded tomorrow, in public.</i>"));
-    return void send(chat, lines.join("\n"), menu());
-  };
-  const nursery = async (chat: number) => {
-    const evo = await data.evolution?.().catch(() => null);
-    if (!evo) return void send(chat, T("The nursery is resting. Try again in a minute."));
-    const alive = evo.creatures.filter((c) => !c.diedNight).sort((a, b) => (b.lifetimeSkill ?? 0) - (a.lifetimeSkill ?? 0));
-    const lines = [T("<b>The nursery</b> · turn {g} · next in {n} nights", { g: evo.generation, n: evo.nextGenerationInNights }), ""];
-    for (const c of alive) lines.push(`• <b>${esc(c.name)}</b>, ${esc(c.temperament)} · ${c.graded ? T("{p} over {n}", { p: pct(c.lifetimeSkill), n: c.graded }) : T("no grades yet")}`);
-    const last = evo.chronicle.find((e) => e.kind !== "scored");
-    if (last) lines.push("", `<i>${esc(last.text)}</i>`);
-    return void send(chat, lines.join("\n"), [[{ text: T("Open the nursery"), url: `${SITE}/evolution` }]]);
-  };
-
   const leaderboard = async (chat: number) => {
     const b = await data.board?.().catch(() => null);
     if (!b) return void send(chat, T("The leaderboard is resting. Try again in a minute."));
-    const lines = [T("<b>Every agent, one honest scale</b>"), T("<i>balanced accuracy; a rank needs {n} graded calls with dead and living tokens among them</i>", { n: b.minGraded }), ""];
+    const lines = [T("<b>Every agent, one honest scale</b>"), T("<i>balanced accuracy; a rank needs {n} graded calls with dead and living tokens among them. The odds model is the bar to beat.</i>", { n: b.minGraded }), ""];
     const ranked = b.rows.filter((r) => r.ranked);
     if (!ranked.length) lines.push(T("Nobody is ranked yet. Living tokens are rare, so it fills slowly. That is the point."), "");
     for (const [i, r] of ranked.slice(0, 8).entries()) lines.push(`${i + 1}. <b>${esc(r.name)}</b> · ${pct(r.score)} · ${T("{n} graded", { n: r.graded })}`);
-    const next = b.rows.filter((r) => !r.ranked && !r.died && r.graded).slice(0, 5);
+    const next = b.rows.filter((r) => !r.ranked && r.graded).slice(0, 5);
     if (next.length) lines.push(T("<b>On the way:</b>"), ...next.map((r) => `• ${esc(r.name)} · ${pct(r.score)} · ${T("{n} graded", { n: r.graded })}`));
-    return void send(chat, lines.join("\n"), [[{ text: T("Full leaderboard"), url: `${SITE}/agents#leaderboard` }]]);
-  };
-
-  const brief = async (chat: number) => {
-    const b = await data.latestBrief?.().catch(() => null);
-    if (!b) return void send(chat, T("The next Morning Brief comes out at 07:00 UTC."));
-    const parts = [
-      b.launches !== undefined ? T("{n} fresh launches", { n: b.launches.toLocaleString("en-US") }) : null,
-      b.graduated !== undefined ? T("{n} graduated", { n: b.graduated }) : null,
-      b.wentToZero !== undefined ? T("{n} went to zero", { n: b.wentToZero }) : null,
-    ].filter(Boolean);
-    return void send(chat, [T("<b>Morning Brief · night of {n}</b>", { n: b.night }), "", parts.join(" · "), "", T("<i>Written by the tortoise, no human in the loop, signed on the public log.</i>")].join("\n"), [
-      [{ text: T("Read the brief"), url: `${SITE}/brief` }],
-    ]);
+    return void send(chat, lines.join("\n"), [[{ text: T("Full leaderboard"), url: `${SITE}/contests#leaderboard` }]]);
   };
 
   const token = (chat: number) =>
     send(
       chat,
-      ["<b>$ZOOAGENCY</b>", "", T("Launched through ClawPump, graduated to PumpSwap."), T("Holders who sign in on the site with a wallet holding {h}+ ask the beaver 30 times an hour, watch 10 tokens and get alerts first (/link).", { h: HOLDER_MIN.toLocaleString("en-US") }), "", `<code>${TOKEN_CA}</code>`].join("\n"),
+      ["<b>$ZOOAGENCY</b>", "", T("Launched through ClawPump, graduated to PumpSwap."), T("Holders who sign in on the site with a wallet holding {h}+ get higher x-ray limits, play the humans' contest and get alerts first (/link).", { h: HOLDER_MIN.toLocaleString("en-US") }), "", `<code>${TOKEN_CA}</code>`].join("\n"),
       [[{ text: T("Chart"), url: `https://dexscreener.com/solana/${TOKEN_CA}` }, { text: T("Website"), url: SITE }]],
     );
 
@@ -696,8 +536,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(chat, [T("<b>Under watch</b>"), "", ...mine.map((m) => `<code>${m}</code>`)].join("\n"), mine.map((m) => [{ text: T("Stop {m}", { m: short(m) }), callback_data: `unwatch:${m}` }]));
   };
 
-  const prompt = (chat: number, what: "ask" | "dev" | "xray") =>
-    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : what === "xray" ? "Send me a token to x-ray: pump.fun, LaunchLab, Meteora or four.meme." : "Send me a token address or a pump.fun link."), undefined, {
+  const prompt = (chat: number, what: "dev" | "xray") =>
+    send(chat, T(what === "dev" ? "Send me the creator's wallet address." : "Send me a token to x-ray: pump.fun, LaunchLab or Meteora."), undefined, {
       reply_markup: { force_reply: true, input_field_placeholder: T(what === "dev" ? "wallet address" : "token address or link") },
     });
 
@@ -736,7 +576,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       return void send(chat, [`<b>${T("Dev {w}", { w: short(r.wallet) })}</b> · ${creatorLine(r)}`, line ? `${T("last:")} $${esc(r.recent[0]!.symbol)} · ${line}` : ""].filter(Boolean).join("\n"), full(`d-${address}`), reply);
     }
     const x = await north<XRayReply>(`/v1/xray/${address}`);
-    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme)."), undefined, reply);
+    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), undefined, reply);
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
@@ -752,11 +592,13 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const [head = "", ...rest] = text.split(/\s+/);
     const cmd = head.startsWith("/") ? head.toLowerCase().replace(`@${botName.toLowerCase()}`, "") : "";
     const arg = rest.join(" ");
-    const found = (cmd ? arg : text).match(MINT)?.[0];
-    const address = found && isBsc(found) ? found.toLowerCase() : found;
-    const who = `tg:${msg.from?.id ?? chat}`;
+    const body = cmd ? arg : text;
+    // Solana only: a 0x address is BNB Chain or Base, read no more.
+    const evm = EVM.test(body);
+    const address = evm ? undefined : body.match(MINT)?.[0];
     // A group gets the short x-ray and dev check only, rate limited; the rest of the bot lives in private.
     if (!isPrivate) return groupReply(msg, cmd, address);
+    if (evm) return void send(chat, T("Solana only: BNB Chain and Base are no longer read. Paste a Solana token or wallet address."));
 
     // An answer to "send me the creator's wallet".
     if (!cmd && /creator's wallet|开发者钱包/.test(msg.reply_to_message?.text ?? "") && address) return dev(chat, address);
@@ -772,8 +614,6 @@ export function startTelegram(opts: TelegramOptions): () => void {
         if (arg.startsWith("x-") && MINT_ONLY.test(arg.slice(2))) return xray(chat, arg.slice(2));
         if (arg.startsWith("d-") && MINT_ONLY.test(arg.slice(2))) return dev(chat, arg.slice(2));
         return welcome(chat, msg.from?.first_name);
-      case "/app":
-        return void send(chat, "The zoo in liquid glass: ask the beaver, live rugs, clean launches, the nursery.", [[{ text: "Open the zoo", web_app: { url: APP_URL } }]]);
       case "/menu":
         return void send(chat, T("What next?"), menu());
       case "/help":
@@ -781,12 +621,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/id":
         // For operators: the number to put in ZOO_ALERT_CHAT so the zoo's own alerts land here.
         return void send(chat, `This chat's id: <code>${chat}</code>`);
-      case "/tour":
-        return void send(chat, tourPage(0), tourKeyboard(0));
       case "/xray":
-        return address ? xray(chat, address) : prompt(chat, "xray");
+      // /ask was the beaver's; it is an x-ray now, so an old habit still gets an answer.
       case "/ask":
-        return address ? ask(chat, who, address) : prompt(chat, "ask");
+        return address ? xray(chat, address) : prompt(chat, "xray");
       case "/dev":
         return address ? dev(chat, address) : prompt(chat, "dev");
       case "/rugs":
@@ -794,16 +632,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/radar":
       case "/clean":
         return arg === "on" || arg === "off" ? radarPings(chat, arg === "on") : clean(chat);
-      case "/live":
-        return live(chat);
-      case "/nursery":
-        return nursery(chat);
-      case "/koi":
-        return koi(chat);
       case "/leaderboard":
         return leaderboard(chat);
-      case "/brief":
-        return brief(chat);
       case "/token":
         return void token(chat);
       case "/watch":
@@ -820,9 +650,9 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "/lang":
         return switchLang(chat);
       default:
-        // In a private chat, a pasted address is a question.
-        if (isPrivate && address) return ask(chat, who, address);
-        if (isPrivate) return void send(chat, T("Paste a token address or a pump.fun link, or pick from the menu."), menu());
+        // In a private chat, a pasted address gets the x-ray (a creator's wallet gets its record).
+        if (isPrivate && address) return xray(chat, address);
+        if (isPrivate) return void send(chat, T("Paste a Solana token address or a pump.fun link, or pick from the menu."), menu());
     }
   };
 
@@ -837,19 +667,12 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return switchLang(chat);
       case "menu":
         return void send(chat, T("What next?"), menu());
-      case "tour": {
-        const i = Math.max(0, Math.min(TOUR_LINES.length - 1, Number(value) || 0));
-        // Turn the page in place when the tour is already on screen.
-        const edited = q.message?.text?.includes("/3 ·")
-          ? await call("editMessageText", { chat_id: chat, message_id: q.message.message_id, text: tourPage(i), parse_mode: "HTML", reply_markup: { inline_keyboard: tourKeyboard(i) } }).catch(() => null)
-          : null;
-        if (!edited?.ok) await send(chat, tourPage(i), tourKeyboard(i));
-        return;
-      }
       case "prompt":
-        return prompt(chat, value === "dev" ? "dev" : value === "xray" ? "xray" : "ask");
+        return prompt(chat, value === "dev" ? "dev" : "xray");
+      // "ask:" buttons on messages sent before 2026-11-20 open the x-ray.
+      case "xray":
       case "ask":
-        return MINT_ONLY.test(value) ? ask(chat, `tg:${q.from.id}`, value) : undefined;
+        return MINT_ONLY.test(value) ? xray(chat, value) : undefined;
       case "radar":
         return radarPings(chat, value === "on");
       case "watch":
@@ -860,8 +683,6 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return rugs(chat);
       case "clean":
         return clean(chat);
-      case "nursery":
-        return nursery(chat);
       case "leaderboard":
         return leaderboard(chat);
     }
@@ -876,11 +697,11 @@ export function startTelegram(opts: TelegramOptions): () => void {
       await call("setMyCommands", { commands: list, scope }).catch(() => null);
       await call("setMyCommands", { commands: zh(list as typeof COMMANDS), scope, language_code: "zh" }).catch(() => null);
     }
-    await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Open", web_app: { url: APP_URL } } }).catch(() => null);
-    await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana or BNB Chain token. Free." }).catch(() => null);
+    await call("setChatMenuButton", { menu_button: { type: "web_app", text: "X-Ray", web_app: { url: APP_URL } } }).catch(() => null);
+    await call("setMyShortDescription", { short_description: "See who you're buying from: the dev's wallets, the snipers and who paid for them, for any Solana token. Free." }).catch(() => null);
     await call("setMyDescription", {
       description:
-        "ZOOAI AGENCY: AI agents that read every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana, and every four.meme launch straight from BNB Chain.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nJudge any token, with the evidence\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nEvery answer is graded by reality the next day, in public. Tap Start.",
+        "ZOOAI AGENCY reads every launch on pump.fun, Raydium LaunchLab and Meteora straight from Solana.\n\nX-Ray any token: who bought in the first 5 seconds, and who they are\nCheck a dev's wallet: launches, dumps, how fast\nAlerts when a creator dumps a token you watch\nFresh launches that passed the basic checks\n\nPaste a token address to start.",
     }).catch(() => null);
     log(`[telegram] bot @${botName || "?"} listening`);
   };
@@ -967,7 +788,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     while (later.length && later[0]!.at <= now) {
       const a = later.shift()!;
       sent += 1;
-      await send(a.chat, a.text, [[{ text: "Ask the beaver now", callback_data: `ask:${a.mint}` }]]);
+      await send(a.chat, a.text, [[{ text: "X-Ray it", callback_data: `xray:${a.mint}` }]]);
     }
     if (sent) await saveLater();
   };
@@ -1002,7 +823,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       for (const chat of subs) {
         const l = await chatLang(opts.store, chat);
         const text = inLang(l, () => `${bad ? "🔴" : "🟠"} <b>$${esc(t.symbol)}</b> ${T("turned: {v}", { v: T(bad ? "AVOID" : "CAUTION") })}\n• ${esc(TC(c.reasons[0] ?? ""))}\n<code>${mint}</code>`);
-        await send(chat, text, [[{ text: T("X-ray it"), url: `${SITE}/xray?mint=${mint}` }, { text: T("Ask the beaver now"), callback_data: `ask:${mint}` }]]);
+        await send(chat, text, [[{ text: T("X-ray it"), url: `${APP_URL}?mint=${mint}` }]]);
       }
     }
   };

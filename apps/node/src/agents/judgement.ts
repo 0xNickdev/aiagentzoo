@@ -1,14 +1,9 @@
-import { cleanText } from "../guests.ts";
 import type { GuestReport, Observation } from "./nightWatch.ts";
 
 /**
- * How the pack judges and learns.
- *
- * The beaver makes calls on the night's tokens: a verdict, a confidence and
- * a reason. The next morning the hedgehog re-checks those tokens on
- * DexScreener; each call is scored against what actually happened. The
- * scorecard then goes back to the model, which rewrites the beaver's
- * playbook: the rules it judges by. Every version is on the public log.
+ * How a verdict is graded. Anyone who judges a token (a guest agent, a holder in the humans' contest, the odds model)
+ * says promising, watch or suspicious; the next day the hedgehog re-checks the token on DexScreener and on chain, and
+ * each verdict is scored against what actually happened. No model is involved anywhere in this.
  */
 
 export const VERDICTS = ["promising", "watch", "suspicious"] as const;
@@ -21,10 +16,10 @@ export interface Call {
   /** 0..1 */
   confidence: number;
   why: string;
-  /** The same reason in Simplified Chinese, when the model could write it. */
+  /** The same reason in Simplified Chinese, on calls kept from before 2026-11-20. */
   whyZh?: string;
-  /** "model" when the beaver thought it through, "rules" when no model was at hand. */
-  by: "model" | "rules";
+  /** Who made the call: "model" and "rules" are the retired beaver's, kept in old nights' records. */
+  by: "model" | "rules" | "odds";
   at: number;
   /** The token was already dead when the call was made: calling it suspicious proves nothing, so it is not scored. */
   already?: boolean;
@@ -57,6 +52,18 @@ export interface Scorecard {
   guests: Record<string, GuestTally>;
   /** Each guest verdict with how its token turned out, so a guest's record can be read call by call. */
   guestCases?: Record<string, GuestCase[]>;
+  /** The odds model on the night's exam, graded by the same re-check: the baseline both contests measure against. */
+  odds?: OddsScore;
+}
+
+/** The odds model's verdicts on one night's exam tokens, graded. */
+export interface OddsScore {
+  cases: Array<Case & { run: number | null }>;
+  dead: number;
+  deadRight: number;
+  alive: number;
+  aliveRight: number;
+  skill: number | null;
 }
 
 export interface GuestTally {
@@ -96,28 +103,6 @@ export interface GuestCase {
   hit: boolean | null;
   already?: boolean;
 }
-
-export interface Playbook {
-  version: number;
-  text: string;
-  night: string | null;
-  accuracy: number | null;
-  updatedAt: number;
-}
-
-export const DEFAULT_PLAYBOOK: Playbook = {
-  version: 0,
-  night: null,
-  accuracy: null,
-  updatedAt: 0,
-  text: [
-    "1. No socials plus sells outnumbering buys 3:1 is the strongest rug signal I have.",
-    "2. Volume far above liquidity usually means wash trading; lean suspicious.",
-    "3. A token that graduated from the bonding curve with steady buys deserves a watch, not a promise.",
-    "4. Paid DexScreener promotion alone proves nothing either way.",
-    "5. Say watch when the data is thin. Confidence above 0.8 only with two independent signals.",
-  ].join("\n"),
-};
 
 /** A pump.fun token opens at about 28 SOL of market cap. Still under this a day later, nobody is holding it up. */
 export const CURVE_DEAD_SOL = 32;
@@ -204,29 +189,7 @@ export function scoreNight(night: string, calls: Call[], reports: GuestReport[],
   };
 }
 
-/**
- * The tokens worth a re-check tomorrow, at most `max`. The nursery's exam comes first (every creature answered it),
- * then guests, taking turns, up to half of what is left: the beaver makes far more calls than fit, and a guest's
- * record is only worth anything if it gets checked. The beaver's calls fill the rest.
- */
-export function followupMints(calls: Call[], reports: GuestReport[], reserved: string[] = [], max = 30): string[] {
-  const picked = new Set<string>(reserved.slice(0, max));
-  const guestCap = picked.size + (max - picked.size) / 2;
-  const queues = reports.map((r) => r.items.filter((i) => i.verdict !== "watch" && !i.already).map((i) => i.mint));
-  for (let round = 0; picked.size < guestCap && queues.some((q) => q.length > round); round++) {
-    for (const q of queues) {
-      const mint = q[round];
-      if (mint && picked.size < guestCap) picked.add(mint);
-    }
-  }
-  for (const c of calls) {
-    if (picked.size >= max) break;
-    if (c.verdict !== "watch" && !c.already) picked.add(c.mint);
-  }
-  return [...picked];
-}
-
-/** Rule flags, the beaver's fallback when it has no model, and a hint when it does. */
+/** Red flags read from the market and the chain, shown with an exam token. */
 export function ruleFlags(o: Observation): string[] {
   const usd = (n: number | null | undefined) => n ?? 0;
   const m = o.market;
@@ -244,62 +207,6 @@ export function ruleFlags(o: Observation): string[] {
   return reasons;
 }
 
-/** Up to `max` tokens the beaver has not judged yet, the most telling first. */
-export function candidates(obs: Observation[], judged: Set<string>, max = 15): Observation[] {
-  // Tokens already dead teach nothing: a suspicious call on them is free and is not scored anyway.
-  const fresh = obs.filter((o) => !judged.has(o.mint) && o.source !== "followup" && outcomeOf(o) !== "dead");
-  const weight = (o: Observation) => ruleFlags(o).length * 10 + (o.complete ? 5 : 0) + Math.log10(1 + (o.market?.volume24hUsd ?? 0));
-  return fresh.sort((a, b) => weight(b) - weight(a)).slice(0, max);
-}
-
-export function ruleCalls(items: Observation[], now: number): Call[] {
-  return items.flatMap((o) => {
-    const flags = ruleFlags(o);
-    if (flags.length < 2) return [];
-    return [{ mint: o.mint, symbol: o.symbol, verdict: "suspicious" as const, confidence: 0.5, why: flags.join(", "), by: "rules" as const, at: now }];
-  });
-}
-
-/** How to read the on-chain facts, for every judge that sees them. */
-/**
- * What the zoo's own record of 34,183 pump.fun launches taught (2026-10-28), handed to every judge. Facts, not rules:
- * each judge still applies its own playbook, but it knows the base rates it plays against.
- */
-export const FIELD_NOTES = [
-  "Field notes from 34,183 pump.fun launches the zoo graded:",
-  "- About 97% are dead within a day. 'suspicious' is right most nights; the skill is finding the few that live, so call 'promising' when the evidence is there, not never.",
-  "- The strongest sign of life is people: 100+ wallets buying in the first five minutes ran 21% of the time, under 20 wallets almost never.",
-  "- A dev's first launch in two days ran far more often than a dev with 20 before it. creatorLaunches24h above 10 is a factory.",
-  "- A dev who sold half the bag in the first five minutes (creatorSold >= 0.5 early) rarely leaves a coin alive.",
-  "- A launch-block bundle is not a death sign on its own: bundled launches ran more often. It turns bad once the bundle has sold.",
-  "- chain.odds.run is the zoo's calibrated chance this coin climbs past 85 SOL cap; the average launch is 0.027. chain.odds.devDumps is the chance the dev still sells half the bag.",
-  "- Answer 'watch' only when the facts you need are missing. A judge that watches everything starves.",
-].join("\n");
-
-export const CHAIN_NOTE =
-  "Some tokens carry `chain`: facts read from Solana itself. creatorSold is the share of the creator's own bought tokens they already sold (0..1), creatorLaunches24h counts the creator's launches today, buys/sells/buyers count trades on the bonding curve, curveSol is the SOL still in it, top5Share is the share of SOL bought in by the five biggest buyers (0..1), repeatBuyers counts buyers who bought again, trades15m counts trades in the first 15 minutes, bundleWallets counts wallets other than the creator that bought in the launch block (a bundle), bundleShare is the share of the whole supply they took (0..1), earlyWallets counts wallets other than the creator that bought in the first 5 seconds (snipers and bundle), earlyHeld is the share of the supply they still hold (0..1), washShare is at least the share of trading volume from wallets selling back what they just bought (0..1), bumps counts a wallet buying and selling in the same transaction (a bump bot), creatorCrew counts first-second wallets that keep sniping this creator's other launches (the creator's own wallets), ringWallets counts first-second wallets that have sniped launches together before (one operator), serialSnipers counts first-second wallets that snipe ten or more launches in two days.";
-
-/** Every field a judge can see on an exam token: rules, and mutations, can only use these. */
-export const EXAM_FIELDS =
-  "symbol, name, source (pump or dex-profile), graduated, hasSocials, marketCapUsd, market.liq, market.curveCapSol, market.vol24h, market.change24h, market.buys24h, market.sells24h, flags, chain.ageMin, chain.buys, chain.sells, chain.buyers, chain.solIn, chain.solOut, chain.curveSol, chain.creatorSold, chain.creatorLaunches24h, chain.top5Share, chain.repeatBuyers, chain.trades15m, chain.bundleWallets, chain.bundleShare, chain.poolSol, chain.ammBuys, chain.ammSells, chain.ammSolIn, chain.ammSolOut, chain.earlyWallets, chain.earlyHeld, chain.washShare, chain.bumps, chain.creatorCrew, chain.ringWallets, chain.serialSnipers, chain.odds.run, chain.odds.devDumps";
-
-export function judgeSystem(playbook: Playbook): string {
-  return [
-    "You are the beaver, a builder in ZOOAI AGENCY. Each night you judge new Solana tokens from market data alone.",
-    "You judge by your playbook below. You wrote it yourself from your track record, and you will rewrite it tomorrow when your calls are checked against what happened.",
-    "",
-    `Playbook v${playbook.version}:`,
-    playbook.text,
-    "",
-    "For every token decide: promising (likely still alive with real liquidity tomorrow), suspicious (likely dead or rugged by tomorrow), or watch (not enough evidence).",
-    FIELD_NOTES,
-    CHAIN_NOTE,
-    'Answer with a JSON array only, one object per token: {"mint": string, "verdict": "promising"|"watch"|"suspicious", "confidence": number 0..1, "why": string up to 140 chars}.',
-    "Facts and numbers, no hype, no investment advice.",
-    'Write "why" for a trader, in plain words: "creator sold everything in the first minute, top 5 wallets hold all of it", never field names like creatorSold=1 or top5Share.',
-  ].join("\n");
-}
-
 export function compact(o: Observation) {
   const m = o.market;
   return {
@@ -314,58 +221,6 @@ export function compact(o: Observation) {
     flags: ruleFlags(o),
     chain: o.chain ?? null,
   };
-}
-
-/** Parses the model's verdicts, keeping only well-formed calls on tokens it was asked about. */
-/** Marks calls on tokens that were already dead when judged, from the observations the judge saw. */
-export function markAlready(calls: Call[], asked: Observation[]): Call[] {
-  const dead = new Set(asked.filter((o) => outcomeOf(o) === "dead").map((o) => o.mint));
-  return calls.map((c) => (dead.has(c.mint) ? { ...c, already: true } : c));
-}
-
-export function parseCalls(text: string, asked: Observation[], now: number): Call[] {
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start < 0 || end <= start) return [];
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(raw)) return [];
-  const bySymbol = new Map(asked.map((o) => [o.mint, o.symbol]));
-  const calls: Call[] = [];
-  for (const item of raw) {
-    const x = item as Partial<Call>;
-    if (typeof x?.mint !== "string" || !bySymbol.has(x.mint) || !VERDICTS.includes(x.verdict as Verdict)) continue;
-    if (calls.some((c) => c.mint === x.mint)) continue;
-    const confidence = typeof x.confidence === "number" && Number.isFinite(x.confidence) ? Math.min(1, Math.max(0, x.confidence)) : 0.5;
-    calls.push({ mint: x.mint, symbol: bySymbol.get(x.mint)!, verdict: x.verdict as Verdict, confidence, why: cleanText(String(x.why ?? ""), 160), by: "model", at: now });
-  }
-  return calls;
-}
-
-export const REFLECT_SYSTEM = [
-  "You are the beaver, a builder in ZOOAI AGENCY. Yesterday you judged Solana tokens; this morning they were checked against what actually happened.",
-  "Rewrite your playbook so tomorrow's calls are better: keep rules that produced hits, change or drop rules behind misses, add at most two new rules grounded in the cases.",
-  "Numbered rules, at most 8, at most 1200 characters in total. Plain text, no markdown headings. Output only the playbook.",
-].join("\n");
-
-/** Keeps a model-written playbook plain: no control characters or markup, bounded length. */
-export function cleanPlaybook(text: string): string {
-  return text
-    // Comparisons carry the meaning of a rule; spell them out instead of letting the sanitizer drop them.
-    .replace(/>=|≥/g, " at least ")
-    .replace(/<=|≤/g, " at most ")
-    .replace(/>/g, " above ")
-    .replace(/</g, " below ")
-    .split("\n")
-    .map((line) => cleanText(line, 300))
-    .filter(Boolean)
-    .slice(0, 10)
-    .join("\n")
-    .slice(0, 1500);
 }
 
 /** The night before `night` (night ids are dates). */

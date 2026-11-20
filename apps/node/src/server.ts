@@ -2,8 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { createRouteContext, type RouteContext, type ServerOptions } from "./routes/context.ts";
 import { end, json } from "./routes/http.ts";
 import { x402Routes } from "./routes/x402.ts";
-import { logRoutes, nodeRoutes, rpcRoutes } from "./routes/misc.ts";
-import { boardRoutes, evolutionRoutes } from "./routes/nursery.ts";
+import { goneRoutes, logRoutes, nodeRoutes } from "./routes/misc.ts";
+import { boardRoutes } from "./routes/boards.ts";
 import { agentRoutes } from "./routes/agents.ts";
 import { eventRoutes, guestListRoutes, guestRoutes } from "./routes/guests.ts";
 import { cabalRoutes, chainBoardRoutes, chainReadRoutes, tapeRoutes } from "./routes/chain.ts";
@@ -11,7 +11,7 @@ import { checkRoutes } from "./routes/check.ts";
 import { walletRoutes } from "./routes/wallets.ts";
 import { callRoutes } from "./routes/calls.ts";
 import { poolRoutes } from "./routes/pools.ts";
-import { askRoutes } from "./routes/ask.ts";
+import { tgRoutes } from "./routes/tg.ts";
 import { guestWardenRoutes, wardenRoutes } from "./routes/warden.ts";
 
 export type { ServerOptions, VisitorPolicy } from "./routes/context.ts";
@@ -20,6 +20,7 @@ type Route = (ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url:
 
 /** Every route group in the order the node tries them; the first that handles a request answers it. */
 const ROUTES: Route[] = [
+  goneRoutes,
   x402Routes,
   callRoutes,
   poolRoutes,
@@ -33,12 +34,10 @@ const ROUTES: Route[] = [
   cabalRoutes,
   walletRoutes,
   chainBoardRoutes,
-  askRoutes,
+  tgRoutes,
   tapeRoutes,
-  evolutionRoutes,
   guestRoutes,
   guestWardenRoutes,
-  rpcRoutes,
   eventRoutes,
   wardenRoutes,
 ];

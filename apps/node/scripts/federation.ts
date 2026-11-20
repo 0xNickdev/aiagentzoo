@@ -1,6 +1,6 @@
 /**
- * Runs the whole Night Watch locally: three nodes, three enclosures,
- * real data, real signatures, real HTTP federation between them.
+ * Runs the whole Night Watch locally: north and canyon, two enclosures,
+ * real data, real signatures, real HTTP federation between them. The marsh is retired.
  *
  *   npm run dev -w @aiagentzoo/node
  *
@@ -13,7 +13,6 @@ import { Identity } from "@aiagentzoo/sdk";
 
 const roles = [
   { role: "north", port: 8781 },
-  { role: "marsh", port: 8782 },
   { role: "canyon", port: 8783 },
 ] as const;
 

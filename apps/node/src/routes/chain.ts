@@ -3,8 +3,6 @@ import { lineage } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { holderReport, holdersEnabled } from "../chain/holders.ts";
 import { feedBody } from "../chain/feed.ts";
-import { bscTape } from "../chain/bsc.ts";
-import { baseTape } from "../chain/base.ts";
 import { loopOf, loopEnabled } from "../chain/loop.ts";
 import { outflowsEnabled, cachedOutflows } from "../chain/outflows.ts";
 import { tape } from "../chain/pump.ts";
@@ -13,9 +11,8 @@ import type { RouteContext } from "./context.ts";
 
 /** The tapes' status, tool prints and one token as the stream saw it. */
 export async function chainReadRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
-  const { chainFor, tapeOf } = ctx;
   if (req.method === "GET" && path === "/v1/chain") {
-    return json(res, 200, { ...tape.status(), bsc: bscTape.status(), base: baseTape.status() });
+    return json(res, 200, tape.status());
   }
   // A tool print: what it is and the launches made with it, so a reader can see the farm behind a fresh wallet.
   if (req.method === "GET" && path === "/v1/chain/tools") {
@@ -41,8 +38,8 @@ export async function chainReadRoutes(ctx: RouteContext, req: IncomingMessage, r
   const chainToken = ROUTE.chainToken.exec(path);
   if (req.method === "GET" && chainToken) {
     const a = norm(chainToken[1]!);
-    const found = tapeOf(a, url.searchParams.get("chain")).token(a);
-    return found ? json(res, 200, { chain: chainFor(a, url.searchParams.get("chain")), ...found }) : json(res, 404, { error: "not on the stream" });
+    const found = tape.token(a);
+    return found ? json(res, 200, { chain: "solana", ...found }) : json(res, 404, { error: "not on the stream" });
   }
   return false;
 }
@@ -62,7 +59,7 @@ export async function cabalRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const c = cabals.get(Number(cabalOf[1]));
     if (!c) return json(res, 404, { error: "no cabal with this number" });
     res.setHeader("cache-control", "public, max-age=120");
-    const live = [...cabals.live(c.id, tape).map((l) => ({ ...l, chain: "solana" as const })), ...cabals.live(c.id, bscTape).map((l) => ({ ...l, chain: "bsc" as const })), ...cabals.live(c.id, baseTape).map((l) => ({ ...l, chain: "base" as const }))].sort((a, b) => b.createdAt - a.createdAt);
+    const live = cabals.live(c.id, tape).map((l) => ({ ...l, chain: "solana" as const })).sort((a, b) => b.createdAt - a.createdAt);
     return json(res, 200, { ...c, live });
   }
   // The extension saw a token in a post: who posted it and when. Public posts, nothing about the reader.
@@ -138,13 +135,10 @@ export async function chainBoardRoutes(ctx: RouteContext, req: IncomingMessage, 
     return json(res, 200, lineage.funderStats());
   }
   if (req.method === "GET" && path === "/v1/chain/ruggers") {
-    // Every tape's worst devs in one list, each with its chain; ?chain= keeps one.
+    // The tape's worst devs, each marked with its chain (Solana only since 2026-11-20).
     const limit = clampInt(url.searchParams.get("limit"), 20, 1, 50);
     const only = url.searchParams.get("chain");
-    const tapes = [[tape, "solana"], [bscTape, "bsc"], [baseTape, "base"]] as const;
-    const ruggers = tapes
-      .filter(([, c]) => !only || only === c)
-      .flatMap(([tp, c]) => tp.ruggers(limit).map((r) => ({ ...r, chain: c })))
+    const ruggers = only && only !== "solana" ? [] : tape.ruggers(limit).map((r) => ({ ...r, chain: "solana" as const }))
       .sort((a, b) => b.dumped - a.dumped || b.launches48h - a.launches48h)
       .slice(0, limit);
     return json(res, 200, { hours: 48, ruggers });

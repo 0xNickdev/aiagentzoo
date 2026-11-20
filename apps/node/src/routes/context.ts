@@ -3,13 +3,9 @@ import type { ServerResponse } from "node:http";
 import type { Enclosure } from "@aiagentzoo/sdk";
 import { Cooldown } from "../guardian.ts";
 import type { PassportIndex } from "../passport.ts";
-import type { BriefIndex } from "../briefs.ts";
-import type { AskDesk } from "../ask.ts";
 import { lineage } from "../chain/lineage.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
-import { type Chain, isEvm, RateGate } from "../chain/check.ts";
-import { bscTape } from "../chain/bsc.ts";
-import { baseTape } from "../chain/base.ts";
+import { RateGate } from "../chain/check.ts";
 import type { WalletTag } from "../chain/tags.ts";
 import type { CabalIndex } from "../chain/cabals.ts";
 import { labels } from "../chain/labels.ts";
@@ -18,7 +14,7 @@ import { handleOf, type Mentions } from "../chain/mentions.ts";
 import { traceOutflows, outflowsEnabled, cachedOutflows, type Destination } from "../chain/outflows.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, HoldingCache } from "../chain/keys.ts";
 import { isHolder } from "../holders.ts";
-import { CHAIN_OF_VENUE, type CreatorRecord, tape, type Venue } from "../chain/pump.ts";
+import { type CreatorRecord, tape } from "../chain/pump.ts";
 import type { HistoryStore } from "../chain/history.ts";
 import type { GuestHouse } from "../guests.ts";
 import type { X402Lane } from "../x402.ts";
@@ -38,8 +34,6 @@ export interface ServerOptions {
   passports?: PassportIndex;
   /** Public wake button. Disabled when unset. */
   visitor?: VisitorPolicy;
-  /** Published Morning Briefs. */
-  briefs?: BriefIndex;
   /** Guardian watchlists. Enabled on the node whose sentinel reads them. */
   watchlist?: { perGuardian: number; maxGuardians: number; perHolder?: number };
   /** Guest enclosures for outside agents. Disabled when unset. */
@@ -48,15 +42,15 @@ export interface ServerOptions {
   stats?: () => Promise<unknown>;
   /** Every graded agent on one scale, served at GET /v1/leaderboard. */
   board?: () => Promise<unknown>;
-  /** The beaver's night-by-night record, served at GET /v1/beaver/record. */
-  beaverHistory?: () => Promise<unknown>;
+  /** The odds model's night-by-night record on the exam, served at GET /v1/odds/record (and its old /v1/beaver/record). */
+  oddsHistory?: () => Promise<unknown>;
   /** Agent of the week standings, served at GET /v1/agent-of-the-week. */
   weekly?: () => Promise<unknown>;
   buybacks?: () => Promise<unknown>;
-  /** "Ask the beaver", on the node that keeps it. */
-  asks?: AskDesk;
-  /** The nursery, served at GET /v1/evolution on the node that keeps it. */
-  evolution?: { briefAt: string };
+  /** Both contests (humans vs the odds model, agent of the week), on the node that sets the exam. */
+  contest?: { briefAt: string };
+  /** The Telegram bot runs on this node, so the mini app's watch button can reach it. */
+  telegram?: boolean;
   /** The chain's long memory on the north node: tokens and wallets for 90 days, after the tape forgets them. */
   history?: HistoryStore;
   /** Cabals read from that memory: wallets that launch, snipe and fund together. */
@@ -115,23 +109,6 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
   };
   /** A wallet's 90-day roles from the long memory, for its tags; nothing on nodes without one. */
   const kept = (wallet: string) => history?.wallet(wallet, 1) ?? null;
-  /**
-   * Which chain an address is on. Base58 is Solana. A 0x address is BNB Chain or Base, and its shape cannot say which:
-   * the tape that has it (as a token, a creator or a sniper) decides, then the venue the long memory kept it under,
-   * then the caller's `?chain=`; BNB Chain otherwise, the first EVM chain the zoo read.
-   */
-  const chainFor = (address: string, hint?: string | null): Chain => {
-    if (!isEvm(address)) return "solana";
-    for (const [t, c] of [[bscTape, "bsc"], [baseTape, "base"]] as const) if (t.token(address) || t.creator(address) || t.sniper(address)) return c;
-    const venue = history?.venueOf(address) ?? history?.walletVenue(address);
-    if (venue && venue in CHAIN_OF_VENUE) return CHAIN_OF_VENUE[venue as Venue];
-    return hint === "base" || hint === "bsc" ? hint : "bsc";
-  };
-  /** The tape that reads the chain an address lives on. */
-  const tapeOf = (address: string, hint?: string | null) => {
-    const c = chainFor(address, hint);
-    return c === "bsc" ? bscTape : c === "base" ? baseTape : tape;
-  };
   /**
    * Where the token was seen on X, and the one thing worth saying about it: a KOL whose wallet (or side wallet)
    * bought in the first seconds and who posted it later. Written into the check's notes, never a reason.
@@ -304,8 +281,6 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
     holding,
     preferHistory,
     kept,
-    chainFor,
-    tapeOf,
     shills,
     withCabal,
     outflowsOf,

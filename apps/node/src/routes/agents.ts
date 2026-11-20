@@ -5,22 +5,13 @@ import { isHolder } from "../holders.ts";
 import { SOLANA_ADDRESS, clientIp, readJson, json } from "./http.ts";
 import type { RouteContext } from "./context.ts";
 
-/** Agent passports, Morning Briefs, guardian watchlists and the public wake button. */
+/** Agent passports, guardian watchlists and the public wake button. */
 export async function agentRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
-  const { enclosure, passports, visitor, briefs, watchlist, agentCooldown, visitorCooldown, guardianCooldown } = ctx;
+  const { enclosure, passports, visitor, watchlist, agentCooldown, visitorCooldown, guardianCooldown } = ctx;
   const passport = /^\/v1\/agents\/([a-z0-9-]+)$/.exec(path);
   if (req.method === "GET" && passport) {
     const found = passports?.get(passport[1]!);
     return found ? json(res, 200, found) : json(res, 404, { error: "no such agent" });
-  }
-
-  if (req.method === "GET" && path === "/v1/briefs") {
-    return json(res, 200, briefs?.list() ?? []);
-  }
-  const brief = /^\/v1\/briefs\/(morning-brief-\d{4}-\d{2}-\d{2})$/.exec(path);
-  if (req.method === "GET" && brief) {
-    const entry = await briefs?.get(brief[1]!);
-    return entry ? json(res, 200, entry) : json(res, 404, { error: "no such brief" });
   }
 
   const watchOf = /^\/v1\/watchlist\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);

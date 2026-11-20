@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ZooEvent } from "@aiagentzoo/sdk";
-import { GUEST_SCORES, guestRecord } from "../agents/nightWatch.ts";
+import { guestRecord } from "../agents/nightWatch.ts";
+import { GUEST_SCORES } from "../contest/regrade.ts";
 import { type GuestTally, skillOf } from "../agents/judgement.ts";
 import { isGuestNode, publicGuest } from "../guests.ts";
 import { readJson, json } from "./http.ts";
