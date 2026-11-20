@@ -185,101 +185,6 @@ function LiveStrip({ coins, live }: { coins: FeedCoin[]; live: boolean }) {
 
 /* ---------- below the fold ---------- */
 
-function Extension({ usage }: { usage: Usage | null }) {
-  const ext = usage?.last7.bySource?.extension;
-  const days = (usage?.days ?? []).map((d) => ({ day: d.day, n: d.bySource?.extension?.xrays ?? 0 }));
-  const max = Math.max(1, ...days.map((d) => d.n));
-  return (
-    <Panel title={t("Chrome extension")} meta={t("free")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
-      <p className="text-[13px] leading-[1.5] text-fg-2">{t("The X-Ray on the page you trade on: pump.fun, Axiom, GMGN, BullX, Photon, DexScreener and X. The dev and the first-second wallets, without leaving the chart.")}</p>
-      {ext && (
-        <div className="mt-3.5 grid grid-cols-2 border-y border-line">
-          <Tile k={t("X-Rays from it, 7 days")} v={num(ext.xrays)} className="border-r border-line !min-h-[78px] !px-0 !pr-3.5" />
-          <Tile k={t("traders using it, 7 days")} v={num(ext.users)} className="!min-h-[78px]" />
-        </div>
-      )}
-      {days.length > 1 && (
-        <div className="mt-3" aria-label={t("X-Rays from the extension by day")}>
-          <div className="flex h-12 items-end gap-1.5 border-b border-line">
-            {days.map((d) => (
-              <div key={d.day} title={`${d.day}: ${num(d.n)}`} className="flex-1 rounded-t-[2px] bg-moss/70" style={{ height: `${Math.max(2, (d.n / max) * 100)}%` }} />
-            ))}
-          </div>
-          <div className="mt-1 flex justify-between text-[10.5px] text-faint">
-            <span>{days[0]!.day.slice(5)}</span>
-            <span>{t("by day, UTC")}</span>
-            <span>{days[days.length - 1]!.day.slice(5)}</span>
-          </div>
-        </div>
-      )}
-      <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className="btn-moss mt-3.5 flex h-9 items-center justify-center rounded-[8px] text-[13px] font-medium lg:mt-auto">
-        {t("Add to Chrome")}
-      </a>
-    </Panel>
-  );
-}
-
-const BOT_LINES: Array<[string, string]> = [
-  ["/xray <token>", "who bought in the first 5 seconds, and who they are"],
-  ["/dev <wallet>", "a creator's last 48 h: launches, dumps, how fast"],
-  ["/watch <token>", "alerts on dumps, drained pools, graduation, big buys"],
-  ["/clean", "fresh launches that passed the basic checks"],
-  ["/link <code>", "holders get the alerts 10 minutes first"],
-];
-
-function Bot() {
-  return (
-    <Panel title={t("Telegram bot")} meta="@zooaiagency_bot" className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
-      <ul className="border-t border-line">
-        {BOT_LINES.map(([cmd, what]) => (
-          <li key={cmd} className="grid grid-cols-[112px_minmax(0,1fr)] gap-3 border-b border-line py-2 text-[12.5px]">
-            <code className="font-mono text-[12px] text-white">{cmd}</code>
-            <span className="text-fg-2">{t(what)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-3 text-[12px] leading-[1.45] text-dim">{t("In groups only /xray and /dev, with short answers.")}</p>
-      <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="mt-3.5 flex h-9 items-center justify-center rounded-[8px] border border-line-2 bg-night-raised text-[13px] font-medium text-white hover:border-[#3a4640] lg:mt-auto">
-        {t("Open the bot")}
-      </a>
-    </Panel>
-  );
-}
-
-const PLANS = [
-  { k: "a day", p: 3 },
-  { k: "a week", p: 12 },
-  { k: "a month", p: 35 },
-] as const;
-
-function Pro() {
-  return (
-    <Panel title={t("Pro")} tag={t("opens soon")} meta={t("paid in SOL")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
-      <p className="text-[13px] leading-[1.5] text-fg-2">{t("The deep check: where the money came from and where it went. Paying is not open yet; the free X-Ray stays free.")}</p>
-      <ul className="mt-3 border-t border-line">
-        {["Funding trace, 4 hops back", "Where the SOL went after the dump", "Every early wallet's history", "1 free deep check a week"].map((f) => (
-          <li key={f} className="flex gap-2 border-b border-line py-1.5 text-[12.5px] text-fg-2">
-            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-moss" />
-            {t(f)}
-          </li>
-        ))}
-      </ul>
-      <div className="mt-3 grid grid-cols-3 border-b border-line pb-3">
-        {PLANS.map((x) => (
-          <div key={x.k}>
-            <span className="text-[22px] font-medium leading-none tracking-[-0.03em] text-white">${x.p}</span>
-            <span className="ml-1 text-[11.5px] text-dim">{t(x.k)}</span>
-          </div>
-        ))}
-      </div>
-      <p className="mt-2.5 text-[12px] text-dim">{t("Hold 500k $ZOOAGENCY and pay half.")}</p>
-      <a href="/xray" className="mt-3.5 flex h-9 items-center justify-center rounded-[8px] border border-line-2 bg-night-raised text-[13px] font-medium text-white hover:border-[#3a4640] lg:mt-auto">
-        {t("Use the free X-Ray now")}
-      </a>
-    </Panel>
-  );
-}
-
 function Contests({ humans, weekly }: { humans: HumansView | null; weekly: Weekly | null }) {
   const now = useNow(60_000);
   if (!humans && !weekly) return null;
@@ -389,9 +294,6 @@ export default function Home() {
         <LiveStrip coins={coins} live={!!feedBody?.stream?.live} />
         <Record record={record} />
         <Numbers usage={usage} chain={chain} record={record} />
-        <Extension usage={usage} />
-        <Bot />
-        <Pro />
         <Contests humans={humans} weekly={weekly} />
         <Token wide={!humans && !weekly} />
       </div>
