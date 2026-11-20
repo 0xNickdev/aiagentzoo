@@ -46,7 +46,7 @@ export function TradeOnEvm({ mint, flap }: { mint: string; flap?: boolean }) {
 
 export function Terminals({ mint }: { mint: string }) {
   return (
-    <div className="mt-4 border-t border-white/[0.08] pt-3">
+    <div className="mt-4 border-t border-line pt-3">
       <p className="text-[12.5px] text-fg-4">{t("open in your terminal")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {TERMINALS(mint).map((x) => (
@@ -58,7 +58,7 @@ export function Terminals({ mint }: { mint: string }) {
             title={x.copies ? t("{x}: copies the CA, paste it in the app", { x: x.k }) : x.k}
             aria-label={x.k}
             onClick={x.copies ? () => void navigator.clipboard?.writeText(mint).catch(() => null) : undefined}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] transition hover:border-white/30 hover:bg-white/[0.07]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line-2 bg-white/[0.03] transition hover:border-[#3a4640] hover:bg-white/[0.07]"
           >
             <img src={x.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-md" loading="lazy" />
           </a>

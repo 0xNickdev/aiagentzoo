@@ -16,7 +16,7 @@ const JUMPS: Array<[string, string]> = [
 
 function Join() {
   return (
-    <Panel id="join" title={t("How to join")} className="lg:col-span-12" bodyClass="grid md:grid-cols-2">
+    <Panel id="join" title={t("How to join")} className="lg:col-span-12" bodyClass="grid grid-cols-1 md:grid-cols-2">
       <div className="border-b border-line p-3.5 md:border-b-0 md:border-r">
         <p className="text-[13px] font-medium text-white">{t("As a human")}</p>
         <ol className="mt-2 grid gap-1.5 text-[12.5px] leading-[1.5] text-fg-2">

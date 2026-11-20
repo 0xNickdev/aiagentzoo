@@ -346,7 +346,41 @@ export function RightNowPanel({ r }: Ctx) {
 const SCALES = [30, 60, 90, 120, 300, 600, 1800, 3600, 6 * 3600, 24 * 3600];
 const spanOf = (s: number) => (s < 120 ? `${s}s` : s < 7200 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`);
 
-/** One square per launch: dumped in red, the rest in moss. The node gives counts, not the order, so they are grouped. */
+const TL_CLASS = { d: "", g: "ok", a: "al", u: "op" } as const;
+const TL_LEGEND: Array<["d" | "g" | "a" | "u", string, string]> = [
+  ["d", "dumped {n}", "var(--danger)"],
+  ["g", "graduated {n}", "var(--moss)"],
+  ["a", "alive {n}", "#5f8a6b"],
+  ["u", "under 15 min {n}", "transparent"],
+];
+
+/** One square per launch in the order they launched, coloured by what became of each. */
+function Timeline({ codes, label }: { codes: Array<"d" | "g" | "a" | "u">; label: string }) {
+  const count = { d: 0, g: 0, a: 0, u: 0 };
+  for (const c of codes) count[c] = (count[c] ?? 0) + 1;
+  return (
+    <>
+      <div className="x-strip" aria-hidden="true">
+        {codes.map((c, i) => (
+          <span key={i} className={TL_CLASS[c] ?? "op"} />
+        ))}
+      </div>
+      <div className="x-legend">
+        <span className="x-lgk">
+          {TL_LEGEND.filter(([k]) => count[k] > 0).map(([k, label, bg]) => (
+            <span key={k}>
+              <i style={{ background: bg, boxShadow: k === "u" ? "inset 0 0 0 1px var(--line-2)" : undefined }} />
+              {t(label, { n: count[k].toLocaleString("en-US") })}
+            </span>
+          ))}
+        </span>
+        <span>{t("one square per launch, oldest first · {l}", { l: label })}</span>
+      </div>
+    </>
+  );
+}
+
+/** One square per launch: dumped in red, the rest in moss. Without a timeline the node gives counts, not the order, so they are grouped. */
 function Squares({ total, dumped, label }: { total: number; dumped: number; label: string }) {
   const per = Math.max(1, Math.ceil(total / 732));
   const n = Math.ceil(total / per);
@@ -360,7 +394,7 @@ function Squares({ total, dumped, label }: { total: number; dumped: number; labe
       </div>
       <div className="x-legend">
         <span>
-          <i style={{ background: "#d86b60" }} />
+          <i style={{ background: "var(--danger)" }} />
           {t("dumped {n}", { n: dumped.toLocaleString("en-US") })}
           <i style={{ background: "var(--moss)", marginLeft: 12 }} />
           {t("did not dump {n}", { n: (total - dumped).toLocaleString("en-US") })}
@@ -428,7 +462,7 @@ export function DevPanel({ r, onPick, go, full }: Ctx & { full?: boolean }) {
           {[rec.medianDumpMin !== null ? (rec.medianDumpMin < 120 ? t("median {m} min to first sell", { m: rec.medianDumpMin }) : t("median {h} h to first sell", { h: Math.round(rec.medianDumpMin / 60) })) : null, rec.graduated ? t("{n} graduated before", { n: rec.graduated }) : null].filter(Boolean).join(" · ")}
         </span>
       </div>
-      <Squares total={rec.launches48h} dumped={rec.dumped} label={t("48 h")} />
+      {rec.timeline?.length ? <Timeline codes={rec.timeline} label={t("48 h")} /> : <Squares total={rec.launches48h} dumped={rec.dumped} label={t("48 h")} />}
       {recent.length > 0 && (
         <>
           <div className="x-runs">

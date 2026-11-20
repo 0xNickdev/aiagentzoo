@@ -35,8 +35,8 @@
   scroll-behavior: smooth;
 }
 .xr2 *, .xr2 *::before, .xr2 *::after { box-sizing: border-box; }
-.xr2 a { color: inherit; text-decoration: none; }
-.xr2 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:where(.xr2) a { color: inherit; text-decoration: none; }
+:where(.xr2) button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 .xr2 :focus-visible { outline: 1.5px solid var(--moss); outline-offset: 2px; border-radius: 4px; }
 .xr2 code, .xr2 .x-mono { font-family: var(--mono); letter-spacing: -0.01em; }
 .xr2 .x-d { color: var(--danger); }
@@ -173,9 +173,11 @@
 .x-big { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.025em; color: var(--fg); }
 .x-sub { color: var(--fg-3); font-size: 12px; }
 .x-strip { display: grid; grid-template-columns: repeat(61, minmax(0, 1fr)); gap: 2px; margin: 12px 0 6px; }
-.x-strip span { aspect-ratio: 1; border-radius: 1px; background: #d86b60; }
+.x-strip span { aspect-ratio: 1; border-radius: 1px; background: var(--danger); }
 .x-strip span.ok { background: var(--moss); }
-.x-strip span.op { background: var(--line-2); }
+.x-strip span.al { background: #5f8a6b; }
+.x-strip span.op { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.x-legend .x-lgk { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
 .x-legend { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--fg-4); font-size: 11.5px; }
 .x-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 1px; margin-right: 5px; }
 .x-runs { margin-top: 14px; }
@@ -371,7 +373,7 @@
   .x-runs .x-hd, .x-run, .x-scale { grid-template-columns: 58px minmax(0, 1fr) 52px; gap: 8px; }
   .x-run .x-r:last-child, .x-runs .x-hd .x-r:last-child, .x-scale div:last-child { display: none; }
   .x-lane, .x-lscale { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
-  .x-strip { grid-template-columns: repeat(31, minmax(0, 1fr)); }
+  .x-strip { grid-template-columns: repeat(41, minmax(0, 1fr)); gap: 1.5px; }
   .x-gopro, .x-protag { display: none !important; }
   .x-fac { grid-template-columns: minmax(0, 1fr); }
   .x-moments { grid-template-columns: minmax(0, 1fr); }

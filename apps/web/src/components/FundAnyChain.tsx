@@ -154,39 +154,39 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
 
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="mt-2 w-full rounded-xl border border-white/[0.1] px-3 py-2 text-left text-[13px] text-fg-3 transition hover:border-white/25 hover:text-white">
-        {t("No SOL? Fund this buy from another chain")} <span className="text-fg-4">· USDC, ETH, BNB, BTC…</span>
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 w-full rounded-[8px] border border-line-2 bg-night-raised px-3 py-2 text-left text-[12px] text-dim transition hover:border-faint hover:text-white">
+        {t("No SOL? Fund this buy from another chain")} <span className="text-faint">· USDC, ETH, BTC…</span>
       </button>
     );
 
-  const row = "mt-2 flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-2";
+  const row = "mt-2 flex h-9 items-center gap-2 rounded-[8px] border border-line-2 bg-night px-3";
   return (
-    <div className="mt-3 rounded-xl border border-white/[0.1] p-3">
+    <div className="mt-2.5 rounded-[9px] border border-line bg-night-raised p-3">
       <div className="flex items-center justify-between">
-        <p className="text-[13px] text-fg-2">{t("Fund from another chain")}</p>
-        <button type="button" onClick={() => (phase === "waiting" ? null : (reset(), setOpen(false)))} className="text-[12px] text-fg-4 hover:text-white">
+        <p className="text-[12.5px] font-medium text-white">{t("Fund from another chain")}</p>
+        <button type="button" onClick={() => (phase === "waiting" ? null : (reset(), setOpen(false)))} className="text-[11.5px] text-faint hover:text-white">
           {phase === "waiting" ? "" : t("close")}
         </button>
       </div>
 
       {phase === "idle" || phase === "quoting" || phase === "sending" ? (
         <>
-          <select value={asset} onChange={(e) => pick(e.target.value)} aria-label={t("Pay with")} className={`${row} w-full text-[13px] text-white outline-none`}>
+          <select value={asset} onChange={(e) => pick(e.target.value)} aria-label={t("Pay with")} className={`${row} w-full text-[12.5px] text-white outline-none`}>
             {!list.length && <option>{t("loading…")}</option>}
             {list.map((x) => (
-              <option key={x.assetId} value={x.assetId} className="bg-[#0d110f]">
+              <option key={x.assetId} value={x.assetId} className="bg-night-raised">
                 {x.symbol} · {chainName(x.blockchain)}
               </option>
             ))}
           </select>
           <div className={row}>
-            <input inputMode="decimal" size={1} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label={t("Amount")} className="tabular-nums w-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none" />
-            <span className="text-[13px] text-fg-3">{token?.symbol ?? ""}</span>
+            <input inputMode="decimal" size={1} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label={t("Amount")} className="tabular-nums w-full min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none" />
+            <span className="text-[12px] text-dim">{token?.symbol ?? ""}</span>
           </div>
           {token && !isEvm && (
-            <input value={refund} onChange={(e) => setRefund(e.target.value.trim())} placeholder={t("your {c} address, for a refund", { c: chainName(token.blockchain) })} className={`${row} w-full text-[13px] text-white outline-none placeholder:text-fg-4`} />
+            <input value={refund} onChange={(e) => setRefund(e.target.value.trim())} placeholder={t("your {c} address, for a refund", { c: chainName(token.blockchain) })} className={`${row} w-full text-[12.5px] text-white outline-none placeholder:text-faint`} />
           )}
-          <p className="tabular-nums mt-2 min-h-[2.6em] text-[13px] leading-relaxed text-fg-3">
+          <p className="tabular-nums mt-2 min-h-[2.6em] text-[12px] leading-relaxed text-dim">
             {!wallet
               ? t("Connect your Solana wallet first: the SOL arrives there.")
               : preview
@@ -199,7 +199,7 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
             type="button"
             onClick={() => (wallet ? void start() : onConnect())}
             disabled={!!wallet && (!preview || phase !== "idle")}
-            className="mt-1 w-full rounded-xl bg-white px-4 py-2.5 text-[13.5px] font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-1 w-full flex h-9 items-center justify-center rounded-[8px] bg-moss px-4 text-[12.5px] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] text-moss-ink transition hover:bg-moss-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {!wallet
               ? t("Connect Solana wallet")
@@ -214,11 +214,11 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
         </>
       ) : (
         deposit && (
-          <div className="mt-2 text-[13px] leading-relaxed text-fg-3">
+          <div className="mt-2 text-[12px] leading-relaxed text-dim">
             {!deposit.tx && phase === "waiting" && (
-              <div className="rounded-lg border border-white/[0.1] p-2.5">
+              <div className="rounded-[8px] border border-line-2 bg-night p-2.5">
                 <p className="text-fg-2">{t("Send exactly {a} {s} on {c} to:", { a: deposit.amountIn, s: deposit.symbol, c: chainName(deposit.chain) })}</p>
-                <button type="button" onClick={() => void navigator.clipboard?.writeText(deposit.address)} className="mt-1 break-all text-left font-mono text-[13px] text-white underline decoration-white/20 underline-offset-4" title={t("copy")}>
+                <button type="button" onClick={() => void navigator.clipboard?.writeText(deposit.address)} className="mt-1 break-all text-left font-mono text-[12px] text-white underline decoration-faint underline-offset-4" title={t("copy")}>
                   {deposit.address}
                 </button>
                 {deposit.memo && <p className="mt-1">{t("memo")}: <span className="font-mono text-white">{deposit.memo}</span></p>}
@@ -227,30 +227,30 @@ export default function FundAnyChain({ wallet, onConnect, onFunded }: { wallet: 
             {deposit.tx && EVM[deposit.chain] && (
               <p>
                 {t("Sent on {c}", { c: chainName(deposit.chain) })}:{" "}
-                <a href={EVM[deposit.chain].explorer + deposit.tx} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+                <a href={EVM[deposit.chain].explorer + deposit.tx} target="_blank" rel="noopener noreferrer" className="underline decoration-faint underline-offset-4 hover:text-white">
                   {deposit.tx.slice(0, 10)}… ↗
                 </a>
               </p>
             )}
-            <p className={`mt-1.5 ${phase === "done" ? "text-[#a6e3b4]" : phase === "failed" ? "text-[#ff8a7e]" : "text-fg-2"}`}>
-              {phase === "waiting" && <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#f3c97a] align-middle" />}
+            <p className={`mt-1.5 ${phase === "done" ? "text-moss" : phase === "failed" ? "text-danger" : "text-fg-2"}`}>
+              {phase === "waiting" && <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warn align-middle" />}
               {phase === "done" ? t("{n} SOL delivered to your wallet. The buy above is filled with it.", { n: got ?? "" }) : t(STATE[st ?? "PENDING_DEPOSIT"])}
             </p>
             {outTx && (
-              <a href={`${SOLSCAN_URL}/tx/${outTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
+              <a href={`${SOLSCAN_URL}/tx/${outTx}`} target="_blank" rel="noopener noreferrer" className="underline decoration-faint underline-offset-4 hover:text-white">
                 Solscan ↗
               </a>
             )}
             {phase !== "waiting" && (
-              <button type="button" onClick={reset} className="mt-2 block text-[12.5px] text-fg-4 hover:text-white">
+              <button type="button" onClick={reset} className="mt-2 block text-[11.5px] text-faint hover:text-white">
                 {t("Fund again")}
               </button>
             )}
           </div>
         )
       )}
-      {error && <p className="mt-2 text-[13px] leading-relaxed text-[#ff8a7e]">{error}</p>}
-      <p className="mt-2 text-[12px] leading-relaxed text-fg-4">{t("Swapped by Aurora Intents into SOL sent straight to your Solana wallet. If it cannot complete, it is refunded on the chain you paid from.")}</p>
+      {error && <p className="mt-2 text-[12px] leading-relaxed text-danger">{error}</p>}
+      <p className="mt-2 text-[11.5px] leading-relaxed text-faint">{t("Swapped by Aurora Intents into SOL sent straight to your Solana wallet. If it cannot complete, it is refunded on the chain you paid from.")}</p>
     </div>
   );
 }

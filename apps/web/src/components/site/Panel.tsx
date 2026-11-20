@@ -59,3 +59,37 @@ export function More({ href, children }: { href: string; children: ReactNode }) 
     </a>
   );
 }
+
+/** A kept page's frame: the dashboard's width and gutters, a 32px title with one line under it, and an optional right side. */
+export function Page({ title, lead, side, children }: { title: ReactNode; lead?: ReactNode; side?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-5 sm:px-5">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.045em] text-white sm:text-[32px]">{title}</h1>
+          {lead && <p className="mt-2 max-w-[75ch] text-[13.5px] leading-[1.55] text-fg-2">{lead}</p>}
+        </div>
+        {side && <div className="flex shrink-0 flex-wrap items-center gap-2">{side}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** A quiet button in the dashboard's style; `primary` is the moss one. */
+export function Btn({ href, onClick, primary, children, className = "" }: { href?: string; onClick?: () => void; primary?: boolean; children: ReactNode; className?: string }) {
+  const cls = `${primary ? "btn-moss" : "border border-line-2 bg-night-raised text-white hover:border-[#3a4640]"} inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] px-3 text-[12.5px] font-medium ${className}`;
+  if (href) {
+    const ext = href.startsWith("http");
+    return (
+      <a href={href} target={ext ? "_blank" : undefined} rel={ext ? "noopener noreferrer" : undefined} className={cls}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {children}
+    </button>
+  );
+}

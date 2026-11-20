@@ -27,9 +27,9 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 function Row({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
-      <span className="text-[13px] font-normal text-fg-4">{k}</span>
-      <span className={`tabular-nums text-right text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
+    <div className="flex items-baseline justify-between gap-3 border-t border-line py-2 first:border-t-0">
+      <span className="text-[12px] font-normal text-faint">{k}</span>
+      <span className={`tabular-nums text-right text-[12px] ${bad ? "text-danger" : "text-fg-2"}`}>{v}</span>
     </div>
   );
 }
@@ -54,8 +54,8 @@ export default function DevHabits({ h }: { h: Habits | null | undefined }) {
   if (h.tempo) rows.push({ k: t("pace"), v: h.tempo.idleDays < 1 ? t("{n} a day · last today", { n: h.tempo.perDay }) : t("{n} a day · last {d}d ago", { n: h.tempo.perDay, d: h.tempo.idleDays }) });
   if (!rows.length) return null;
   return (
-    <div className="mt-3 border-t border-white/[0.08] pt-3">
-      <p className="tabular-nums text-[12.5px] [&::first-letter]:uppercase text-fg-4">
+    <div className="mt-3 border-t border-line pt-3">
+      <p className="tabular-nums text-[11.5px] [&::first-letter]:uppercase text-faint">
         {p ? t("usually · from {n} launches", { n: p.launches }) : t("habits")}
       </p>
       <div className="mt-1.5">

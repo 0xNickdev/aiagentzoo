@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NODE_URLS } from "../sim/live";
-import { Reveal, Section, SectionHead } from "./ui";
+import { Page, Panel, Tile } from "./site/Panel";
 import { t } from "../i18n";
 import { shortFit } from "../format";
 import { useLive } from "../hooks";
@@ -37,29 +37,18 @@ interface Receipts {
 const MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 const DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 
-const VERDICT: Record<string, string> = { avoid: "text-[#ff8a7e]", caution: "text-[#f3c97a]", pass: "text-[#a6e3b4]" };
+const VERDICT: Record<string, string> = { avoid: "text-danger", caution: "text-warn", pass: "text-moss" };
 
-function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
+function Card({ title, note, className = "", children }: { title: string; note?: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-night-surface px-5 py-4">
-      <p className="text-[13px] text-fg-4 [&::first-letter]:uppercase">{k}</p>
-      <p className="mt-2 text-[26px] leading-none text-fg tabular-nums">{v}</p>
-      {sub && <p className="mt-2 text-[13px] text-fg-4">{sub}</p>}
-    </div>
-  );
-}
-
-function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-night-surface p-5 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="font-display text-xl text-fg">{title}</h3>
-        {note && <span className="text-[13px] text-fg-4">{note}</span>}
-      </div>
+    <Panel title={title} meta={note} className={className}>
       {children}
-    </div>
+    </Panel>
   );
 }
+
+const LINK = "underline decoration-line-2 underline-offset-4 hover:text-white";
+const PRE = "rounded-[9px] border border-line bg-night p-3 font-mono text-[11.5px] leading-[1.6] text-fg-2";
 
 const STEPS: Array<[string, string]> = [
   ["Ask", "The agent calls GET /v1/x402/check/<mint> like any API. No key, no sign-up."],
@@ -103,7 +92,7 @@ function Probe() {
     }
   };
   return (
-    <Card title={t("See the 402 yourself")} note={t("a real request, unpaid")}>
+    <Card title={t("See the 402 yourself")} note={t("a real request, unpaid")} className="lg:col-span-6">
       <form
         className="flex flex-col gap-2 sm:flex-row"
         onSubmit={(e) => {
@@ -111,12 +100,13 @@ function Probe() {
           void run();
         }}
       >
-        <input value={mint} onChange={(e) => setMint(e.target.value)} placeholder={t("token address")} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-[14px] text-fg outline-none placeholder:text-fg-4 focus:border-white/30" />
-        <button disabled={busy} className="rounded-xl bg-white px-5 py-3 text-[14px] font-medium text-black transition hover:bg-white/85 disabled:opacity-50">
+        <input value={mint} onChange={(e) => setMint(e.target.value)} placeholder={t("token address")} aria-label={t("token address")} className="h-9 min-w-0 shrink-0 rounded-[7px] border border-line-2 bg-night px-3 font-mono sm:flex-1 text-[12.5px] text-white outline-none placeholder:font-sans placeholder:text-faint focus:border-moss-edge" />
+        <button disabled={busy} className="btn-moss h-9 rounded-[7px] px-4 text-[12.5px] font-medium disabled:opacity-50">
           {busy ? t("Asking…") : t("Ask without paying")}
         </button>
       </form>
-      {out && <pre className="mt-4 max-h-80 overflow-auto rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{out}</pre>}
+      {!out && <p className="mt-3 text-[12px] leading-[1.55] text-dim">{t("Paste any Solana token: the node answers 402 with its price, and the PAYMENT-REQUIRED header is decoded here. No wallet, nothing is paid.")}</p>}
+      {out && <pre className={`mt-3 max-h-80 overflow-auto ${PRE}`}>{out}</pre>}
     </Card>
   );
 }
@@ -142,14 +132,14 @@ function AgentPrompt() {
     }
   };
   return (
-    <Card title={t("Paste this into your coding agent")} note={t("Claude Code, Cursor, Codex")}>
-      <p className="text-[14px] leading-relaxed text-fg-3">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
-      <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{text ?? t("Loading…")}</pre>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button onClick={() => void copy()} disabled={!text} className="rounded-xl bg-white px-5 py-2.5 text-[14px] font-medium text-black transition hover:bg-white/85 disabled:opacity-50">
+    <Card title={t("Paste this into your coding agent")} note={t("Claude Code, Cursor, Codex")} className="lg:col-span-12">
+      <p className="text-[12.5px] leading-[1.6] text-fg-2">{t("It wires the paid check into your trading bot: one call before every swap, no trade on avoid, the wallet key kept in an environment variable.")}</p>
+      <pre className={`mt-3 max-h-56 overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] ${PRE}`}>{text ?? t("Loading…")}</pre>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button onClick={() => void copy()} disabled={!text} className="btn-moss h-8 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
           {copied ? t("Copied") : t("Copy the prompt")}
         </button>
-        <a href="/x402-agent-prompt.txt" target="_blank" rel="noopener noreferrer" className="text-[13px] text-fg-4 underline decoration-white/20 underline-offset-4 hover:text-white">
+        <a href="/x402-agent-prompt.txt" target="_blank" rel="noopener noreferrer" className={`text-[12px] text-dim ${LINK}`}>
           {t("or give your agent this link")}
         </a>
       </div>
@@ -171,149 +161,134 @@ export default function X402() {
   const clusters = menu ? menu.networks.map((n) => (n.cluster === "mainnet-beta" ? "mainnet" : n.cluster)).join(" + ") : "";
 
   return (
-    <Section className="!pt-10">
-      <SectionHead
-        eyebrow={clusters ? t("x402 · Solana {c} · live", { c: clusters }) : t("x402 · Solana · live")}
-        title={[t("Pay per check."), t("No key, no account.")]}
-        text={t("A trading agent asks who is behind a coin before it buys and pays for the answer in USDC over plain HTTP. The node verifies the payment, builds the report, and settles only when there is a report to deliver.")}
-      />
+    <Page
+      title={t("Pay per check with x402")}
+      lead={t("A trading agent asks who is behind a coin before it buys and pays for the answer in USDC over plain HTTP. The node verifies the payment, builds the report, and settles only when there is a report to deliver.")}
+      side={
+        <span className="flex items-center gap-2 text-[12px] text-dim">
+          <span className="h-1.5 w-1.5 rounded-full bg-moss" />
+          {clusters ? t("x402 · Solana {c} · live", { c: clusters }) : t("x402 · Solana · live")}
+        </span>
+      }
+    >
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <section className="grid grid-cols-2 overflow-hidden rounded-[12px] border border-line bg-night-surface lg:col-span-12 lg:grid-cols-4">
+          <Tile k={t("paid on mainnet")} v={tot ? String(real?.paid ?? 0) : "-"} sub={tot ? t("{u} real USDC", { u: (real?.usdc ?? 0).toFixed(3) }) : ""} tone={real?.paid ? "moss" : "fg"} className="border-b border-r border-line lg:border-b-0" />
+          <Tile k={t("paid on devnet")} v={tot ? String(test?.paid ?? 0) : "-"} sub={tot ? t("{u} test USDC", { u: (test?.usdc ?? 0).toFixed(3) }) : ""} className="border-b border-line lg:border-b-0 lg:border-r" />
+          <Tile k={t("not charged")} v={tot ? String(tot.refusedBeforeSettle) : "-"} sub={t("verified, but nothing to sell")} className="border-r border-line" />
+          <Tile k={t("settlements failed")} v={tot ? String(tot.settleFailed) : "-"} sub={t("report withheld")} tone={tot?.settleFailed ? "danger" : "fg"} />
+        </section>
 
-      <div className="mx-auto max-w-7xl space-y-4">
-        <Reveal className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] lg:grid-cols-4">
-          <Tile k={t("paid on mainnet")} v={tot ? String(real?.paid ?? 0) : "…"} sub={tot ? t("{u} real USDC", { u: (real?.usdc ?? 0).toFixed(3) }) : ""} />
-          <Tile k={t("paid on devnet")} v={tot ? String(test?.paid ?? 0) : "…"} sub={tot ? t("{u} test USDC", { u: (test?.usdc ?? 0).toFixed(3) }) : ""} />
-          <Tile k={t("not charged")} v={tot ? String(tot.refusedBeforeSettle) : "…"} sub={t("verified, but nothing to sell")} />
-          <Tile k={t("settlements failed")} v={tot ? String(tot.settleFailed) : "…"} sub={t("report withheld")} />
-        </Reveal>
+        <Card title={t("The menu")} note={menu ? t("USDC on {c}", { c: clusters }) : ""} className="lg:col-span-6">
+          <ul className="divide-y divide-line">
+            {(menu?.resources ?? []).map((r) => (
+              <li key={r.url} className="py-2.5 first:pt-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <code className="min-w-0 truncate font-mono text-[12px] text-white">GET {r.url.replace("https://north.zooaiagency.com", "")}</code>
+                  <span className="shrink-0 text-[13px] font-medium text-moss">{r.price.usdc} USDC</span>
+                </div>
+                <p className="mt-1 text-[12px] leading-[1.55] text-dim">{t(r.description)}</p>
+              </li>
+            ))}
+            {!menu && <li className="text-[12.5px] text-faint">{t("Reading the node…")}</li>}
+          </ul>
+          {menu?.networks.map((n) => (
+            <p key={n.network} className="mt-2 text-[12px] text-dim first-of-type:mt-3">
+              {n.network === MAINNET ? t("mainnet") : t("devnet")}: {t("paid to")}{" "}
+              <a href={acct(n.payTo, n.network)} target="_blank" rel="noopener noreferrer" className={`font-mono ${LINK}`}>
+                {shortFit(n.payTo)}
+              </a>{" "}
+              · {t("network fee paid by the node")}{" "}
+              <a href={acct(n.feePayer, n.network)} target="_blank" rel="noopener noreferrer" className={`font-mono ${LINK}`}>
+                {shortFit(n.feePayer)}
+              </a>
+            </p>
+          ))}
+        </Card>
+        <Probe />
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
-          <Reveal>
-            <Card title={t("The menu")} note={menu ? t("USDC on {c}", { c: clusters }) : ""}>
-              <ul className="space-y-4">
-                {(menu?.resources ?? []).map((r) => (
-                  <li key={r.url} className="border-t border-white/[0.08] pt-4 first:border-t-0 first:pt-0">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <code className="truncate text-[13px] text-fg-2">GET {r.url.replace("https://north.zooaiagency.com", "")}</code>
-                      <span className="shrink-0 text-[15px] text-fg tabular-nums">{r.price.usdc} USDC</span>
-                    </div>
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-fg-4">{t(r.description)}</p>
-                  </li>
-                ))}
-                {!menu && <li className="text-[13px] text-fg-4">{t("Reading the node…")}</li>}
-              </ul>
-              {menu?.networks.map((n) => (
-                <p key={n.network} className="mt-3 text-[13px] text-fg-4 first-of-type:mt-5">
-                  {n.network === MAINNET ? t("mainnet") : t("devnet")}: {t("paid to")}{" "}
-                  <a href={acct(n.payTo, n.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {shortFit(n.payTo)}
-                  </a>{" "}
-                  · {t("network fee paid by the node")}{" "}
-                  <a href={acct(n.feePayer, n.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {shortFit(n.feePayer)}
-                  </a>
-                </p>
-              ))}
-            </Card>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <Probe />
-          </Reveal>
-        </div>
+        <Card title={t("How one paid request goes")} note={t("x402 v2, exact scheme, SPL USDC")} className="lg:col-span-12">
+          <ol className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            {STEPS.map(([k, v], i) => (
+              <li key={k} className="flex gap-3">
+                <span className="mt-px w-5 shrink-0 text-[12px] text-faint">{String(i + 1).padStart(2, "0")}</span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-white">{t(k)}</p>
+                  <p className="mt-0.5 text-[12px] leading-[1.55] text-dim">{t(v)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Card>
 
-        <Reveal>
-          <Card title={t("How one paid request goes")} note={t("x402 v2, exact scheme, SPL USDC")}>
-            <ol className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-              {STEPS.map(([k, v], i) => (
-                <li key={k} className="flex gap-3">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/15 text-[13px] text-fg-3 tabular-nums">{i + 1}</span>
-                  <div>
-                    <p className="text-[15px] text-fg">{t(k)}</p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-fg-4">{t(v)}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </Card>
-        </Reveal>
-
-        <Reveal>
-          <Card title={t("Every sale, live")} note={t("each report's sha256 is also in the node's signed public log")}>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-[13px] tabular-nums">
-                <thead className="text-[13px] text-fg-4">
-                  <tr className="border-b border-white/[0.08]">
-                    <th className="py-2 pr-4 font-normal">{t("time UTC")}</th>
-                    <th className="py-2 pr-4 font-normal">{t("bought")}</th>
-                    <th className="py-2 pr-4 font-normal">{t("coin")}</th>
-                    <th className="py-2 pr-4 font-normal">{t("verdict sold")}</th>
-                    <th className="py-2 pr-4 font-normal">{t("agent")}</th>
-                    <th className="py-2 pr-4 font-normal">{t("payment")}</th>
-                    <th className="py-2 font-normal">{t("report sha256")}</th>
+        <Panel title={t("Every sale, live")} meta={t("each report's sha256 is also in the node's signed public log")} className="lg:col-span-12" bodyClass="px-3.5 pb-2">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+              <thead className="text-[11.5px] text-faint">
+                <tr className="border-b border-line">
+                  <th className="py-2 pr-4 font-normal">{t("time UTC")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("bought")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("coin")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("verdict sold")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("agent")}</th>
+                  <th className="py-2 pr-4 font-normal">{t("payment")}</th>
+                  <th className="py-2 font-normal">{t("report sha256")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(sales?.receipts ?? []).map((r) => (
+                  <tr key={r.transaction} className="border-t border-line text-fg-2">
+                    <td className="py-2 pr-4 text-dim">{when(r.at)}</td>
+                    <td className="py-2 pr-4">{r.route === "xray" ? "X-Ray" : t("check")}</td>
+                    <td className="py-2 pr-4">
+                      <a href={`/xray?mint=${r.mint}`} className={`font-mono ${LINK}`}>
+                        {shortFit(r.mint)}
+                      </a>
+                    </td>
+                    <td className={`py-2 pr-4 ${VERDICT[r.verdict ?? ""] ?? "text-dim"}`}>{r.verdict ?? "-"}</td>
+                    <td className="py-2 pr-4">
+                      <a href={acct(r.payer, r.network)} target="_blank" rel="noopener noreferrer" className="font-mono hover:text-white">
+                        {shortFit(r.payer)}
+                      </a>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <a href={tx(r.transaction, r.network)} target="_blank" rel="noopener noreferrer" className={LINK}>
+                        {r.network === MAINNET ? "" : "devnet · "}
+                        <span className="font-mono">{shortFit(r.transaction, 6)}</span> ↗
+                      </a>
+                    </td>
+                    <td className="py-2 font-mono text-dim">{r.reportSha256.slice(0, 12)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {(sales?.receipts ?? []).map((r) => (
-                    <tr key={r.transaction} className="border-t border-white/[0.06] text-fg-3">
-                      <td className="py-2 pr-4 text-fg-4">{when(r.at)}</td>
-                      <td className="py-2 pr-4">{r.route === "xray" ? "X-Ray" : t("check")}</td>
-                      <td className="py-2 pr-4">
-                        <a href={`/xray?mint=${r.mint}`} className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                          {shortFit(r.mint)}
-                        </a>
-                      </td>
-                      <td className={`py-2 pr-4 ${VERDICT[r.verdict ?? ""] ?? "text-fg-4"}`}>{r.verdict ?? "-"}</td>
-                      <td className="py-2 pr-4">
-                        <a href={acct(r.payer, r.network)} target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                          {shortFit(r.payer)}
-                        </a>
-                      </td>
-                      <td className="py-2 pr-4">
-                        <a href={tx(r.transaction, r.network)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                          {r.network === MAINNET ? "" : "devnet · "}
-                          {shortFit(r.transaction, 6)} ↗
-                        </a>
-                      </td>
-                      <td className="py-2 text-fg-4">{r.reportSha256.slice(0, 12)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {sales && sales.receipts.length === 0 && <p className="py-6 text-center text-[13px] text-fg-4">{t("No sales yet.")}</p>}
-              {!sales && <p className="py-6 text-center text-[13px] text-fg-4">{t("Reading the node…")}</p>}
-            </div>
-          </Card>
-        </Reveal>
+                ))}
+              </tbody>
+            </table>
+            {sales && sales.receipts.length === 0 && <p className="py-6 text-center text-[12.5px] text-faint">{t("No sales yet.")}</p>}
+            {!sales && <p className="py-6 text-center text-[12.5px] text-faint">{t("Reading the node…")}</p>}
+          </div>
+        </Panel>
 
-        <Reveal>
-          <AgentPrompt />
-        </Reveal>
+        <AgentPrompt />
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
-          <Reveal>
-            <Card title={t("From your agent")} note="@x402/fetch + @x402/svm">
-              <pre className="overflow-x-auto rounded-xl bg-black/40 p-4 text-[13px] leading-relaxed text-fg-3">{SNIPPET}</pre>
-              <p className="mt-4 text-[13px] text-fg-4">
-                {t("A ready agent that refuses the swap on avoid:")}{" "}
-                <a href="https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent" target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 underline-offset-4 hover:text-white">
-                  examples/x402-agent
-                </a>
-              </p>
-            </Card>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <Card title={t("When you are not charged")}>
-              <ul className="space-y-3 text-[14px] leading-relaxed text-fg-3">
-                <li>{t("The payment does not verify: 402 with the reason, nothing is built.")}</li>
-                <li>{t("The zoo knows nothing about the coin: the answer goes out free.")}</li>
-                <li>{t("The node cannot build the report: you get the error, the signed transfer is never sent and expires.")}</li>
-                <li>{t("The transfer fails on chain: 402 with the reason, the report is withheld.")}</li>
-                <li>{t("You cannot name your own price: the node always checks the payment against its own.")}</li>
-              </ul>
-              <p className="mt-5 text-[13px] text-fg-4">{t("The agent needs USDC only: the node pays the Solana network fee.")}</p>
-            </Card>
-          </Reveal>
-        </div>
+        <Card title={t("From your agent")} note="@x402/fetch + @x402/svm" className="lg:col-span-7">
+          <pre className={`overflow-x-auto ${PRE}`}>{SNIPPET}</pre>
+          <p className="mt-3 text-[12px] text-dim">
+            {t("A ready agent that refuses the swap on avoid:")}{" "}
+            <a href="https://github.com/0xNickdev/aiagentzoo/tree/main/examples/x402-agent" target="_blank" rel="noopener noreferrer" className={`font-mono ${LINK}`}>
+              examples/x402-agent
+            </a>
+          </p>
+        </Card>
+        <Card title={t("When you are not charged")} className="lg:col-span-5">
+          <ul className="space-y-2 text-[12.5px] leading-[1.55] text-fg-2">
+            <li>{t("The payment does not verify: 402 with the reason, nothing is built.")}</li>
+            <li>{t("The zoo knows nothing about the coin: the answer goes out free.")}</li>
+            <li>{t("The node cannot build the report: you get the error, the signed transfer is never sent and expires.")}</li>
+            <li>{t("The transfer fails on chain: 402 with the reason, the report is withheld.")}</li>
+            <li>{t("You cannot name your own price: the node always checks the payment against its own.")}</li>
+          </ul>
+          <p className="mt-3 text-[12px] text-dim">{t("The agent needs USDC only: the node pays the Solana network fee.")}</p>
+        </Card>
       </div>
-    </Section>
+    </Page>
   );
 }

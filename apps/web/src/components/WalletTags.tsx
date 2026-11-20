@@ -12,14 +12,14 @@ export const TAG: Record<WalletTag, { Icon: typeof Rat; color: string; label: st
   rugger: { Icon: Skull, color: "#ff8a7e", label: "known rugger", what: "launched tokens before and dumped most of them" },
   ring: { Icon: Network, color: "#ffc27a", label: "sniper ring", what: "has sniped launches together with other wallets here: one operator" },
   serial: { Icon: Repeat, color: "#c9b48a", label: "serial sniper", what: "buys launches in the first seconds to sell to whoever comes next" },
-  bundle: { Icon: Package, color: "#b8beba", label: "bundler", what: "bought in the launch block, or bundles launches as a habit" },
-  whale: { Icon: Waves, color: "#8ec5ff", label: "whale", what: "took two percent of the supply or more" },
-  dev: { Icon: Hammer, color: "#d8c49a", label: "has launched before", what: "launched tokens the zoo has kept, and did not dump most of them" },
-  exchange: { Icon: Landmark, color: "#b8beba", label: "exchange or launcher", what: "everyone's wallet, so it ties no one together" },
+  bundle: { Icon: Package, color: "#aab2ad", label: "bundler", what: "bought in the launch block, or bundles launches as a habit" },
+  whale: { Icon: Waves, color: "#e6e9e7", label: "whale", what: "took two percent of the supply or more" },
+  dev: { Icon: Hammer, color: "#e6e9e7", label: "has launched before", what: "launched tokens the zoo has kept, and did not dump most of them" },
+  exchange: { Icon: Landmark, color: "#aab2ad", label: "exchange or launcher", what: "everyone's wallet, so it ties no one together" },
   new: { Icon: Sprout, color: "#a6e3b4", label: "new wallet", what: "never seen by the zoo before this launch" },
-  kol: { Icon: Megaphone, color: "#f2d39b", label: "KOL", what: "a KOL's wallet, as Kolscan lists it" },
-  smart: { Icon: Gem, color: "#7fe0d6", label: "smart money", what: "a trader with a record of winning" },
-  kolside: { Icon: Megaphone, color: "#c9a96a", label: "KOL side wallet", what: "paid for by a KOL's known wallet" },
+  kol: { Icon: Megaphone, color: "#ffc27a", label: "KOL", what: "a KOL's wallet, as Kolscan lists it" },
+  smart: { Icon: Gem, color: "#a6e3b4", label: "smart money", what: "a trader with a record of winning" },
+  kolside: { Icon: Megaphone, color: "#ffc27a", label: "KOL side wallet", what: "paid for by a KOL's known wallet" },
 };
 
 const ORDER: WalletTag[] = ["kol", "kolside", "smart", "crew", "rugger", "ring", "serial", "bundle", "whale", "dev", "exchange", "new"];
@@ -48,11 +48,11 @@ export function TagList({ tags }: { tags?: WalletTag[] }) {
       {list.map((k) => {
         const { Icon, color, label, what } = TAG[k];
         return (
-          <li key={k} className="flex items-start gap-2 text-[13px] leading-snug">
+          <li key={k} className="flex items-start gap-2 text-[12px] leading-snug">
             <Icon size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" style={{ color }} aria-hidden />
             <span>
               <span style={{ color }}>{t(label)}</span>
-              <span className="text-fg-4"> · {t(what)}</span>
+              <span className="text-faint"> · {t(what)}</span>
             </span>
           </li>
         );

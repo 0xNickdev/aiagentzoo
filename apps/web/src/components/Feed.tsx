@@ -5,7 +5,8 @@ import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
 import { FEE_BPS, landed, quote, SOL_MINT, swap, swapEnabled } from "../swap";
 import { walletProvider } from "../zoo";
-import { Section } from "./ui";
+import { Page } from "./site/Panel";
+import { oddsPct } from "./XRay/ui";
 import NumberTicker from "./NumberTicker";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -18,7 +19,8 @@ interface Coin {
   createdAt: number;
   image?: string;
   verdict: "pass" | "caution";
-  score: number | null;
+  /** Survival odds from the odds model, when the node sends them: the chance the coin is alive tomorrow. */
+  odds?: { run: number } | null;
   reason: string | null;
   buyers: number;
   buys: number;
@@ -120,7 +122,7 @@ function Buy({ coin, amount, onState }: { coin: Coin; amount: string; onState: (
     }
   };
   return (
-    <button type="button" onClick={go} disabled={busy !== null} className="tabular-nums shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">
+    <button type="button" onClick={go} disabled={busy !== null} className="btn-moss h-8 shrink-0 rounded-[7px] px-3 text-[12.5px] font-medium disabled:opacity-50">
       {busy ?? t("Buy {s}", { s: amount })}
     </button>
   );
@@ -158,18 +160,18 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: EASE }}
-      className="group block rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 transition hover:border-white/[0.16] hover:bg-white/[0.04]"
+      className="group block border-b border-line px-3.5 py-3 transition last:border-b-0 hover:bg-night-raised"
     >
       <div className="flex items-center gap-3">
         <Pic c={c} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14.5px] text-white">
-            ${c.symbol.replace(/^\$/, "")} <span className="text-[13px] text-fg-4">{c.name}</span>
+          <p className="truncate text-[13.5px] font-medium text-white">
+            ${c.symbol.replace(/^\$/, "")} <span className="text-[12.5px] font-normal text-dim">{c.name}</span>
           </p>
-          <p className="tabular-nums mt-0.5 truncate text-[13px] text-fg-3">
+          <p className="mt-0.5 truncate text-[12px] text-dim">
             {age(c.createdAt)} · {capUsd !== null && (
               <>
-                <NumberTicker value={capUsd} format={usd} className="text-fg-2" />
+                <NumberTicker value={capUsd} format={usd} className="text-white" />
                 {" · "}
               </>
             )}
@@ -181,19 +183,20 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
         {swapEnabled() && <Buy coin={c} amount={amount} onState={onState} />}
       </div>
       <div className="mt-2.5 flex items-center gap-2.5">
-        <span className={`tabular-nums shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium ${pass ? "bg-[#a6e3b4]/[0.12] text-[#a6e3b4]" : "bg-[#ffc27a]/[0.12] text-[#ffc27a]"}`}>
+        <span className={`inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[4px] border px-1.5 text-[11.5px] font-medium ${pass ? "border-moss-edge text-moss" : "border-[#4a3a22] text-warn"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${pass ? "bg-moss" : "bg-warn"}`} />
           {pass ? t("no red flags") : t("caution")}
-          {c.score !== null ? ` · ${c.score}` : ""}
+          {c.odds && Number.isFinite(c.odds.run) ? <span className="font-normal text-fg-2">· {t("{p}% alive tomorrow", { p: oddsPct(c.odds.run) })}</span> : null}
         </span>
         {!c.graduated && (
-          <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
-            <span className="block h-full rounded-full bg-white/50" style={{ width: `${Math.round(c.progress * 100)}%` }} />
+          <span className="h-[3px] flex-1 overflow-hidden rounded-sm bg-night-raised" title={t("bonding curve")}>
+            <span className="block h-full bg-[#5d6b63]" style={{ width: `${Math.round(c.progress * 100)}%` }} />
           </span>
         )}
-        {c.graduated && <span className="flex-1 truncate text-[12.5px] text-fg-4">{t("graduated")}</span>}
-        {moved && <span className="tabular-nums shrink-0 text-[12.5px] text-fg-4">{t("first seen at {c}", { c: usd(shownUsd!) })}</span>}
+        {c.graduated && <span className="flex-1 truncate text-[11.5px] text-dim">{t("graduated")}</span>}
+        {moved && <span className="shrink-0 text-[11.5px] text-faint">{t("first seen at {c}", { c: usd(shownUsd!) })}</span>}
       </div>
-      {!pass && c.reason && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-fg-3">{tChain(c.reason)}</p>}
+      {!pass && c.reason && <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-fg-2">{tChain(c.reason)}</p>}
     </motion.a>
   );
 }
@@ -232,28 +235,27 @@ export default function Feed() {
 
   const listOf = (b: Board) => (data?.[b] ?? []).filter((c) => !strict || c.verdict === "pass");
 
+  const seg = (on: boolean) => `h-7 rounded-[5px] px-2.5 transition ${on ? "bg-night-raised text-white" : "text-dim hover:text-white"}`;
   return (
-    <Section className="!pt-12 sm:!pt-16">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl">
-          <p className="tabular-nums flex items-center gap-2 text-[13px] text-fg-3">
-            <span className={`h-[7px] w-[7px] rounded-full ${data?.stream.live ? "animate-pulse bg-[#a6e3b4]" : "bg-[#ffc27a]"}`} />
+    <Page
+      title={t("Every new coin. Minus the known scams.")}
+      lead={t("New, almost graduated and migrated. Every coin is checked as it trades: the dev's record, the first-second wallets, bundles, who already sold. Anything the check calls avoid never makes it here.")}
+      side={
+        <>
+          <span className="flex items-center gap-2 text-[12px] text-dim">
+            <span className={`h-1.5 w-1.5 rounded-full ${data?.stream.live ? "animate-pulse bg-moss" : "bg-warn"}`} />
             {t("Live feed · fresh Solana launches · avoid is never shown")}
-          </p>
-          <h1 className="font-display mt-4 text-4xl leading-[1.05] sm:text-5xl">{t("Every new coin. Minus the known scams.")}</h1>
-          <p className="mt-4 text-[15px] font-normal leading-relaxed text-fg-3">{t("New, almost graduated and migrated. Every coin is checked as it trades: the dev's record, the first-second wallets, bundles, who already sold. Anything the check calls avoid never makes it here.")}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-full border border-white/[0.12] p-1 text-[13px]">
-            <button type="button" onClick={() => (setStrict(false), keep("zoo-feed-strict", "0"))} className={`rounded-full px-3.5 py-1.5 transition ${!strict ? "bg-white text-black" : "text-fg-3 hover:text-white"}`}>
+          </span>
+          <div className="flex rounded-[7px] border border-line p-0.5 text-[12px]">
+            <button type="button" onClick={() => (setStrict(false), keep("zoo-feed-strict", "0"))} className={seg(!strict)}>
               {t("no red flags + caution")}
             </button>
-            <button type="button" onClick={() => (setStrict(true), keep("zoo-feed-strict", "1"))} className={`rounded-full px-3.5 py-1.5 transition ${strict ? "bg-white text-black" : "text-fg-3 hover:text-white"}`}>
+            <button type="button" onClick={() => (setStrict(true), keep("zoo-feed-strict", "1"))} className={seg(strict)}>
               {t("no red flags only")}
             </button>
           </div>
           {swapEnabled() && (
-            <label className="tabular-nums flex items-center gap-2 rounded-full border border-white/[0.12] px-3.5 py-1.5 text-[13px] text-fg-3">
+            <label className="flex h-8 items-center gap-2 rounded-[7px] border border-line px-2.5 text-[12px] text-dim focus-within:border-moss-edge">
               {t("quick buy")}
               <input
                 value={amount}
@@ -263,58 +265,58 @@ export default function Feed() {
                   keep("zoo-feed-amount", v);
                 }}
                 inputMode="decimal"
+                aria-label={t("quick buy")}
                 className="w-12 bg-transparent text-right text-white outline-none"
               />
               SOL
             </label>
           )}
-        </div>
-      </div>
-
-      <div className="mt-8 flex gap-2 lg:hidden">
+        </>
+      }
+    >
+      <div className="mb-3 flex gap-1 lg:hidden">
         {BOARDS.map((b) => (
-          <button key={b.id} type="button" onClick={() => setTab(b.id)} className={`tabular-nums rounded-full px-4 py-2 text-[13.5px] transition ${tab === b.id ? "bg-white text-black" : "border border-white/[0.12] text-fg-3"}`}>
-            {t(b.title)} {data ? listOf(b.id).length : ""}
+          <button key={b.id} type="button" onClick={() => setTab(b.id)} className={`flex h-8 items-center gap-1.5 rounded-[7px] border px-3 text-[12.5px] transition ${tab === b.id ? "border-line-2 bg-night-raised text-white" : "border-line text-dim"}`}>
+            {t(b.title)} <span className="text-faint">{data ? listOf(b.id).length : ""}</span>
           </button>
         ))}
       </div>
 
-      {failed && !data && <p className="mt-10 text-[14px] text-fg-3">{t("The chain reader did not answer. Try again in a minute.")}</p>}
+      {failed && !data && <p className="mb-3 text-[12.5px] text-warn">{t("The chain reader did not answer. Try again in a minute.")}</p>}
 
-      <div className="mt-6 grid gap-5 lg:mt-10 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         {BOARDS.map((b) => {
           const list = listOf(b.id);
           return (
-            <div key={b.id} className={`${tab === b.id ? "block" : "hidden"} min-w-0 lg:block`}>
-              <div className="mb-3 flex items-baseline justify-between px-1">
-                <p className="text-[16px] text-white">
-                  {t(b.title)} <span className="tabular-nums text-fg-4">{data ? list.length : ""}</span>
-                </p>
-                <p className="text-[13px] text-fg-4">{t(b.note)}</p>
+            <section key={b.id} className={`${tab === b.id ? "flex" : "hidden"} min-w-0 flex-col rounded-[12px] border border-line bg-night-surface lg:flex`}>
+              <div className="flex h-10 shrink-0 items-center gap-2.5 border-b border-line px-3.5">
+                <h2 className="text-[13px] font-medium text-white">{t(b.title)}</h2>
+                <span className="text-[11.5px] text-faint">{data ? list.length : ""}</span>
+                <span className="ml-auto min-w-0 truncate text-[11.5px] text-faint">{t(b.note)}</span>
               </div>
-              <div className="flex max-h-[78vh] flex-col gap-2 overflow-y-auto pr-1">
+              <div className="flex max-h-[76vh] min-h-[200px] flex-col overflow-y-auto">
                 <AnimatePresence initial={false}>
                   {list.map((c) => (
                     <Row key={c.mint} c={c} solUsd={data?.solUsd ?? null} amount={amount} onState={setState} />
                   ))}
                 </AnimatePresence>
-                {data && !list.length && <p className="px-1 py-6 text-[13px] text-fg-4">{t("Nothing here right now that the check lets through.")}</p>}
-                {!data && !failed && Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[86px] animate-pulse rounded-xl bg-white/[0.03]" />)}
+                {data && !list.length && <p className="px-3.5 py-8 text-center text-[12.5px] text-faint">{t("Nothing here right now that the check lets through.")}</p>}
+                {!data && !failed && Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[78px] animate-pulse border-b border-line bg-night-raised/40" />)}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
 
-      <p className="mt-8 max-w-3xl text-[13px] leading-relaxed text-fg-4">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a {p}% fee goes to the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
+      <p className="mt-3 max-w-[90ch] text-[12px] leading-[1.6] text-dim">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a {p}% fee goes to the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
 
       <AnimatePresence>
         {state && (
-          <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/[0.12] bg-[#0b0f0d] px-5 py-2.5 text-[13px] text-white shadow-lg">
+          <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed bottom-5 left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-[9px] border border-line-2 bg-night-raised px-4 py-2.5 text-[12.5px] text-white shadow-lg">
             {state}
           </motion.p>
         )}
       </AnimatePresence>
-    </Section>
+    </Page>
   );
 }

@@ -27,11 +27,11 @@ function usePage(): [Page, (slug: string, hash?: string) => void] {
 
 function Nav({ page, go }: { page: Page; go: (slug: string) => void }) {
   return (
-    <nav className="space-y-8">
+    <nav className="space-y-6">
       {GROUPS.map((g) => (
         <div key={g.title}>
-          <p className="mb-3 text-[13px] text-fg-4">{t(g.title)}</p>
-          <ul className="space-y-1">
+          <p className="mb-2 px-2.5 text-[11.5px] text-faint">{t(g.title)}</p>
+          <ul className="space-y-px">
             {g.pages.map((p) => (
               <li key={p.slug}>
                 <a
@@ -40,8 +40,8 @@ function Nav({ page, go }: { page: Page; go: (slug: string) => void }) {
                     e.preventDefault();
                     go(p.slug);
                   }}
-                  className={`block rounded-lg px-3 py-1.5 text-[14px] transition ${
-                    p.slug === page.slug ? "bg-white/[0.07] text-white" : "text-fg-4 hover:text-white"
+                  className={`block rounded-[7px] px-2.5 py-1.5 text-[13px] transition ${
+                    p.slug === page.slug ? "bg-night-raised text-white" : "text-dim hover:bg-night-surface hover:text-white"
                   }`}
                 >
                   {t(p.title)}
@@ -132,24 +132,24 @@ export default function DocsApp() {
     <div className="min-h-screen">
       <SiteNav active="/docs" />
       <div className="sticky top-[60px] z-30 border-b border-line bg-night lg:hidden">
-        <button type="button" onClick={() => setMenu((m) => !m)} className="flex w-full items-center justify-between px-5 py-3 text-[13px] text-fg-4 sm:px-8">
+        <button type="button" onClick={() => setMenu((m) => !m)} className="flex h-11 w-full items-center justify-between px-4 text-[12.5px] text-dim sm:px-5">
           <span>{t("Contents")} · {t(page.title)}</span>
           {menu ? <X size={15} /> : <Menu size={15} />}
         </button>
         {menu && (
-          <div className="max-h-[65vh] overflow-y-auto border-t border-white/[0.07] px-5 py-6 sm:px-8">
+          <div className="max-h-[65vh] overflow-y-auto border-t border-line px-4 py-5 sm:px-5">
             <Nav page={page} go={go} />
           </div>
         )}
       </div>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-10 px-5 sm:px-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
-        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto py-10 lg:block">
+      <div className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)] gap-10 px-4 sm:px-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
+        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto border-r border-line py-8 pr-4 lg:block">
           <Nav page={page} go={go} />
         </aside>
 
-        <main className="min-w-0 py-10 sm:py-14">
-          <p className="text-[13px] text-fg-4">{t(GROUPS.find((g) => g.pages.includes(page))?.title ?? "")}</p>
+        <main className="min-w-0 py-8 sm:py-10">
+          <p className="text-[12px] text-faint">{t(GROUPS.find((g) => g.pages.includes(page))?.title ?? "")}</p>
           {ready ? (
             <div ref={body} className="doc" dangerouslySetInnerHTML={{ __html: html }} />
           ) : (
@@ -158,7 +158,7 @@ export default function DocsApp() {
             </div>
           )}
 
-          <div className="mt-16 grid gap-3 border-t border-white/[0.07] pt-8 sm:grid-cols-2">
+          <div className="mt-14 grid max-w-[46rem] gap-3 border-t border-line pt-6 sm:grid-cols-2">
             {prev ? (
               <a
                 href={`/docs/${prev.slug}`}
@@ -166,12 +166,12 @@ export default function DocsApp() {
                   e.preventDefault();
                   go(prev.slug);
                 }}
-                className="group rounded-2xl p-5 ring-1 ring-white/10 transition hover:ring-white/25"
+                className="group rounded-[12px] border border-line bg-night-surface p-3.5 transition hover:border-line-2"
               >
-                <span className="flex items-center gap-1.5 text-[13px] text-fg-4">
+                <span className="flex items-center gap-1.5 text-[11.5px] text-faint">
                   <ArrowLeft size={12} /> {t("previous")}
                 </span>
-                <span className="mt-1 block text-[16px] text-white">{t(prev.title)}</span>
+                <span className="mt-1 block text-[14px] font-medium text-white">{t(prev.title)}</span>
               </a>
             ) : (
               <span />
@@ -183,13 +183,13 @@ export default function DocsApp() {
                   e.preventDefault();
                   go(next.slug);
                 }}
-                className="group rounded-2xl p-5 text-right ring-1 ring-white/10 transition hover:ring-white/25"
+                className="group rounded-[12px] border border-line bg-night-surface p-3.5 text-right transition hover:border-line-2"
               >
-                <span className="flex items-center justify-end gap-1.5 text-[13px] text-fg-4">
+                <span className="flex items-center justify-end gap-1.5 text-[11.5px] text-faint">
                   {t("next")} <ArrowRight size={12} />
                 </span>
-                <span className="mt-1 block text-[16px] text-white">{t(next.title)}</span>
-                <span className="mt-1 block text-[13px] text-fg-3">{t(next.blurb)}</span>
+                <span className="mt-1 block text-[14px] font-medium text-white">{t(next.title)}</span>
+                <span className="mt-1 block text-[12px] text-dim">{t(next.blurb)}</span>
               </a>
             )}
           </div>
@@ -197,26 +197,26 @@ export default function DocsApp() {
             href={`${GITHUB_URL}/blob/main/${page.source}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-block text-[13px] text-fg-4 hover:text-white"
+            className="mt-6 inline-block text-[12px] text-dim hover:text-white"
           >
             {t("edit this page on GitHub ↗")}
           </a>
-          <a href={markdownUrl(page)} className="ml-6 mt-8 inline-block text-[13px] text-fg-4 hover:text-white">
+          <a href={markdownUrl(page)} className="ml-6 mt-6 inline-block text-[12px] text-dim hover:text-white">
             {t("raw markdown")}
           </a>
         </main>
 
-        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto py-14 xl:block">
+        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto py-10 xl:block">
           {headings.length > 1 && (
             <>
-              <p className="mb-3 text-[13px] text-fg-4">{t("On this page")}</p>
-              <ul className="space-y-2 border-l border-white/[0.08]">
+              <p className="mb-2 text-[11.5px] text-faint">{t("On this page")}</p>
+              <ul className="space-y-1.5 border-l border-line">
                 {headings.map((h) => (
                   <li key={h.id}>
                     <a
                       href={`#${h.id}`}
-                      className={`-ml-px block border-l py-0.5 pl-3 text-[13px] transition ${
-                        active === h.id ? "border-amber-200/70 text-white" : "border-transparent text-fg-3 hover:text-white"
+                      className={`-ml-px block border-l py-0.5 pl-3 text-[12.5px] transition ${
+                        active === h.id ? "border-moss text-white" : "border-transparent text-dim hover:text-white"
                       }`}
                     >
                       {h.text}

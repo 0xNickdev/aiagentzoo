@@ -115,11 +115,6 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full select-none" role="img" aria-label={t("Wallets in the first 5 seconds")} onClick={() => pick(null)}>
         <defs>
-          <radialGradient id="xr-bg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(255,236,200,0.07)" />
-            <stop offset="60%" stopColor="rgba(255,255,255,0.015)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-          </radialGradient>
           <filter id="xr-glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="5" result="b" />
             <feMerge>
@@ -128,18 +123,17 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             </feMerge>
           </filter>
         </defs>
-        <circle cx={CX} cy={CY} r={rOf(5) + 22} fill="url(#xr-bg)" />
-        {/* a ring per second, the one the replay has reached a little brighter */}
+                {/* a ring per second, the one the replay has reached a little brighter */}
         {[0, 1, 2, 3, 4, 5].map((s) => (
           <g key={s}>
-            <circle cx={CX} cy={CY} r={rOf(s)} fill="none" stroke="white" strokeOpacity={playing && Math.floor(clock) === s ? 0.22 : s === 5 ? 0.12 : 0.06} strokeDasharray={s === 0 ? "2 5" : undefined} />
-            <text x={CX + 4} y={CY - rOf(s) - 5} className="tabular-nums" fontSize="10" fill="white" fillOpacity="0.32">
+            <circle cx={CX} cy={CY} r={rOf(s)} fill="none" stroke={playing && Math.floor(clock) === s ? "#3a4640" : s === 5 ? "#232c27" : "#18201c"} strokeDasharray={s === 0 ? "2 5" : undefined} />
+            <text x={CX + 4} y={CY - rOf(s) - 5} className="tabular-nums" fontSize="10" fill="#7d8681" fontFamily="Geist Mono, ui-monospace, monospace">
               {s === 0 ? t("launch") : `${s}s`}
             </text>
           </g>
         ))}
-        <line x1={CX - rOf(5) - 10} y1={CY} x2={CX + rOf(5) + 10} y2={CY} stroke="white" strokeOpacity="0.04" />
-        <line x1={CX} y1={CY - rOf(5) - 10} x2={CX} y2={CY + rOf(5) + 10} stroke="white" strokeOpacity="0.04" />
+        <line x1={CX - rOf(5) - 10} y1={CY} x2={CX + rOf(5) + 10} y2={CY} stroke="#18201c" />
+        <line x1={CX} y1={CY - rOf(5) - 10} x2={CX} y2={CY + rOf(5) + 10} stroke="#18201c" />
         {playing && <circle cx={CX} cy={CY} r={rOf(clock)} fill="none" stroke="#ffc27a" strokeOpacity="0.55" strokeWidth="1.2" />}
 
         {/* ring members tied around their circle, crew tied to the dev */}
@@ -180,7 +174,7 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
                 <circle cx={n.x} cy={n.y} r={n.size} fill={k.color} fillOpacity="0.05" stroke={k.color} strokeOpacity="0.75" strokeWidth="1" strokeDasharray="3 3" />
               )}
               <circle cx={n.x} cy={n.y} r={1.8} fill={k.color} />
-              {hover === n.e.wallet && !isSel && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="1" />}
+              {hover === n.e.wallet && !isSel && <circle cx={n.x} cy={n.y} r={n.size + 6} fill="none" stroke="#e6e9e7" strokeWidth="1" />}
               {isSel && (
                 <>
                   <circle cx={n.x} cy={n.y} r={n.size + 7} fill="none" stroke="#ffc27a" strokeWidth="1.6" />
@@ -194,12 +188,12 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
           );
         })}
 
-        <circle cx={CX} cy={CY} r="20" fill="#050807" stroke="white" strokeOpacity="0.85" />
-        <circle cx={CX} cy={CY} r="26" fill="none" stroke="white" strokeOpacity="0.12" />
-        <text x={CX} y={CY + 4} textAnchor="middle" className="tabular-nums" fontSize="11" fill="white" fillOpacity="0.9">
+        <circle cx={CX} cy={CY} r="20" fill="#030504" stroke="#e6e9e7" />
+        <circle cx={CX} cy={CY} r="26" fill="none" stroke="#232c27" />
+        <text x={CX} y={CY + 4} textAnchor="middle" className="tabular-nums" fontSize="11" fill="#e6e9e7">
           dev
         </text>
-        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill="#ffc27a" fillOpacity={playing ? 0.95 : 0.5}>
+        <text x={W - 14} y={24} textAnchor="end" className="tabular-nums" fontSize="12" fill={playing ? "#ffc27a" : "#7d8681"} fontFamily="Geist Mono, ui-monospace, monospace">
           {`t+${clock.toFixed(1)}s`}
         </text>
       </svg>
@@ -213,47 +207,47 @@ export default function XRayRadar({ early, selected, onSelect, compact = false }
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="pointer-events-none absolute z-10 w-[220px] rounded-xl border border-white/10 bg-[#070a09]/95 px-3.5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+            className="pointer-events-none absolute z-10 w-[220px] max-w-[70vw] rounded-[10px] border border-line-2 bg-night-raised px-3 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
             style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%`, transform: `translate(${tip.x > W * 0.6 ? "-108%" : "12%"}, -50%)` }}
           >
-            <p className="tabular-nums text-[13px] text-fg-2">{short(tip.e.wallet)}</p>
-            <p className="tabular-nums mt-0.5 text-[13px]" style={{ color: KIND[tip.k].color }}>
+            <p className="font-mono text-[12px] text-fg-2">{short(tip.e.wallet)}</p>
+            <p className="tabular-nums mt-0.5 text-[12px]" style={{ color: KIND[tip.k].color }}>
               {t(KIND[tip.k].label)}
             </p>
-            <div className="tabular-nums mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
-              <span className="text-fg-3">{t("in at")}</span>
+            <div className="tabular-nums mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+              <span className="text-dim">{t("in at")}</span>
               <span className="text-right text-fg-2">{tip.e.afterSec}s</span>
-              <span className="text-fg-3">{t("took")}</span>
+              <span className="text-dim">{t("took")}</span>
               <span className="text-right text-fg-2">{share(tip.e.bought)}</span>
-              <span className="text-fg-3">{t("holds")}</span>
-              <span className={`text-right ${tip.e.held >= 0.05 ? "text-[#ff8a7e]" : "text-fg-2"}`}>{share(tip.e.held)}</span>
-              <span className="text-fg-3">{t("sold out")}</span>
+              <span className="text-dim">{t("holds")}</span>
+              <span className={`text-right ${tip.e.held >= 0.05 ? "text-danger" : "text-fg-2"}`}>{share(tip.e.held)}</span>
+              <span className="text-dim">{t("sold out")}</span>
               <span className="text-right text-fg-2">{tip.e.exitSec === null ? t("not yet") : t("after {s}", { s: secs(tip.e.exitSec) })}</span>
-              <span className="text-fg-3">{t("snipes 48h")}</span>
+              <span className="text-dim">{t("snipes 48h")}</span>
               <span className="text-right text-fg-2">{tip.e.snipes48h}</span>
             </div>
-            {!onSelect && <p className="mt-2 text-[13px] font-normal text-fg-4">{t(KIND[tip.k].what)}</p>}
+            {!onSelect && <p className="mt-2 text-[11.5px] font-normal text-faint">{t(KIND[tip.k].what)}</p>}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="tabular-nums mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
+      <div className="tabular-nums mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
         {ORDER.filter((k) => present.has(k)).map((k) => (
           <button
             key={k}
             type="button"
             onClick={() => setOnly(only === k ? null : k)}
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 transition ${only === k ? "bg-white/10 text-white ring-white/25" : only ? "text-fg-4 ring-white/[0.06]" : "text-fg-4 ring-white/[0.08] hover:text-white"}`}
+            className={`flex h-[22px] items-center gap-1.5 rounded-full border px-2 transition ${only === k ? "border-faint bg-night-raised text-white" : only ? "border-line text-faint" : "border-line-2 text-dim hover:text-white"}`}
           >
             <span className="h-2 w-2 rounded-full" style={{ background: KIND[k].color }} />
             {t(KIND[k].label)} {nodes.filter((n) => has(n.e, k)).length}
           </button>
         ))}
-        <button type="button" onClick={replay} className="ml-auto rounded-full px-2.5 py-1 text-[#ffc27a]/80 ring-1 ring-[#ffc27a]/20 hover:text-[#ffc27a]">
+        <button type="button" onClick={replay} className="ml-auto flex h-[22px] items-center rounded-full border border-[#4a3a24] px-2 text-warn hover:border-warn">
           ↻ {t("replay the 5 seconds")}
         </button>
       </div>
-      <p className="tabular-nums mt-2 text-[12.5px] text-fg-4">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
+      <p className="tabular-nums mt-2 text-[12.5px] text-faint">{t("ring = the second it bought · size = what it took · filled = still holds · dashed = sold out")}</p>
     </div>
   );
 }

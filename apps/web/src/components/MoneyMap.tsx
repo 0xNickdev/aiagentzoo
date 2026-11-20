@@ -72,16 +72,16 @@ function Node({ x, y, h, title, sub, sub2, color = WHITE, href, right, left }: {
     <g>
       <rect x={x - 2} y={y} width={4} height={h} rx={2} fill={color} />
       <rect x={x - 6} y={y - 4} width={12} height={h + 8} rx={6} fill={color} opacity={0.12} />
-      <text x={tx} y={top} fill="#ffffff" fontSize={15} fontWeight={600} fontFamily="Geist, sans-serif" textAnchor={anchor}>
+      <text x={tx} y={top} fill="#ffffff" fontSize={15} fontWeight={500} fontFamily="Geist, sans-serif" textAnchor={anchor}>
         {title}
       </text>
       {sub && (
-        <text x={tx} y={top + 17} fill="#d9dddb" fontSize={13} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
+        <text x={tx} y={top + 17} fill="#e6e9e7" fontSize={13} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
           {sub}
         </text>
       )}
       {sub2 && (
-        <text x={tx} y={top + 34} fill="#b8beba" fontSize={12.5} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
+        <text x={tx} y={top + 34} fill="#aab2ad" fontSize={12.5} fontFamily="Geist, sans-serif" textAnchor={anchor} style={{ fontVariantNumeric: "tabular-nums" }}>
           {sub2}
         </text>
       )}
@@ -180,14 +180,14 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
   const heldY = midY + 40;
 
   return (
-    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
-      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-        <h3 className="font-display text-2xl text-fg">{t("Money map")}</h3>
-        <span className="tabular-nums text-[13px] text-fg-4">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
+    <div className="min-w-0">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-[13px] font-medium text-white">{t("Money map")}</h3>
+        <span className="tabular-nums text-[11.5px] text-faint">{t("who paid · the dev · the first 5 seconds · sold or held")}</span>
       </div>
 
       {gs.length === 0 ? (
-        <p className="text-[15px] text-fg-3">{t("Nobody bought in the first five seconds, so there is no operation to draw.")}</p>
+        <p className="text-[13px] text-dim">{t("Nobody bought in the first five seconds, so there is no operation to draw.")}</p>
       ) : (
         <>
           <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Money map")}>
@@ -216,32 +216,32 @@ export default function MoneyMap({ r }: { r: XRayReport }) {
 
           {/* On a phone the same story reads top to bottom. */}
           <ol className="grid gap-3 md:hidden">
-            <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: funderColor }}>
-              <p className="text-[15px] text-white">{funderTitle}</p>
-              <p className="tabular-nums mt-1 text-[13px] text-fg-4">{funderSub}</p>
+            <li className="rounded-[8px] border border-line border-l-2 bg-night-raised px-3 py-2.5" style={{ borderLeftColor: funderColor }}>
+              <p className="text-[13px] text-white">{funderTitle}</p>
+              <p className="tabular-nums mt-0.5 text-[12px] text-faint">{funderSub}</p>
             </li>
-            <li className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: (f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE }}>
-              <p className="text-[15px] text-white">{t("The dev {w}", { w: short(r.creator) })}</p>
-              <p className="tabular-nums mt-1 text-[13px] text-fg-4">{devSub}</p>
+            <li className="rounded-[8px] border border-line border-l-2 bg-night-raised px-3 py-2.5" style={{ borderLeftColor: (f?.creatorSoldPct ?? 0) >= 50 ? RED : WHITE }}>
+              <p className="text-[13px] text-white">{t("The dev {w}", { w: short(r.creator) })}</p>
+              <p className="tabular-nums mt-0.5 text-[12px] text-faint">{devSub}</p>
             </li>
             {gs.map((g) => (
-              <li key={g.key} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
-                <p className="text-[15px] text-white">{t(g.label)}</p>
-                <p className="tabular-nums mt-1 text-[13px] text-fg-4">
+              <li key={g.key} className="rounded-[8px] border border-line border-l-2 bg-night-raised px-3 py-2.5" style={{ borderLeftColor: g.color }}>
+                <p className="text-[13px] text-white">{t(g.label)}</p>
+                <p className="tabular-nums mt-0.5 text-[12px] text-faint">
                   {t("{n} wallets · took {p}", { n: g.wallets.length, p: pctFine(g.took) })} · {t("sold {p}", { p: pctFine(Math.max(0, g.took - g.held)) })}
                 </p>
               </li>
             ))}
           </ol>
 
-          <div className="mt-6 grid gap-x-8 gap-y-2 text-[14px] leading-relaxed text-fg-3 md:grid-cols-2">
+          <div className="mt-5 grid gap-x-8 gap-y-1.5 text-[12.5px] leading-relaxed text-dim md:grid-cols-2">
             {gs.map((g) => (
               <p key={g.key}>
                 <span className="font-medium" style={{ color: g.color === WHITE ? "#fff" : g.color }}>{t(g.label)}</span>: {t(g.note)}.
               </p>
             ))}
           </div>
-          <p className="mt-5 text-[13px] text-fg-4">{t("Thickness is the share of supply.")}</p>
+          <p className="mt-4 text-[11.5px] leading-relaxed text-faint">{t("Thickness is the share of supply.")}</p>
         </>
       )}
       <Outflows r={r} />
@@ -343,20 +343,20 @@ function Outflows({ r }: { r: XRayReport }) {
   }, [r.mint, solana]);
 
   const head = (
-    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-      <h3 className="font-display text-xl text-fg">{t("Where the SOL went")}</h3>
-      <span className="tabular-nums text-[13px] text-fg-4">{t("the dev and its selling wallets · transfers out · first 24 h")}</span>
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <h3 className="text-[13px] font-medium text-white">{t("Transfers out")}</h3>
+      <span className="tabular-nums text-[11.5px] text-faint">{t("the dev and its selling wallets · transfers out · first 24 h")}</span>
     </div>
   );
   const box = (body: React.ReactNode) => (
-    <div className="mt-8 border-t border-white/[0.08] pt-7">
+    <div className="mt-6 border-t border-line pt-5">
       {head}
       {body}
     </div>
   );
-  if (!solana) return box(<p className="text-[15px] text-fg-3">{t("Followed on Solana for now.")}</p>);
-  if (rep === "loading") return box(<p className="text-[15px] text-fg-3">{t("Following the SOL out of the dev's wallets…")}</p>);
-  if (rep === "error" || rep === null) return box(<p className="text-[15px] text-fg-3">{t("Could not follow the transfers right now. Open the tab again in a minute.")}</p>);
+  if (!solana) return box(<p className="text-[13px] text-dim">{t("Followed on Solana for now.")}</p>);
+  if (rep === "loading") return box(<p className="text-[13px] text-dim">{t("Following the SOL out of the dev's wallets…")}</p>);
+  if (rep === "error" || rep === null) return box(<p className="text-[13px] text-dim">{t("Could not follow the transfers right now. Open the tab again in a minute.")}</p>);
 
   const flows = rep.flows ?? [];
   const inside = flows.filter((f) => f.kind === "operation").reduce((n, f) => n + f.sol, 0);
@@ -366,7 +366,7 @@ function Outflows({ r }: { r: XRayReport }) {
   const missed = rep.wallets.filter((w) => !w.reached).length;
   if (!groups.length)
     return box(
-      <p className="text-[15px] text-fg-3">
+      <p className="text-[13px] text-dim">
         {t("No SOL left these wallets by plain transfer in the day after the launch.")} {inside > 0 && t("{s} SOL moved between their own wallets.", { s: sol(inside) })}
       </p>,
     );
@@ -392,11 +392,11 @@ function Outflows({ r }: { r: XRayReport }) {
   return box(
     <>
       {leads.length > 0 && (
-        <div className="mb-6 rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: RED }}>
-          <p className="text-[15px] leading-relaxed text-white">
+        <div className="mb-6 rounded-[8px] border border-line border-l-2 bg-night-raised px-3 py-2.5" style={{ borderLeftColor: RED }}>
+          <p className="text-[13px] leading-relaxed text-white">
             {t("The dev's SOL leads to")} {leads.join("; ")}.
           </p>
-          <p className="mt-1 text-[13px] text-fg-4">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
+          <p className="mt-0.5 text-[12px] text-faint">{t("Transfers we can see on chain: who received the SOL, not who owns the wallets.")}</p>
         </div>
       )}
       <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="hidden w-full md:block" role="img" aria-label={t("Where the SOL went")}>
@@ -412,32 +412,32 @@ function Outflows({ r }: { r: XRayReport }) {
 
       <ol className="grid gap-3 md:hidden">
         {groups.map((g) => (
-          <li key={g.kind} className="rounded-xl border border-white/[0.08] border-l-2 p-4" style={{ borderLeftColor: g.color }}>
-            <p className="text-[15px] text-white">{t(g.label)}</p>
-            <p className="tabular-nums mt-1 text-[13px] text-fg-4">
+          <li key={g.kind} className="rounded-[8px] border border-line border-l-2 bg-night-raised px-3 py-2.5" style={{ borderLeftColor: g.color }}>
+            <p className="text-[13px] text-white">{t(g.label)}</p>
+            <p className="tabular-nums mt-0.5 text-[12px] text-faint">
               {sol(g.sol)} SOL · {names(g)}
             </p>
           </li>
         ))}
       </ol>
 
-      <ul className="mt-6 divide-y divide-white/[0.06] text-[14px]">
+      <ul className="mt-5 divide-y divide-line text-[12.5px]">
         {top.map((f) => {
           const k = KIND.find((x) => x.kind === f.kind)!;
           return (
             <li key={f.to} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
-              <span className="tabular-nums w-20 shrink-0 text-white">{sol(f.sol)} SOL</span>
-              <a href={explorer(f.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-2 underline decoration-white/20 underline-offset-4 hover:text-white">
+              <span className="tabular-nums w-[4.5rem] shrink-0 text-white">{sol(f.sol)} SOL</span>
+              <a href={explorer(f.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-2 underline decoration-faint underline-offset-4 hover:text-white">
                 {short(f.to)}
               </a>
-              <span style={{ color: k.color === WHITE ? undefined : k.color }} className={k.color === WHITE ? "text-fg-3" : ""}>
+              <span style={{ color: k.color === WHITE ? undefined : k.color }} className={k.color === WHITE ? "text-dim" : ""}>
                 {about(f)}
               </span>
               {f.cabal != null && <CabalChip id={f.cabal} />}
               {f.then && (
-                <span className="text-fg-4">
+                <span className="text-faint">
                   {t("then {s} SOL on to", { s: sol(f.then.sol) })}{" "}
-                  <a href={explorer(f.then.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-white/20 underline-offset-4 hover:text-white">
+                  <a href={explorer(f.then.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-faint underline-offset-4 hover:text-white">
                     {f.then.kind === "exchange" && f.then.label ? f.then.label : short(f.then.to)}
                   </a>
                   {f.then.kind !== "exchange" && f.then.kind !== "wallet" && (
@@ -455,7 +455,7 @@ function Outflows({ r }: { r: XRayReport }) {
         })}
       </ul>
 
-      <p className="mt-5 text-[13px] text-fg-4">
+      <p className="mt-4 text-[11.5px] leading-relaxed text-faint">
         {t("Plain SOL transfers out of the dev and the first-seconds wallets that sold, in the 24 hours after the launch. Swaps and dust under 0.1 SOL are left out.")}
         {inside > 0 && ` ${t("{s} SOL moved between their own wallets and is not counted.", { s: sol(inside) })}`}
         {(r.creatorRecord?.launches48h ?? 0) >= 5 && ` ${t("This dev launched {n} coins in two days, so the day's transfers carry the other launches' money too.", { n: r.creatorRecord?.launches48h ?? 0 })}`}
@@ -468,7 +468,7 @@ function Outflows({ r }: { r: XRayReport }) {
 
 function CabalChip({ id }: { id: number }) {
   return (
-    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full px-1.5 py-px text-[12px] text-[#ffc27a] ring-1 ring-[#ffc27a]/30 hover:text-white" title={t("part of a cabal the memory ties together")}>
+    <a href={`/cabals?id=${id}`} className="tabular-nums ml-1 rounded-full border border-[#4a3a24] px-1.5 text-[11px] leading-[18px] text-warn hover:text-white" title={t("part of a cabal the memory ties together")}>
       {t("cabal #{c}", { c: id })}
     </a>
   );
@@ -481,7 +481,7 @@ function Onward({ d }: { d: Dest }) {
     <>
       {", "}
       {t("then {s} SOL on to", { s: sol(d.sol) })}{" "}
-      <a href={explorer(d.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-white/20 underline-offset-4 hover:text-white">
+      <a href={explorer(d.to)} target="_blank" rel="noopener noreferrer" className="tabular-nums underline decoration-faint underline-offset-4 hover:text-white">
         {d.kind === "exchange" && d.label ? d.label : short(d.to)}
       </a>
       {d.kind !== "exchange" && d.kind !== "wallet" && (

@@ -51,7 +51,7 @@ function ago(ts: number | null): string {
 const VERDICT_TONE: Record<RecordItem["verdict"], string> = {
   suspicious: "text-danger ring-rose-200/25",
   promising: "text-moss ring-emerald-200/25",
-  watch: "text-fg-4 ring-white/15",
+  watch: "text-fg-4 ring-line-2",
 };
 
 function result(i: RecordItem, night: string, today: string): { text: string; tone: string } {
@@ -198,7 +198,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="border-b border-white/[0.08] p-6 sm:p-7">
+        <header className="border-b border-line p-6 sm:p-7">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="tabular-nums text-[13px] text-fg-4">
@@ -206,7 +206,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
               </p>
               <h3 className="mt-1 truncate text-[26px] font-medium tracking-[-0.03em] text-white">{g.name}</h3>
             </div>
-            <button type="button" onClick={onClose} aria-label={t("Close")} className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
+            <button type="button" onClick={onClose} aria-label={t("Close")} className="rounded-full p-2 text-fg-4 ring-1 ring-line-2 hover:text-white">
               <X size={16} />
             </button>
           </div>
@@ -241,7 +241,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
                 <h4 className="sticky top-0 bg-night-surface py-1 text-[12px] text-faint">
                   {t(n.items.length === 1 ? "night of {night} · {n} call" : "night of {night} · {n} calls", { night: n.night, n: n.items.length })}
                 </h4>
-                <ul className="divide-y divide-white/[0.06]">
+                <ul className="divide-y divide-line">
                   {n.items.map((i) => (
                     <Call key={i.mint} i={i} night={n.night} today={today} />
                   ))}
@@ -251,7 +251,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           )}
         </div>
 
-        <footer className="tabular-nums flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[0.08] px-6 py-4 text-[13px] text-fg-4 sm:px-7">
+        <footer className="tabular-nums flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-line px-6 py-4 text-[13px] text-fg-4 sm:px-7">
           <a href={`${SOLSCAN_URL}/account/${g.wallet}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">
             {t("signed by {w} ↗", { w: shortAddress(g.wallet) })}
           </a>

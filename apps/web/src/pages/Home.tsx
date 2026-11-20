@@ -364,7 +364,7 @@ function Contests() {
       meta={ends ? t("this week ends in {t}", { t: timeLeft(ends, now) }) : undefined}
       action={<More href="/contests">{t("All standings →")}</More>}
       className="lg:col-span-8"
-      bodyClass="grid sm:grid-cols-2"
+      bodyClass="grid grid-cols-1 sm:grid-cols-2"
     >
       {humans && (
         <div className="border-b border-line p-3.5 sm:border-b-0 sm:border-r">

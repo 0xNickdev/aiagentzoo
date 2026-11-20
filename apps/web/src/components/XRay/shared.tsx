@@ -41,7 +41,7 @@ export const TONE: Record<Verdict, { label: string; color: string }> = {
 
 export function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-2 first:border-t-0">
+    <div className="flex items-baseline justify-between gap-3 border-t border-line py-2 first:border-t-0">
       <span className="text-[13px] font-normal text-fg-4">{t(k)}</span>
       <span className={`tabular-nums text-[13px] ${bad ? "text-[#ff8a7e]" : "text-fg-2"}`}>{v}</span>
     </div>
@@ -50,9 +50,9 @@ export function Stat({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
 
 export function Panel({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+    <div className="rounded-[12px] border border-line bg-night-surface p-3.5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="font-display text-xl text-fg">{t(title)}</h3>
+        <h3 className="text-[13px] font-medium text-white">{t(title)}</h3>
         {note && <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>}
       </div>
       {children}
@@ -67,7 +67,7 @@ export const openWallet = (w: string) => window.dispatchEvent(new CustomEvent("z
 export function Addr({ a, href, className = "" }: { a: string; href?: string; className?: string }) {
   if (href)
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`tabular-nums underline decoration-white/15 underline-offset-4 hover:text-white hover:decoration-white/50 ${className}`}>
+      <a href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`tabular-nums underline decoration-line-2 underline-offset-4 hover:text-white hover:decoration-dim ${className}`}>
         {short(a)} ↗
       </a>
     );
@@ -108,7 +108,7 @@ export function HoldStrip({ c }: { c: XRayReport["check"] }) {
   if (h?.programPct) cells.push({ k: t("curve / pool"), v: h.programPct, bad: false });
   if (!cells.length) return null;
   return (
-    <div className="mt-3 border-t border-white/[0.08] pt-3">
+    <div className="mt-3 border-t border-line pt-3">
       <p className="tabular-nums text-[12px] [&::first-letter]:uppercase text-fg-4">{t("who holds it")}</p>
       <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2">
         {cells.map((x) => (

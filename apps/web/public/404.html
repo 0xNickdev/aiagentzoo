@@ -16,32 +16,34 @@
         font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
         -webkit-font-smoothing: antialiased;
         color: #fff;
-        background: #030504 radial-gradient(60vw 60vh at 15% 20%, rgba(70, 110, 85, 0.10), transparent 70%) fixed;
+        background: #030504;
+        font-variant-numeric: tabular-nums;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
       }
-      header { padding: 28px 20px; max-width: 1280px; width: 100%; margin: 0 auto; }
-      header a { display: inline-flex; align-items: center; gap: 10px; color: #8b928d; text-decoration: none; font-size: 12px; font-weight: 500; }
-      header img { height: 18px; }
-      main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px 96px; text-align: center; }
-      .k { font-size: 13px; color: #8b928d; font-variant-numeric: tabular-nums; }
-      h1 { margin-top: 16px; font-size: clamp(44px, 9vw, 84px); line-height: 1; font-weight: 600; letter-spacing: -0.045em; }
-      h1 span { color: #7e877f; }
-      p.s { margin: 20px auto 0; max-width: 440px; font-size: 17px; line-height: 1.5; color: #b9c0bb; }
-      .row { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-      .row a { border-radius: 999px; padding: 12px 24px; font-size: 14px; font-weight: 500; text-decoration: none; transition: background 0.15s, color 0.15s; }
-      .p { background: #fff; color: #000; }
-      .p:hover { background: #e6e9e7; }
-      .g { border: 1px solid #262b28; color: #d4d9d6; }
-      .g:hover { color: #fff; border-color: #3a403c; }
+      header { height: 56px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #18201c; background: rgba(3, 5, 4, 0.55); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); }
+      header a { display: inline-flex; align-items: center; gap: 10px; color: #aab2ad; text-decoration: none; font-size: 12px; font-weight: 500; }
+      header img { height: 14px; }
+      main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 16px 96px; text-align: center; }
+      .card { max-width: 520px; width: 100%; border: 1px solid #18201c; border-radius: 12px; background: #080b0a; padding: 36px 24px; }
+      .k { font-size: 12px; color: #7d8681; }
+      h1 { margin-top: 12px; font-size: clamp(32px, 8vw, 44px); line-height: 1; font-weight: 600; letter-spacing: -0.045em; }
+      h1 span { color: #aab2ad; }
+      p.s { margin: 14px auto 0; max-width: 400px; font-size: 13.5px; line-height: 1.55; color: #e6e9e7; }
+      .row { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+      .row a { display: inline-flex; align-items: center; height: 34px; border-radius: 7px; padding: 0 14px; font-size: 12.5px; font-weight: 500; text-decoration: none; transition: background 0.15s, color 0.15s; }
+      .p { background: #a6e3b4; color: #06120b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+      .p:hover { background: #b9ecc5; }
+      .g { border: 1px solid #232c27; background: #0e1311; color: #fff; }
+      .g:hover { border-color: #3a4640; }
       a:focus-visible { outline: 2px solid #a6e3b4; outline-offset: 3px; }
     </style>
   </head>
   <body>
     <header><a href="/"><img src="/logo.svg" alt="ZOOAI" />AGENCY</a></header>
     <main>
-      <div>
+      <div class="card">
         <p class="k">404</p>
         <h1>Nothing here.<br /><span>The chain is still there.</span></h1>
         <p class="s">This page does not exist. Paste a token on the X-Ray and see who you are buying from.</p>

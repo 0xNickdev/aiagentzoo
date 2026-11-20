@@ -38,10 +38,10 @@ interface Profile {
 export function WalletLink({ a, onWallet, className = "" }: { a: string; onWallet: (w: string) => void; className?: string }) {
   return (
     <span className={`tabular-nums inline-flex items-baseline gap-1.5 ${className}`}>
-      <button type="button" onClick={() => onWallet(a)} className="underline decoration-white/15 underline-offset-4 transition hover:text-white hover:decoration-white/60">
+      <button type="button" onClick={() => onWallet(a)} className="underline decoration-faint underline-offset-4 transition hover:text-white hover:decoration-dim">
         {short(a)}
       </button>
-      <a href={explorer(a)} target="_blank" rel="noopener noreferrer" title={explorerName(a)} className="text-[12.5px] text-fg-4 hover:text-white">
+      <a href={explorer(a)} target="_blank" rel="noopener noreferrer" title={explorerName(a)} className="text-[11.5px] text-faint hover:text-white">
         ↗
       </a>
     </span>
@@ -50,24 +50,24 @@ export function WalletLink({ a, onWallet, className = "" }: { a: string; onWalle
 
 function Box({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        {note && <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>}
+    <section className="x-pn">
+      <div className="x-ph">
+        <h2>{t(title)}</h2>
+        {note && <span className="x-m">{t(note)}</span>}
       </div>
-      {children}
-    </div>
+      <div className="x-pb">{children}</div>
+    </section>
   );
 }
 
 function Num({ k, v, bad }: { k: string; v: string; bad?: boolean }) {
   return (
-    <div className="bg-night-surface px-4 py-3">
-      <p className="flex items-center gap-1.5 text-[13px] text-fg-3">
-        {bad && <span className="h-1.5 w-1.5 rounded-full bg-[#ff8a7e]" />}
+    <div className="min-w-0 bg-night-surface px-3.5 py-3">
+      <p className="flex items-center gap-1.5 truncate text-[12px] text-dim">
+        {bad && <span className="h-1.5 w-1.5 rounded-full bg-danger" />}
         {t(k)}
       </p>
-      <p className="tabular-nums mt-1 text-[18px] text-fg">{v}</p>
+      <p className="tabular-nums mt-1.5 text-[22px] font-medium leading-none tracking-[-0.03em] text-white">{v}</p>
     </div>
   );
 }
@@ -137,24 +137,22 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
     };
   }, [wallet, attempt]);
 
-  if (p === undefined) return <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8"><div className="bg-night-surface border border-white/[0.08] h-64 animate-pulse rounded-2xl" /></div>;
+  if (p === undefined) return <div className="x-pn h-64 animate-pulse" />;
   if (!p)
     return (
-      <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8">
-        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-8 text-center sm:p-10">
-          <p className="tabular-nums text-[13px] text-fg-3">{t("wallet")}</p>
-          <p className="tabular-nums mt-2 break-all text-[15px] text-fg-2">{wallet}</p>
-          <p className="mx-auto mt-6 max-w-xl text-[15px] text-[#ff8a7e]">{error}</p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[13px]">
-            {dropped && (
-              <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-full bg-white px-6 py-2.5 font-medium text-black transition hover:bg-white/90">
-                {t("Try again")}
-              </button>
-            )}
-            <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/[0.12] px-6 py-2.5 text-fg-2 transition hover:text-white">
-              {explorerName(wallet)} ↗
-            </a>
-          </div>
+      <div className="x-pn px-5 py-8 text-center sm:px-10">
+        <p className="text-[11.5px] text-faint">{t("wallet")}</p>
+        <p className="font-mono mt-2 break-all text-[12px] text-fg-2">{wallet}</p>
+        <p className="mx-auto mt-5 max-w-xl text-[12px] text-danger">{error}</p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          {dropped && (
+            <button type="button" onClick={() => setAttempt((n) => n + 1)} className="x-btn">
+              {t("Try again")}
+            </button>
+          )}
+          <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="x-btn">
+            {explorerName(wallet)} ↗
+          </a>
         </div>
       </div>
     );
@@ -163,40 +161,40 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
   const roles = [p.dev && t("dev"), p.sniper && t("first-second buyer"), p.funded.creators.length > 0 && !p.funded.hot && t("pays for devs"), p.funded.hot && t("exchange or router")].filter(Boolean) as string[];
   const d = p.dev;
   return (
-    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 pb-10 sm:px-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-6 sm:p-8">
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="min-w-0">
+      <div className="space-y-3">
+        <div className="x-pn p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="tabular-nums flex items-center gap-2 text-[13px] text-fg-3">
+            <p className="tabular-nums flex min-w-0 flex-wrap items-center gap-2 text-[12px] text-dim">
               {t("wallet")} · {roles.join(" · ")}
               <Tags tags={p.tags} />
             </p>
-            <span className="flex items-center gap-3 text-[13px]">
-              <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="tabular-nums text-fg-3 hover:text-white">
+            <span className="flex items-center gap-3 text-[12px]">
+              <button type="button" onClick={() => void navigator.clipboard?.writeText(wallet)} className="tabular-nums text-dim hover:text-white">
                 {t("copy")}
               </button>
-              <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-fg-3 underline decoration-white/20 underline-offset-4 hover:text-white">
+              <a href={explorer(wallet)} target="_blank" rel="noopener noreferrer" className="tabular-nums text-dim underline decoration-faint underline-offset-4 hover:text-white">
                 {explorerName(wallet)} ↗
               </a>
             </span>
           </div>
-          <p className="tabular-nums mt-2 break-all text-[15px] text-fg-2">{wallet}</p>
-          <div className="mt-6">
-            <p className="flex items-center gap-2 text-[13px] font-medium [&::first-letter]:uppercase" style={{ color: l.tone === "bad" ? "#ff8a7e" : l.tone === "good" ? "#a6e3b4" : "rgba(255,255,255,0.6)" }}>
-              <span className="h-2 w-2 rounded-full" style={{ background: "currentColor" }} />
+          <p className="font-mono mt-2 break-all text-[12px] text-fg-2">{wallet}</p>
+          <div className="mt-5">
+            <p className={`flex items-center gap-2 text-[12px] font-medium [&::first-letter]:uppercase ${l.tone === "bad" ? "text-danger" : l.tone === "good" ? "text-moss" : "text-dim"}`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {l.tag}
             </p>
-            <h2 className="font-display mt-3 max-w-4xl text-[32px] font-semibold leading-[1.05] text-white sm:text-[44px]">{l.title}</h2>
-            {l.sub && <p className="mt-2 text-[17px] text-fg-3">{l.sub}</p>}
+            <h2 className="mt-2.5 max-w-4xl text-[24px] font-medium leading-[1.15] tracking-[-0.03em] text-white sm:text-[30px]">{l.title}</h2>
+            {l.sub && <p className="mt-2 text-[13.5px] text-dim">{l.sub}</p>}
           <TagList tags={p.tags} />
           {p.cabal && (
-            <a href={`/cabals?id=${p.cabal}`} className="mt-2 inline-block text-[13px] text-[#ffc27a] underline decoration-[#ffc27a]/30 underline-offset-4">
+            <a href={`/cabals?id=${p.cabal}`} className="mt-2 inline-block text-[12px] text-warn underline decoration-faint underline-offset-4">
               {t("in cabal #{n}: wallets the memory ties together →", { n: p.cabal })}
             </a>
           )}
           </div>
           {d && (
-            <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06] sm:grid-cols-5">
+            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-line bg-line sm:grid-cols-5">
               <Num k="launches · 48h" v={String(d.launches48h)} bad={d.launches48h >= 5} />
               <Num k="launches · 24h" v={String(d.launches24h)} />
               <Num k="dumped" v={String(d.dumped)} bad={d.dumped >= 2} />
@@ -207,36 +205,36 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
         </div>
 
         {d && (d.pattern || d.repeats?.length) && (
-          <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+          <div className="x-pn p-3.5">
             <DevHabits h={d} />
           </div>
         )}
 
         {d && (
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <Box title="Its launches" note="last 48 hours · tap to x-ray">
-              <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] gap-3 border-b border-white/[0.08] pb-2 text-[13px] text-fg-4">
+              <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3rem_8rem] sm:grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] gap-3 border-b border-line pb-2 text-[12px] text-faint">
                 <span>{t("token")}</span>
                 <span className="text-right">{t("buyers")}</span>
-                <span className="text-right">{t("first 5 s")}</span>
+                <span className="hidden text-right sm:block">{t("first 5 s")}</span>
                 <span className="text-right">{t("what happened")}</span>
               </div>
               <div className="max-h-[440px] overflow-auto">
                 {d.launches.map((x) => (
-                  <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="tabular-nums grid w-full grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-left text-[13px] transition first:border-t-0 hover:bg-white/[0.03]">
+                  <button key={x.mint} type="button" onClick={() => onToken(x.mint)} className="tabular-nums grid w-full grid-cols-[minmax(0,1fr)_3rem_8rem] sm:grid-cols-[minmax(0,1fr)_4rem_4rem_11rem] items-baseline gap-3 border-t border-line py-2 text-left text-[12px] transition first:border-t-0 hover:bg-night-raised">
                     <span className="truncate text-fg-2">
-                      ${sym(x.symbol)} <span className="text-fg-4">· {VENUE[x.venue] ?? x.venue} · {agoTight(x.createdAt)}</span>
+                      ${sym(x.symbol)} <span className="text-faint">· {VENUE[x.venue] ?? x.venue} · {agoTight(x.createdAt)}</span>
                     </span>
-                    <span className="text-right text-fg-4">{x.buyers}</span>
-                    <span className="text-right text-fg-4">{x.early}</span>
+                    <span className="text-right text-faint">{x.buyers}</span>
+                    <span className="hidden text-right text-faint sm:block">{x.early}</span>
                     {x.buyers === 0 ? (
-                      <span className="text-right text-fg-4">{t("nobody bought")}</span>
+                      <span className="text-right text-faint">{t("nobody bought")}</span>
                     ) : (() => {
                       const o = launchOutcome(x);
                       return (
                         <span className="text-right leading-snug">
-                          <span className={o.dumped ? "text-[#ff8a7e]" : x.graduated ? "text-fg-2" : "text-fg-3"}>{o.head}</span>
-                          {o.tail && <span className="block text-[12px] text-fg-4">{o.tail}</span>}
+                          <span className={o.dumped ? "text-danger" : x.graduated ? "text-fg-2" : "text-dim"}>{o.head}</span>
+                          {o.tail && <span className="block text-[12px] text-faint">{o.tail}</span>}
                         </span>
                       );
                     })()}
@@ -244,17 +242,17 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                 ))}
               </div>
             </Box>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Box title="Who paid for this dev" note={chainName(wallet) === "Solana" ? "traced on Solana" : chainName(wallet)}>
-                {!p.funding && <p className="text-[13px] font-normal text-fg-3">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
-                {p.funding && !p.funding.funder && <p className="text-[13px] font-normal text-fg-3">{t("No funding transfer in the dev's recent history.")}</p>}
+                {!p.funding && <p className="text-[12px] font-normal text-dim">{t("Not traced yet. It is queued: open this again in a minute.")}</p>}
+                {p.funding && !p.funding.funder && <p className="text-[12px] font-normal text-dim">{t("No funding transfer in the dev's recent history.")}</p>}
                 {p.funding?.funder && (
                   <>
                     <div className="flex items-baseline justify-between gap-3 py-1">
-                      <span className="text-[13px] font-normal text-fg-4">{t("funded by")}</span>
-                      <WalletLink a={p.funding.funder} onWallet={onWallet} className="text-[13px] text-fg-2" />
+                      <span className="text-[12px] font-normal text-faint">{t("funded by")}</span>
+                      <WalletLink a={p.funding.funder} onWallet={onWallet} className="text-[12px] text-fg-2" />
                     </div>
-                    <p className="mt-1 text-[13px] font-normal text-fg-4">
+                    <p className="mt-1 text-[12px] font-normal text-faint">
                       {p.funding.funderIsHot ? t("An exchange or a router: it funds everyone, so it ties no one together.") : p.funding.siblings.length ? t("It paid for {n} other devs too, with {d} dumps between them in two days.", { n: p.funding.siblings.length, d: p.funding.siblingDumped48h }) : t("It paid for no other dev the zoo traced.")}
                     </p>
                   </>
@@ -262,14 +260,14 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               <Box title="Wallets that keep buying its launches" note="in their first 5 seconds">
                 {!d.regulars.length ? (
-                  <p className="text-[13px] font-normal text-fg-3">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
+                  <p className="text-[12px] font-normal text-dim">{t("No wallet bought two or more of its launches in the first seconds.")}</p>
                 ) : (
                   <>
-                    <p className="mb-2 text-[13px] font-normal text-fg-3">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
+                    <p className="mb-2 text-[12px] font-normal text-dim">{t("A wallet in the first seconds of most of one dev's launches is usually that dev's own.")}</p>
                     {d.regulars.map((r) => (
-                      <div key={r.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[13px] first:border-t-0">
+                      <div key={r.wallet} className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 text-[12px] first:border-t-0">
                         <WalletLink a={r.wallet} onWallet={onWallet} className="text-fg-2" />
-                        <span className={`tabular-nums ${r.launches >= Math.max(2, d.launches48h * 0.5) ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} of its {m} launches", { n: r.launches, m: d.launches48h })}</span>
+                        <span className={`tabular-nums ${r.launches >= Math.max(2, d.launches48h * 0.5) ? "text-danger" : "text-faint"}`}>{t("{n} of its {m} launches", { n: r.launches, m: d.launches48h })}</span>
                       </div>
                     ))}
                   </>
@@ -277,13 +275,13 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
               </Box>
               {p.accounts.length > 0 && (
                 <Box title="Accounts its tokens link to" note="from the tokens' metadata">
-                  <p className="mb-2 text-[13px] font-normal text-fg-3">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
+                  <p className="mb-2 text-[12px] font-normal text-dim">{t("Typed in by whoever launched the token: a lead to who is behind it, not proof.")}</p>
                   {p.accounts.map((a) => (
-                    <div key={a.social.url} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[13px] first:border-t-0">
+                    <div key={a.social.url} className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 text-[12px] first:border-t-0">
                       <a href={a.social.url} target="_blank" rel="noopener noreferrer nofollow" className="truncate text-fg-2 hover:text-white">
                         {a.social.label} ↗
                       </a>
-                      <span className={`tabular-nums shrink-0 ${a.fastDumps >= 2 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{n} other launches · {d} fast dumps", { n: a.launches, d: a.fastDumps })}</span>
+                      <span className={`tabular-nums shrink-0 ${a.fastDumps >= 2 ? "text-danger" : "text-faint"}`}>{t("{n} other launches · {d} fast dumps", { n: a.launches, d: a.fastDumps })}</span>
                     </div>
                   ))}
                 </Box>
@@ -292,25 +290,25 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           </div>
         )}
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
           {p.sniper && (
             <Box title="As a first-second buyer" note="last 48 hours">
-              <div className="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.06]">
+              <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[10px] border border-line bg-line">
                 <Num k="launches sniped" v={String(p.sniper.snipes48h)} bad={p.sniper.snipes48h >= 10} />
                 <Num k="sold out of" v={String(p.sniper.soldOut)} />
                 <Num k="usually out after" v={secs(p.sniper.medianExitSec)} />
               </div>
-              <p className="tabular-nums mb-1 mt-4 text-[12.5px] [&::first-letter]:uppercase text-fg-4">{t("whose launches it buys")}</p>
+              <p className="tabular-nums mb-1 mt-4 text-[11.5px] [&::first-letter]:uppercase text-faint">{t("whose launches it buys")}</p>
               {p.sniper.topCreators.map((c) => (
-                <div key={c.creator} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[13px] first:border-t-0">
+                <div key={c.creator} className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 text-[12px] first:border-t-0">
                   <WalletLink a={c.creator} onWallet={onWallet} className="text-fg-2" />
-                  <span className="tabular-nums text-fg-4">{c.launches === 1 ? t("1 launch") : t("{n} launches", { n: c.launches })}</span>
+                  <span className="tabular-nums text-faint">{c.launches === 1 ? t("1 launch") : t("{n} launches", { n: c.launches })}</span>
                 </div>
               ))}
-              <p className="tabular-nums mb-2 mt-4 text-[12.5px] [&::first-letter]:uppercase text-fg-4">{t("its latest snipes · tap to x-ray")}</p>
+              <p className="tabular-nums mb-2 mt-4 text-[11.5px] [&::first-letter]:uppercase text-faint">{t("its latest snipes · tap to x-ray")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {p.sniper.recent.map((m) => (
-                  <button key={m.mint} type="button" onClick={() => onToken(m.mint)} className="tabular-nums max-w-[10rem] truncate rounded-full px-2.5 py-1 text-[13px] text-fg-3 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">
+                  <button key={m.mint} type="button" onClick={() => onToken(m.mint)} className="x-chip tabular-nums max-w-[10rem] truncate transition hover:text-white">
                     ${sym(m.symbol)}
                   </button>
                 ))}
@@ -320,20 +318,20 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
           {(p.funded.creators.length > 0 || p.funded.hot) && (
             <Box title="Devs it paid for" note={chainName(wallet) === "Solana" ? "traced on Solana" : chainName(wallet)}>
               {p.funded.hot ? (
-                <p className="text-[13px] font-normal text-fg-3">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
+                <p className="text-[12px] font-normal text-dim">{t("An exchange or a router: it funds everyone, so it ties no one together.")}</p>
               ) : (
                 p.funded.creators.map((c) => (
-                  <div key={c.wallet} className="flex items-baseline justify-between gap-3 border-t border-white/[0.08] py-1.5 text-[13px] first:border-t-0">
+                  <div key={c.wallet} className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 text-[12px] first:border-t-0">
                     <WalletLink a={c.wallet} onWallet={onWallet} className="text-fg-2" />
-                    <span className={`tabular-nums ${c.dumped >= 1 ? "text-[#ff8a7e]" : "text-fg-4"}`}>{t("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
+                    <span className={`tabular-nums ${c.dumped >= 1 ? "text-danger" : "text-faint"}`}>{t("{l} launched · {d} dumped", { l: c.launches48h, d: c.dumped })}</span>
                   </div>
                 ))
               )}
             </Box>
           )}
         </div>
-        <p className="tabular-nums text-center text-[13px] text-fg-4">
-          {t("raw:")} <a href={`${NORTH}/v1/wallet/${wallet}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">/v1/wallet/{short(wallet)}</a> · {t("Read from public chain data. Not financial advice.")}
+        <p className="tabular-nums text-center text-[12px] text-faint">
+          {t("raw:")} <a href={`${NORTH}/v1/wallet/${wallet}`} className="underline decoration-faint underline-offset-4 hover:text-white">/v1/wallet/{short(wallet)}</a> · {t("Read from public chain data. Not financial advice.")}
         </p>
       </div>
     </motion.section>

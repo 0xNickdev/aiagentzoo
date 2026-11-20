@@ -312,7 +312,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
           ctx.fillText(label, lx + 8, ly + 0.5);
         } else if (n.kind === "coin" && n.label && (tr.k > 0.95 || n === focus)) {
           ctx.font = "500 11px Geist, system-ui, sans-serif";
-          ctx.fillStyle = n === focus ? "#ffffff" : "#d9dddb";
+          ctx.fillStyle = n === focus ? "#ffffff" : "#e6e9e7";
           ctx.textAlign = "left";
           ctx.fillText(n.label, x + rad + 6, y);
         } else if ((n.kind === "crew" || n.kind === "ring") && n.launches && rad > 9) {
@@ -331,7 +331,7 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
         ctx.fillStyle = g.color;
         ctx.fillText(g.title, x, y - 28);
         ctx.font = `400 ${mobile ? 11 : 12}px Geist, system-ui, sans-serif`;
-        ctx.fillStyle = "#d9dddb";
+        ctx.fillStyle = "#aab2ad";
         ctx.fillText(g.sub, x, y - 12);
       }
       // the scanner's reticle on the focused node
@@ -424,32 +424,32 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
   const total = graph?.total ?? 1;
   const kindName: Record<Kind, string> = { crew: t("His crew"), ring: t("Regular"), bundle: t("Launch block"), serial: t("Serial sniper"), early: t("First 5 seconds"), funder: t("Funder"), sibling: t("Another dev, same funder"), coin: t("His launch"), dev: t("The dev") };
   return (
-    <div ref={wrap} className="relative h-[560px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[radial-gradient(60%_60%_at_50%_45%,rgba(70,110,85,0.10),transparent_70%)] bg-night sm:h-[640px]">
+    <div ref={wrap} className="relative h-[460px] overflow-hidden rounded-[8px] border border-line bg-night sm:h-[600px]">
       <canvas ref={canvas} className="block" style={{ touchAction: "pan-y" }} />
       <div ref={reticle} aria-hidden className="pointer-events-none absolute left-0 top-0 -ml-5 -mt-5 h-10 w-10 opacity-0 transition-opacity duration-150">
         {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((c) => {
           const [v, h] = c.split("-") as ["top" | "bottom", "left" | "right"];
-          const edge = "1.5px solid rgba(255,255,255,0.95)";
-          return <i key={c} className="absolute h-[9px] w-[9px] drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]" style={{ [v]: 0, [h]: 0, [`border${v === "top" ? "Top" : "Bottom"}`]: edge, [`border${h === "left" ? "Left" : "Right"}`]: edge }} />;
+          const edge = "1.5px solid #e6e9e7";
+          return <i key={c} className="absolute h-[9px] w-[9px]" style={{ [v]: 0, [h]: 0, [`border${v === "top" ? "Top" : "Bottom"}`]: edge, [`border${h === "left" ? "Left" : "Right"}`]: edge }} />;
         })}
       </div>
-      {!graph && <p className="absolute inset-0 grid place-items-center text-[13px] text-fg-4">{t("Drawing the network…")}</p>}
+      {!graph && <p className="absolute inset-0 grid place-items-center text-[12px] text-faint">{t("Drawing the network…")}</p>}
       {n && picked && (
         <div
           role="dialog"
-          className="absolute z-10 w-[260px] rounded-xl border border-white/[0.14] bg-night-surface/95 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+          className="absolute z-10 w-[260px] max-w-[calc(100%-16px)] rounded-[10px] border border-line-2 bg-night-raised p-3.5 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
           style={{ left: Math.max(8, Math.min(picked.x + 18, (wrap.current?.clientWidth ?? 0) - 276)), top: Math.max(8, Math.min(picked.y - 24, (wrap.current?.clientHeight ?? 0) - 230)) }}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[13px] font-medium" style={{ color: COLOR[n.kind] }}>{kindName[n.kind]}</p>
-              <p className="mt-0.5 truncate text-[15px] font-semibold text-white">{n.kind === "coin" ? n.label : n.kind === "dev" ? short(r.creator) : short(n.id)}</p>
+              <p className="text-[11.5px] font-medium" style={{ color: COLOR[n.kind] }}>{kindName[n.kind]}</p>
+              <p className="mt-0.5 truncate text-[14px] font-medium text-white">{n.kind === "coin" ? n.label : n.kind === "dev" ? short(r.creator) : short(n.id)}</p>
             </div>
-            <button type="button" onClick={() => setPicked(null)} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-fg-4 hover:text-white">
+            <button type="button" onClick={() => setPicked(null)} aria-label={t("Close")} className="-mr-1 -mt-1 rounded-md px-1.5 text-[18px] leading-none text-faint hover:text-white">
               ×
             </button>
           </div>
-          <div className="mt-3 space-y-1.5 border-t border-white/[0.08] pt-3 text-[13px] text-fg-3">
+          <div className="tabular-nums mt-3 space-y-1.5 border-t border-line pt-3 text-[12px] text-dim">
             {n.kind === "dev" && <p>{t("{d} of {n} launches dumped in 48h", { d: graph?.record.dumped ?? 0, n: graph?.record.launches ?? 0 })}</p>}
             {n.launches !== undefined && n.kind !== "sibling" && <p>{t("in {a} of his {b} launches in 48h", { a: n.launches, b: total })}</p>}
             {n.kind === "sibling" && <p>{t("{a} launches · {d} dumped in 48h", { a: n.launches ?? 0, d: n.dumped ?? 0 })}</p>}
@@ -459,24 +459,24 @@ export default function NetworkMap({ r, onPick, onWallet }: { r: XRayReport; onP
             {n.kind === "coin" && <p className={n.outcome === "dumped" ? "text-danger" : ""}>{n.outcome === "dumped" ? t("dev dumped it") : n.outcome === "graduated" ? t("graduated") : t("dev still holding")}</p>}
           </div>
           {n.kind !== "dev" && (
-            <button type="button" onClick={() => (n.kind === "coin" ? onPick(n.id.slice(2)) : onWallet(n.id))} className="mt-3 text-[13.5px] font-medium text-white hover:underline">
+            <button type="button" onClick={() => (n.kind === "coin" ? onPick(n.id.slice(2)) : onWallet(n.id))} className="mt-3 text-[12.5px] font-medium text-moss hover:underline">
               {n.kind === "coin" ? t("Open X-Ray") : t("Open the wallet")} →
             </button>
           )}
         </div>
       )}
-      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-night-surface/90">
+      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-[8px] border border-line-2 bg-night-surface">
         {[
           ["+", () => controls.current?.zoomBy(1.4), t("zoom in")],
           ["−", () => controls.current?.zoomBy(1 / 1.4), t("zoom out")],
           ["⤢", () => controls.current?.fit(), t("fit the map")],
         ].map(([label, fn, title]) => (
-          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="h-9 w-9 border-b border-white/[0.08] text-[15px] text-fg-3 transition last:border-b-0 hover:bg-white/[0.06] hover:text-white">
+          <button key={label as string} type="button" title={title as string} onClick={fn as () => void} className="h-8 w-8 border-b border-line text-[14px] text-dim transition last:border-b-0 hover:bg-night-raised hover:text-white">
             {label as string}
           </button>
         ))}
       </div>
-      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[13px] text-fg-4">{t("Drag to move · pinch or ⌘ scroll to zoom · click a dot")}</p>
+      <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 w-[92%] text-center text-[11.5px] text-faint">{t("Drag to move · pinch or ⌘ scroll to zoom · click a dot")}</p>
     </div>
   );
 }
