@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Section } from "../ui";
 import { t, tChain } from "../../i18n";
 import { minAgo } from "../../format";
 import type { Verdict } from "./types";
 import { NORTH, TONE } from "./shared";
+import { Pn } from "./ui";
 
 export interface Moment {
   mint: string;
@@ -41,8 +41,7 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
           if (!b) return;
           const seen = new Set<string>();
           // Something worth looking at: a dev who just dumped, a serial launcher, a token that graduated.
-          const pickd = b.moments.filter((m) => ["dump", "serial", "graduated"].includes(m.kind) && !seen.has(m.mint) && seen.add(m.mint)).slice(0, 8);
-          setMoments(pickd);
+          setMoments(b.moments.filter((m) => ["dump", "serial", "graduated"].includes(m.kind) && !seen.has(m.mint) && seen.add(m.mint)).slice(0, 8));
         })
         .catch(() => setMoments([]));
     void load();
@@ -50,48 +49,41 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
     return () => clearInterval(timer);
   }, []);
   return (
-    <Section className="!pt-2">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-display text-2xl">{t("Try one from the chain, right now")}</h2>
-        <p className="tabular-nums text-[13px] text-fg-3">{t("live from Solana · tap to x-ray")}</p>
-      </div>
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {!moments && Array.from({ length: 4 }, (_, i) => <div key={i} className="bg-night-surface border border-white/[0.08] h-[84px] animate-pulse rounded-2xl opacity-60" />)}
-        {moments?.map((m) => (
-          <button
-            key={m.mint}
-            type="button"
-            onClick={() => onPick(m.mint)}
-            className="bg-night-surface border border-white/[0.08] group rounded-2xl p-4 text-left transition hover:bg-white/[0.06]"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-display truncate text-[17px]">${m.symbol.replace(/^\$/, "")}</span>
-              <span className="tabular-nums shrink-0 text-[13px] text-fg-4">{minAgo(m.at)}</span>
+    <>
+      <section className="x-s12 x-hero">
+        <h1>{t("See who you are buying from.")}</h1>
+        <p>{t("Paste a token above. The wallets that got in during the first five seconds, who they are across every launch of the last two days, who paid for the creator, and how much of the volume is churn. pump.fun, LaunchLab and Meteora, read live from Solana.")}</p>
+      </section>
+      <Pn span="x-s12" title={t("Try one from the chain, right now")} meta={t("live from Solana · tap to x-ray")} body={false}>
+        <div className="x-moments">
+          {!moments && Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="x-mo">
+              <div className="x-sk" style={{ height: 16, width: "50%" }} />
+              <div className="x-sk" style={{ height: 12, width: "85%" }} />
+              <div className="x-sk" style={{ height: 12, width: "30%" }} />
             </div>
-            <p className="mt-1.5 truncate text-[13px] font-normal text-fg-4">{tChain(m.text)}</p>
-            <div className="mt-2.5 flex items-center justify-between gap-2">
-              {verdicts[m.mint] ? (
-                <span className="tabular-nums rounded-full px-2 py-0.5 text-[12.5px] tracking-[0.06em] ring-1" style={{ color: TONE[verdicts[m.mint]!].color, boxShadow: "none", borderColor: "transparent", background: "rgba(255,255,255,0.03)" }}>
-                  {t(TONE[verdicts[m.mint]!].label)}
+          ))}
+          {moments?.map((m) => {
+            const v = verdicts[m.mint];
+            return (
+              <button key={m.mint} type="button" className="x-mo" onClick={() => onPick(m.mint)}>
+                <span className="x-a">
+                  <span>${m.symbol.replace(/^\$/, "")}</span>
+                  <small>{minAgo(m.at)}</small>
                 </span>
-              ) : (
-                <span className="tabular-nums text-[12.5px] text-fg-4">{t("checking…")}</span>
-              )}
-              <span className="tabular-nums text-[13px] text-fg-4 group-hover:text-fg-3">{t("x-ray it →")}</span>
-            </div>
-          </button>
-        ))}
-      </div>
-      {moments && moments.length === 0 && <p className="text-[13px] font-normal text-fg-3">{t("Nothing loud on the chain this minute. Paste any token above.")}</p>}
-
-      <div className="mt-10 grid gap-3 md:grid-cols-3">
-        {SHOWS.map((x) => (
-          <div key={x.title} className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-            <h3 className="font-display text-xl text-fg">{t(x.title)}</h3>
-            <p className="mt-2 text-[13.5px] font-normal leading-relaxed text-fg-3">{t(x.text)}</p>
-          </div>
-        ))}
-      </div>
-    </Section>
+                <p>{tChain(m.text)}</p>
+                <span className="x-vd" style={{ color: v ? TONE[v].color : "var(--fg-4)" }}>{v ? t(TONE[v].label) : t("checking…")}</span>
+              </button>
+            );
+          })}
+        </div>
+        {moments && moments.length === 0 && <p className="x-note" style={{ padding: 14 }}>{t("Nothing loud on the chain this minute. Paste any token above.")}</p>}
+      </Pn>
+      {SHOWS.map((x) => (
+        <Pn key={x.title} span="x-s4" title={t(x.title)}>
+          <p className="x-note">{t(x.text)}</p>
+        </Pn>
+      ))}
+    </>
   );
 }

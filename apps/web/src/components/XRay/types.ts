@@ -19,6 +19,8 @@ export interface Early {
   tags?: WalletTag[];
   /** The cabal it belongs to, when the memory ties it to others. */
   cabal?: number | null;
+  /** A known wallet's public name, e.g. pump.fun's own Mayhem bot. */
+  smart?: { name?: string } | null;
 }
 
 export interface Odds {
@@ -28,6 +30,8 @@ export interface Odds {
   why: Array<{ says: string; up: boolean }>;
   at: "5min" | "early";
   fit: string;
+  /** The average launch's run chance, when the node sends it; 2.7% otherwise. */
+  average?: number;
   settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number };
   devSettled?: { dumped: boolean; ageMin: number };
 }
@@ -72,6 +76,8 @@ export interface Check {
     bundlersPeakPct?: number | null;
     bundledSol?: number | null;
     bundlesSince?: number | null;
+    /** Share of all buying the five largest buyers did. */
+    top5BuyingPct?: number | null;
     graduated: boolean;
     poolSol?: number | null;
     curveSol?: number | null;
@@ -111,7 +117,7 @@ export interface XRayReport {
   createdAt: number;
   check: Check;
   early: Early[];
-  creatorRecord: ({ launches48h: number; dumped: number; medianDumpMin: number | null; recent?: Array<{ mint: string; symbol: string; createdAt: number } & LaunchOutcome> } & Habits) | null;
+  creatorRecord: ({ launches48h: number; launches24h?: number; dumped: number; medianDumpMin: number | null; graduated?: number; recent?: Array<{ mint: string; symbol: string; createdAt: number; firstCapUsd?: number | null } & LaunchOutcome> } & Habits) | null;
   /** The X account, X community or Telegram group the token links to, and its other launches. */
   socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
   /** Earlier launches under the same ticker in the node's memory, this one left out. */
@@ -127,4 +133,14 @@ export interface XRayReport {
   devHistory?: { launches: number; dumped: number } | null;
   /** Posts on X naming the token, oldest first, as the extension saw them. */
   mentions?: Array<{ handle: string; url: string; postAt: number }>;
+  /** What this reader may open: the tier the node served the report at, and its rate limits. */
+  access?: Access;
+}
+
+export interface Access {
+  tier: "free" | "pro" | (string & {});
+  perMinute?: number;
+  deepPerMinute?: number;
+  /** When a paid pass ends, ms since epoch. */
+  until?: number | null;
 }

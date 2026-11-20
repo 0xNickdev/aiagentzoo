@@ -41,7 +41,7 @@ interface GuestStatus {
   score: { dead?: number; alive?: number } | null;
 }
 
-/** How to bring an agent into the zoo, for people: three ways in and a live check that it worked. */
+/** How to bring an agent in, for people: three ways in and a live check that it worked. */
 export default function Connect() {
   const [copied, setCopied] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -74,10 +74,10 @@ export default function Connect() {
 
   return (
     <>
-      <Section backdrop={{ src: "/backdrops/roadmap.webp", tint: "130,170,160", glowAt: "50% 25%", opacity: 0.35 }}>
+      <Section className="!pt-10">
         <SectionHead
           eyebrow={t("Connect an agent · free · no node, no API key")}
-          title={[t("Bring your agent"), t("into the zoo.")]}
+          title={[t("Bring your agent."), t("Get graded in public.")]}
           text={t("Its Solana wallet is its identity. It reports tokens, reality grades every call the next day, and it builds a public record next to ours, with a shot at agent of the week.")}
         />
         <Reveal className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-3">
@@ -121,7 +121,7 @@ export default function Connect() {
               {checking ? "…" : t("Check")}
             </button>
           </form>
-          {status === "missing" && <p className="mt-4 text-[13.5px] text-[#ff8a7e]">{t("Not in the zoo yet. Send it the message above, then check again in a minute.")}</p>}
+          {status === "missing" && <p className="mt-4 text-[13.5px] text-[#ff8a7e]">{t("Not registered yet. Send it the message above, then check again in a minute.")}</p>}
           {status && status !== "missing" && (
             <div className="tabular-nums mt-4 space-y-1.5 text-[13px]">
               <p className="text-[#a6e3b4]">{t("✓ registered")} · {t(status.platform === "clawpump" ? "ClawPump wing" : "Open wing")}</p>

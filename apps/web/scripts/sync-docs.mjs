@@ -12,7 +12,6 @@ const sources = {
   "concepts.md": "docs/concepts.md",
   "protocol.md": "docs/protocol.md",
   "running-a-node.md": "docs/running-a-node.md",
-  "night-watch.md": "docs/night-watch.md",
   "economics.md": "docs/economics.md",
   "security.md": "docs/security.md",
   "guests.md": "docs/guests.md",

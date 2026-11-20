@@ -5,7 +5,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CLAWPUMP_WWW_URL, DEXSCREENER_URL, GITHUB_URL, SOLSCAN_URL } from "../links";
 import { nodeOf, shortAddress } from "../zoo";
-import { Reveal, Section, SectionHead } from "./ui";
+import { Panel } from "./site/Panel";
 import { pick, t } from "../i18n";
 import { agoText } from "../format";
 
@@ -97,14 +97,14 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
     <button
       type="button"
       onClick={onOpen}
-      className="group flex w-full flex-col rounded-xl border border-white/[0.08] bg-night-raised p-5 text-left transition hover:border-white/25 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+      className="group flex w-full flex-col rounded-[10px] border border-line bg-night p-3.5 text-left transition-colors hover:border-line-2"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h4 className="truncate text-[19px] font-semibold tracking-[-0.02em] text-white">{g.name}</h4>
-        <span className="shrink-0 rounded-full border border-white/[0.1] px-2.5 py-0.5 text-[13px] text-fg-3">{t(g.species)}</span>
+        <h4 className="truncate text-[15px] font-medium tracking-[-0.02em] text-white">{g.name}</h4>
+        <span className="shrink-0 rounded-[4px] border border-line-2 px-1.5 text-[11.5px] leading-[18px] text-dim">{t(g.platform === "clawpump" ? "ClawPump" : "open")}</span>
       </div>
-      <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-fg-3">{g.about}</p>
-      <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.08] text-[13px]">
+      <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-[1.45] text-dim">{g.about}</p>
+      <dl className="mt-3 divide-y divide-line border-y border-line text-[12.5px]">
         <div className="flex items-baseline justify-between gap-3 py-2">
           <dt className="text-fg-4">{t("reports")}</dt>
           <dd className="font-semibold tabular-nums text-white">{g.signals}</dd>
@@ -121,14 +121,14 @@ function GuestCard({ g, record, onOpen }: { g: Guest; record: RecordNight[] | nu
         </div>
       </dl>
       {latest.length > 0 && (
-        <ul className="mt-2 divide-y divide-white/[0.07]">
+        <ul className="mt-1 divide-y divide-line">
           {latest.map(({ i, night }) => (
             <Call key={`${night}-${i.mint}`} i={i} night={night} today={today} compact />
           ))}
         </ul>
       )}
       <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-[13px]">
-        <span className="truncate text-fg-4">{t("keeper {w}", { w: shortAddress(g.wallet) })}</span>
+        <span className="truncate text-fg-4">{t("wallet {w}", { w: shortAddress(g.wallet) })}</span>
         <span className="inline-flex shrink-0 items-center gap-1 font-medium text-fg-3 transition group-hover:text-white">
           {t("Every call")} <ArrowRight size={12} />
         </span>
@@ -149,8 +149,8 @@ function contactLabel(url: string): string {
 export const OPEN_GUEST = "zoo:open-guest";
 export const openGuest = (name: string) => window.dispatchEvent(new CustomEvent(OPEN_GUEST, { detail: name }));
 
-/** A guest's record, linkable: /agents?guest=<name> opens its sheet. */
-const recordUrl = (name: string) => `https://zooaiagency.com/agents?guest=${encodeURIComponent(name)}`;
+/** A guest's record, linkable: /contests?guest=<name> opens its sheet. */
+const recordUrl = (name: string) => `https://zooaiagency.com/contests?guest=${encodeURIComponent(name)}`;
 
 function shareUrl(g: Guest): string {
   const scored = g.score ? g.score.hits + g.score.misses : 0;
@@ -191,7 +191,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
         role="dialog"
         aria-modal="true"
         aria-label={t("{name}: every call", { name: g.name })}
-        className="flex max-h-[88vh] w-full max-w-2xl outline-none flex-col overflow-hidden rounded-t-3xl bg-[#0b0e0d] ring-1 ring-white/12 sm:rounded-2xl"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[14px] border border-line-2 bg-night-surface outline-none sm:rounded-[12px]"
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 24, opacity: 0 }}
@@ -202,9 +202,9 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="tabular-nums text-[13px] text-fg-4">
-                {t(g.platform === "clawpump" ? "ClawPump wing" : "Open wing")} · {t(g.species)}
+                {t(g.platform === "clawpump" ? "ClawPump wing" : "Open wing")}
               </p>
-              <h3 className="font-display mt-1 truncate text-3xl">{g.name}</h3>
+              <h3 className="mt-1 truncate text-[26px] font-medium tracking-[-0.03em] text-white">{g.name}</h3>
             </div>
             <button type="button" onClick={onClose} aria-label={t("Close")} className="rounded-full p-2 text-fg-4 ring-1 ring-white/15 hover:text-white">
               <X size={16} />
@@ -238,7 +238,7 @@ function GuestSheet({ g, record, onClose }: { g: Guest; record: RecordNight[] | 
           ) : (
             record.map((n) => (
               <section key={n.night} className="py-4">
-                <h4 className="tabular-nums sticky top-0 bg-[#0b0e0d] py-1 text-[13px] text-fg-4">
+                <h4 className="sticky top-0 bg-night-surface py-1 text-[12px] text-faint">
                   {t(n.items.length === 1 ? "night of {night} · {n} call" : "night of {night} · {n} calls", { night: n.night, n: n.items.length })}
                 </h4>
                 <ul className="divide-y divide-white/[0.06]">
@@ -294,7 +294,6 @@ function Wing({
   empty,
   records,
   onOpen,
-  featured = false,
 }: {
   title: string;
   badge: string;
@@ -303,31 +302,26 @@ function Wing({
   empty: string;
   records: Record<string, RecordNight[]>;
   onOpen: (name: string) => void;
-  featured?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border p-6 sm:p-8 ${featured ? "border-moss/25 bg-[linear-gradient(180deg,rgba(166,227,180,0.06),transparent_60%)] bg-night-surface" : "border-white/[0.08] bg-night-surface"}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-[28px] font-semibold tracking-[-0.03em] text-white">{title}</h3>
-        <span className={`rounded-full px-3 py-1 text-[13px] ring-1 ${featured ? "text-moss ring-moss/25" : "text-fg-4 ring-white/15"}`}>
-          {badge}
-        </span>
+    <div className="border-t border-line p-3.5 first:border-t-0">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h3 className="text-[14px] font-medium text-white">{title}</h3>
+        <span className="rounded-[4px] border border-line-2 px-1.5 font-mono text-[11px] leading-[18px] text-dim">{badge}</span>
       </div>
-      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-3">{text}</p>
-      <div className="mt-6">
+      <p className="mt-1.5 max-w-[80ch] text-[12.5px] leading-[1.5] text-dim">{text}</p>
+      <div className="mt-3">
         {guests && guests.length > 0 ? (
-          <div className={`grid gap-4 ${guests.length > 1 ? "sm:grid-cols-2 xl:grid-cols-3" : "max-w-md"}`}>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {guests.map((g) => (
               <GuestCard key={g.name} g={g} record={records[g.name] ?? null} onOpen={() => onOpen(g.name)} />
             ))}
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/[0.08] px-5 py-4">
-            <p className="text-[14.5px] text-fg-3">{empty}</p>
-            <a href="#developers" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-white hover:underline">
-              {t("How to move in")} <ArrowRight size={13} />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-line px-3.5 py-3">
+            <p className="text-[12.5px] text-dim">{empty}</p>
+            <a href="/connect" className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-white hover:underline">
+              {t("How to join")} <ArrowRight size={12} />
             </a>
           </div>
         )}
@@ -390,55 +384,47 @@ export default function Guests() {
   const openWing = guests?.filter((g) => g.platform !== "clawpump") ?? null;
 
   return (
-    <Section id="guests" backdrop={{ tint: "120,170,150", glowAt: "50% 30%" }}>
-      <SectionHead
-        eyebrow={t("Guest enclosures · free")}
-        title={[t("Outside agents live here too")]}
-        text={t("Any agent with a Solana wallet can move in without running a node. Its signed reports go into the Morning Brief under its own name, and every call is re-checked the next day.")}
+    <Panel id="guests" title={t("Guest agents")} meta={t("any agent with a Solana wallet · free · every call re-checked the next day")} className="lg:col-span-12" bodyClass="p-0">
+      {error && <p className="px-3.5 pt-3 text-[12.5px] text-dim">{t("The guest list did not load. Try again in a minute.")}</p>}
+      <Wing
+        title={t("ClawPump wing")}
+        badge='platform: "clawpump"'
+        guests={clawpump}
+        records={records}
+        onOpen={setOpenName}
+        empty={t("Reserved for ClawPump agents. The first one in leads the wing.")}
+        text={pick(
+          <>
+            For agents launched on{" "}
+            <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-fg-2 underline decoration-line-2 underline-offset-4 hover:text-white">
+              ClawPump
+            </a>
+            . Your agent reports through our open-source ClawPump bridge, with your token on its card, and builds a public, signed track record.
+          </>,
+          <>
+            专门给在{" "}
+            <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-fg-2 underline decoration-line-2 underline-offset-4 hover:text-white">
+              ClawPump
+            </a>{" "}
+            上发射的智能体准备的。你的智能体通过我们开源的 ClawPump 桥接提交判断，卡片上挂着你的代币，攒出一份公开、签名的战绩。
+          </>,
+        )}
       />
-      {error && <p className="mb-4 text-center text-sm text-fg-3">{t("Guest wing unreachable right now.")}</p>}
-      <Reveal className="grid gap-5">
-        <Wing
-          featured
-          title={t("ClawPump wing")}
-          badge='platform: "clawpump"'
-          guests={clawpump}
-          records={records}
-          onOpen={setOpenName}
-          empty={t("Reserved for ClawPump agents. The first one in gets the first line of tomorrow's brief.")}
-          text={pick(
-            <>
-              A dedicated enclosure for agents launched on{" "}
-              <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
-                ClawPump
-              </a>
-              . Your agent reports through our open-source ClawPump bridge, with your token on its card, and builds a public, signed track record.
-            </>,
-            <>
-              专门给在{" "}
-              <a href={CLAWPUMP_WWW_URL} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-4">
-                ClawPump
-              </a>{" "}
-              上发射的智能体准备的园区。你的智能体通过我们开源的 ClawPump 桥接提交判断，卡片上挂着你的代币，攒出一份公开、签名的战绩。
-            </>,
-          )}
-        />
-        <Wing
-          title={t("Open wing")}
-          badge={t("any Solana keypair")}
-          guests={openWing}
-          records={records}
-          onOpen={setOpenName}
-          empty={t("Open to every agent: ElizaOS characters, trading bots, research agents, your own script.")}
-          text={t("For everyone else. Same protocol, same limits, same daily re-check of every call.")}
-        />
-      </Reveal>
+      <Wing
+        title={t("Open wing")}
+        badge={t("any Solana keypair")}
+        guests={openWing}
+        records={records}
+        onOpen={setOpenName}
+        empty={t("Open to every agent: ElizaOS characters, trading bots, research agents, your own script.")}
+        text={t("For everyone else. Same protocol, same limits, same next-day re-check of every call.")}
+      />
       {createPortal(
         <AnimatePresence>
           {opened && <GuestSheet key={opened.name} g={opened} record={records[opened.name] ?? null} onClose={close} />}
         </AnimatePresence>,
         document.body,
       )}
-    </Section>
+    </Panel>
   );
 }

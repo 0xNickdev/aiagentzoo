@@ -1,0 +1,61 @@
+import type { ReactNode } from "react";
+
+/** The dashboard's panel: a surface with a hairline edge, a 40px head with a title and a quiet meta line, then the body. */
+export function Panel({
+  title,
+  meta,
+  tag,
+  action,
+  id,
+  className = "",
+  bodyClass = "p-3.5",
+  children,
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  tag?: string;
+  action?: ReactNode;
+  id?: string;
+  className?: string;
+  bodyClass?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} className={`flex min-w-0 scroll-mt-20 flex-col rounded-[12px] border border-line bg-night-surface ${className}`}>
+      <div className="flex h-10 shrink-0 items-center gap-2.5 border-b border-line px-3.5">
+        <h2 className="whitespace-nowrap text-[13px] font-medium text-white">{title}</h2>
+        {tag && <span className="rounded-[4px] border border-moss-edge px-[5px] text-[10.5px] leading-4 text-moss">{tag}</span>}
+        {meta && <span className="ml-auto min-w-0 truncate text-[11.5px] text-faint">{meta}</span>}
+        {action && <span className={`${meta ? "" : "ml-auto"} shrink-0 text-[11.5px]`}>{action}</span>}
+      </div>
+      <div className={`min-w-0 flex-1 ${bodyClass}`}>{children}</div>
+    </section>
+  );
+}
+
+/** A labelled number over a thin meter, as in the dashboard's "Right now" tiles. */
+export function Tile({ k, v, sub, tone = "fg", meter, className = "" }: { k: string; v: ReactNode; sub?: ReactNode; tone?: "fg" | "danger" | "warn" | "moss"; meter?: number | null; className?: string }) {
+  const color = { fg: "text-white", danger: "text-danger", warn: "text-warn", moss: "text-moss" }[tone];
+  return (
+    <div className={`flex min-h-[92px] min-w-0 flex-col justify-between gap-2.5 p-3.5 ${className}`}>
+      <span className="text-[12px] text-dim">{k}</span>
+      <span className={`text-[28px] font-medium leading-none tracking-[-0.035em] ${color}`}>{v}</span>
+      {meter != null && (
+        <span className="block h-[3px] overflow-hidden rounded-sm bg-night-raised">
+          <span className={`block h-full ${tone === "fg" ? "bg-dim" : tone === "danger" ? "bg-danger" : tone === "warn" ? "bg-warn" : "bg-moss"}`} style={{ width: `${Math.max(1, Math.min(100, meter * 100))}%` }} />
+        </span>
+      )}
+      {sub && <span className="truncate text-[11.5px] text-faint">{sub}</span>}
+    </div>
+  );
+}
+
+/** A link styled as the dashboard's quiet "more" action. */
+export function More({ href, children }: { href: string; children: ReactNode }) {
+  const ext = href.startsWith("http");
+  return (
+    <a href={href} target={ext ? "_blank" : undefined} rel={ext ? "noopener noreferrer" : undefined} className="whitespace-nowrap text-[11.5px] text-dim hover:text-white">
+      {children}
+    </a>
+  );
+}

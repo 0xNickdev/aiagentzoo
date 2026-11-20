@@ -90,7 +90,7 @@ export default function Volume() {
   const tt = body?.totals;
 
   return (
-    <Section className="overflow-x-clip !pt-32 sm:!pt-40" backdrop={{ glowAt: "30% 10%" }}>
+    <Section className="overflow-x-clip !pt-12 sm:!pt-16">
       <SectionHead
         eyebrow={t("Real volume · PumpSwap top pools by 24-hour volume · each one read from the chain")}
         title={[t("Top volume,"), t("read from the chain.")]}

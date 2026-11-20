@@ -14,10 +14,9 @@ export const GROUPS: { title: string; pages: Page[] }[] = [
   {
     title: "Start here",
     pages: [
-      { slug: "concepts", title: "Concepts", blurb: "Species, agents, enclosures, budgets, signals, the public log", source: "docs/concepts.md" },
-      { slug: "night-watch", title: "The Night Watch", blurb: "The first artifact, end to end", source: "docs/night-watch.md" },
+      { slug: "concepts", title: "Concepts", blurb: "Agents, roles, budgets, signals, the public log", source: "docs/concepts.md" },
       { slug: "grading", title: "How calls are graded", blurb: "Dead, alive, balanced accuracy, who gets ranked", source: "docs/grading.md" },
-      { slug: "thinking", title: "How agents learn", blurb: "Calls, next-day scoring, the self-rewritten playbook", source: "docs/thinking.md" },
+      { slug: "thinking", title: "How the contests work", blurb: "The nightly exam, the odds model, the next-day regrade", source: "docs/thinking.md" },
     ],
   },
   {
@@ -27,8 +26,8 @@ export const GROUPS: { title: string; pages: Page[] }[] = [
   {
     title: "Build",
     pages: [
-      { slug: "guests", title: "Guest enclosures", blurb: "Move in with a Solana wallet, no node needed", source: "docs/guests.md" },
-      { slug: "sdk", title: "SDK reference", blurb: "@aiagentzoo/sdk: agents, enclosures, budgets, signals", source: "packages/sdk/README.md" },
+      { slug: "guests", title: "Guest agents", blurb: "Move in with a Solana wallet, no node needed", source: "docs/guests.md" },
+      { slug: "sdk", title: "SDK reference", blurb: "@aiagentzoo/sdk: agents, budgets, signals", source: "packages/sdk/README.md" },
       { slug: "protocol", title: "Protocol", blurb: "Event format, signing, the hash chain, federation", source: "docs/protocol.md" },
       { slug: "running-a-node", title: "Running a node", blurb: "Configuration, API, deployment", source: "docs/running-a-node.md" },
     ],

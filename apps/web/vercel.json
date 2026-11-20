@@ -1,24 +1,15 @@
-    {
+{
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/(zones|agents|animals|backdrops|evolution)/(.*)",
+      "source": "/(terminals|research)/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/video/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=604800"
         }
       ]
     },
@@ -71,47 +62,11 @@
       "destination": "/docs.html"
     },
     {
-      "source": "/evolution",
-      "destination": "/evolution.html"
-    },
-    {
-      "source": "/live",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/brief",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/agents",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/ask",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/app",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/rugs",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/cabals",
-      "destination": "/index.html"
-    },
-    {
       "source": "/callers",
       "destination": "/index.html"
     },
     {
       "source": "/volume",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/play",
       "destination": "/index.html"
     },
     {
@@ -127,15 +82,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/roadmap",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/radar",
-      "destination": "/index.html"
-    },
-    {
       "source": "/feed",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contests",
       "destination": "/index.html"
     },
     {
@@ -144,11 +95,6 @@
     }
   ],
   "redirects": [
-    {
-      "source": "/rug",
-      "destination": "/rugs",
-      "permanent": true
-    },
     {
       "source": "/x-ray",
       "destination": "/xray",
@@ -167,6 +113,76 @@
     {
       "source": "/bot",
       "destination": "https://t.me/zooaiagency_bot",
+      "permanent": true
+    },
+    {
+      "source": "/live",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/brief",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/evolution",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/evolution.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/roadmap",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/ask",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/rugs",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/rug",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/cabals",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/radar",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/app",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/app.html",
+      "destination": "/xray",
+      "permanent": true
+    },
+    {
+      "source": "/agents",
+      "destination": "/contests",
+      "permanent": true
+    },
+    {
+      "source": "/play",
+      "destination": "/contests",
       "permanent": true
     }
   ]

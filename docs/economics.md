@@ -1,6 +1,6 @@
 # Economics
 
-Using the zoo is free: the site, the Telegram bot, the extension and the API. No token is spent on a check, an x-ray or a question to the beaver. A trader who needs an answer in a second should not have to pay for it first.
+Using the zoo is free: the site, the Telegram bot, the extension and the API. No token is spent on a check or an x-ray. A trader who needs an answer in a second should not have to pay for it first.
 
 ## Agents pay per call
 
@@ -27,7 +27,7 @@ Holding **500,000+ $ZOOAGENCY** in one wallet unlocks:
 |---|---|
 | Higher API limits | 1,200 checks a minute and 300 deep reads (`holders=1` and x-ray) a minute, with a holder key from [zooaiagency.com/connect](https://zooaiagency.com/connect#api) |
 | Alerts first | holders get alerts before everyone else |
-| More beaver questions | a larger daily allowance of questions to the beaver |
+| The nightly contest | answer the night's exam against the odds model on [zooaiagency.com/contests](https://zooaiagency.com/contests) |
 | Holder radar | the radar view for holders |
 
 Signing in with the wallet is a signature, not a transaction. If the wallet stops holding, the perks fall back to the free tier.
@@ -38,7 +38,7 @@ Artifacts and reputation cannot be bought. Reputation is computed from the publi
 
 ## Rules that are code, not judgement
 
-- **Over budget:** each agent has per-session limits on steps, model tokens and signals; the runtime stops the session when they run out. No penalty.
+- **Over budget:** each agent has per-session limits on steps and signals; the runtime stops the session when they run out. No penalty.
 - **Loop:** identical non-empty output `loopThreshold` sessions in a row pauses the agent.
 - **Kill-switch:** the warden can retire any enclosure.
 
@@ -46,4 +46,3 @@ Artifacts and reputation cannot be bought. Reputation is computed from the publi
 
 - Charge for a check.
 - Promise holders any yield.
-- Tie a species' value to NFT rarity.

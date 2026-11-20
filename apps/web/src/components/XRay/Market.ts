@@ -14,10 +14,11 @@ export interface Market {
 
 const DS_CHAIN: Record<string, string> = { solana: "solana", bsc: "bsc", base: "base" };
 
-export function useMarket(mint: string): Market | null {
+export function useMarket(mint: string | null): Market | null {
   const [m, setM] = useState<Market | null>(null);
   useEffect(() => {
     setM(null);
+    if (!mint) return;
     const chain = DS_CHAIN[chainOf(mint)] ?? "solana";
     let gone = false;
     const read = () =>

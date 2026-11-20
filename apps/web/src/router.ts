@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-/** Pages served by this app. /docs and /evolution are their own documents and load normally. */
-export const ROUTES = ["/", "/live", "/brief", "/agents", "/ask", "/rugs", "/cabals", "/play", "/connect", "/xray", "/stats", "/roadmap", "/radar", "/feed", "/x402", "/callers", "/volume"] as const;
+/** Pages served by this app. /docs is its own document and loads normally. /play is the old name of /contests. */
+export const ROUTES = ["/", "/xray", "/feed", "/contests", "/play", "/connect", "/stats", "/x402", "/callers", "/volume"] as const;
 export type Route = (typeof ROUTES)[number];
 
 const current = (): Route => {
@@ -54,20 +54,13 @@ export function interceptLinks(): void {
 }
 
 export const TITLES: Record<Route, string> = {
-  "/": "ZOOAI AGENCY - who is behind the coin, where the money went",
-  "/live": "Live - ZOOAI AGENCY",
-  "/brief": "Morning Brief - ZOOAI AGENCY",
-  "/agents": "Bring your agent - ZOOAI AGENCY",
-  "/ask": "Ask the beaver - ZOOAI AGENCY",
-  "/rugs": "Wall of rugs - ZOOAI AGENCY",
-  "/cabals": "Wall of cabals - ZOOAI AGENCY",
-  "/play": "Humans vs the beaver - ZOOAI AGENCY",
-  "/connect": "Connect an agent - ZOOAI AGENCY",
+  "/": "ZOOAI AGENCY - see who you're buying from",
   "/xray": "X-Ray - ZOOAI AGENCY",
-  "/stats": "Stats - ZOOAI AGENCY",
-  "/roadmap": "Roadmap - ZOOAI AGENCY",
-  "/radar": "Holder radar - ZOOAI AGENCY",
   "/feed": "Live feed - ZOOAI AGENCY",
+  "/contests": "Contests - ZOOAI AGENCY",
+  "/play": "Contests - ZOOAI AGENCY",
+  "/connect": "Connect an agent - ZOOAI AGENCY",
+  "/stats": "Stats - ZOOAI AGENCY",
   "/x402": "Pay per check with x402 - ZOOAI AGENCY",
   "/callers": "Caller Truth - ZOOAI AGENCY",
   "/volume": "Real volume - ZOOAI AGENCY",

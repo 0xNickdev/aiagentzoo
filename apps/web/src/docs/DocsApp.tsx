@@ -2,8 +2,10 @@ import { ArrowLeft, ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GITHUB_URL } from "../links";
 import SiteNav from "../components/SiteNav";
+import SiteFooter from "../components/site/SiteFooter";
 import { GROUPS, markdownUrl, PAGES, type Page, render } from "./pages";
 import { lang, t } from "../i18n";
+import { FEE_BPS } from "../swap";
 
 const slugFromPath = () => location.pathname.replace(/^\/docs\/?/, "").replace(/\/$/, "") || PAGES[0]!.slug;
 
@@ -65,7 +67,8 @@ export default function DocsApp() {
     // A page not yet in Chinese falls back to the English one.
     get(markdownUrl(page))
       .catch((e) => (lang() === "zh" ? get(markdownUrl(page, false)) : Promise.reject(e)))
-      .then((text) => live && setMarkdown({ slug: page.slug, text }))
+      // The markdown names the default swap fee; the page shows the one this build charges.
+      .then((text) => live && setMarkdown({ slug: page.slug, text: text.replace(/\b1% (?=fee|swap fee)/g, `${FEE_BPS / 100}% `).replace(/1% 手续费/g, `${FEE_BPS / 100}% 手续费`) }))
       .catch(() => live && setMarkdown({ slug: page.slug, text: `# ${page.title}\n\nThis page could not be loaded. [Read it on GitHub](https://github.com/0xNickdev/aiagentzoo/blob/main/${page.source}).` }));
     return () => {
       live = false;
@@ -128,7 +131,7 @@ export default function DocsApp() {
   return (
     <div className="min-h-screen">
       <SiteNav active="/docs" />
-      <div className="sticky top-[61px] z-30 border-b border-white/[0.07] bg-[#030504]/85 backdrop-blur-xl sm:top-[77px] lg:hidden">
+      <div className="sticky top-[60px] z-30 border-b border-line bg-night lg:hidden">
         <button type="button" onClick={() => setMenu((m) => !m)} className="flex w-full items-center justify-between px-5 py-3 text-[13px] text-fg-4 sm:px-8">
           <span>{t("Contents")} · {t(page.title)}</span>
           {menu ? <X size={15} /> : <Menu size={15} />}
@@ -141,7 +144,7 @@ export default function DocsApp() {
       </div>
 
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-10 px-5 sm:px-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
-        <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-10 lg:block">
+        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto py-10 lg:block">
           <Nav page={page} go={go} />
         </aside>
 
@@ -203,7 +206,7 @@ export default function DocsApp() {
           </a>
         </main>
 
-        <aside className="sticky top-[77px] hidden h-[calc(100vh-77px)] overflow-y-auto py-14 xl:block">
+        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] overflow-y-auto py-14 xl:block">
           {headings.length > 1 && (
             <>
               <p className="mb-3 text-[13px] text-fg-4">{t("On this page")}</p>
@@ -225,6 +228,7 @@ export default function DocsApp() {
           )}
         </aside>
       </div>
+      <SiteFooter />
     </div>
   );
 }

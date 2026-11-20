@@ -26,17 +26,15 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ZOO_NODE_ID` | `<role>.zoo` | 公开的节点 id |
 | `PORT` | `8787` | |
 | `ZOO_NODE_SECRET` | 自动生成 | base64 PKCS#8 ed25519 密钥 |
-| `ZOO_DATA_DIR` | `./data/<role>` | SQLite 数据库、身份、早报 |
+| `ZOO_DATA_DIR` | `./data/<role>` | SQLite 数据库、身份 |
 | `ZOO_PEERS` | `[]` | JSON `[{ id, url, publicKey }]` |
 | `ZOO_NODE_NORTH` / `_MARSH` / `_CANYON` | `<role>.zoo` | 其他围栏的 id |
 | `ZOO_ADMIN_TOKEN` | 未设置 | 开启看守者路由 |
-| `ZOO_BRIEF_AT` | `07:00` | 发布时间（UTC） |
+| `ZOO_BRIEF_AT` | `07:00` | 比赛的一晚结束、下一晚开始的时间（UTC） |
+| `ZOO_CONTEST_EXCLUDE` | `clawpump-demo` | 不进入排行榜和本周最佳智能体的访客名，逗号分隔 |
 | `ZOO_SCAN_EVERY_MS` | `600000` | 哨兵扫描节奏 |
 | `ZOO_CORS_ORIGIN` | `*` | 用于公开的读取路由 |
-| 模型提供方密钥 | 未设置 | 把提供方的 API 密钥放进环境变量，建造者和档案员就会思考；没有密钥时按规则运行（见 [`.env.example`](../apps/node/.env.example)） |
-| `ZOO_MODEL` | 提供方默认 | 当前启用的提供方的模型 id |
 | `ZOO_HISTORY` | 开（north） | `off` 关闭 `history.db`：48 小时的磁带忘掉一个发射之后，X-Ray 读的就是这份 90 天的记忆 |
-| `ZOO_JUDGE_EVERY_MS` | `1800000` | 海狸多久判断一次当晚的新代币 |
 | `ZOO_OBS_CAP` | `4000` | 海狸每晚最多保留的代币数 |
 | `ZOO_GUESTS` | 开启（canyon） | `off` 关闭访客区 |
 | `ZOO_GUESTS_MAX` / `ZOO_GUEST_COOLDOWN_MS` | `200` / `600000` | 访客容量和每个访客的报告间隔 |
@@ -74,8 +72,7 @@ docker compose --env-file .env.federation up --build
 ## 运维
 
 - **观察：** `curl localhost:8783/v1/stream`
-- **唤醒智能体：** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" localhost:8783/v1/agents/tortoise/wake`
+- **唤醒智能体：** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" localhost:8783/v1/agents/beaver/wake`
 - **紧急停止开关：** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" -d '{"reason":"..."}' localhost:8783/v1/warden/retire`
 - **审计：** 拉取 `/v1/log`，用 SDK 里的 `verifyChain(entries)` 校验。
 
-早报也会以 Markdown 写到 `$ZOO_DATA_DIR/briefs/`。

@@ -3,7 +3,8 @@ import { t, tChain } from "../../i18n";
 import { base, FG2, FG4, HAIR, header, loadFonts, small } from "../cardKit";
 import { pctFine } from "../../format";
 import type { XRayReport } from "./types";
-import { TONE, venueLabel } from "./shared";
+import { TONE, venueLabel, VWORD } from "./shared";
+import { oddsPct } from "./ui";
 
 /** The x-ray as a 1200x675 picture worth posting: verdict, the first reason, three numbers and the map of the first seconds. */
 export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promise<void> {
@@ -71,13 +72,24 @@ export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promis
   await header(ctx, L, 86, `X-Ray · ${venueLabel(f)}`);
   ctx.font = '600 64px "Geist", sans-serif';
   ctx.fillStyle = "#fff";
-  ctx.fillText(`$${r.symbol}`.slice(0, 16), L - 3, 166);
+  ctx.fillText(`$${r.symbol.replace(/^\$/, "")}`.slice(0, 16), L - 3, 166);
   ctx.font = small(15);
   ctx.fillStyle = FG4;
   ctx.fillText(`${r.mint.slice(0, 6)}…${r.mint.slice(-6)}`, L, 196);
-  ctx.font = '600 84px "Geist", sans-serif';
+  // The verdict in one word and the odds of a run, as the dashboard reads them; no 0-100 score.
+  const word = t((VWORD[c.verdict] ?? VWORD.unknown!).w);
+  const odds = c.odds ? t("{p}% alive tomorrow", { p: oddsPct(c.odds.run) }) : null;
+  let size = 84;
+  ctx.font = `600 ${size}px "Geist", sans-serif`;
+  while (size > 48 && ctx.measureText(word).width > 640) ctx.font = `600 ${(size -= 4)}px "Geist", sans-serif`;
   ctx.fillStyle = tone.color;
-  ctx.fillText(c.score === null || c.score === undefined ? t(tone.label) : `${t(tone.label)} · ${c.score}`, L - 4, 300);
+  ctx.fillText(word, L - 4, 300);
+  if (odds) {
+    ctx.font = '500 30px "Geist", sans-serif';
+    ctx.fillStyle = "#fff";
+    ctx.fillText(odds, L, 348);
+  }
+  const reasonTop = odds ? 400 : 356;
 
   // The first reason, wrapped.
   ctx.font = '400 26px "Geist", sans-serif';
@@ -99,7 +111,7 @@ export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promis
     } else line = next;
   }
   if (line) lines.push(line);
-  lines.slice(0, 3).forEach((l, i) => ctx.fillText(i === 2 && lines.length > 3 ? `${l}…` : l, L, 356 + i * 36));
+  lines.slice(0, 3).forEach((l, i) => ctx.fillText(i === 2 && lines.length > 3 ? `${l}…` : l, L, reasonTop + i * 36));
 
   const took = r.early.reduce((n, e) => n + e.bought, 0);
   const h = c.holders;

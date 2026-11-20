@@ -45,14 +45,6 @@ interface CheckRecord {
   flaggedAvoid: Side;
   notFlagged: Side;
 }
-interface Dev {
-  wallet: string;
-  launches48h: number;
-  dumped: number;
-  graduated: number;
-  medianDumpMin?: number | null;
-}
-
 function Tile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="bg-night-surface px-5 py-4">
@@ -96,39 +88,11 @@ function Bars({ title, note, days, pick }: { title: string; note: string; days: 
   );
 }
 
-function DevTable({ title, note, rows, good }: { title: string; note: string; rows: Dev[] | null; good?: boolean }) {
-  return (
-    <div className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="font-display text-xl text-fg">{t(title)}</h3>
-        <span className="tabular-nums text-[13px] text-fg-4">{t(note)}</span>
-      </div>
-      <div className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 border-b border-white/[0.08] pb-2 text-[13px] text-fg-4">
-        <span>{t("dev wallet")}</span>
-        <span className="text-right">{t("launched")}</span>
-        <span className="text-right">{t("dumped")}</span>
-        <span className="text-right">{t("graduated")}</span>
-      </div>
-      {!rows && <p className="py-6 text-center text-[13px] text-fg-3">{t("Reading the chain…")}</p>}
-      {rows?.map((r) => (
-        <a key={r.wallet} href={`/xray?wallet=${r.wallet}`} className="tabular-nums grid grid-cols-[minmax(0,1fr)_3.6rem_3.6rem_4.2rem] sm:grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] items-baseline gap-3 border-t border-white/[0.08] py-2 text-[13px] transition first:border-t-0 hover:bg-white/[0.03]">
-          <span className="truncate text-fg-2">{short(r.wallet)}</span>
-          <span className="text-right text-fg-4">{num(r.launches48h)}</span>
-          <span className={`text-right ${!good && r.dumped ? "text-[#ff8a7e]" : "text-fg-4"}`}>{num(r.dumped)}</span>
-          <span className={`text-right ${good && r.graduated ? "text-[#a6e3b4]" : "text-fg-4"}`}>{num(r.graduated)}</span>
-        </a>
-      ))}
-    </div>
-  );
-}
-
-/** Every number the zoo has about itself, live from its public endpoints, with what each one does and does not count. */
+/** Our own numbers, live from its public endpoints, with what each one does and does not count. */
 export default function Stats() {
   const usage = useLive<Usage>(`${NORTH}/v1/usage`, 60_000);
   const chain = useLive<Chain>(`${NORTH}/v1/chain`, 60_000);
   const record = useLive<CheckRecord>(`${NORTH}/v1/check/record`, 60_000);
-  const ruggers = useLive<{ ruggers: Dev[] }>(`${NORTH}/v1/chain/ruggers?limit=10`, 60_000);
-  const builders = useLive<{ builders: Dev[] }>(`${NORTH}/v1/chain/builders?limit=10`, 60_000);
   // The counter started on 19 October: days before it are not zero, they were not counted.
   const days = (usage?.days ?? []).filter((d) => d.day >= "2026-10-19");
   const a = record?.flaggedAvoid;
@@ -159,7 +123,7 @@ export default function Stats() {
           </Reveal>
         </div>
         <p className="mx-auto max-w-3xl text-center text-[13px] leading-relaxed text-fg-3">
-          {t("A full X-Ray is a person opening the whole report: on the site with a token pasted, in the extension's panel, in the bot or the Telegram app. A verdict check is the short answer; the extension asks for one on every token page and every address on X, and /xray asks for one per example card, so checks run well ahead of people. Callers are counted as hashes, never addresses. Days are UTC.")}
+          {t("A full X-Ray is a person opening the whole report: on the site with a token pasted, in the extension's panel, or in the bot. A verdict check is the short answer; the extension asks for one on every token page and every address on X, and /xray asks for one per example card, so checks run well ahead of people. Callers are counted as hashes, never addresses. Days are UTC.")}
         </p>
 
         <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
@@ -196,15 +160,6 @@ export default function Stats() {
           </p>
         </Reveal>
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
-          <Reveal>
-            <DevTable title="Serial dumpers" note="last 48 hours · tap a wallet" rows={ruggers?.ruggers ?? null} />
-          </Reveal>
-          <Reveal delay={0.05}>
-            <DevTable title="Builders" note="launches graduated, not dumped" rows={builders?.builders ?? null} good />
-          </Reveal>
-        </div>
-
         {/* Where the token's creator fees go: pump.fun pays them to the creator wallet, so the proof is the buybacks and burns themselves. */}
         <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -228,7 +183,7 @@ export default function Stats() {
 
         <p className="tabular-nums pt-2 text-center text-[13px] text-fg-4">
           {t("raw:")}{" "}
-          {["/v1/usage", "/v1/chain", "/v1/check/record", "/v1/chain/ruggers", "/v1/chain/builders"].map((p, i) => (
+          {["/v1/usage", "/v1/chain", "/v1/check/record"].map((p, i) => (
             <span key={p}>
               {i > 0 && " · "}
               <a href={`${NORTH}${p}`} className="underline decoration-white/25 underline-offset-4 hover:text-white">
@@ -260,7 +215,7 @@ function FeeLoop() {
     <Reveal className="bg-night-surface border border-white/[0.08] rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="font-display text-xl text-fg">{t("Swap fees")}</h3>
-        <span className="tabular-nums text-[13px] text-fg-4">{t("{p}% buys $ZOOAGENCY back, the rest runs the zoo", { p: Math.round(b.buyShare * 100) })}</span>
+        <span className="tabular-nums text-[13px] text-fg-4">{t("{p}% buys $ZOOAGENCY back, the rest goes to the treasury", { p: Math.round(b.buyShare * 100) })}</span>
       </div>
       <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-fg-3">
         {t("Every trade in the X-Ray pays its fee in SOL to a hot wallet. Every six hours the node sweeps it: a tenth buys $ZOOAGENCY through Jupiter straight into the treasury, the rest goes to the treasury as SOL. Each run below links both transactions.")}

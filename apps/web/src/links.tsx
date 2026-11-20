@@ -10,7 +10,7 @@ export const DEXSCREENER_URL = "https://dexscreener.com";
 export const SOLSCAN_URL = "https://solscan.io";
 
 /** $ZOOAGENCY written out: these links name the token itself, whatever VITE_TOKEN_MINT says. */
-const ZOOAGENCY_MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
+export const ZOOAGENCY_MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
 export const ZOOAGENCY_CLAWPUMP_URL = `${CLAWPUMP_URL}/tokens/${ZOOAGENCY_MINT}`;
 export const ZOOAGENCY_DEXSCREENER_URL = `${DEXSCREENER_URL}/solana/${ZOOAGENCY_MINT}`;
 export const ZOOAGENCY_SOLSCAN_URL = `${SOLSCAN_URL}/token/${ZOOAGENCY_MINT}`;

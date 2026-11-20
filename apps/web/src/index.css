@@ -18,15 +18,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   color: #fff;
   background-color: #030504;
-  /* Night is never pure black: one quiet moss glow, nothing else. */
-  background-image: radial-gradient(60vw 60vh at 15% 20%, rgba(70, 110, 85, 0.10), transparent 70%);
-  background-attachment: fixed;
-}
-
-.font-instrument {
-  font-family: 'Geist', sans-serif;
-  font-weight: 500;
-  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
 }
 
 html,
@@ -50,55 +42,6 @@ body {
 .accent {
   font-style: normal;
   color: #ffffff;
-}
-
-.mobile-menu-glass {
-  background: rgba(10, 10, 10, 0.94);
-  backdrop-filter: blur(20px);
- 
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.liquid-glass {
-  background: rgba(255, 255, 255, 0.01);
-  background-blend-mode: luminosity;
-  backdrop-filter: blur(4px);
- 
-  border: none;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.liquid-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
-    rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
-    rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.liquid-glass:hover {
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
-}
-
-.liquid-glass:active {
-  transform: scale(0.98);
-}
-
-/* Roadmap: links draw themselves from the hovered milestone outward. */
-@keyframes roadmap-draw {
-  to { stroke-dashoffset: 0; }
 }
 
 /* Simplified Chinese: Geist has no CJK glyphs, so each Latin face falls through to the system's Chinese face.
@@ -125,48 +68,9 @@ body {
 :root:lang(zh-CN) p {
   line-height: 1.75;
 }
-:root:lang(zh-CN) .font-display,
-:root:lang(zh-CN) .font-instrument {
+:root:lang(zh-CN) .font-display {
   letter-spacing: 0;
 }
-
-/* Roadmap: mist that drifts on its own over the trail. */
-.roadmap-fog {
-  background:
-    radial-gradient(45% 30% at 30% 70%, rgba(170, 195, 210, 0.16), transparent 70%),
-    radial-gradient(40% 25% at 75% 60%, rgba(160, 190, 205, 0.14), transparent 70%),
-    radial-gradient(60% 35% at 55% 85%, rgba(150, 180, 195, 0.12), transparent 70%);
-  filter: blur(18px);
-  animation: roadmap-fog 38s ease-in-out infinite alternate;
-}
-@keyframes roadmap-fog {
-  from { transform: translate3d(-4%, 0, 0) scale(1.05); }
-  to { transform: translate3d(4%, -2%, 0) scale(1.12); }
-}
-.roadmap-firefly {
-  opacity: 0;
-  box-shadow: 0 0 8px 2px rgba(253, 230, 138, 0.55);
-  animation-name: roadmap-firefly;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
-}
-@keyframes roadmap-firefly {
-  0%, 100% { opacity: 0; transform: translate3d(0, 0, 0); }
-  40% { opacity: 0.85; }
-  50% { transform: translate3d(14px, -22px, 0); }
-  70% { opacity: 0.4; }
-}
-/* Months further ahead sit in the fog; pointing at one clears it. Touch screens read them clear. */
-@media (hover: hover) {
-  .fog-1 .roadmap-chapter-body { filter: blur(0.35px); opacity: 0.85; transition: filter 0.6s, opacity 0.6s; }
-  .fog-2 .roadmap-chapter-body { filter: blur(0.8px); opacity: 0.72; transition: filter 0.6s, opacity 0.6s; }
-  .fog-1 .roadmap-chapter-body:hover, .fog-2 .roadmap-chapter-body:hover,
-  .fog-1 .roadmap-chapter-body:focus-within, .fog-2 .roadmap-chapter-body:focus-within { filter: none; opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .roadmap-fog, .roadmap-firefly { animation: none; }
-}
-
 
 /* One keyboard focus ring everywhere: moss, only when the keyboard is used. */
 :focus-visible {
@@ -182,4 +86,73 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- site chrome: the glass top bar ---------- */
+.glass-bar {
+  background: rgba(3, 5, 4, 0.55);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(20px) saturate(170%);
+}
+/* A hairline under the bar that lights up once content scrolls beneath it. */
+.glass-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #18201c;
+  transition: background 0.3s;
+}
+.glass-bar[data-under="true"]::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14) 30%, rgba(166, 227, 180, 0.25) 50%, rgba(255, 255, 255, 0.14) 70%, transparent);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bar { background: rgba(3, 5, 4, 0.95); }
+}
+
+/* A primary button: moss with a thin top light. */
+.btn-moss {
+  background: #a6e3b4;
+  color: #06120b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.btn-moss:hover { background: #b9ecc5; }
+
+/* The live strip: one slow loop that stops while a pointer is on it. */
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.marquee-track {
+  animation: marquee var(--marquee-s, 90s) linear infinite;
+}
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+.marquee {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+
+@keyframes ping-soft {
+  0% { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.live-dot { position: relative; }
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1px solid #a6e3b4;
+  opacity: 0;
+  animation: ping-soft 2.4s ease-out infinite;
+}
+
+/* With motion off the strip stands still and scrolls by hand instead. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; }
 }

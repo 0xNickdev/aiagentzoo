@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { hue, initials, picOf } from "./home/live";
 import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
-import { landed, quote, SOL_MINT, swap, swapEnabled } from "../swap";
+import { FEE_BPS, landed, quote, SOL_MINT, swap, swapEnabled } from "../swap";
 import { walletProvider } from "../zoo";
 import { Section } from "./ui";
 import NumberTicker from "./NumberTicker";
@@ -233,7 +233,7 @@ export default function Feed() {
   const listOf = (b: Board) => (data?.[b] ?? []).filter((c) => !strict || c.verdict === "pass");
 
   return (
-    <Section className="!pt-28 sm:!pt-36">
+    <Section className="!pt-12 sm:!pt-16">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <p className="tabular-nums flex items-center gap-2 text-[13px] text-fg-3">
@@ -306,7 +306,7 @@ export default function Feed() {
         })}
       </div>
 
-      <p className="mt-8 max-w-3xl text-[13px] leading-relaxed text-fg-4">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a 1% fee goes to the zoo. Not financial advice.")}</p>
+      <p className="mt-8 max-w-3xl text-[13px] leading-relaxed text-fg-4">{t("No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a {p}% fee goes to the zoo. Not financial advice.", { p: (FEE_BPS / 100).toString() })}</p>
 
       <AnimatePresence>
         {state && (

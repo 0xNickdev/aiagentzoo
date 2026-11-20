@@ -93,13 +93,13 @@ export function LangSwitch({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => setLang(to)}
       aria-pressed={l === to}
-      className={`rounded-full px-2.5 py-1 transition-colors ${l === to ? "bg-white text-black" : "text-fg-4 hover:text-white"}`}
+      className={`rounded-[5px] px-2 py-0.5 transition-colors ${l === to ? "bg-night-raised text-white" : "text-faint hover:text-white"}`}
     >
       {label}
     </button>
   );
   return (
-    <div className={`liquid-glass flex items-center gap-0.5 rounded-full p-0.5 text-[13px] ${className}`} role="group" aria-label="Language">
+    <div className={`flex items-center gap-0.5 rounded-[7px] border border-line p-0.5 text-[12px] ${className}`} role="group" aria-label="Language">
       {btn("en", "EN")}
       {btn("zh", "中文")}
     </div>

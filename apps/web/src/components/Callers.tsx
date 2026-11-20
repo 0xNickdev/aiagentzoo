@@ -146,7 +146,7 @@ export default function Callers() {
   const CALL_COLS = "grid-cols-[minmax(0,1fr)_4rem_5.5rem] sm:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_5.5rem_5.5rem_5.5rem_5rem]";
 
   return (
-    <Section className="overflow-x-clip !pt-32 sm:!pt-40" backdrop={{ glowAt: "30% 10%" }}>
+    <Section className="overflow-x-clip !pt-12 sm:!pt-16">
       <SectionHead
         eyebrow={t("Caller Truth · pump.fun callouts · each one followed for 24 hours")}
         title={[t("What happened"), t("after the call.")]}

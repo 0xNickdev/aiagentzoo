@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { type ReactNode, useState } from "react";
 import { t } from "../i18n";
 import StaggeredFade from "../StaggeredFade";
-import { Backdrop, type BackdropProps } from "./backdrop";
 
 export function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
   return (
@@ -42,16 +41,15 @@ export function Section({
   id,
   children,
   className = "",
-  backdrop,
 }: {
   id?: string;
   children: ReactNode;
   className?: string;
-  backdrop?: BackdropProps;
+  /** Ignored: pages carry no backdrops. Still accepted while the X-Ray passes one. */
+  backdrop?: unknown;
 }) {
   return (
     <section id={id} className={`relative px-5 py-14 sm:px-8 sm:py-24 md:py-28 ${className}`}>
-      {backdrop && <Backdrop {...backdrop} />}
       <div className="relative z-10 mx-auto max-w-7xl">{children}</div>
     </section>
   );

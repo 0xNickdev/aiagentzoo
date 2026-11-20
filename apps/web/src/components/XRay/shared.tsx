@@ -24,6 +24,14 @@ export const ageOf = (r: XRayReport) => {
 };
 export const mintIn = addressIn;
 
+/** The verdict as one word, the way the dashboard and the share card both say it. */
+export const VWORD: Record<string, { w: string; long?: boolean }> = {
+  avoid: { w: "Avoid" },
+  caution: { w: "Caution" },
+  pass: { w: "No red flags", long: true },
+  unknown: { w: "Not on the stream", long: true },
+};
+
 export const TONE: Record<Verdict, { label: string; color: string }> = {
   avoid: { label: "AVOID", color: "#ff8a7e" },
   caution: { label: "CAUTION", color: "#ffc27a" },

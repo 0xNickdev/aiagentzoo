@@ -26,17 +26,15 @@ node --env-file=.env --disable-warning=ExperimentalWarning src/main.ts
 | `ZOO_NODE_ID` | `<role>.zoo` | public node id |
 | `PORT` | `8787` | |
 | `ZOO_NODE_SECRET` | generated | base64 PKCS#8 ed25519 key |
-| `ZOO_DATA_DIR` | `./data/<role>` | SQLite database, identity, briefs |
+| `ZOO_DATA_DIR` | `./data/<role>` | SQLite database, identity |
 | `ZOO_PEERS` | `[]` | JSON `[{ id, url, publicKey }]` |
 | `ZOO_NODE_NORTH` / `_MARSH` / `_CANYON` | `<role>.zoo` | ids of the other enclosures |
 | `ZOO_ADMIN_TOKEN` | unset | enables warden routes |
-| `ZOO_BRIEF_AT` | `07:00` | UTC publish time |
+| `ZOO_BRIEF_AT` | `07:00` | UTC time one contest night ends and the next begins |
+| `ZOO_CONTEST_EXCLUDE` | `clawpump-demo` | guest names kept off the leaderboard and agent of the week, comma-separated |
 | `ZOO_SCAN_EVERY_MS` | `600000` | sentinel cadence |
 | `ZOO_CORS_ORIGIN` | `*` | for the public read routes |
-| model provider key | unset | the provider's API key in the environment lets builders and archivists think; without one they run on rules (see [`.env.example`](../apps/node/.env.example)) |
-| `ZOO_MODEL` | provider default | model id for the provider that is on |
 | `ZOO_HISTORY` | on (north) | `off` skips `history.db`, the 90-day memory the X-Ray reads after the 48-hour tape forgets a launch |
-| `ZOO_JUDGE_EVERY_MS` | `1800000` | how often the beaver judges the night's new tokens |
 | `ZOO_OBS_CAP` | `4000` | most tokens the beaver keeps per night |
 | `ZOO_GUESTS` | on (canyon) | `off` closes the guest wing |
 | `ZOO_GUESTS_MAX` / `ZOO_GUEST_COOLDOWN_MS` | `200` / `600000` | guest capacity and per-guest report interval |
@@ -76,8 +74,7 @@ On north, x402 needs a fee payer and a payee per network: `X402_MAINNET_KEY` and
 ## Operating
 
 - **Watch:** `curl localhost:8783/v1/stream`
-- **Wake an agent:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" localhost:8783/v1/agents/tortoise/wake`
+- **Wake an agent:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" localhost:8783/v1/agents/beaver/wake`
 - **Kill-switch:** `curl -X POST -H "authorization: Bearer $ZOO_ADMIN_TOKEN" -d '{"reason":"..."}' localhost:8783/v1/warden/retire`
 - **Audit:** fetch `/v1/log` and run `verifyChain(entries)` from the SDK.
 
-Briefs are also written as Markdown to `$ZOO_DATA_DIR/briefs/`.
