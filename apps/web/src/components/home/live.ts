@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { NODE_URLS } from "../../sim/live";
-import { agoCompact } from "../../format";
+import { agoCompact, shortOr } from "../../format";
 
 /** The home page reads everything from the north node; a field it cannot read is left out, never a made-up number. */
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 export const SITE_XRAY = (mint: string) => `/xray?mint=${mint}`;
+export const SITE_WALLET = (w: string) => `/xray?wallet=${w}`;
+export const full = (n: number) => Math.round(n).toLocaleString("en-US");
 
 export const compact = (n: number) =>
   n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : Math.round(n).toLocaleString("en-US");
 
 const clean = (s?: string) => String(s ?? "").replace(/^\$+/, "").replace(/[\sㅤᅟᅠ​-‍﻿]+/g, " ").trim();
-export const initials = (s?: string, mint?: string) => (clean(s) || mint || "?").slice(0, 2).toUpperCase();
+/** A ticker as people write it; a coin with an empty or invisible ticker shows its address instead. */
+export const ticker = (s?: string, mint?: string) => (clean(s) ? `$${clean(s)}` : mint ? shortOr(mint) : "$?");
+export const initials =(s?: string, mint?: string) => (clean(s) || mint || "?").slice(0, 2).toUpperCase();
 export const hue = (m: string) => {
   let h = 0;
   for (const c of m) h = (h * 31 + c.charCodeAt(0)) % 360;

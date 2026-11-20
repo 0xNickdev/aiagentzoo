@@ -1,11 +1,12 @@
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BOT_URL, EXTENSION_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../links";
-import { navigate } from "../router";
 import { t } from "../i18n";
 import { num } from "../format";
 import { ago, compact, SITE_XRAY, useNorth, useNow } from "../components/home/live";
 import { More, Panel, Tile } from "../components/site/Panel";
 import { CaRow, BuyButton, TokenDot } from "../components/site/ZooToken";
+import Hero from "../components/home/Hero";
+import HowItWorks from "../components/home/HowItWorks";
 import { opponentOf, pct, timeLeft, type HumansView, useContestApi, type Weekly } from "../components/contests/data";
 
 /* ---------- what the home reads ---------- */
@@ -53,79 +54,21 @@ const VERDICT: Record<FeedVerdict, { label: string; dot: string; text: string }>
 
 const clean = (s: string) => s.replace(/^\$+/, "").replace(/[\sㅤᅟᅠ​-‍﻿]+/g, " ").trim();
 
-/* ---------- first screen: the search ---------- */
+/* ---------- the numbers ---------- */
 
-function Search() {
-  const [mint, setMint] = useState("");
-  const input = useRef<HTMLInputElement>(null);
-  const go = (e: FormEvent) => {
-    e.preventDefault();
-    const m = mint.trim();
-    if (!m) return input.current?.focus();
-    navigate(SITE_XRAY(encodeURIComponent(m)));
-  };
-  return (
-    <form onSubmit={go} className="flex flex-col gap-2 sm:flex-row" role="search">
-      <label className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-[9px] border border-[#ffffff14] bg-night px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] focus-within:border-[#3f5a48]">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 text-faint">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          ref={input}
-          value={mint}
-          onChange={(e) => setMint(e.target.value)}
-          placeholder={t("Paste a Solana token address")}
-          aria-label={t("Token address")}
-          spellCheck={false}
-          autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent font-mono text-[13.5px] tracking-[-0.01em] text-white placeholder:text-faint focus:outline-none"
-        />
-      </label>
-      <button type="submit" className="btn-moss h-12 shrink-0 rounded-[9px] px-5 text-[14px] font-medium">
-        {t("X-Ray it")}
-      </button>
-    </form>
-  );
-}
-
-function Hero({ usage, chain, record, feed }: { usage: Usage | null; chain: Chain | null; record: CheckRecord | null; feed: FeedCoin[] }) {
-  const sample = feed[0];
+function Numbers({ usage, chain, record }: { usage: Usage | null; chain: Chain | null; record: CheckRecord | null }) {
   const tiles = [
-    usage && { k: t("X-Rays run, last 7 days"), v: compact(usage.last7.xrays) },
-    usage && { k: t("Quick checks, last 7 days"), v: compact(usage.last7.checks) },
-    chain && { k: t("Solana launches read"), v: compact(chain.seen.launches) },
-    record?.avoidBecause && { k: t("Dev dumps flagged at minute {m}", { m: record.checkedAtMin ?? 5 }), v: compact(record.avoidBecause.dumped), sub: t(record.window), tone: "danger" as const },
+    usage && { k: t("X-Rays run"), v: compact(usage.last7.xrays), sub: t("last 7 days") },
+    usage && { k: t("Quick checks"), v: compact(usage.last7.checks), sub: t("last 7 days") },
+    chain && { k: t("Solana launches read"), v: compact(chain.seen.launches), sub: t("since the node started") },
+    record?.avoidBecause && { k: t("Dev dumps caught at minute {m}", { m: record.checkedAtMin ?? 5 }), v: compact(record.avoidBecause.dumped), sub: t(record.window), tone: "danger" as const },
   ].filter(Boolean) as Array<{ k: string; v: string; sub?: string; tone?: "danger" }>;
+  if (tiles.length < 2) return null;
   return (
-    <Panel
-      title={t("X-Ray")}
-      meta={t("free · Solana · read straight from the chain")}
-      className="lg:col-span-8"
-      bodyClass="flex flex-col"
-    >
-      <div className="p-5 sm:p-6">
-        <h1 className="max-w-[18ch] text-[36px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[48px]">{t("See who you're buying from.")}</h1>
-        <p className="mb-5 mt-3 max-w-[60ch] text-[14.5px] leading-[1.5] text-fg-2">
-          {t("Paste a token. Get the dev's record, the wallets in the first seconds, who paid for them and the odds the first five minutes give.")}
-        </p>
-        <Search />
-        {sample && (
-          <p className="mt-2.5 text-[12px] text-faint">
-            {t("Or try the newest launch:")}{" "}
-            <a href={SITE_XRAY(sample.mint)} className="text-dim underline decoration-line-2 underline-offset-4 hover:text-white">
-              ${clean(sample.symbol) || sample.mint.slice(0, 6)}
-            </a>
-          </p>
-        )}
-      </div>
-      {tiles.length > 0 && (
-        <div className={`mt-auto grid grid-cols-2 border-t border-line ${tiles.length > 2 ? "sm:grid-cols-4" : ""}`}>
-          {tiles.map((x, i) => (
-            <Tile key={x.k} k={x.k} v={x.v} sub={x.sub} tone={x.tone ?? "fg"} className={`${i % 2 ? "" : "border-r"} ${i < tiles.length - 2 ? "border-b sm:border-b-0" : ""} border-line sm:border-r sm:last:border-r-0`} />
-          ))}
-        </div>
-      )}
+    <Panel title={t("In numbers")} meta={t("live from the node")} className="lg:col-span-4" bodyClass="grid grid-cols-2">
+      {tiles.map((x, i) => (
+        <Tile key={x.k} k={x.k} v={x.v} sub={x.sub} tone={x.tone ?? "fg"} className={`border-line ${i % 2 ? "" : "border-r"} ${i < tiles.length - 2 || (tiles.length % 2 === 1 && i < tiles.length - 1) ? "border-b" : ""}`} />
+      ))}
     </Panel>
   );
 }
@@ -142,7 +85,8 @@ function Record({ record }: { record: CheckRecord | null }) {
   const read = record ? record.flaggedAvoid.n - (record.flaggedAvoid.unread ?? 0) : 0;
   const deadShare = record && read ? record.flaggedAvoid.dead / read : null;
   return (
-    <Panel title={t("Track record")} meta={t("odds vs verdict · AUC")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
+    <Panel title={t("Track record")} meta={t("odds vs verdict · AUC, published 28 Oct")} className="lg:col-span-8" bodyClass={`grid grid-cols-1 ${deadShare !== null ? "md:grid-cols-2" : ""}`}>
+      <div className="p-3.5">
       <p className="text-[12.5px] leading-[1.45] text-dim">{t("How well each ranks the coins that lived above the ones that died. 0.5 is a coin flip, 1 is perfect.")}</p>
       <div className="mt-4 grid gap-3.5">
         {AUC.map((a) => (
@@ -163,8 +107,9 @@ function Record({ record }: { record: CheckRecord | null }) {
           <span>{t("1.0 perfect")}</span>
         </div>
       </div>
+      </div>
       {deadShare !== null && record && (
-        <div className="mt-auto border-t border-line pt-3.5">
+        <div className="border-t border-line p-3.5 md:border-l md:border-t-0">
           <p className="text-[12.5px] text-fg-2">{t("Dead since, by the verdict at minute {m}", { m: record.checkedAtMin ?? 5 })}</p>
           {[
             { k: "flagged avoid", side: record.flaggedAvoid, bar: "bg-danger", text: "text-danger" },
@@ -302,56 +247,40 @@ function Bot() {
 }
 
 const PLANS = [
-  { k: "Day", p: 3, per: "per day" },
-  { k: "Week", p: 12, per: "per week" },
-  { k: "Month", p: 35, per: "per month" },
+  { k: "a day", p: 3 },
+  { k: "a week", p: 12 },
+  { k: "a month", p: 35 },
 ] as const;
 
 function Pro() {
-  const [i, setI] = useState(1);
-  const plan = PLANS[i]!;
   return (
-    <Panel title={t("Pro")} tag={t("deep check")} meta={t("paid in SOL")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
-      <div className="grid grid-cols-3 rounded-[9px] border border-line bg-night p-[3px]" role="radiogroup" aria-label={t("Pro period")}>
-        {PLANS.map((x, j) => (
-          <button
-            key={x.k}
-            type="button"
-            role="radio"
-            aria-checked={i === j}
-            onClick={() => setI(j)}
-            className={`rounded-[6px] py-[5px] text-[12px] transition-colors ${i === j ? "bg-night-raised text-white shadow-[inset_0_0_0_1px_#232c27]" : "text-dim hover:text-fg-2"}`}
-          >
-            {t(x.k)}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3.5 flex items-baseline gap-1.5">
-        <span className="text-[36px] font-medium leading-none tracking-[-0.04em] text-white">${plan.p}</span>
-        <span className="text-[12px] text-dim">{t(plan.per)}</span>
-        <span className="ml-auto text-[12px] text-moss">{t("holders ${h}", { h: Number.isInteger(plan.p / 2) ? plan.p / 2 : (plan.p / 2).toFixed(2) })}</span>
-      </div>
-      <ul className="my-3 border-t border-line">
-        {["Funding trace, 4 hops back", "Where the SOL went", "Every early wallet's history", "1 free deep check a week, opens soon"].map((f) => (
-          <li key={f} className="flex gap-2 border-b border-line py-1.5 text-[12px] text-fg-2">
+    <Panel title={t("Pro")} tag={t("opens soon")} meta={t("paid in SOL")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
+      <p className="text-[13px] leading-[1.5] text-fg-2">{t("The deep check: where the money came from and where it went. Paying is not open yet; the free X-Ray stays free.")}</p>
+      <ul className="mt-3 border-t border-line">
+        {["Funding trace, 4 hops back", "Where the SOL went after the dump", "Every early wallet's history", "1 free deep check a week"].map((f) => (
+          <li key={f} className="flex gap-2 border-b border-line py-1.5 text-[12.5px] text-fg-2">
             <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-moss" />
             {t(f)}
           </li>
         ))}
       </ul>
-      <p className="text-[11.5px] text-faint">
-        <span className="font-medium text-dim">{t("500k $ZOOAGENCY")}</span> {t("holders pay half.")}
-      </p>
-      <a href="/xray" className="mt-3 flex h-9 items-center justify-center rounded-[8px] border border-line-2 bg-night-raised text-[13px] font-medium text-white hover:border-[#3a4640] lg:mt-auto">
-        {t("Free deep check opens soon")}
+      <div className="mt-3 grid grid-cols-3 border-b border-line pb-3">
+        {PLANS.map((x) => (
+          <div key={x.k}>
+            <span className="text-[22px] font-medium leading-none tracking-[-0.03em] text-white">${x.p}</span>
+            <span className="ml-1 text-[11.5px] text-dim">{t(x.k)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2.5 text-[12px] text-dim">{t("Hold 500k $ZOOAGENCY and pay half.")}</p>
+      <a href="/xray" className="mt-3.5 flex h-9 items-center justify-center rounded-[8px] border border-line-2 bg-night-raised text-[13px] font-medium text-white hover:border-[#3a4640] lg:mt-auto">
+        {t("Use the free X-Ray now")}
       </a>
     </Panel>
   );
 }
 
-function Contests() {
-  const humans = useContestApi<HumansView>("/v1/humans", 120_000).data;
-  const weekly = useContestApi<Weekly>("/v1/agent-of-the-week", 120_000).data;
+function Contests({ humans, weekly }: { humans: HumansView | null; weekly: Weekly | null }) {
   const now = useNow(60_000);
   if (!humans && !weekly) return null;
   const model = opponentOf(humans);
@@ -406,9 +335,9 @@ function Contests() {
   );
 }
 
-function Token() {
+function Token({ wide }: { wide: boolean }) {
   return (
-    <Panel title={<span className="flex items-center gap-2"><TokenDot />$ZOOAGENCY</span>} meta={t("on ClawPump")} className="lg:col-span-4" bodyClass="flex flex-col p-3.5">
+    <Panel title={<span className="flex items-center gap-2"><TokenDot />$ZOOAGENCY</span>} meta={t("on ClawPump")} className={wide ? "lg:col-span-12" : "lg:col-span-4"} bodyClass={wide ? "grid grid-cols-1 gap-x-6 p-3.5 md:grid-cols-2" : "flex flex-col p-3.5"}>
       <ul className="border-t border-line">
         {["Pro at half price", "The weekly human contest", "Bot alerts 10 minutes first"].map((f) => (
           <li key={f} className="flex items-baseline justify-between gap-3 border-b border-line py-1.5 text-[12.5px]">
@@ -417,22 +346,26 @@ function Token() {
           </li>
         ))}
       </ul>
-      <CaRow id="home-ca" className="mt-3.5" />
-      <BuyButton className="mt-2 w-full !h-9 !text-[13px]" />
-      <div className="mt-3 flex gap-4 text-[12px]">
-        <More href={ZOOAGENCY_DEXSCREENER_URL}>DexScreener ↗</More>
-        <More href={ZOOAGENCY_SOLSCAN_URL}>Solscan ↗</More>
+      <div className={wide ? "mt-3.5 md:mt-0" : ""}>
+        <CaRow id="home-ca" className={wide ? "" : "mt-3.5"} />
+        <BuyButton className="mt-2 w-full !h-9 !text-[13px]" />
+        <div className="mt-3 flex gap-4 text-[12px]">
+          <More href={ZOOAGENCY_DEXSCREENER_URL}>DexScreener ↗</More>
+          <More href={ZOOAGENCY_SOLSCAN_URL}>Solscan ↗</More>
+        </div>
       </div>
     </Panel>
   );
 }
 
-/** The home: one screen that checks a coin, shows the tape and the record, then what else there is. Every number is read live; a part that cannot be read is left out. */
+/** The home: the hero with the scene and the search, how it works, then the tape, the numbers, the record and the rest. Every number is read live; a part that cannot be read is left out. */
 export default function Home() {
   const feedBody = useNorth<FeedBody>("/v1/chain/feed", 15_000);
   const usage = useNorth<Usage>("/v1/usage", 120_000);
-  const chain = useNorth<Chain>("/v1/chain", 60_000);
+  const chain = useNorth<Chain>("/v1/chain", 30_000);
   const record = useNorth<CheckRecord>("/v1/check/record", 120_000);
+  const humans = useContestApi<HumansView>("/v1/humans", 120_000).data;
+  const weekly = useContestApi<Weekly>("/v1/agent-of-the-week", 120_000).data;
   const coins = useMemo(() => {
     const all = [...(feedBody?.new ?? []), ...(feedBody?.soon ?? []), ...(feedBody?.migrated ?? [])];
     const seen = new Set<string>();
@@ -441,17 +374,27 @@ export default function Home() {
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 30);
   }, [feedBody]);
+  // One coin for the examples, picked once: the newest that is past its first five minutes, so its odds are the 5-minute ones.
+  const [sample, setSample] = useState<FeedCoin | undefined>();
+  useEffect(() => {
+    if (sample || !coins.length) return;
+    setSample(coins.find((c) => Date.now() - c.createdAt > 5 * 60_000) ?? coins[0]);
+  }, [coins, sample]);
 
   return (
-    <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-3 px-4 pb-8 pt-4 sm:px-5 lg:grid-cols-12">
-      <Hero usage={usage} chain={chain} record={record} feed={coins} />
-      <Record record={record} />
-      <LiveStrip coins={coins} live={!!feedBody?.stream?.live} />
-      <Extension usage={usage} />
-      <Bot />
-      <Pro />
-      <Contests />
-      <Token />
-    </div>
+    <>
+      <Hero chain={chain} sample={coins[0]} />
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-3 px-4 pb-8 pt-4 sm:px-5 lg:grid-cols-12">
+        <HowItWorks sample={sample} />
+        <LiveStrip coins={coins} live={!!feedBody?.stream?.live} />
+        <Record record={record} />
+        <Numbers usage={usage} chain={chain} record={record} />
+        <Extension usage={usage} />
+        <Bot />
+        <Pro />
+        <Contests humans={humans} weekly={weekly} />
+        <Token wide={!humans && !weekly} />
+      </div>
+    </>
   );
 }
