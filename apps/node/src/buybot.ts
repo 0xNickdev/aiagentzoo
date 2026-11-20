@@ -83,6 +83,22 @@ export function ownEmoji(html: string): string {
   return html.replace(/💰|💲|🪙|👀|🆕|👜|📈|📊|🛒|🔎/gu, (e) => `<tg-emoji emoji-id="${OWN[e]}">${e}</tg-emoji>`);
 }
 
+/**
+ * What a failed fetch was: undici throws a bare "fetch failed" and keeps the reason (ECONNREFUSED, ENOTFOUND,
+ * a timeout) in error.cause, so the step and the host go in front of it.
+ */
+export function failure(step: string, url: string | null, error: unknown): string {
+  const e = error as Error & { cause?: { code?: string; message?: string } };
+  let host = "";
+  try {
+    if (url) host = ` ${new URL(url).host}`;
+  } catch {
+    /* not a url */
+  }
+  const cause = e?.cause?.code ?? e?.cause?.message ?? (e?.name === "TimeoutError" ? "timeout" : "");
+  return `${step}${host}: ${String(e?.message ?? error).slice(0, 160)}${cause && !String(e?.message).includes(cause) ? ` (${cause})` : ""}`;
+}
+
 export function buyMessage(f: BuyFacts): string {
   const s = f.swap;
   const price = s.tokens > 0 ? s.sol / s.tokens : 0;
@@ -202,13 +218,30 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
   let stopped = false;
   let busy = false;
   let cursor: number | null = null;
+  const startedAt = Date.now();
+  let northUp = false;
+  let step = "state";
+  let url: string | null = null;
   const round = async () => {
     if (stopped || busy) return;
     busy = true;
+    step = "state";
+    url = null;
     try {
       if (cursor === null) cursor = (await opts.store.get<number>("buybot:after")) ?? -1;
       // North can pause for a few seconds while it prunes the tape: wait it out instead of logging a timeout.
-      const r = await f(`${opts.northUrl}/v1/chain/swaps/${mint}?after=${Math.max(0, cursor)}`, { signal: AbortSignal.timeout(20_000) });
+      step = "north tape";
+      url = `${opts.northUrl}/v1/chain/swaps/${mint}?after=${Math.max(0, cursor)}`;
+      let r: Response;
+      try {
+        r = await f(url, { signal: AbortSignal.timeout(20_000) });
+      } catch (error) {
+        // All three nodes start together and north opens its port last: the first rounds find nobody there yet.
+        const code = (error as { cause?: { code?: string } }).cause?.code;
+        if (!northUp && Date.now() - startedAt < 120_000 && (code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "EAI_AGAIN")) return;
+        throw error;
+      }
+      northUp = true;
       if (!r.ok) return;
       const body = (await r.json()) as { swaps: FollowedSwap[] };
       if (!body.swaps.length) return;
@@ -218,7 +251,10 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
       // A first start posts nothing old: it only marks where it begins.
       if (first) return;
       const buys = body.swaps.filter((s) => s.isBuy && s.sol >= minSol);
+      step = "price and supply";
+      url = null;
       const [usdNow, supplyNow] = await Promise.all([solUsd(), supply()]);
+      step = "buyer balance";
       for (const swap of buys.slice(0, PER_ROUND)) {
         const balance = await balanceOf(swap.user, f, Date.now(), true);
         const text = buyMessage({ swap, symbol, mint, balance, solUsd: usdNow, supply: supplyNow });
@@ -233,7 +269,7 @@ export function startBuyBot(opts: BuyBotOptions): () => void {
         await post(`<b>+${rest.length} more buys</b>, ${total.toFixed(2)} SOL in all`).catch(() => null);
       }
     } catch (error) {
-      log(`[buybot] ${(error as Error).message?.slice(0, 200)}`);
+      log(`[buybot] ${failure(step, url, error)}`);
     } finally {
       busy = false;
     }

@@ -721,6 +721,9 @@ test("the tape keeps each creator's record and lists fresh launches that pass th
   assert.equal(rec.launches24h, 3);
   assert.equal(rec.dumped, 2);
   assert.equal(rec.medianDumpMin, 2);
+  // Oldest first: the two dumped, then the one still too young to call.
+  assert.deepEqual(rec.timeline, ["d", "d", "u"]);
+  assert.deepEqual(tape.creator(DEV, now + 20 * 60_000)!.timeline, ["d", "d", "a"]);
   assert.equal(tape.creator("nobody", now), null);
   // Two dumps is not yet a wall entry; a third puts the dev on it.
   assert.equal(tape.ruggers(10, now).length, 0);

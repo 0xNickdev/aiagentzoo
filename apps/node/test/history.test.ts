@@ -91,6 +91,9 @@ test("history counts a creator's launches over many days and prunes past the cut
     assert.equal(totals.launches, 4);
     assert.equal(totals.dumped, 4);
     assert.equal(totals.medianDumpMin, 2);
+    // One letter per counted launch, oldest first, for the X-Ray's row of squares.
+    assert.deepEqual(totals.timeline, ["d", "d", "d", "d"]);
+    assert.deepEqual(store.creatorRecord(DEV, now - 30 * 86_400_000)!.timeline, ["d"]);
     // At launch, two days back: only that token.
     assert.equal(store.creatorRecord(DEV, now - 30 * 86_400_000)!.launches48h, 1);
 

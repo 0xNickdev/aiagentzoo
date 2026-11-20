@@ -13,11 +13,11 @@ import { type OperatorRecord, Operators } from "./operators.ts";
 import { COMMON_WALLETS, type PrintRecord, type ToolPrint } from "./fingerprint.ts";
 import { curveCapOf, CURVE_ALIVE_SOL, CURVE_DEAD_SOL, POOL_ALIVE_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { PumpEvent, Venue } from "./pumpParse.ts";
-import { capsFrom, DAY_MS, devPattern, type DevPattern, hash32, type LaunchOutcome, ordinal, repeatsOf, supplyOf, tempoOf } from "./pumpHelpers.ts";
+import { capsFrom, DAY_MS, devPattern, type DevPattern, hash32, type LaunchCode, launchCode, type LaunchOutcome, ordinal, repeatsOf, supplyOf, tempoOf, TIMELINE_MAX } from "./pumpHelpers.ts";
 
 // The parser, the stream and the helpers live in their own modules; everything that imported them from here still can.
 export { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, Reader, type Venue, WSOL } from "./pumpParse.ts";
-export { capsFrom, devPattern, type DevPattern, type LaunchOutcome, repeatsOf, tempoOf } from "./pumpHelpers.ts";
+export { capsFrom, devPattern, type DevPattern, type LaunchCode, launchCode, type LaunchOutcome, repeatsOf, tempoOf, TIMELINE_MAX } from "./pumpHelpers.ts";
 export { startPumpStream, startRelayFeed, type StreamOptions, type StreamSink } from "./stream.ts";
 
 /** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
@@ -264,6 +264,8 @@ export interface CreatorRecord {
   repeats?: Array<{ symbol: string; n: number }>;
   /** Launches a day while active, and days since the last one. */
   tempo?: { perDay: number; idleDays: number };
+  /** Every launch counted above, oldest first, one code each ("d" dumped, "g" graduated, "a" not dumped, "u" too young); at most the last 1000. */
+  timeline?: LaunchCode[];
 }
 
 /** A fresh token that passed the basic checks the tape can make; not a judgement of its worth. */
@@ -309,7 +311,7 @@ const WHALE_SOL = 10;
 const KEEP_MS = 48 * 3_600_000;
 /**
  * Newest launches kept in order: six hours and more even at a busy 50 a minute. It was 500 (about 20 minutes),
- * which left the clean list and the koi looking at nothing older than that.
+ * which left the clean list looking at nothing older than that.
  */
 const RECENT_KEEP = 20_000;
 /**
@@ -1413,6 +1415,7 @@ export class PumpTape {
       pattern: devPattern(all),
       repeats: repeatsOf(all),
       tempo: tempoOf(all, now),
+      timeline: [...tokens].sort((a, b) => a.createdAt - b.createdAt).slice(-TIMELINE_MAX).map((t) => launchCode({ createdAt: t.createdAt, dumped: t.dumpedAt !== null, graduated: t.graduated }, now)),
     };
   }
 
@@ -1539,15 +1542,6 @@ export class PumpTape {
   }
 
   /**
-   * Fresh launches that pass the checks the tape can make: the creator has not sold, the wallet is not a serial
-   * launcher, the buying is spread across many wallets and some came back for more. It says nothing about whether
-   * a token is worth anything, only that the usual rug signs are absent so far.
-   */
-  /**
-   * Launches that passed the basic checks. `wide` is the koi's net: up to six hours old and a smaller crowd, because
-   * the koi's own judgement does the strict part; the default is the stricter list people see.
-   */
-  /**
    * The live feed's candidates, pump.fun only, as pump.fun's own board sorts them: new (the last ten minutes, newest
    * first), soon (still on the curve with a third or more of the way done, closest to graduating first) and migrated
    * (graduated in the last day, its pool not drained, newest first). The check decides which of them are shown.
@@ -1579,6 +1573,12 @@ export class PumpTape {
     };
   }
 
+  /**
+   * Fresh launches that pass the checks the tape can make: the creator has not sold, the wallet is not a serial
+   * launcher, the buying is spread across many wallets and some came back for more. It says nothing about whether
+   * a token is worth anything, only that the usual rug signs are absent so far. `wide` takes launches up to six
+   * hours old and a smaller crowd; the default is the stricter list people see.
+   */
   clean(limit = 20, now = Date.now(), wide = false): CleanLaunch[] {
     const out: CleanLaunch[] = [];
     for (const mint of this.recent) {

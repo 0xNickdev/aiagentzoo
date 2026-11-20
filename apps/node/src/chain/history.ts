@@ -1,7 +1,7 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { checkToken } from "./check.ts";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { capsFrom, CHAIN_OF_VENUE, type ChainFacts, type CreatorRecord, devPattern, type PulseEvent, type PumpTape, repeatsOf, tempoOf, UNIT_OF_CHAIN, type Venue } from "./pump.ts";
+import { capsFrom, CHAIN_OF_VENUE, type ChainFacts, type CreatorRecord, devPattern, type LaunchCode, launchCode, type PulseEvent, type PumpTape, repeatsOf, tempoOf, TIMELINE_MAX, UNIT_OF_CHAIN, type Venue } from "./pump.ts";
 
 /** What a kept token's amounts are in, from where it launched: SOL unless the venue is on another chain. */
 const unitOfVenue = (venue: string | null | undefined) => UNIT_OF_CHAIN[CHAIN_OF_VENUE[(venue ?? "") as Venue] ?? "solana"];
@@ -82,6 +82,7 @@ export interface HistoryTotals {
   pattern?: CreatorRecord["pattern"];
   repeats?: CreatorRecord["repeats"];
   tempo?: CreatorRecord["tempo"];
+  timeline?: LaunchCode[];
 }
 
 export class HistoryStore {
@@ -169,6 +170,8 @@ export class HistoryStore {
         cap_first, cap_peak, cap_peak_at, cap_dump, cap_low, cap_high, dev_first_sell_at FROM tokens WHERE creator_id = ? ORDER BY created_at DESC LIMIT 40`),
       venue: p("SELECT venue FROM tokens WHERE mint = ?"),
       walletVenue: p(`SELECT t.venue FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.wallet_id = ? ORDER BY wt.token_id DESC LIMIT 1`),
+      timeline: p(`SELECT created_at, dev_dumped_at IS NOT NULL AS dumped, graduated_at IS NOT NULL AS graduated FROM tokens
+        WHERE creator_id = ? AND created_at > ? AND created_at <= ? ORDER BY created_at DESC LIMIT ${TIMELINE_MAX}`),
       dumpMins: p("SELECT dev_dumped_at - created_at AS ms FROM tokens WHERE creator_id = ? AND dev_dumped_at IS NOT NULL AND created_at > ? AND created_at <= ? ORDER BY ms LIMIT 2000"),
       window: p(`SELECT count(*) AS n, sum(created_at > ?) AS n24, sum(dev_dumped_at IS NOT NULL) AS dumped, sum(graduated_at IS NOT NULL) AS graduated
         FROM tokens WHERE creator_id = ? AND created_at > ? AND created_at <= ?`),
@@ -342,6 +345,7 @@ export class HistoryStore {
       medianDumpMin: this.medianDumpMin(w.id, end - 2 * DAY_MS, end),
       graduated: Number(win.graduated ?? 0),
       ...this.habitsOf(w.id, end),
+      timeline: this.timelineOf(w.id, end - 2 * DAY_MS, end),
     };
   }
 
@@ -356,7 +360,14 @@ export class HistoryStore {
       medianDumpMin: this.medianDumpMin(w.id, 0, Number.MAX_SAFE_INTEGER),
       graduated: Number((this.s.graduated!.get(w.id) as { n: number }).n),
       ...this.habitsOf(w.id),
+      timeline: this.timelineOf(w.id, 0, Number.MAX_SAFE_INTEGER),
     };
+  }
+
+  /** The creator's launches between two times as one letter each, oldest first, the newest TIMELINE_MAX of them. */
+  private timelineOf(creatorId: number, from: number, to: number, now = Date.now()): LaunchCode[] {
+    const rows = this.s.timeline!.all(creatorId, from, to) as Array<{ created_at: number; dumped: number; graduated: number }>;
+    return rows.reverse().map((r) => launchCode({ createdAt: Number(r.created_at), dumped: Boolean(r.dumped), graduated: Boolean(r.graduated) }, now));
   }
 
   private medianDumpMin(creatorId: number, from: number, to: number): number | null {

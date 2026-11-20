@@ -79,6 +79,21 @@ export function repeatsOf(list: Array<{ symbol: string }>): Array<{ symbol: stri
   return [...n].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([symbol, c]) => ({ symbol, n: c }));
 }
 
+/** The most launches a creator's timeline carries; older ones fall off its front. */
+export const TIMELINE_MAX = 1000;
+/** A launch younger than this that the dev has not sold is still unsettled: most dumps come in the first minutes. */
+export const TIMELINE_SETTLE_MS = 15 * 60_000;
+/**
+ * One launch as one letter for the X-Ray's row of squares: "d" the dev dumped it, "g" it graduated (and was not
+ * dumped), "u" too young to tell, "a" anything else (not dumped). The same facts the counts are summed from.
+ */
+export type LaunchCode = "d" | "g" | "a" | "u";
+export function launchCode(l: { createdAt: number; dumped: boolean; graduated: boolean }, now = Date.now()): LaunchCode {
+  if (l.dumped) return "d";
+  if (l.graduated) return "g";
+  return now - l.createdAt < TIMELINE_SETTLE_MS ? "u" : "a";
+}
+
 /** Launches a day over the days they were active, and days since the last launch. */
 export function tempoOf(list: Array<{ createdAt: number }>, now = Date.now()): { perDay: number; idleDays: number } | undefined {
   if (!list.length) return undefined;

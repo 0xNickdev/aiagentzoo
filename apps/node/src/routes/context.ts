@@ -102,6 +102,8 @@ export function createRouteContext(options: ServerOptions, serverAddress: () => 
       medianDumpMin: h.medianDumpMin ?? rec?.medianDumpMin ?? null,
       graduated: Math.max(h.graduated, rec?.graduated ?? 0),
       recent: (rec?.recent.length ?? 0) >= h.recent.length ? rec!.recent : h.recent,
+      // One letter per launch counted in launches48h (here: back to the first day), oldest first.
+      timeline: (rec?.timeline?.length ?? 0) > (h.timeline?.length ?? 0) ? rec!.timeline : h.timeline,
       last48h: rec ? { launches: rec.launches48h, dumped: rec.dumped } : { launches: 0, dumped: 0 },
       counted: "history" as const,
       historySince: history!.since(),

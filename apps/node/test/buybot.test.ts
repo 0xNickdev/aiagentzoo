@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PumpTape } from "../src/chain/pump.ts";
-import { bills, buyMessage, compact, holderLine, ownEmoji } from "../src/buybot.ts";
+import { bills, buyMessage, compact, failure, holderLine, ownEmoji } from "../src/buybot.ts";
 
 const POOL = "CpZyjihejMJ8i6xRFL6Znmpt4HdgGirMvQh5QqdgJZ2v";
 const MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -53,4 +53,12 @@ test("a buy message has the size, the buyer, the cap and no ads", () => {
 test("our own emoji wrap the plain ones, which stay inside as the fallback, and leave the rest of the post alone", () => {
   const out = ownEmoji("💰💰\n📈 Market Cap $30.4K <b>x</b> 🚀");
   assert.equal(out, '<tg-emoji emoji-id="5472307506455817334">💰</tg-emoji><tg-emoji emoji-id="5472307506455817334">💰</tg-emoji>\n<tg-emoji emoji-id="5469737243407065908">📈</tg-emoji> Market Cap $30.4K <b>x</b> 🚀');
+});
+
+test("a failed fetch is logged with its step, its host and undici's hidden cause", () => {
+  const refused = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+  assert.equal(failure("north tape", "http://zoo-north:8787/v1/chain/swaps/x?after=1", refused), "north tape zoo-north:8787: fetch failed (ECONNREFUSED)");
+  assert.equal(failure("state", null, new Error("disk full")), "state: disk full");
+  const timeout = Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+  assert.equal(failure("north tape", "http://zoo-north:8787/", timeout), "north tape zoo-north:8787: The operation was aborted due to timeout");
 });
