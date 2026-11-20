@@ -30,10 +30,17 @@ function useCopy(targetId: string) {
   return { copy, label, ok: state === "copied" };
 }
 
-/** A small round mark for the token: a plain warm orb, no picture. */
+/** The token's own mark (the owl), small and round. */
 export const TokenDot = ({ className = "" }: { className?: string }) => (
-  <span aria-hidden className={`inline-block h-3.5 w-3.5 shrink-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#ffe2b0,#e08a3c_60%,#7a3a12)] ${className}`} />
+  <img src="/token-64.png" alt="" aria-hidden width={16} height={16} className={`inline-block h-4 w-4 shrink-0 rounded-full ring-1 ring-white/10 ${className}`} />
 );
+
+const CopyIcon = ({ ok }: { ok: boolean }) =>
+  ok ? (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m5 12 5 5 9-10" /></svg>
+  ) : (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
+  );
 
 /** The address on one line with a copy button, as in the dashboard's sidebar card. */
 export function CaRow({ id, className = "" }: { id: string; className?: string }) {
@@ -83,30 +90,36 @@ export function TokenCard({ id, className = "" }: { id: string; className?: stri
   );
 }
 
-/** The bar's version: the ticker, the short address with copy, and the buy button. */
+/** The bar's version: one capsule - mark, ticker, short address with a copy icon, and a quiet buy link. */
 export function TokenChip() {
-  const { copy, label, ok } = useCopy("bar-ca");
+  const { copy, ok } = useCopy("bar-ca");
   return (
-    <div className="flex items-center gap-2">
-      <div className="hidden h-8 items-center gap-2 rounded-[8px] border border-line bg-night-surface pl-2.5 pr-1 xl:flex">
-        <TokenDot className="!h-3 !w-3" />
+    <div className="hidden h-8 items-center rounded-full border border-line-2 bg-night-surface/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:flex">
+      <button
+        type="button"
+        onClick={copy}
+        title={ok ? t("Copied") : t("Copy the $ZOOAGENCY address")}
+        aria-label={t("Copy the $ZOOAGENCY address")}
+        className="group flex h-full items-center gap-2 rounded-l-full pl-1.5 pr-3 hover:bg-white/[0.03]"
+      >
+        <TokenDot className="!h-5 !w-5" />
         <span className="text-[12.5px] font-medium text-white">$ZOOAGENCY</span>
-        <code id="bar-ca" className="font-mono text-[11.5px] text-dim" title={ZOOAGENCY_MINT}>
+        <code id="bar-ca" className="font-mono text-[11.5px] text-dim group-hover:text-fg-2">
           <span className="sr-only">{ZOOAGENCY_MINT}</span>
-          <span aria-hidden>
-            {ZOOAGENCY_MINT.slice(0, 4)}…{ZOOAGENCY_MINT.slice(-4)}
-          </span>
+          <span aria-hidden>{ZOOAGENCY_MINT.slice(0, 4)}…{ZOOAGENCY_MINT.slice(-4)}</span>
         </code>
-        <button
-          type="button"
-          onClick={copy}
-          aria-label={t("Copy the $ZOOAGENCY address")}
-          className={`h-6 min-w-[52px] rounded-[5px] border bg-night-raised px-2 text-[11.5px] ${ok ? "border-moss-edge text-moss" : "border-line-2 text-fg-2 hover:text-white"}`}
-        >
-          {label}
-        </button>
-      </div>
-      <BuyButton />
+        <span className={ok ? "text-moss" : "text-faint group-hover:text-fg-2"}><CopyIcon ok={ok} /></span>
+      </button>
+      <span aria-hidden className="h-4 w-px bg-line-2" />
+      <a
+        href={ZOOAGENCY_CLAWPUMP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-full items-center gap-1 rounded-r-full pl-3 pr-3.5 text-[12.5px] font-medium text-moss hover:bg-white/[0.03]"
+      >
+        {t("Buy")}
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M7 17 17 7M8 7h9v9" /></svg>
+      </a>
     </div>
   );
 }

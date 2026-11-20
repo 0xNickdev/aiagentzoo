@@ -68,7 +68,7 @@
 .x-sp { flex: 1; min-height: 16px; }
 .x-tokc { border: 1px solid var(--line-2); border-radius: 10px; padding: 12px; background: var(--surface); }
 .x-tokc .x-h { display: flex; align-items: center; gap: 8px; color: var(--fg); font-weight: 600; font-size: 13px; }
-.x-tk { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe2b0, #e08a3c 60%, #7a3a12); flex: none; }
+.x-tk { width: 18px; height: 18px; border-radius: 50%; background: url(/token-64.png) center/cover; box-shadow: 0 0 0 1px rgba(255,255,255,.1); flex: none; }
 .x-tokc p { margin: 6px 0 10px; color: var(--fg-3); font-size: 12px; line-height: 1.45; }
 .x-carow { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 4px 0 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--night); }
 .x-carow code { flex: 1; min-width: 0; font-size: 11.5px; color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
