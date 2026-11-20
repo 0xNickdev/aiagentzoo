@@ -149,10 +149,6 @@ function Statement() {
 /* ---------- b) the proof ---------- */
 
 /** Published 28 Oct 2026: how well each ranks the launches that lived above the ones that died. 0.5 is a coin flip. */
-const AUC = [
-  { k: "Odds model", v: 0.89, line: "bg-white", text: "text-white" },
-  { k: "Verdict alone", v: 0.59, line: "bg-[#6b736f]", text: "text-fg-4" },
-];
 
 function share(s?: Side) {
   if (!s) return null;
@@ -191,35 +187,31 @@ function Proof({ record }: { record: CheckRecord | null }) {
       <div className={flagged ? "mt-[clamp(96px,12vw,168px)] border-t border-line pt-[clamp(48px,6vw,88px)]" : ""}>
         <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <div>
-            <p className={`${display} whitespace-nowrap text-[clamp(52px,8vw,120px)] leading-[0.9] text-white`}>
-              <Reveal>0.89</Reveal> <Reveal className="text-fg-4">{t("vs")}</Reveal> <Reveal className="text-fg-4">0.59</Reveal>
+            <p className={`${display} whitespace-nowrap text-[clamp(64px,10vw,150px)] leading-[0.9] text-white`}>
+              <Reveal>0.89</Reveal>
             </p>
-            <div ref={bars} className="mt-12 max-w-[760px]">
-              {AUC.map((a) => (
-                <div key={a.k} className="mb-7">
-                  <div className="mb-2.5 flex items-baseline justify-between text-[14px]">
-                    <span className={a.text}>{t(a.k)}</span>
-                    <span className={`font-mono tabular-nums ${a.text}`}>{(0.5 + (a.v - 0.5) * k).toFixed(2)}</span>
-                  </div>
-                  {/* Scale 0.5 to 1: the line's length is how far past a coin flip it ranks. */}
-                  <div className="relative h-px bg-line-2">
-                    <div className={`absolute left-0 top-[-0.5px] h-[2px] ${a.line}`} style={{ width: `${((a.v - 0.5) / 0.5) * 100 * k}%` }} />
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between font-mono text-[11px] text-faint">
-                <span>0.5</span>
+            <div ref={bars} className="mt-14 max-w-[760px]">
+              {/* One scale, 0.5 (a coin flip) to 1.0 (never wrong). The line draws on scroll; the number never moves. */}
+              <div className="relative h-px bg-line-2">
+                <div className="absolute left-0 top-[-0.5px] h-[2px] bg-white" style={{ width: `${((0.89 - 0.5) / 0.5) * 100 * k}%` }} />
+                <div className="absolute top-[-7px] h-[15px] w-px bg-white" style={{ left: `${((0.89 - 0.5) / 0.5) * 100}%`, opacity: k > 0.98 ? 1 : 0.25 }} />
+                <span className="absolute top-[-30px] -translate-x-1/2 whitespace-nowrap text-[13px] text-white" style={{ left: `${((0.89 - 0.5) / 0.5) * 100}%` }}>
+                  {t("ZOO odds model")}
+                </span>
+              </div>
+              <div className="mt-3 flex justify-between font-mono text-[11px] text-faint">
+                <span>{t("0.5 coin flip")}</span>
                 <span>0.75</span>
-                <span>1.0</span>
+                <span>{t("1.0 perfect")}</span>
               </div>
             </div>
           </div>
           <div className="max-w-[440px] lg:pt-4">
             <p className="text-[20px] font-medium leading-[1.35] tracking-[-0.02em] text-white sm:text-[24px]">
-              {t("The odds model ranks coins far better than the verdict alone.")}
+              {t("Our odds model picks which coins survive.")}
             </p>
             <p className={`mt-5 ${lead}`}>
-              {t("Take one coin that lived and one that died. AUC is how often the model puts the one that lived higher. 0.5 is a coin flip, 1.0 is never wrong.")}
+              {t("Take one coin that lived and one that died. 89 times out of 100 the model rates the survivor higher. Guessing gets you 50.")}
             </p>
             <p className="mt-6 border-t border-line pt-3 text-[13px] text-faint">{t("Area under the curve, published 28 Oct 2026")}</p>
           </div>
