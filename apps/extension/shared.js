@@ -4,19 +4,27 @@ var ZOO = (() => {
   const BOT = "https://t.me/zooaiagency_bot";
   const TONE = {
     avoid: { get label() { return t("AVOID"); }, color: "#ff8a7e", badge: "!!", badgeBg: "#d9584b" },
-    caution: { get label() { return t("CAUTION"); }, color: "#f2d39b", badge: "!", badgeBg: "#b8913f" },
-    pass: { get label() { return t("NO RED FLAGS"); }, color: "#9df3b0", badge: "ok", badgeBg: "#3f8f55" },
+    caution: { get label() { return t("CAUTION"); }, color: "#ffc27a", badge: "!", badgeBg: "#b8913f" },
+    pass: { get label() { return t("NO RED FLAGS"); }, color: "#a6e3b4", badge: "ok", badgeBg: "#3f8f55" },
     unknown: { get label() { return t("NOT ON THE STREAM"); }, color: "#d9d8d3", badge: "", badgeBg: "#444" },
   };
-  const VENUE = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", fourmeme: "four.meme" };
-  /** A Solana address (base58) or a BNB Chain one (0x and forty hex digits). */
-  const ADDR = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/g;
-  /** Every token or wallet address in a piece of text; a 0x address is lowercased, the chain does not care about case. */
-  const addresses = (text) => [...new Set((String(text || "").match(ADDR) || []).map((a) => (a.startsWith("0x") ? a.toLowerCase() : a)))];
-  const isBsc = (a) => /^0x[0-9a-f]{40}$/i.test(a);
-  /** The chain's explorer for a wallet. */
-  const explorer = (a) => (isBsc(a) ? `https://bscscan.com/address/${a}` : `https://solscan.io/account/${a}`);
-  const explorerName = (a) => (isBsc(a) ? "BscScan" : "Solscan");
+  const VENUE = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora" };
+  /** A Solana address (base58, 32 to 44 characters). The zoo reads Solana only. */
+  const ADDR = /(?<![0-9A-Za-z])[1-9A-HJ-NP-Za-km-z]{32,44}(?![0-9A-Za-z])/g;
+  /** Every token or wallet address in a piece of text. */
+  const addresses = (text) => [...new Set(String(text || "").match(ADDR) || [])];
+  /** The explorer for a wallet. */
+  const explorer = (a) => `https://solscan.io/account/${a}`;
+  const explorerName = () => "Solscan";
+  /** The odds model's chance to be alive tomorrow, as a percent: the same rounding as the site. */
+  const oddsPct = (p) => {
+    const v = p * 100;
+    return v >= 10 ? String(Math.round(v)) : v >= 0.1 ? v.toFixed(1) : v > 0 ? v.toFixed(2) : "0";
+  };
+  /** The average launch's chance to be alive tomorrow, when the node does not send one. Same as the site. */
+  const AVG_RUN = 0.027;
+  /** "0.1% alive" for a check with odds, null without. */
+  const alive = (c) => (c?.odds && typeof c.odds.run === "number" ? t("{p}% alive", { p: oddsPct(c.odds.run) }) : null);
   const pct = (x) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x > 0 ? `${(x * 100).toFixed(1)}%` : "0%");
   const short = (a) => `${a.slice(0, 4)}…${a.slice(-4)}`;
   const secs = (s) => (s === null || s === undefined ? "-" : s < 120 ? `${s}s` : `${Math.round(s / 60)}m`);
@@ -27,7 +35,7 @@ var ZOO = (() => {
   };
   const sym = (s) => String(s || "?").replace(/^\$+/, "");
   const ask = (msg) => new Promise((res) => chrome.runtime.sendMessage(msg, (r) => res(chrome.runtime.lastError ? { error: t("The extension restarted. Reload the page.") } : r)));
-  return { SITE, BOT, TONE, VENUE, addresses, isBsc, explorer, explorerName, pct, short, secs, mins, ago, sym, ask };
+  return { SITE, BOT, TONE, VENUE, addresses, explorer, explorerName, oddsPct, AVG_RUN, alive, pct, short, secs, mins, ago, sym, ask };
 })();
 
 // English and Simplified Chinese. Strings are keyed by their English text: t("Alert me"). A string without a
@@ -85,7 +93,16 @@ var ZH = {
   home: "主页",
   // background
   "Ten full x-rays a minute on the free tier. Try again in a minute.": "免费版每分钟 10 次完整 X 光，请一分钟后再试。",
-  "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora、four.meme）。",
+  "Not a Solana launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).": "不是数据流在过去两天里看到的 Solana 新币（pump.fun、LaunchLab、Meteora）。",
+  "Solana only: paste a Solana token or wallet address.": "仅支持 Solana：请粘贴 Solana 代币或钱包地址。",
+  "{p}% alive": "{p}% 存活",
+  tomorrow: "明天",
+  "{p}% alive tomorrow": "明天仍存活的概率 {p}%",
+  "chance to be alive tomorrow": "明天仍存活的概率",
+  "average launch {a}%": "平均新币 {a}%",
+  ODDS: "存活概率",
+  "at 5 min": "第 5 分钟读数",
+  "early read": "早期读数",
   "Too many lookups this minute. Try again in a minute.": "这一分钟查询太多了，请一分钟后再试。",
   "This wallet did not launch, snipe or fund a launch the stream saw in the last two days.": "过去两天里，这个钱包没有发过、狙过或资助过数据流看到的币。",
   "X-Ray this token": "X 光查看这个币",
@@ -102,7 +119,7 @@ var ZH = {
   "token or wallet address, or a link": "代币或钱包地址，或链接",
   "X-ray": "X 光",
   "See who you're buying from.": "看清你在跟谁买。",
-  "Open a token on pump.fun, four.meme, DexScreener, gmgn, Axiom, Photon or BullX: the verdict shows up on the page.": "在 pump.fun、four.meme、DexScreener、gmgn、Axiom、Photon 或 BullX 打开一个币：判定会直接显示在页面上。",
+  "Open a Solana token on pump.fun, DexScreener, gmgn, Axiom, Photon or BullX: the verdict and its odds show up on the page.": "在 pump.fun、DexScreener、gmgn、Axiom、Photon 或 BullX 打开一个 Solana 币：判定和存活概率会直接显示在页面上。",
   "On X, token addresses in posts get a verdict chip.": "在 X 上，帖子里的代币地址旁会出现判定标签。",
   "Anywhere: select an address, right click, X-Ray this token.": "任何地方：选中地址，右键，X 光查看这个币。",
   "ALERTS ON": "提醒已开",
@@ -111,8 +128,9 @@ var ZH = {
   BUILDERS: "建设者",
   "48 hours": "48 小时",
   "read from public chain data · not financial advice · ": "数据来自公开的链上记录 · 不构成投资建议 · ",
+  "our token": "我们的代币",
   "read from public chain data · not financial advice": "数据来自公开的链上记录 · 不构成投资建议",
-  "Paste a token or wallet address (Solana or BNB Chain), or a link.": "粘贴一个代币或钱包地址（Solana 或 BNB Chain），或链接。",
+  "Paste a Solana token or wallet address, or a link.": "粘贴一个 Solana 代币或钱包地址，或链接。",
   "since {t}": "{t} 起",
   "Stop alerts": "关闭提醒",
   "Open its page": "打开它的页面",
@@ -251,8 +269,6 @@ var ZOO_CHAIN = [
   [/^wallet's (\d+)(?:st|nd|rd|th) launch today$/, (m) => `该钱包今天第 ${m[1]} 次发币`],
   [/^\+([\d.]+) SOL buy after graduation$/, (m) => `毕业后 +${m[1]} SOL 大单买入`],
   [/^\+([\d.]+) SOL buy$/, (m) => `+${m[1]} SOL 大单买入`],
-  [/^\+([\d.]+) BNB buy$/, (m) => `+${m[1]} BNB 大单买入`],
-  [/^not a launch from four\.meme in the last two days, so there is no chain record to check$/, () => "不是过去两天里在 four.meme 上发的币，所以没有链上记录可查"],
   [/^graduated$/, () => "已毕业"],
   [/^new launch$/, () => "新币上线"],
   [/^creator sold (\d+)% of their bag$/, (m) => `开发者卖出了 ${m[1]}% 的筹码`],
@@ -312,7 +328,7 @@ var ZOO_CHAIN = [
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^pass means .*$/, () => "通过只代表链上没看到开发者砸盘、捆绑、开发者小号、狙击手囤货、连环发币或内盘归零，不代表会涨"],
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],
-  [/^holders could not be read from (Solana|BNB Chain) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
+  [/^holders could not be read from (Solana) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
   [/^the chain stream is down right now: .*$/, () => "链上数据流暂时中断：结果可能不是最新的"],
 ];
 /** A reason or note from the node, in the reader's language when the pattern is known; anything else passes through. */

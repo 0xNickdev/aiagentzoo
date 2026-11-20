@@ -2,7 +2,7 @@
 (() => {
   if (window.__zooXray) return;
   window.__zooXray = true;
-  const { TONE, addresses, sym, ask } = ZOO;
+  const { TONE, addresses, sym, ask, alive } = ZOO;
   const { h } = ZooPanel;
 
   // The fonts live in the extension, so the panel looks the same on every site.
@@ -28,6 +28,7 @@
     .wrap .pill .brand { flex:none; white-space:nowrap; font:500 9.5px ZooGeistMono, ui-monospace, monospace; letter-spacing:.18em; color:rgba(238,237,233,.45); }
     .wrap .pill .bar { width:1px; height:14px; background:rgba(255,255,255,.12); }
     .wrap .pill .v { flex:none; white-space:nowrap; font:500 11px ZooGeistMono, ui-monospace, monospace; letter-spacing:.1em; }
+    .wrap .pill .run { flex:none; white-space:nowrap; font:500 11px ZooGeistMono, ui-monospace, monospace; color:#eeede9; }
     .wrap .pill .why { font-weight:400; color:rgba(238,237,233,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
     .card { width:380px; max-height:min(78vh,740px); overflow:auto; padding:0 16px 14px; border-radius:12px;
       background:radial-gradient(90% 30% at 50% 0%, rgba(255,255,255,.035), transparent 70%), rgba(11,11,12,.98);
@@ -50,7 +51,7 @@
   let current = null;
   let report = null;
   let open = false;
-  let state = { verdict: null, why: "", symbol: "" };
+  let state = { verdict: null, odds: null, why: "", symbol: "" };
 
   chrome.storage.local.get(["panelOpen", "pillPos"]).then((v) => {
     open = !!v.panelOpen;
@@ -102,6 +103,7 @@
       h("span", { class: "brand" }, "X-RAY"),
       h("span", { class: "bar" }),
       h("span", { class: "v", style: { color: tone.color } }, tone.label),
+      state.odds ? h("span", { class: "run", title: t("chance to be alive tomorrow") }, state.odds) : null,
       state.why ? h("span", { class: "why" }, tChain(state.why)) : null,
     );
     if (!card || card.dataset.mint !== current) {
@@ -150,7 +152,7 @@
     if (candidate === current) return;
     current = candidate;
     report = null;
-    state = { verdict: null, why: "", symbol: "" };
+    state = { verdict: null, odds: null, why: "", symbol: "" };
     if (!candidate) {
       void ask({ type: "clear" });
       draw();
@@ -165,7 +167,7 @@
       return;
     }
     current = r.mint;
-    state = { verdict: c.verdict, why: c.reasons?.[0] || "", symbol: sym(c.symbol) };
+    state = { verdict: c.verdict, odds: alive(c), why: c.reasons?.[0] || "", symbol: sym(c.symbol) };
     draw();
   }
 

@@ -2,46 +2,99 @@
   "manifest_version": 3,
   "name": "ZOOAI X-Ray",
   "short_name": "X-Ray",
-  "version": "0.6.7",
-  "description": "See who you're buying from. The dev, the wallets in the first 5 seconds and who paid for the dev, on the page you trade on.",
+  "version": "0.7.0",
+  "description": "See who you're buying from on Solana: the verdict, the odds it is alive tomorrow and the dev behind it, on the page you trade on.",
   "homepage_url": "https://zooaiagency.com/xray",
   "action": {
     "default_title": "ZOOAI X-Ray",
     "default_popup": "popup.html",
-    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
   },
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["activeTab", "storage", "contextMenus", "notifications", "alarms"],
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "notifications",
+    "alarms"
+  ],
   "content_scripts": [
     {
       "matches": [
-        "https://pump.fun/*", "https://*.pump.fun/*",
-        "https://dexscreener.com/*", "https://*.dexscreener.com/*",
-        "https://gmgn.ai/*", "https://*.gmgn.ai/*",
-        "https://axiom.trade/*", "https://*.axiom.trade/*",
+        "https://pump.fun/*",
+        "https://*.pump.fun/*",
+        "https://dexscreener.com/*",
+        "https://*.dexscreener.com/*",
+        "https://gmgn.ai/*",
+        "https://*.gmgn.ai/*",
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*",
         "https://photon-sol.tinyastro.io/*",
-        "https://bullx.io/*", "https://*.bullx.io/*",
-        "https://birdeye.so/*", "https://*.birdeye.so/*",
+        "https://bullx.io/*",
+        "https://*.bullx.io/*",
+        "https://birdeye.so/*",
+        "https://*.birdeye.so/*",
         "https://solscan.io/*",
-        "https://jup.ag/*", "https://*.jup.ag/*",
-        "https://four.meme/*", "https://*.four.meme/*",
-        "https://bscscan.com/*",
-        "https://pancakeswap.finance/*", "https://*.pancakeswap.finance/*"
+        "https://jup.ag/*",
+        "https://*.jup.ag/*"
       ],
-      "js": ["shared.js", "panel.js", "content-site.js"],
+      "js": [
+        "shared.js",
+        "panel.js",
+        "content-site.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://x.com/*", "https://twitter.com/*", "https://pro.x.com/*"],
-      "js": ["shared.js", "content-x.js"],
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://pro.x.com/*"
+      ],
+      "js": [
+        "shared.js",
+        "content-x.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["fonts/*", "icons/*", "panel.css"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "fonts/*",
+        "panel.css"
+      ],
+      "matches": [
+        "https://pump.fun/*",
+        "https://*.pump.fun/*",
+        "https://dexscreener.com/*",
+        "https://*.dexscreener.com/*",
+        "https://gmgn.ai/*",
+        "https://*.gmgn.ai/*",
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*",
+        "https://photon-sol.tinyastro.io/*",
+        "https://bullx.io/*",
+        "https://*.bullx.io/*",
+        "https://birdeye.so/*",
+        "https://*.birdeye.so/*",
+        "https://solscan.io/*",
+        "https://jup.ag/*",
+        "https://*.jup.ag/*"
+      ]
     }
   ]
 }

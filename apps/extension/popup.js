@@ -1,5 +1,5 @@
 // The toolbar popup: the X-Ray of this tab's token, or any token or wallet you paste, plus your alerts, recent tokens and the boards.
-const { TONE, addresses, sym, short, ago, ask } = ZOO;
+const { TONE, addresses, sym, short, ago, ask, oddsPct } = ZOO;
 const { h } = ZooPanel;
 const $ = (id) => document.getElementById(id);
 
@@ -41,7 +41,7 @@ const opts = { onHome: home };
 async function run(raw, quiet = false) {
   const addr = addresses(raw)[0];
   if (!addr) {
-    $("out").replaceChildren(h("p", { class: "err" }, t("Paste a token or wallet address (Solana or BNB Chain), or a link.")));
+    $("out").replaceChildren(h("p", { class: "err" }, t("Paste a Solana token or wallet address, or a link.")));
     return;
   }
   $("mint").value = addr;
@@ -60,6 +60,16 @@ async function run(raw, quiet = false) {
   }
   $("go").disabled = false;
 }
+
+// The footer's $ZOOAGENCY contract address, copied on click.
+$("ca").addEventListener("click", () => {
+  const b = $("ca");
+  void navigator.clipboard?.writeText(b.dataset.ca).then(() => {
+    const was = b.textContent;
+    b.textContent = t("copied");
+    setTimeout(() => (b.textContent = was), 1200);
+  });
+});
 
 $("form").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -95,7 +105,7 @@ async function lists() {
   $("hist").replaceChildren(
     ...history.slice(0, 6).map((x) => {
       const tone = TONE[x.verdict] || TONE.unknown;
-      return h("button", { class: "li", onclick: () => run(x.mint) }, h("span", { class: "l" }, `$${sym(x.symbol)} `, h("small", { class: "mono" }, ago(x.at))), h("span", { class: "r v mono", style: { color: tone.color } }, tone.label));
+      return h("button", { class: "li", onclick: () => run(x.mint) }, h("span", { class: "l" }, `$${sym(x.symbol)} `, h("small", { class: "mono" }, ago(x.at))), h("span", { class: "r v mono", style: { color: tone.color } }, tone.label, typeof x.run === "number" ? h("span", { class: "run" }, ` ${oddsPct(x.run)}%`) : null));
     }),
   );
   const b = await ask({ type: "boards" });

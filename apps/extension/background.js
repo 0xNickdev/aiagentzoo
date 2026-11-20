@@ -8,7 +8,7 @@ const TONE = {
   caution: { get label() { return t("CAUTION"); }, badge: "!", bg: "#b8913f" },
   pass: { get label() { return t("NO RED FLAGS"); }, badge: "ok", bg: "#3f8f55" },
 };
-const ADDR = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/;
+const { addresses, oddsPct } = ZOO; // Solana addresses only: the zoo no longer reads BNB Chain or Base
 
 const cache = new Map();
 /** One read per token per minute or so: the free tier is generous for checks, tight for full x-rays. */
@@ -24,17 +24,17 @@ async function cached(key, ttl, fn) {
 const getJson = async (url) => {
   const r = await fetch(url);
   const body = await r.json().catch(() => ({}));
-  return { status: r.status, ok: r.ok, body };
+  return { status: r.status, ok: r.ok, gone: r.status === 410, body };
 };
+const SOLANA_ONLY = () => t("Solana only: paste a Solana token or wallet address.");
 
 /** DexScreener and most terminals put a pool's address in the URL, not the token's: ask DexScreener which token it is. */
 const tokenOfPair = (addr) =>
   cached(`pair:${addr}`, 3_600_000, async () => {
     try {
-      const { ok, body } = await getJson(`https://api.dexscreener.com/latest/dex/pairs/${addr.startsWith("0x") ? "bsc" : "solana"}/${addr}`);
+      const { ok, body } = await getJson(`https://api.dexscreener.com/latest/dex/pairs/solana/${addr}`);
       const p = ok ? body.pairs?.[0] ?? body.pair : null;
-      const token = p?.baseToken?.address ?? null;
-      return token && token.startsWith("0x") ? token.toLowerCase() : token;
+      return p?.baseToken?.address ?? null;
     } catch {
       return null;
     }
@@ -42,7 +42,11 @@ const tokenOfPair = (addr) =>
 
 /** The light check (verdict and reasons). An address the stream never saw is tried as a pool before giving up. */
 async function check(addr) {
-  const read = (m) => cached(`check:${m}`, 60_000, async () => (await getJson(`${NORTH}/v1/check/${m}?holders=1`)).body);
+  const read = (m) =>
+    cached(`check:${m}`, 60_000, async () => {
+      const { ok, body } = await getJson(`${NORTH}/v1/check/${m}?holders=1`);
+      return ok ? body : { verdict: "unknown" };
+    });
   let c = await read(addr);
   let mint = addr;
   if (!c || c.verdict === "unknown") {
@@ -75,7 +79,8 @@ async function xray(addr) {
   return cached(`xray:${mint}`, 90_000, async () => {
     const { status, ok, body } = await getJson(`${NORTH}/v1/xray/${mint}`);
     if (status === 429) return { error: t("Ten full x-rays a minute on the free tier. Try again in a minute.") };
-    if (!ok) return { error: t("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, four.meme).") };
+    if (status === 410) return { error: SOLANA_ONLY() };
+    if (!ok) return { error: t("Not a Solana launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") };
     void remember(body);
     return { report: body };
   }).then((r) => {
@@ -96,6 +101,7 @@ const wallet = (w) =>
   cached(`wallet:${w}`, 60_000, async () => {
     const { status, ok, body } = await getJson(`${NORTH}/v1/wallet/${w}`);
     if (status === 429) return { error: t("Too many lookups this minute. Try again in a minute.") };
+    if (status === 410) return { error: SOLANA_ONLY() };
     if (!ok) return { error: t("This wallet did not launch, snipe or fund a launch the stream saw in the last two days.") };
     return { profile: body };
   }).then((r) => {
@@ -113,15 +119,17 @@ const boards = () =>
 /** The last tokens you looked at, for the popup. */
 async function remember(r) {
   const { history = [] } = await chrome.storage.local.get("history");
-  const item = { mint: r.mint, symbol: r.symbol, verdict: r.check.verdict, at: Date.now() };
+  const run = r.check.odds?.run;
+  const item = { mint: r.mint, symbol: r.symbol, verdict: r.check.verdict, run: typeof run === "number" ? run : null, at: Date.now() };
   await chrome.storage.local.set({ history: [item, ...history.filter((h) => h.mint !== r.mint)].slice(0, 12) });
 }
 
-function badge(tabId, verdict, title) {
+function badge(tabId, verdict, title, run) {
   const tone = TONE[verdict];
   chrome.action.setBadgeText({ tabId, text: tone ? tone.badge : "" });
   if (tone) chrome.action.setBadgeBackgroundColor({ tabId, color: tone.bg });
-  chrome.action.setTitle({ tabId, title: tone ? `ZOOAI X-Ray · ${tone.label}${title ? ` · ${tChain(title)}` : ""}` : "ZOOAI X-Ray" });
+  const odds = typeof run === "number" ? ` · ${t("{p}% alive tomorrow", { p: oddsPct(run) })}` : "";
+  chrome.action.setTitle({ tabId, title: tone ? `ZOOAI X-Ray · ${tone.label}${odds}${title ? ` · ${tChain(title)}` : ""}` : "ZOOAI X-Ray" });
 }
 
 const tabMint = new Map();
@@ -133,7 +141,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (sender.tab?.id !== undefined && msg.page) {
         if (r.check && r.check.verdict !== "unknown") {
           tabMint.set(sender.tab.id, r.mint);
-          badge(sender.tab.id, r.check.verdict, r.check.reasons?.[0]);
+          badge(sender.tab.id, r.check.verdict, r.check.reasons?.[0], r.check.odds?.run);
         } else badge(sender.tab.id, null);
       }
       return r;
@@ -174,8 +182,7 @@ chrome.storage.onChanged.addListener((ch, area) => {
   if (area === "local" && ch.lang) chrome.contextMenus.update("xray", { title: t("X-Ray this token") }, () => void chrome.runtime.lastError);
 });
 chrome.contextMenus.onClicked.addListener((info) => {
-  const found = String(info.selectionText || info.linkUrl || "").match(ADDR)?.[0];
-  const m = found && found.startsWith("0x") ? found.toLowerCase() : found;
+  const m = addresses(info.selectionText || info.linkUrl || "")[0];
   chrome.tabs.create({ url: m ? `${SITE}/xray?mint=${m}` : `${SITE}/xray` });
 });
 

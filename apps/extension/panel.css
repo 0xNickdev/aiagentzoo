@@ -2,7 +2,7 @@
 .zoo {
   --bg: #0b0b0c; --s1: #111113; --s2: #16161a; --line: rgba(255,255,255,.07); --line2: rgba(255,255,255,.12);
   --tx: #eeede9; --tx2: rgba(238,237,233,.66); --tx3: rgba(238,237,233,.4); --tx4: rgba(238,237,233,.26);
-  --avoid: #ff8a7e; --caution: #f2d39b; --pass: #9df3b0;
+  --avoid: #ff8a7e; --caution: #ffc27a; --pass: #a6e3b4;
   color: var(--tx); font: 400 13px/1.45 ZooGeist, Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; font-feature-settings: "ss01";
 }
 .zoo * { box-sizing: border-box; margin: 0; }
@@ -39,6 +39,12 @@
 .zoo .live i { width: 5px; height: 5px; border-radius: 50%; background: var(--pass); box-shadow: 0 0 6px var(--pass); }
 .zoo .live.off i { background: var(--caution); box-shadow: none; }
 .zoo .verdict { margin-top: 8px; font-size: 30px; line-height: 1; letter-spacing: -.025em; font-weight: 500; color: var(--tone); }
+.zoo .odds { margin-top: 10px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.zoo .odds b { font: 500 22px/1 ZooGeistMono, "Geist Mono", ui-monospace, monospace; letter-spacing: -.02em; color: var(--tx); }
+.zoo .odds b.bad { color: var(--avoid); }
+.zoo .odds b.good { color: var(--pass); }
+.zoo .odds span { font-size: 11.5px; color: var(--tx2); }
+.zoo .odds em { font-style: normal; font-size: 10.5px; color: var(--tx3); }
 .zoo .meter { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
 .zoo .meter span { display: block; height: 3px; background: rgba(255,255,255,.08); }
 .zoo .meter span.on { background: var(--tone); box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 55%, transparent); }
@@ -51,7 +57,7 @@
 .zoo .notes { margin-top: 9px; font-size: 11px; color: var(--tx3); }
 .zoo .trail { margin-top: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--tx); background: rgba(255,138,126,.06); box-shadow: inset 0 0 0 1px rgba(255,138,126,.2); border-radius: 2px; }
 .zoo .trail-n { display: block; margin-top: 4px; font-size: 11px; color: var(--tx3); }
-.zoo .track { margin-top: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--pass); background: rgba(157,243,176,.06); box-shadow: inset 0 0 0 1px rgba(157,243,176,.18); border-radius: 2px; }
+.zoo .track { margin-top: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--pass); background: rgba(166,227,180,.06); box-shadow: inset 0 0 0 1px rgba(166,227,180,.18); border-radius: 2px; }
 
 /* Section heads: 02 ── THE DEV ──────── aside */
 .zoo .sec { display: flex; align-items: center; gap: 8px; margin: 18px 0 8px; font-size: 9.5px; letter-spacing: .16em; color: var(--tx3); white-space: nowrap; }
@@ -127,7 +133,7 @@
 .zoo .actions { margin-top: 16px; display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 6px; }
 .zoo .btn { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; border-radius: 8px; font: 500 12px/1 ZooGeist, Geist, -apple-system, sans-serif; color: var(--tx); background: var(--s1); box-shadow: inset 0 0 0 1px var(--line2); cursor: pointer; text-decoration: none; transition: background .15s ease, box-shadow .15s ease; }
 .zoo .btn:hover { background: var(--s2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
-.zoo .btn[data-on="1"] { color: var(--pass); box-shadow: inset 0 0 0 1px rgba(157,243,176,.35); }
+.zoo .btn[data-on="1"] { color: var(--pass); box-shadow: inset 0 0 0 1px rgba(166,227,180,.35); }
 .zoo .btn.primary { background: var(--tx); color: #0b0b0c; box-shadow: none; }
 .zoo .btn.primary:hover { background: #fff; }
 .zoo .foot { margin-top: 12px; font-size: 9.5px; letter-spacing: .04em; color: var(--tx4); text-align: center; }
@@ -139,7 +145,7 @@
 .zoo .skeleton i { display: block; height: 14px; background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.07), rgba(255,255,255,.03)); background-size: 200% 100%; animation: zoo-sh 1.3s linear infinite; }
 .zoo .skeleton i:nth-child(2) { height: 132px; } .zoo .skeleton i:nth-child(3) { height: 84px; } .zoo .skeleton i:nth-child(4) { height: 110px; }
 @keyframes zoo-sh { to { background-position: -200% 0; } }
-.zoo .err { font-size: 12px; color: #ff9a8f; line-height: 1.5; }
+.zoo .err { font-size: 12px; color: var(--avoid); line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .zoo .skeleton i { animation: none; } }
 
 /* Chinese: a CJK face after Geist (and after Geist Mono for numbers and labels), and no wide letter-spacing. */

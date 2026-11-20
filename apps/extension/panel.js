@@ -1,7 +1,7 @@
 // The report, drawn the same way in the popup and in the panel on a trading page: a token's X-Ray and every wallet's page,
 // one leading to the other with a back step. Built from DOM nodes, never from HTML strings.
 var ZooPanel = (() => {
-  const { TONE, VENUE, pct, short, secs, mins, ago, sym, SITE, BOT, ask, explorer, explorerName } = ZOO;
+  const { TONE, VENUE, pct, short, secs, mins, ago, sym, SITE, BOT, ask, explorer, explorerName, oddsPct, AVG_RUN } = ZOO;
   const KIND = {
     crew: { color: "#ff8a7e", get label() { return t("dev's own wallet"); } },
     ring: { color: "#f2b56b", get label() { return t("sniper ring"); } },
@@ -132,6 +132,21 @@ var ZooPanel = (() => {
     ];
   }
 
+  /** The odds model's chance to be alive tomorrow, against the average launch. Nothing when the node sent no odds. */
+  function odds(c) {
+    const o = c.odds;
+    if (!o || typeof o.run !== "number") return null;
+    const avg = typeof o.average === "number" ? o.average : AVG_RUN;
+    const cls = o.run < avg ? "bad" : c.verdict === "pass" ? "good" : "";
+    return h(
+      "div",
+      { class: "odds" },
+      h("b", { class: cls }, `${oddsPct(o.run)}%`),
+      h("span", {}, t("chance to be alive tomorrow")),
+      h("em", { class: "mono" }, [t("average launch {a}%", { a: oddsPct(avg) }), o.at === "5min" ? t("at 5 min") : t("early read")].join(" · ")),
+    );
+  }
+
   /** A token's X-Ray. */
   function drawToken(ctx, r) {
     const compact = !!ctx.opts.compact;
@@ -149,7 +164,8 @@ var ZooPanel = (() => {
     const verdict = frame(
       { class: "verdict-card", style: { "--tone": tone.color } },
       h("div", { class: "v-top mono" }, h("span", {}, h("span", { style: { opacity: 0.6 } }, "01  "), t("VERDICT")), h("span", { class: `live ${live ? "" : "off"}` }, h("i"), live ? t("LIVE READ") : t("STREAM BEHIND"))),
-      h("p", { class: "verdict" }, c.score === null || c.score === undefined ? tone.label : `${tone.label} · ${c.score}`),
+      h("p", { class: "verdict" }, tone.label),
+      odds(c),
       ...meter(c.verdict),
       c.reasons?.length ? h("ol", { class: "reasons" }, ...c.reasons.slice(0, compact ? 3 : 5).map((x, i) => h("li", {}, h("b", {}, String(i + 1).padStart(2, "0")), h("span", {}, tChain(x))))) : null,
       c.notes?.length && !compact ? h("p", { class: "notes" }, c.notes.map(tChain).join(" · ")) : null,
@@ -179,7 +195,7 @@ var ZooPanel = (() => {
     );
     // Where the dev's SOL went, once the dev has sold: filled in when the trace comes back, hidden when it leads nowhere known.
     const trailBox = h("p", { class: "trail", hidden: true });
-    if (!/^0x/.test(r.mint) && (f.creatorSoldPct ?? 0) >= 50)
+    if ((f.creatorSoldPct ?? 0) >= 50)
       void ask({ type: "trail", mint: r.mint }).then((x) => {
         if (!x?.trail || !trailBox.isConnected) return;
         const tr = x.trail;

@@ -2,8 +2,7 @@
 (() => {
   if (window.__zooXrayX) return;
   window.__zooXrayX = true;
-  const { TONE, ask, SITE } = ZOO;
-  const RE = /0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}/g;
+  const { TONE, ask, SITE, addresses, alive } = ZOO; // Solana addresses only
   const seen = new Map(); // address -> verdict promise
   const queue = [];
   let busy = 0;
@@ -24,7 +23,7 @@
       const { addr, res } = queue.shift();
       busy++;
       ask({ type: "check", mint: addr })
-        .then((r) => res(r?.check && r.check.verdict !== "unknown" ? { mint: r.mint, verdict: r.check.verdict, why: r.check.reasons?.[0] || "" } : null))
+        .then((r) => res(r?.check && r.check.verdict !== "unknown" ? { mint: r.mint, verdict: r.check.verdict, odds: alive(r.check), why: r.check.reasons?.[0] || "" } : null))
         .catch(() => res(null))
         .finally(() => {
           busy--;
@@ -40,7 +39,7 @@
     a.href = `${SITE}/xray?mint=${v.mint}`;
     a.target = "_blank";
     a.rel = "noopener";
-    a.title = `ZOOAI X-Ray: ${tone.label}${v.why ? ` · ${tChain(v.why)}` : ""}`;
+    a.title = `ZOOAI X-Ray: ${tone.label}${v.odds ? ` · ${v.odds} ${t("tomorrow")}` : ""}${v.why ? ` · ${tChain(v.why)}` : ""}`;
     if (zh) a.lang = "zh-CN";
     a.dataset.zooChip = "1";
     a.addEventListener("click", (e) => e.stopPropagation());
@@ -54,6 +53,12 @@
     brand.style.cssText = "color:rgba(238,237,233,.45);letter-spacing:.14em";
     brand.textContent = "X-RAY";
     a.append(dot, brand, document.createTextNode(tone.label));
+    if (v.odds) {
+      const odds = document.createElement("span");
+      odds.style.cssText = "color:#eeede9;letter-spacing:0";
+      odds.textContent = v.odds;
+      a.append(odds);
+    }
     return a;
   }
 
@@ -75,8 +80,8 @@
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     const hits = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      const m = n.textContent.match(RE);
-      if (m) hits.push([n, [...new Set(m)]]);
+      const m = addresses(n.textContent);
+      if (m.length) hits.push([n, m]);
     }
     for (const [node, addrs] of hits) {
       for (const addr of addrs) {
