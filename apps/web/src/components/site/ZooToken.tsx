@@ -84,7 +84,7 @@ export function TokenCard({ id, className = "" }: { id: string; className?: stri
         <TokenDot />
         $ZOOAGENCY
       </div>
-      <p className="mb-2.5 mt-1.5 text-[12px] leading-[1.45] text-dim">{t("Hold 500k: Pro at half price and the weekly contest.")}</p>
+      <p className="mb-2.5 mt-1.5 text-[12px] leading-[1.45] text-dim">{t("Hold 500k: the weekly contest. Pro: soon.")}</p>
       <CaRow id={id} />
       <BuyButton className="mt-2 w-full" />
     </div>

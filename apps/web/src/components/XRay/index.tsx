@@ -273,7 +273,7 @@ export default function XRay() {
             <span className="x-tk" />
             $ZOOAGENCY
           </div>
-          <p>{t("Hold 500k: Pro at half price and the weekly contest.")}</p>
+          <p>{t("Hold 500k: the weekly contest. Pro: soon.")}</p>
           <CopyCa id="x-ca" />
           <a className="x-buy" href={ZOOAGENCY_CLAWPUMP_URL} target="_blank" rel="noopener noreferrer">
             {t("Buy on ClawPump")}

@@ -826,7 +826,7 @@ export function ProPanel({ access, span = "x-s3" }: { access: Ctx["access"]; spa
     setMsg(null);
   };
   return (
-    <Pn id="pro" span={span} title={t("Pro")} meta={t("paid in SOL")}>
+    <Pn id="pro" span={span} title={t("Pro")} meta={t("soon")}>
       <div className="x-seg3" role="radiogroup" aria-label={t("Pro period")}>
         {(["day", "week", "month"] as Period[]).map((k) => (
           <button key={k} type="button" role="radio" aria-checked={per === k} onClick={() => pick(k)}>
@@ -835,22 +835,21 @@ export function ProPanel({ access, span = "x-s3" }: { access: Ctx["access"]; spa
         ))}
       </div>
       <div className="x-price">
-        <span className="x-p">${p.usd}</span>
-        <span className="x-u">{t(p.per)}</span>
+        <span className="x-p">{t("Soon")}</span>
       </div>
-      <div className="x-save">{p.save ? t(p.save) : ""}</div>
+      <div className="x-save">{t("Day, week and month passes. Prices and payment open soon.")}</div>
       <ul className="x-feat">
         <li>{t("Who paid the dev, and who else they paid")}</li>
         <li>{t("Where the SOL went")}</li>
         <li>{t("Every early wallet's history")}</li>
         <li>{t("Every caller, set against the chain")}</li>
       </ul>
-      <button type="button" className="x-mbtn x-wide" onClick={() => void startCheckout(per).then((x) => setMsg(x.ok ? null : t(x.message)))}>
-        {t("Pay with SOL")}
+      <button type="button" className="x-mbtn x-wide" disabled aria-disabled="true">
+        {t("Soon")}
       </button>
       {msg && <div className="x-msg">{msg}</div>}
       <div className="x-fine">
-        <b>{t("{n} $ZOOAGENCY", { n: `${HOLDER_MIN / 1000}k` })}</b> {t("holders pay half. 10% buys it back.")}
+        {t("Until then the X-Ray stays fully free.")}
       </div>
     </Pn>
   );
@@ -1003,7 +1002,7 @@ export function TokenPanel() {
     <section className="x-pn x-s12 x-mtok" aria-label="$ZOOAGENCY">
       <div className="x-ph">
         <h2>$ZOOAGENCY</h2>
-        <span className="x-m">{t("Hold 500k: Pro at half price")}</span>
+        <span className="x-m">{t("Hold 500k: the weekly contest")}</span>
       </div>
       <div className="x-pb">
         <CopyCa id="x-ca2" />

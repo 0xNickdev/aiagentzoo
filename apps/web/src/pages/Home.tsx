@@ -379,7 +379,7 @@ function Token() {
       </p>
       <div className="mt-10 grid gap-x-16 gap-y-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <p className="max-w-[30ch] text-[22px] font-medium leading-[1.3] tracking-[-0.02em] text-white sm:text-[28px]">
-          {t("Hold 500k: Pro at half price, the weekly human contest and bot alerts 10 minutes first.")}
+          {t("Hold 500k: the weekly human contest and bot alerts 10 minutes first. Pro: soon.")}
         </p>
         <div className="min-w-0 max-w-[480px]">
           <CaRow id="home-ca" className="!h-11 !rounded-[8px] !pl-3.5 !pr-1.5" />

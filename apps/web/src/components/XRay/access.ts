@@ -33,7 +33,7 @@ export interface AccessState {
 }
 
 /** What the panels say while the payment backend is not live: nothing deep opens on the client alone. */
-export const NOT_LIVE = "Paying in SOL and the free deep check open in a few days.";
+export const NOT_LIVE = "Pro and the free deep check: soon.";
 const MSG_EVENT = "zoo-deep-msg";
 
 /** The reader's tier as the node served this report, and whether the deep check is open for it. */
