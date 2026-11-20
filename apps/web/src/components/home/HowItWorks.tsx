@@ -58,7 +58,7 @@ export default function HowItWorks({ sample }: { sample?: { mint: string; symbol
   const facts = f
     ? ([
         f.creatorLaunches24h != null && [t("dev's launches, last 24h"), full(f.creatorLaunches24h), f.creatorLaunches24h > 3],
-        f.creatorDumped48h != null && [t("of them dumped, 48h"), full(f.creatorDumped48h), f.creatorDumped48h > 0],
+        f.creatorDumped48h != null && [t("dev's coins dumped, last 48h"), full(f.creatorDumped48h), f.creatorDumped48h > 0],
         f.earlyWallets != null && [t("wallets in the first seconds"), full(f.earlyWallets), false],
       ].filter(Boolean) as Array<[string, string, boolean]>)
     : [];
