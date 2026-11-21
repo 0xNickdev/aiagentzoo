@@ -1,0 +1,900 @@
+// Shipped work up to 14 Nov 2026, carried over from the first roadmap (public/roadmap.json in the git history).
+// Each entry keeps the commit that shipped it; `cut` says what the 20 Nov rebuild did to it.
+import type { Buried, Shipped } from "./data";
+
+export const OLD_SHIPPED: Shipped[] = [
+  {
+    "id": "runtime",
+    "date": "2026-10-06",
+    "title": "Agents with permissions",
+    "text": "An agent's species is what it may do, enforced by the runtime. Signed signals, budgets, a hash-chained public log.",
+    "proof": [
+      {
+        "label": "cf7b6dd",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/cf7b6dd"
+      }
+    ],
+    "zh": {
+      "title": "带权限的智能体",
+      "text": "物种决定一个智能体能做什么，由运行时强制执行。签名信号、预算、哈希链公开日志。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "brief",
+    "date": "2026-10-07",
+    "title": "Morning Brief",
+    "text": "Out every day at 07:00 UTC with no human in the loop, every issue hashed and archived.",
+    "proof": [
+      {
+        "label": "9290efc",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/9290efc"
+      }
+    ],
+    "zh": {
+      "title": "早报",
+      "text": "每天 UTC 07:00 自动发布，无人参与，每一期都有哈希并存档。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "graded",
+    "date": "2026-10-07",
+    "title": "Judges graded in public",
+    "text": "Every call is re-checked the next day and the score is public. The beaver rewrites its own playbook from it.",
+    "proof": [
+      {
+        "label": "4a23338",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/4a23338"
+      }
+    ],
+    "zh": {
+      "title": "公开打分的评委",
+      "text": "每个判断第二天都会被复查，分数公开。海狸根据分数重写自己的规则手册。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "guests",
+    "date": "2026-10-07",
+    "title": "Bring your own agent",
+    "text": "Outside agents move in with a Solana wallet and earn a public record. A wing for ClawPump agents.",
+    "proof": [
+      {
+        "label": "b6e0856",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6e0856"
+      }
+    ],
+    "zh": {
+      "title": "带上你自己的智能体",
+      "text": "外部智能体用一个 Solana 钱包入驻，赢得公开战绩。ClawPump 智能体有专属区。"
+    }
+  },
+  {
+    "id": "chain",
+    "date": "2026-10-10",
+    "title": "Reading Solana directly",
+    "text": "Every pump.fun launch and trade straight from a Yellowstone stream, not from someone else's API.",
+    "proof": [
+      {
+        "label": "45d410d",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/45d410d"
+      }
+    ],
+    "zh": {
+      "title": "直接读取 Solana",
+      "text": "每一个 pump.fun 发射和交易都直接来自 Yellowstone 数据流，而不是别人的 API。"
+    }
+  },
+  {
+    "id": "nursery",
+    "date": "2026-10-10",
+    "title": "Judges that evolve",
+    "text": "Eight judges sit the same exam every night. The weakest dies, the strongest breed.",
+    "proof": [
+      {
+        "label": "8367ed4",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/8367ed4"
+      }
+    ],
+    "zh": {
+      "title": "会进化的评委",
+      "text": "八个评委每晚参加同一场考试。最弱的死去，最强的繁衍。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "rugs",
+    "date": "2026-10-14",
+    "title": "Wall of rugs",
+    "text": "The devs who dumped the most of their own launches in 48 hours, each with the transaction.",
+    "proof": [
+      {
+        "label": "005a9ef",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/005a9ef"
+      }
+    ],
+    "zh": {
+      "title": "跑路墙",
+      "text": "48 小时内砸盘自己发射次数最多的开发者，每一笔都附交易。"
+    },
+    "cut": "page cut, data lives in the x-ray",
+    "cutZh": "页面移除，数据并入透视"
+  },
+  {
+    "id": "bundles",
+    "date": "2026-10-14",
+    "title": "Bundle detection",
+    "text": "Wallets that buy together in one block, how much supply they took and how much they still hold.",
+    "proof": [
+      {
+        "label": "3d14fa4",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d14fa4"
+      },
+      {
+        "label": "4b29674",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/4b29674"
+      }
+    ],
+    "zh": {
+      "title": "捆绑检测",
+      "text": "在同一个区块里一起买入的钱包，拿走了多少供应，现在还剩多少。"
+    }
+  },
+  {
+    "id": "telegram",
+    "date": "2026-10-14",
+    "title": "Telegram bot and app",
+    "text": "Paste a CA in any chat. Watch a token and get pinged when the dev dumps or the pool drains.",
+    "proof": [
+      {
+        "label": "594e998",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/594e998"
+      },
+      {
+        "label": "25c0f7d",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/25c0f7d"
+      }
+    ],
+    "zh": {
+      "title": "Telegram 机器人和小程序",
+      "text": "在任何群里粘贴合约地址。关注一个代币，开发者砸盘或池子被抽干时提醒你。"
+    },
+    "cut": "mini app cut, the bot stays",
+    "cutZh": "小程序移除，机器人保留"
+  },
+  {
+    "id": "play",
+    "date": "2026-10-14",
+    "title": "Humans vs the beaver",
+    "text": "People answer the same nightly exam as the AI, graded the same way. Weekly standings, SOL prizes.",
+    "proof": [
+      {
+        "label": "fb7b75d",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/fb7b75d"
+      }
+    ],
+    "zh": {
+      "title": "人类对战海狸",
+      "text": "人和 AI 回答同一场夜间考试，用同样的方式打分。每周排名，SOL 奖励。"
+    }
+  },
+  {
+    "id": "holders",
+    "date": "2026-10-15",
+    "title": "Holders hear first",
+    "text": "Holders of $ZOOAGENCY get alerts at once, everyone else later. More asks, more watched tokens.",
+    "proof": [
+      {
+        "label": "963441c",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/963441c"
+      }
+    ],
+    "zh": {
+      "title": "持有者先知道",
+      "text": "$ZOOAGENCY 持有者立刻收到提醒，其他人稍后。更多提问次数，更多关注代币。"
+    }
+  },
+  {
+    "id": "gene",
+    "date": "2026-10-15",
+    "title": "Holders vote the gene",
+    "text": "Every week holders pick a rule for the next newborn judge. Balance read at the close too, the smaller counts.",
+    "proof": [
+      {
+        "label": "ba8d8f3",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/ba8d8f3"
+      }
+    ],
+    "zh": {
+      "title": "持有者投票基因",
+      "text": "每周持有者为下一个新生评委选一条规则。结束时再读一次余额，取较小值。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "zh",
+    "date": "2026-10-15",
+    "title": "中文",
+    "text": "The site, the bot and the alerts in Simplified Chinese.",
+    "proof": [
+      {
+        "label": "3f2ee9c",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/3f2ee9c"
+      },
+      {
+        "label": "fa6b238",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/fa6b238"
+      }
+    ],
+    "zh": {
+      "title": "中文",
+      "text": "网站、机器人和提醒全部支持简体中文。"
+    }
+  },
+  {
+    "id": "drained",
+    "date": "2026-10-15",
+    "title": "Drained pools",
+    "text": "A graduated coin whose pool falls to a fifth of its best is called out, on the map and in alerts.",
+    "proof": [
+      {
+        "label": "5f05cfc",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/5f05cfc"
+      }
+    ],
+    "zh": {
+      "title": "池子被抽干",
+      "text": "已毕业代币的池子跌到峰值的五分之一，地图和提醒里都会标出来。"
+    }
+  },
+  {
+    "id": "launchpads",
+    "date": "2026-10-17",
+    "title": "LaunchLab and Meteora",
+    "text": "Raydium LaunchLab and Meteora's curve read from the chain, beside pump.fun.",
+    "proof": [
+      {
+        "label": "c7ec1d2",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/c7ec1d2"
+      }
+    ],
+    "zh": {
+      "title": "LaunchLab 和 Meteora",
+      "text": "Raydium LaunchLab 和 Meteora 的曲线直接从链上读取，与 pump.fun 并列。"
+    }
+  },
+  {
+    "id": "xray",
+    "date": "2026-10-17",
+    "title": "X-Ray",
+    "text": "The dev's history, who funded them, the first five seconds as a radar, snipers that turn out to be the dev.",
+    "proof": [
+      {
+        "label": "35965bc",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/35965bc"
+      },
+      {
+        "label": "cbd8042",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/cbd8042"
+      }
+    ],
+    "zh": {
+      "title": "透视",
+      "text": "开发者的历史，谁给他打的钱，前五秒的雷达图，以及其实就是开发者本人的狙击手。"
+    }
+  },
+  {
+    "id": "api",
+    "date": "2026-10-17",
+    "title": "API for builders",
+    "text": "A verdict in one call, a free tier, and a holder key signed with one wallet signature.",
+    "proof": [
+      {
+        "label": "cafc2c0",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/cafc2c0"
+      },
+      {
+        "label": "b6586c3",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/b6586c3"
+      }
+    ],
+    "zh": {
+      "title": "开发者 API",
+      "text": "一次调用得到判断，有免费额度，持有者用一次钱包签名就能拿到密钥。"
+    }
+  },
+  {
+    "id": "extension",
+    "date": "2026-10-19",
+    "title": "Chrome extension",
+    "text": "The x-ray on gmgn, Axiom, pump.fun and DexScreener, and a tag next to every CA on X.",
+    "proof": [
+      {
+        "label": "3d0882f",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/3d0882f"
+      },
+      {
+        "label": "2f4bf6e",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/2f4bf6e"
+      }
+    ],
+    "zh": {
+      "title": "Chrome 插件",
+      "text": "在 gmgn、Axiom、pump.fun 和 DexScreener 上直接透视，X 上每个合约地址旁都有标记。"
+    }
+  },
+  {
+    "id": "relay",
+    "date": "2026-10-20",
+    "title": "Our own chain relay",
+    "text": "The cloud saw a tenth of pump.fun. A relay on our own machine sees all of it.",
+    "proof": [
+      {
+        "label": "08ae972",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972"
+      }
+    ],
+    "zh": {
+      "title": "自己的链上中继",
+      "text": "云服务器只能看到 pump.fun 的十分之一。我们自己机器上的中继能看到全部。"
+    }
+  },
+  {
+    "id": "stats",
+    "date": "2026-10-20",
+    "title": "Our numbers, in public",
+    "text": "Usage by day as it is, and how often coins we flagged really died.",
+    "proof": [
+      {
+        "label": "d29d255",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/d29d255"
+      }
+    ],
+    "zh": {
+      "title": "公开我们的数字",
+      "text": "每天的真实使用量，以及我们标记的代币里有多少真的死了。"
+    }
+  },
+  {
+    "id": "own-ground",
+    "date": "2026-10-22",
+    "title": "Our own servers",
+    "text": "Every node moved onto machines we run, next to the relay that reads Solana for us. No shared cloud, keys only we hold.",
+    "why": "Our cloud host had a security incident in October. The nodes kept running, but a tool that tells people who to trust should not depend on someone else's keys. Since October 22 they run on our own server.",
+    "proof": [
+      {
+        "label": "relay 08ae972",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/08ae972"
+      }
+    ],
+    "zh": {
+      "title": "自己的服务器",
+      "text": "所有节点已迁到我们自己的机器上，和为我们读取 Solana 的中继放在一起。不用共享云，密钥只在我们手里。",
+      "why": "我们的云服务商十月出了安全事件。节点一直在运行，但一个告诉别人该信谁的工具，不应该依赖别人的密钥。从 10 月 22 日起，节点跑在我们自己的服务器上。"
+    }
+  },
+  {
+    "id": "roadmap",
+    "date": "2026-10-22",
+    "title": "This roadmap",
+    "text": "One file in the repo. Shipped means a commit, buried means a reason, and every edit to the plan is in the git history.",
+    "proof": [
+      {
+        "label": "history",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commits/main/apps/web/public/roadmap.json"
+      }
+    ],
+    "zh": {
+      "title": "这份路线图",
+      "text": "仓库里的一个文件。已上线意味着有提交，被放弃意味着有理由，计划的每一次修改都在 git 历史里。"
+    },
+    "cut": "cut 20 Nov, back 21 Nov",
+    "cutZh": "11 月 20 日移除，21 日回归"
+  },
+  {
+    "id": "terminal",
+    "date": "2026-10-25",
+    "title": "X-Ray as a terminal",
+    "text": "One frame: the ticker, the verdict and the stream light on top, the read tabs down the left, four tiles and the reasons in the middle, the trade on the right, the chain's receipt at the bottom. The frame's light takes the verdict's colour.",
+    "proof": [
+      {
+        "label": "578ee5b",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/578ee5b"
+      },
+      {
+        "label": "cc7a99e",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/cc7a99e"
+      }
+    ],
+    "zh": {
+      "title": "终端式透视",
+      "text": "一个框：顶部是代币、判断和数据流状态，左边是查看标签，中间是四块数据和理由，右边是交易，底部是链上凭据。框的光带随判断变色。"
+    }
+  },
+  {
+    "id": "swap",
+    "date": "2026-10-25",
+    "title": "Swap inside the X-Ray",
+    "text": "Buy or sell the coin you just checked without leaving the page, routed through Jupiter, signed in your own wallet, nothing held by us. A 1% fee in SOL: a tenth of it buys $ZOOAGENCY back, the rest keeps the zoo running. The verdict sits right above the buy button.",
+    "why": "We will never tell you what to buy. But you were going to buy it anyway, so now the check and the buy are two clicks apart, and the warning sits right on the button.",
+    "proof": [
+      {
+        "label": "a34f00f",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/a34f00f"
+      }
+    ],
+    "zh": {
+      "title": "透视页面内直接兑换",
+      "text": "买卖刚查过的币不用离开页面：Jupiter 路由，你自己的钱包签名，我们不托管任何资产。1% 的 SOL 手续费：十分之一回购 $ZOOAGENCY，其余维持动物园运转。判断就在买入按钮正上方。",
+      "why": "我们永远不会告诉你该买什么。但你本来就要买，所以现在检查和买入只隔两下点击，警告就在按钮上。"
+    }
+  },
+  {
+    "id": "dock",
+    "date": "2026-10-25",
+    "title": "One tap to where you trade",
+    "text": "Axiom, GMGN, BullX, Padre, pump.fun and FOMO open on this coin from under the verdict, in the X-Ray and in the Telegram bot. Copy CA sits next to the ticker.",
+    "proof": [
+      {
+        "label": "eea119b",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/eea119b"
+      },
+      {
+        "label": "0323b2e",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/0323b2e"
+      }
+    ],
+    "zh": {
+      "title": "一键去你交易的地方",
+      "text": "Axiom、GMGN、BullX、Padre、pump.fun 和 FOMO 在判断下方直接打开这个币，透视页和 Telegram 机器人里都有。复制合约地址就在代币旁边。"
+    }
+  },
+  {
+    "id": "memory",
+    "date": "2026-10-25",
+    "title": "Launches read after the fact",
+    "text": "A coin older than the 48-hour tape can be read from the chain into the 90-day memory, and the X-Ray then reads it like any other. Launchpads are named: ClawPump's launcher and Launch's deployer wallet are the platform's, not a ring and not launch spam.",
+    "proof": [
+      {
+        "label": "8695659",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/8695659"
+      },
+      {
+        "label": "139bf82",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/139bf82"
+      }
+    ],
+    "zh": {
+      "title": "事后补读的发射",
+      "text": "比 48 小时实时带更老的币可以从链上补读进 90 天记忆，透视页随后像读其他币一样读它。发射平台被点名：ClawPump 的发射钱包和 Launch 的部署钱包属于平台，不是团伙，也不是刷币。"
+    }
+  },
+  {
+    "id": "chains",
+    "date": "2026-10-26",
+    "title": "BNB Chain: four.meme",
+    "text": "The same x-ray on BNB Chain. Every four.meme launch, buy, sell and graduation read straight from the chain's logs: the dev's record, the launch-block bundle, the first-seconds wallets, churn. Paste a 0x address anywhere the x-ray lives: the site, the bot, the extension.",
+    "why": "Every chain we add, we read straight from the chain like Solana, not from someone else's API. four.meme first, because that is where BNB Chain launches happen; holders and who paid for the dev come next.",
+    "proof": [],
+    "zh": {
+      "title": "BNB Chain：four.meme",
+      "text": "同样的透视来到 BNB Chain。每一次 four.meme 的发币、买入、卖出和毕业都直接从链上日志读取：开发者的记录、开盘区块捆绑、前几秒的钱包、刷量。在网站、机器人、扩展里任何能透视的地方粘贴 0x 地址即可。",
+      "why": "每增加一条链，我们都像 Solana 一样直接读链上数据，而不是用别人的 API。先做 four.meme，因为 BNB Chain 的发币都在那里；持币者和谁给开发者打钱是下一步。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "base-flap",
+    "date": "2026-10-27",
+    "title": "Base and Flap",
+    "text": "Clanker launches on Base and Flap launches on BNB Chain, read straight from the chain like the rest: the dev, the first buyers, bundles, the pool from the first second.",
+    "why": "Wherever memecoins launch, the same question: who is behind it. We add a chain only when we can read it ourselves.",
+    "proof": [
+      {
+        "label": "d9600cb",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/d9600cb"
+      },
+      {
+        "label": "99dc5dc",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/99dc5dc"
+      }
+    ],
+    "zh": {
+      "title": "Base 和 Flap",
+      "text": "Base 上的 Clanker 发币和 BNB 链上的 Flap 发币，和其他一样直接从链上读取：开发者、第一批买家、捆绑、从第一秒起的池子。",
+      "why": "哪里发币，问题都一样：背后是谁。只有我们能自己读的链才会加。"
+    },
+    "cut": "cut 20 Nov",
+    "cutZh": "11 月 20 日移除"
+  },
+  {
+    "id": "radar",
+    "date": "2026-10-28",
+    "title": "Holder radar",
+    "text": "Fresh coins with no red flags so far, for holders. The moment one turns, the dev dumps, the bundles leave, the pool drains, it goes red and you are pinged first.",
+    "why": "Live on the site for holders and, since 28 October, in Telegram: /radar on in the bot, and every coin that passed is re-checked each minute until it turns or ages out; the ping names the reason.",
+    "proof": [
+      {
+        "label": "t.me/zooaiagency_bot",
+        "href": "https://t.me/zooaiagency_bot"
+      }
+    ],
+    "zh": {
+      "title": "持有者雷达",
+      "text": "目前没有红旗的新币，只给持有者看。一旦变了，开发者砸盘、捆绑撤离、池子被抽干，它立刻变红，你第一个收到提醒。",
+      "why": "已在网站上对持币者开放，自 10 月 28 日起也在 Telegram 里：在机器人里发 /radar on，每个通过检查的币每分钟重新检查，直到变脸或过期；提醒里写明原因。"
+    },
+    "cut": "page cut, lives in the bot",
+    "cutZh": "页面移除，保留在机器人里"
+  },
+  {
+    "id": "operators",
+    "date": "2026-10-28",
+    "title": "Money map",
+    "text": "One look at a whole operation, left to right: who funded the dev, the dev, their own snipers and bundles in the first seconds, and who has already sold. Below it, where the SOL went after the dump: what the dev and its wallets sent out in the day after the launch, to an exchange, back to whoever paid the dev, to wallets that launch coins, or on to a wallet that collects from other devs.",
+    "why": "A dump is not the end of the story. Proceeds that go back to the wallet that paid the dev, or into a wallet other devs pay into, are one operator running many coins. Proceeds that go to an exchange deposit end there, on the record.",
+    "proof": [
+      {
+        "label": "0144a52",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/0144a52"
+      }
+    ],
+    "zh": {
+      "title": "资金流向图",
+      "text": "一眼看清整个操盘过程，从左到右：谁给开发者打的钱，开发者本人，前几秒里他自己的狙击号和捆绑号，以及谁已经卖出。下面是砸盘后 SOL 去了哪里：开发者和他的钱包在发币后一天内转出的钱，转进交易所、回到给开发者打钱的钱包、转给发币的钱包，或者转到另有其他开发者打钱进去的钱包。",
+      "why": "砸盘不是故事的结尾。回到给开发者打钱的钱包，或者转进其他开发者也往里打钱的钱包，说明是一个操盘手在跑很多币。转进交易所充值地址的钱，就停在那里，留在记录上。"
+    }
+  },
+  {
+    "id": "odds",
+    "date": "2026-10-28",
+    "title": "Odds instead of a label",
+    "text": "Every pump.fun X-Ray now gives two numbers from its first five minutes: the chance the coin climbs past 85 SOL market cap, and the chance the dev still dumps, each with what moved it. Once it ran, or an hour on, it shows what happened instead.",
+    "why": "Our own record showed that avoid and pass die at almost the same rate on pump.fun, so a label alone ranks nothing. Two models fitted on 34,183 launches do: the top tenth by these odds climbed past 85 SOL seven times as often as the average launch.",
+    "proof": [
+      {
+        "label": "8e45a1b",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/8e45a1b"
+      }
+    ],
+    "zh": {
+      "title": "用概率代替标签",
+      "text": "现在每个 pump.fun 透视都会根据前五分钟给出两个数字：市值涨过 85 SOL 的概率，以及开发者之后还会砸盘的概率，并说明是什么影响了它们。上涨之后或一小时后，显示实际发生了什么。",
+      "why": "我们自己的记录显示，在 pump.fun 上被标记回避和没有被标记的币死亡率几乎一样，所以只有标签排不出顺序。基于 34,183 个发币拟合的两个模型可以：概率排在前十分之一的币，市值涨过 85 SOL 的次数是普通币的七倍。"
+    }
+  },
+  {
+    "id": "factors",
+    "date": "2026-10-29",
+    "title": "Every factor, counted",
+    "text": "Under the odds, every number behind them: the dev's launches and dumps, who paid the dev, first-seconds wallets, known ruggers, whales, KOLs, rings, cabals, bundles, churn, reused socials. Red where it goes with rugs.",
+    "why": "A holder asked for the factors behind the percentage. Now nothing is a black box.",
+    "proof": [
+      {
+        "label": "e55f3fe",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/e55f3fe"
+      }
+    ],
+    "zh": {
+      "title": "每个因素都算出来",
+      "text": "在概率下面列出背后的每个数字：开发者的发币和砸盘、谁给开发者打钱、头几秒的钱包、已知跑路者、巨鲸、KOL、狙击圈、阴谋集团、捆绑、换手、重复使用的社交账号。和跑路相关的标红。",
+      "why": "一位持币者想看百分比背后的因素。现在没有黑箱。"
+    }
+  },
+  {
+    "id": "guard",
+    "date": "2026-11-02",
+    "title": "ZOO Guard for agents",
+    "text": "One call before every swap: who is behind this coin. Agents pay per check over x402, 0.001 USDC a check and 0.01 a full x-ray, no key and no account. Charged only when a report is delivered. Real USDC on Solana mainnet, test USDC on devnet.",
+    "why": "Shipped a month early. AI agents trade real money with nobody watching, and they cannot fill in a sign-up form. Every sale is public with its transaction and the hash of the report sold.",
+    "proof": [
+      {
+        "label": "6947fe2",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/6947fe2"
+      },
+      {
+        "label": "b8cb5f5",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/b8cb5f5"
+      },
+      {
+        "label": "every sale",
+        "href": "https://zooaiagency.com/x402"
+      }
+    ],
+    "zh": {
+      "title": "ZOO 守卫 · 给智能体",
+      "text": "每次兑换前调用一次：这个币背后是谁。智能体通过 x402 按次付费，每次检查 0.001 USDC，完整透视 0.01 USDC，无需密钥和账户。只有交付了报告才扣费。Solana 主网收真实 USDC，开发网收测试 USDC。",
+      "why": "提前一个月上线。AI 智能体用真钱交易无人看管，也没法填注册表。每一笔销售都公开，附交易和所售报告的哈希。"
+    }
+  },
+  {
+    "id": "tool-print",
+    "date": "2026-11-03",
+    "title": "Tool prints",
+    "text": "A rugger swaps wallets every launch, not the tool. Every launch transaction is read for how it was built: compute budget, the tip and to whom, the programs in order, signers, lookup tables, metadata host. A fresh wallet launching the way a farm of dumping wallets launches gets flagged with no history of its own.",
+    "why": "No tool we know of reads this. On day one it found 33 fresh wallets launching with one setup, 92% of their launches dumped.",
+    "proof": [
+      {
+        "label": "a139b78",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/a139b78"
+      },
+      {
+        "label": "live list",
+        "href": "https://north.zooaiagency.com/v1/chain/tools"
+      }
+    ],
+    "zh": {
+      "title": "工具指纹",
+      "text": "跑路者每次发币都换钱包，但不换工具。我们读取每笔发币交易的构造方式：计算预算、小费及收款方、程序顺序、签名者、查找表、元数据主机。新钱包如果和一批砸盘钱包用同样的方式发币，即使没有历史也会被标记。",
+      "why": "据我们所知没有别的工具读这个。第一天就发现 33 个新钱包用同一套设置发币，92% 被砸盘。"
+    }
+  },
+  {
+    "id": "cosign",
+    "date": "2026-11-03",
+    "title": "The operator",
+    "text": "Wallets whose signatures sit on one transaction share an owner, read from the signatures, not from the accounts a transaction names. A launch buying from its own wallets, a bundled sell, and they stay joined, so a dev on a fresh wallet is caught the moment it signs next to an old one. The transactions are the proof.",
+    "why": "The strongest link there is short of a confession. We call it one operator only when the chain shows the signatures.",
+    "proof": [
+      {
+        "label": "30b802b",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/30b802b"
+      }
+    ],
+    "zh": {
+      "title": "操盘者",
+      "text": "签名同在一笔交易上的钱包属于同一个主人：只看交易本身的签名，不看交易里提到的账户。发币时用自己的钱包买入、打包卖出，这些钱包就被连在一起，开发者换新钱包，只要和旧钱包一起签名就会被认出。交易本身就是证据。",
+      "why": "除了认罪之外最强的关联。只有链上出现签名时，我们才称为同一个操盘者。"
+    }
+  },
+  {
+    "id": "radar-fix",
+    "date": "2026-11-03",
+    "title": "Radar pings only real turns",
+    "text": "A ping now means a coin that read pass on the full check and then turned. Before, coins entered the radar already at caution and every ping said they turned.",
+    "why": "A holder noticed every ping was a caution. They were right.",
+    "proof": [
+      {
+        "label": "c471c49",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/c471c49"
+      }
+    ],
+    "zh": {
+      "title": "雷达只推送真正的转变",
+      "text": "现在推送意味着币在完整检查中曾经是通过，然后变了。之前有些币进入雷达时就已经是谨慎，每次推送都说它变了。",
+      "why": "一位持币者发现每条推送都是谨慎。他说得对。"
+    }
+  },
+  {
+    "id": "any-chain",
+    "date": "2026-11-04",
+    "title": "Buy from any chain",
+    "text": "Fund the buy from another chain through Aurora Intents: USDC, ETH, BNB, BTC and more swapped into SOL, straight to your own Solana wallet.",
+    "proof": [
+      {
+        "label": "54744fa",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/54744fa"
+      },
+      {
+        "label": "dae5d49",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/dae5d49"
+      }
+    ],
+    "zh": {
+      "title": "从任何链买入",
+      "text": "通过 Aurora Intents 用另一条链的资金买入：USDC、ETH、BNB、BTC 等换成 SOL，直接到你自己的 Solana 钱包。"
+    }
+  },
+  {
+    "id": "calls",
+    "date": "2026-11-05",
+    "title": "Who is calling it",
+    "text": "Next to what the chain shows: the pump.fun callouts and FOMO theses on a coin, with the real time of the call and whether the caller's wallet bought before calling. Kept for 30 days.",
+    "why": "The first piece of Caller Truth, out before the vote.",
+    "proof": [
+      {
+        "label": "4f7ebb3",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/4f7ebb3"
+      },
+      {
+        "label": "0b7109c",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/0b7109c"
+      }
+    ],
+    "zh": {
+      "title": "谁在喊单",
+      "text": "和链上数据放在一起：一个币的 pump.fun 喊单和 FOMO 观点，附真实喊单时间，以及喊单者的钱包是否在喊单前就买了。保留 30 天。",
+      "why": "“喊单真相”的第一块，在投票之前就上线了。"
+    }
+  },
+  {
+    "id": "rights",
+    "date": "2026-11-07",
+    "title": "Token rights",
+    "text": "Read from the mint: who can still mint, freeze, move or pause the token, hooks and transfer fees. Freeze, delegate or pause reads avoid; mint, a hook or a fee of 1% or more reads caution.",
+    "proof": [
+      {
+        "label": "b45366b",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/b45366b"
+      },
+      {
+        "label": "6411898",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/6411898"
+      }
+    ],
+    "zh": {
+      "title": "代币权限",
+      "text": "从铸币账户读取：谁还能增发、冻结、转移或暂停代币，以及钩子和转账手续费。冻结、代理或暂停判为回避；增发、钩子或 1% 以上的手续费判为谨慎。"
+    }
+  },
+  {
+    "id": "odds-forward",
+    "date": "2026-11-07",
+    "title": "Odds checked on unseen launches",
+    "text": "The odds model run forward on 32,849 launches it had never seen, written down together with where it is weak.",
+    "proof": [
+      {
+        "label": "15fbd13",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/15fbd13"
+      }
+    ],
+    "zh": {
+      "title": "在未见过的发币上检验赔率",
+      "text": "赔率模型在它从未见过的 32,849 次发币上向前检验，结果连同它的弱点一起写了下来。"
+    }
+  },
+  {
+    "id": "one-hand",
+    "date": "2026-11-08",
+    "title": "One hand in many wallets",
+    "text": "The funding of the 24 biggest buyers is followed up to four hops, and an exchange ends the trail. Buyers who share a wallet up their trail are one hand. The check says how many buyers it traced and how many reads failed.",
+    "proof": [
+      {
+        "label": "a259c30",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/a259c30"
+      },
+      {
+        "label": "04c2717",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/04c2717"
+      }
+    ],
+    "zh": {
+      "title": "多个钱包，一只手",
+      "text": "追踪最大的 24 个买家的资金来源，最多四跳，遇到交易所就停。上游共用同一个钱包的买家算作一只手。检查会说明追踪了多少买家、有多少次读取失败。"
+    }
+  },
+  {
+    "id": "slow-scans",
+    "date": "2026-11-11",
+    "title": "Slow scans fixed",
+    "text": "One background job froze the node for half a minute, about once a minute. A scan that landed in that window just sat there.",
+    "why": "A follower said scans had got slow and asked us to check. They were right.",
+    "proof": [
+      {
+        "label": "5931105",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/5931105"
+      }
+    ],
+    "zh": {
+      "title": "修复扫描变慢",
+      "text": "一个后台任务大约每分钟把节点卡住半分钟。落在这个窗口里的扫描只能干等。",
+      "why": "一位关注者说扫描变慢了，让我们查一下。他说得对。"
+    }
+  },
+  {
+    "id": "first-seen",
+    "date": "2026-11-12",
+    "title": "First seen at",
+    "text": "Every coin on the live feed keeps the cap it first showed up at, next to the verdict, so the reference is still there once it has moved. Migrated coins show a cap again.",
+    "why": "A follower asked for it. Live the same day.",
+    "proof": [
+      {
+        "label": "dfa3bba",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/dfa3bba"
+      }
+    ],
+    "zh": {
+      "title": "首次出现时的市值",
+      "text": "实时列表里的每个币都保留它第一次出现时的市值，就在判断结论旁边，涨跌之后参照还在。已迁移的币重新显示市值。",
+      "why": "一位关注者提的需求。当天上线。"
+    }
+  },
+  {
+    "id": "caller-truth",
+    "date": "2026-11-12",
+    "title": "Caller Truth",
+    "text": "Every pump.fun callout is followed for 24 hours on our tape: the cap an hour in, the highest we saw, where the coin stood a day later and whether it was alive, and what the wallet pump.fun lists next to the caller did around the call. Each caller's record is public, and it sits next to their callouts in the X-Ray. Not built yet: the extension showing it next to a name on X.",
+    "why": "Planned for December and put to the vote. The calls were already being read, so it went out early. Trackers show a caller's trades. Nobody lines them up against the post itself.",
+    "proof": [
+      {
+        "label": "2d28051",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/2d28051"
+      },
+      {
+        "label": "1467c84",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/1467c84"
+      }
+    ],
+    "zh": {
+      "title": "喊单真相",
+      "text": "每一条 pump.fun 喊单都在我们的记录上跟踪 24 小时：一小时后的市值、我们看到的最高点、一天后这个币在哪里、是否还活着，以及 pump.fun 在喊单者旁边列出的钱包在喊单前后做了什么。每个喊单者的记录都是公开的，在透视里也显示在他们的喊单旁边。还没做：扩展在 X 上的名字旁边显示它。",
+      "why": "原计划十二月，并交给投票。喊单本来就在读取，所以提前上线了。别的追踪工具展示喊单者的交易，没有人把交易和帖子本身对起来。"
+    }
+  },
+  {
+    "id": "no-stalls",
+    "date": "2026-11-14",
+    "title": "No more frozen scans",
+    "text": "Every five minutes the node saved two days of launches to disk in one go and answered nobody for 23 seconds. Once an hour a second job did the same for 7. Both now work in small pieces, with scans served in between: the longest pause on the live node went from 23 seconds to under one.",
+    "why": "Found while auditing our own logs. A scan that landed in that window waited, and it was 8% of every hour.",
+    "proof": [
+      {
+        "label": "721c9f5",
+        "href": "https://github.com/0xNickdev/aiagentzoo/commit/721c9f5"
+      }
+    ],
+    "zh": {
+      "title": "扫描不再卡住",
+      "text": "节点每五分钟把两天的发射记录一次性写入磁盘，其间 23 秒不回应任何请求。每小时还有另一个任务同样卡住 7 秒。现在两者都分成小块处理，中间照常响应扫描：线上节点最长的停顿从 23 秒降到不到 1 秒。",
+      "why": "在检查自己的日志时发现的。落在这个窗口里的扫描只能等，而这占了每小时的 8%。"
+    }
+  }
+];
+
+export const OLD_BURIED: Buried[] = [
+  {
+    "id": "feed",
+    "date": "2026-10-07",
+    "title": "Paying the agents in tokens",
+    "text": "Holders would spend the token to feed the agents: model calls, stakes and signal fees settled on chain.",
+    "reason": "Paying for every check is a barrier for a trader who needs an answer in a second.",
+    "zh": {
+      "title": "用代币给智能体付费",
+      "text": "持有者花代币喂养智能体：模型调用、质押和信号费用在链上结算。",
+      "reason": "每次检查都要付费，对一个需要一秒内得到答案的交易者来说是门槛。"
+    }
+  },
+  {
+    "id": "safe-list",
+    "date": "2026-10-21",
+    "title": "A list of safe coins",
+    "text": "A feed of coins that passed every check, sold as alpha.",
+    "reason": "A clean x-ray means we caught nothing, not that the coin lives. Coins we flag avoid and coins with no flags die at almost the same rate. The next rug on a green list would be on us.",
+    "zh": {
+      "title": "安全币清单",
+      "text": "把通过全部检查的币做成清单，当作内幕信息卖。",
+      "reason": "干净的透视只说明我们没抓到问题，不代表币能活下来。被我们标为避开的币和没有红旗的币，死亡率几乎一样。绿名单上的下一个跑路，责任就在我们。"
+    }
+  },
+  {
+    "id": "watchlist",
+    "date": "2026-10-21",
+    "title": "A wallet watchlist",
+    "text": "Follow any wallet and get pinged on its every move.",
+    "reason": "A dozen bots already follow wallets. Another alert feed is not why anyone opens an x-ray.",
+    "zh": {
+      "title": "钱包关注列表",
+      "text": "关注任意钱包，它每动一下都提醒你。",
+      "reason": "已经有十几个机器人在跟踪钱包。多一个提醒频道，不是大家打开透视的理由。"
+    }
+  },
+  {
+    "id": "api-page",
+    "date": "2026-10-21",
+    "title": "A separate API page",
+    "text": "Its own page for the API, apart from everything else for builders.",
+    "reason": "The API lives on /connect beside everything else a builder needs. Two doors to one room was one too many.",
+    "zh": {
+      "title": "单独的 API 页面",
+      "text": "给 API 单独做一个页面，和其他开发者内容分开。",
+      "reason": "API 放在 /connect，和开发者需要的其他东西在一起。一个房间开两扇门，多了一扇。"
+    }
+  }
+];
