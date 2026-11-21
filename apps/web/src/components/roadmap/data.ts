@@ -53,10 +53,10 @@ const NEW_SHIPPED: Shipped[] = [
     id: "final",
     date: "2026-11-19",
     title: "Best Consumer App on Solana",
-    text: "Solana Hackathon 2026, run by Encode Club. The prize is a place in the accelerator, not cash.",
+    text: "Final 8 at Solana Hackathon 2026, run by Encode Club, and the Best Consumer App award. The prize is a place in the accelerator, not cash.",
     proof: [],
     milestone: true,
-    zh: { title: "Solana 最佳消费级应用", text: "Encode Club 主办的 Solana Hackathon 2026。奖励是加速器名额，不是现金。" },
+    zh: { title: "Solana 最佳消费级应用", text: "进入 Encode Club 主办的 Solana Hackathon 2026 八强，并获最佳消费级应用奖。奖励是加速器名额，不是现金。" },
   },
   {
     id: "rebuild",
@@ -183,8 +183,8 @@ export const NEXT: Planned[] = [
     when: "soon",
     whenZh: "即将",
     title: "Pro",
-    text: "The verdict and its main reasons stay free. Pro opens the deep x-ray: the funding trace, one hand in many wallets, where the SOL went, and alerts. No price here until it is live.",
-    zh: { title: "Pro", text: "结论和主要理由继续免费。Pro 打开深度透视：资金追踪、多钱包同一只手、SOL 的去向，以及提醒。上线之前这里不写价格。" },
+    text: "The x-ray stays free. Pro opens who funded the buyers four hops back, where the SOL went, every early wallet's history, all the callers and a Telegram ping the second the dev starts selling. Pay in USDC, or in $ZOOAGENCY at 25% off, and every $ZOOAGENCY paid is burned.",
+    zh: { title: "Pro", text: "透视继续免费。Pro 打开：谁给买家打的钱（向上四层）、SOL 的去向、每个早期钱包的历史、全部喊单人，以及开发者一卖出就发的 Telegram 提醒。可用 USDC 支付，或用 $ZOOAGENCY 支付并减 25%，支付的代币全部销毁。" },
   },
   {
     id: "keys",
@@ -283,6 +283,7 @@ export const STOPS: Stop[] = [
     titleZh: "决赛",
     count: "Solana Hackathon 2026",
     points: [
+      { en: "Final 8 of the hackathon", zh: "进入黑客松八强" },
       { en: "Best Consumer App on Solana", zh: "Solana 最佳消费级应用" },
       { en: "The prize: a place in the accelerator", zh: "奖励：加速器名额" },
     ],
@@ -347,16 +348,3 @@ export const STOPS: Stop[] = [
     href: "#next",
   },
 ];
-
-/** Shipped builds per week, running total: what the chart draws. */
-export function shippedByWeek(): Array<{ week: string; total: number }> {
-  const day = 86_400_000;
-  const start = Date.UTC(2026, 9, 5); // the Monday of the first commit's week
-  const end = Date.parse(UPDATED);
-  const out: Array<{ week: string; total: number }> = [];
-  for (let w = start; w <= end; w += 7 * day) {
-    const upTo = new Date(w + 7 * day).toISOString().slice(0, 10);
-    out.push({ week: new Date(w).toISOString().slice(0, 10), total: SHIPPED.filter((s) => !s.milestone && s.date < upTo).length });
-  }
-  return out;
-}
