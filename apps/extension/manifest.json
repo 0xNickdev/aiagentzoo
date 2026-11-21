@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ZOOAI X-Ray",
   "short_name": "X-Ray",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "See who you're buying from on Solana: the verdict, the odds it is alive tomorrow and the dev behind it, on the page you trade on.",
   "homepage_url": "https://zooaiagency.com/xray",
   "action": {
