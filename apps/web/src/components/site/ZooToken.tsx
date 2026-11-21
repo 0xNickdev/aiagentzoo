@@ -104,8 +104,8 @@ export function TokenChip() {
         className="group flex h-full items-center gap-2 rounded-l-full pl-1.5 pr-3 hover:bg-white/[0.03]"
       >
         <TokenDot className="!h-5 !w-5" />
-        <span className="text-[12.5px] font-medium text-white">$ZOOAGENCY</span>
-        <code id="bar-ca" className="font-mono text-[11.5px] text-dim group-hover:text-fg-2">
+        <span className="whitespace-nowrap text-[12.5px] font-medium text-white">$ZOOAGENCY</span>
+        <code id="bar-ca" className="hidden whitespace-nowrap font-mono text-[11.5px] text-dim group-hover:text-fg-2 xl:inline">
           <span className="sr-only">{ZOOAGENCY_MINT}</span>
           <span aria-hidden>{ZOOAGENCY_MINT.slice(0, 4)}…{ZOOAGENCY_MINT.slice(-4)}</span>
         </code>

@@ -55,7 +55,9 @@ function Head({ n, tag, title, grey, lead, id }: { n: number; tag: string; title
 
 type Filter = "all" | "live" | "cut";
 /** A chapter longer than this shows its newest rows and a button for the rest. */
-const FOLD = 8;
+const narrow = () => typeof innerWidth === "number" && innerWidth < 640;
+const FOLD = narrow() ? 4 : 8;
+const CUT_FOLD = 4;
 const CHAPTERS: Array<{ id: string; from: string; to: string; label: string; name: string }> = [
   { id: "rebuild", from: "2026-11-15", to: "2026-12-31", label: "15 - 21 Nov", name: "The final and the rebuild" },
   { id: "own", from: "2026-11-01", to: "2026-11-14", label: "1 - 14 Nov", name: "Own ground" },
@@ -163,6 +165,8 @@ function PlanCard({ p, dashed }: { p: Planned; dashed?: boolean }) {
 
 export default function Roadmap() {
   const builds = SHIPPED.filter((s) => !s.milestone).length;
+  // On a phone the cut list opens at its newest four; a wide screen shows all of it.
+  const [allCut, setAllCut] = useState(() => !narrow());
   const stat = (v: number | string, k: string) => (
     <div className="min-w-0">
       <p className="text-[clamp(26px,3.2vw,36px)] font-semibold leading-none tracking-[-0.045em] text-white">{v}</p>
@@ -243,7 +247,7 @@ export default function Roadmap() {
           <Rise>
             <Head id="cut" n={4} tag="Cut" title="What we cut," grey="and why." lead="A roadmap that only grows is a wish list. These were planned, some were built, and we dropped them on purpose." />
             <div className="mt-10 grid gap-7 md:grid-cols-2 xl:grid-cols-3">
-              {CUT.map((c) => {
+              {(allCut ? CUT : CUT.slice(0, CUT_FOLD)).map((c) => {
                 const z = zh() ? c.zh : undefined;
                 return (
                   <div key={c.id} className="rm-frame">
@@ -260,6 +264,12 @@ export default function Roadmap() {
                 );
               })}
             </div>
+            {CUT.length > CUT_FOLD && (
+              <button type="button" onClick={() => setAllCut((v) => !v)} aria-expanded={allCut} className="mt-7 flex h-11 w-full items-center justify-center gap-2 border border-line-2 text-[12.5px] text-fg-3 hover:border-[#4a524e] hover:text-white">
+                {allCut ? t("Show fewer") : t("Show all {n}", { n: CUT.length })}
+                <span className="text-faint">{allCut ? "↑" : "↓"}</span>
+              </button>
+            )}
             <div className="mt-12 border-t border-line pt-6">
               <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">{t("Off the plan since the rebuild")}</p>
               <p className="mt-2 max-w-[62ch] text-[13.5px] leading-[1.6] text-fg-4">{t("These were on the 14 November plan and are not on this one. If one comes back, it gets a card above.")}</p>

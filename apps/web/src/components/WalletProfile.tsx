@@ -226,9 +226,10 @@ export default function WalletProfile({ wallet, onToken, onWallet }: { wallet: s
                     <span className="truncate text-fg-2">
                       ${sym(x.symbol)} <span className="text-faint">· {VENUE[x.venue] ?? x.venue} · {agoTight(x.createdAt)}</span>
                     </span>
-                    <span className="text-right text-faint">{x.buyers}</span>
+                    {/* a coin that graduated in its first second has its buyers in the pool: the curve saw one or none, which is not the count */}
+                    <span className="text-right text-faint" title={x.graduated && x.buyers <= 1 ? t("Graduated in its first second: its buyers are in the pool, not counted here") : undefined}>{x.graduated && x.buyers <= 1 ? t("in pool") : x.buyers}</span>
                     <span className="hidden text-right text-faint sm:block">{x.early}</span>
-                    {x.buyers === 0 ? (
+                    {x.buyers === 0 && !x.graduated ? (
                       <span className="text-right text-faint">{t("nobody bought")}</span>
                     ) : (() => {
                       const o = launchOutcome(x);

@@ -17,6 +17,7 @@ const LINKS: Item[] = [
   { label: "X-Ray", href: "/xray", also: ["/callers", "/volume"] },
   { label: "Feed", href: "/feed" },
   { label: "Contests", href: "/contests", also: ["/play"] },
+  { label: "Roadmap", href: "/roadmap" },
   { label: "Extension", href: EXTENSION_URL },
   { label: "API", href: DOCS_URL, also: ["/x402", "/connect", "/stats"] },
 ];

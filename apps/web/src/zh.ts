@@ -2018,4 +2018,6 @@ export const ZH: Record<string, string> = {
   "What holding it gets you today, and how Pro revenue comes back to it once Pro is open.": "现在持有它能得到什么，以及 Pro 上线后收入如何回到它身上。",
   "Today": "现在",
   "When Pro opens": "Pro 上线后",
+  "in pool": "在池中",
+  "Graduated in its first second: its buyers are in the pool, not counted here": "第一秒就毕业：买家在池子里，这里没有统计",
 };

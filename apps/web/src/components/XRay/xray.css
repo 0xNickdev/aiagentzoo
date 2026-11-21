@@ -361,6 +361,9 @@
   .x-navl a.on::before { display: none; }
   .x-main { margin-left: 0; min-height: 0; }
   .x-bar { padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
+  /* on a phone the search takes the whole bar: the spacer would hand half of it to nothing and cut the address short */
+  .x-barsp { display: none; }
+  .x-search { max-width: none; }
   .x-crumb, .x-upd span:last-child, .x-kbd { display: none; }
   .x-grid { padding: 12px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
   .x-s3, .x-s4, .x-s5, .x-s6, .x-s7, .x-s8 { grid-column: span 12; }

@@ -93,7 +93,7 @@ export function LangSwitch({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => setLang(to)}
       aria-pressed={l === to}
-      className={`rounded-[5px] px-2 py-0.5 transition-colors ${l === to ? "bg-night-raised text-white" : "text-faint hover:text-white"}`}
+      className={`whitespace-nowrap rounded-[5px] px-2 py-0.5 transition-colors ${l === to ? "bg-night-raised text-white" : "text-faint hover:text-white"}`}
     >
       {label}
     </button>
