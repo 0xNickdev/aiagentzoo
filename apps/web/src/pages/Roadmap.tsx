@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { GITHUB_URL, GitHubIcon } from "../links";
 import { lang, pick, t } from "../i18n";
-import Orbit, { Corners } from "../components/roadmap/Orbit";
+import Timeline, { Corners } from "../components/roadmap/Timeline";
 import Now from "../components/roadmap/Now";
 import { CUT, EXPLORING, NEXT, PARKED, type Planned, SHIPPED, type Shipped, UPDATED } from "../components/roadmap/data";
 
@@ -165,7 +165,7 @@ export default function Roadmap() {
   const builds = SHIPPED.filter((s) => !s.milestone).length;
   const stat = (v: number | string, k: string) => (
     <div className="min-w-0">
-      <p className="text-[clamp(28px,4vw,40px)] font-semibold leading-none tracking-[-0.045em] text-white">{v}</p>
+      <p className="text-[clamp(26px,3.2vw,36px)] font-semibold leading-none tracking-[-0.045em] text-white">{v}</p>
       <p className="mt-2 text-[12.5px] text-dim">{t(k)}</p>
     </div>
   );
@@ -173,26 +173,31 @@ export default function Roadmap() {
     <div className="rm">
       {/* the hero: the claim, the numbers, and the orbit */}
       <section className="mx-auto max-w-[1440px] px-4 pb-[clamp(56px,7vw,104px)] pt-8 sm:px-5 sm:pt-12 lg:px-[86px]">
-        <Orbit>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
-            {t("Roadmap")} · {t("updated {d}", { d: day(UPDATED, true) })}
-          </p>
-          <h1 className="mt-5 text-[clamp(38px,5.6vw,76px)] font-semibold leading-[0.97] tracking-[-0.05em] text-white">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
+          {t("Roadmap")} · {t("updated {d}", { d: day(UPDATED, true) })}
+        </p>
+        <div className="mt-5 grid gap-x-12 gap-y-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-end">
+          <h1 className="text-[clamp(38px,5.4vw,72px)] font-semibold leading-[0.97] tracking-[-0.05em] text-white">
             {t("Shipped means a commit.")} <span className="text-faint">{t("Cut means a reason.")}</span>
           </h1>
-          <p className="mt-6 max-w-[52ch] text-[15px] leading-[1.6] text-fg-3 sm:text-[16.5px]">
-            {t("Everything we built is in the open, with the commit that shipped it. So is everything we removed, with why. What comes next has a date only when there is one.")}
-          </p>
-          <div className="mt-8 flex flex-wrap items-end gap-x-9 gap-y-5">
-            {stat(builds, "builds shipped")}
-            {stat(CUT.length, "cut on purpose")}
-            {stat(NEXT.length + EXPLORING.length, "ahead")}
-            <a href={`${GITHUB_URL}/commits/main`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-line-2 px-3.5 text-[12.5px] font-medium text-white hover:border-[#4a524e]">
-              <GitHubIcon size={14} />
-              {t("Every commit")}
-            </a>
+          <div>
+            <p className="max-w-[54ch] text-[15px] leading-[1.6] text-fg-3 sm:text-[16px]">
+              {t("Everything we built is in the open, with the commit that shipped it. So is everything we removed, with why. What comes next has a date only when there is one.")}
+            </p>
+            <div className="mt-6 flex flex-wrap items-end gap-x-9 gap-y-5">
+              {stat(builds, "builds shipped")}
+              {stat(CUT.length, "cut on purpose")}
+              {stat(NEXT.length + EXPLORING.length, "ahead")}
+              <a href={`${GITHUB_URL}/commits/main`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-line-2 px-3.5 text-[12.5px] font-medium text-white hover:border-[#4a524e]">
+                <GitHubIcon size={14} />
+                {t("Every commit")}
+              </a>
+            </div>
           </div>
-        </Orbit>
+        </div>
+        <div className="mt-[clamp(32px,4vw,56px)]">
+          <Timeline />
+        </div>
       </section>
 
       {/* now: a hatched band with the bento on a sheet of its own */}

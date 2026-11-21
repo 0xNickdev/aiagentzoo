@@ -1984,4 +1984,9 @@ export const ZH: Record<string, string> = {
   "The running count of builds on this page, each one a commit you can open. Move across the line to read a week.": "本页发布项的累计数量，每一项都是可以打开的提交。在曲线上移动可以读到每一周。",
   "Live launches pass through the frozen model into a sheet that is graded on day seven": "实时发射经过冻结的模型，进入第七天评分的记录表",
   "Builds shipped, running total by week": "按周累计的发布数量",
+  "We are here": "我们在这里",
+  "The road so far": "一路走来",
+  "Free": "免费",
+  "Stays free": "继续免费",
+  "Soon": "即将",
 };

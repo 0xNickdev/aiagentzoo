@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { pick, t } from "../../i18n";
-import { Corners } from "./Orbit";
+import { Corners } from "./Timeline";
 import { shippedByWeek, TRIAL } from "./data";
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -174,65 +174,46 @@ function TrialCard() {
   );
 }
 
-/* ---------- Pro: one hub, four things it opens, lit one at a time ---------- */
+/* ---------- Pro: what stays free and what it opens, as two plain lists ---------- */
 
-const PRO: Array<{ en: string; zh: string; glyph: string }> = [
-  { en: "Funding trace", zh: "资金追踪", glyph: "M-6 5 -2 -1 2 2 6 -5M3 -5h3v3" },
-  { en: "One hand", zh: "同一只手", glyph: "M-5 -3h10M-5 0h10M-5 3h10M-5 -5v10M5 -5v10" },
-  { en: "Alerts", zh: "提醒", glyph: "M-4.5 3.5c0-5 1-8 4.5-8s4.5 3 4.5 8zM-1.5 6h3" },
-  { en: "API keys", zh: "API 密钥", glyph: "M-6 2a3 3 0 1 0 0 -0.1M-3 2h9M3 2v3M6 2v2" },
+const FREE: Array<{ en: string; zh: string }> = [
+  { en: "The verdict and its main reasons", zh: "结论和主要理由" },
+  { en: "The odds from the first five minutes", zh: "前五分钟算出的赔率" },
+  { en: "The dev's record", zh: "开发者的记录" },
+];
+const PRO: Array<{ en: string; zh: string }> = [
+  { en: "The funding trace", zh: "资金追踪" },
+  { en: "One hand in many wallets", zh: "多钱包同一只手" },
+  { en: "Where the SOL went", zh: "SOL 的去向" },
+  { en: "Alerts", zh: "提醒" },
 ];
 
 function ProCard() {
-  const still = reduced();
-  const [hover, setHover] = useState(-1);
-  const [auto, setAuto] = useState(0);
-  useEffect(() => {
-    if (still || hover >= 0) return;
-    const id = setInterval(() => setAuto((a) => (a + 1) % 4), 1700);
-    return () => clearInterval(id);
-  }, [still, hover]);
-  const on = hover >= 0 ? hover : still ? -1 : auto;
-  const tiles = [
-    { x: 66, y: 34 },
-    { x: 66, y: 116 },
-    { x: 234, y: 34 },
-    { x: 234, y: 116 },
-  ];
-  const path = (i: number) => {
-    const tile = tiles[i]!;
-    const dir = tile.x < 150 ? -1 : 1;
-    return `M${150 + dir * 17},75 H${150 + dir * 42} V${tile.y} H${tile.x - dir * 15}`;
-  };
+  const list = (head: string, tag: string, rows: typeof FREE, lit: boolean) => (
+    <div className="min-w-0">
+      <p className="flex items-center justify-between border-b border-line pb-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em]">
+        <span className="text-white">{t(head)}</span>
+        <span className={lit ? "rounded-[3px] bg-white px-1.5 leading-[16px] text-night" : "text-faint"}>{t(tag)}</span>
+      </p>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.en} className="flex items-center gap-2.5 border-b border-line py-2.5 text-[13px] text-fg-2">
+            <span className={`h-[5px] w-[5px] shrink-0 rounded-full ${lit ? "bg-white" : "border border-[#7d8681]"}`} />
+            {pick(r.en, r.zh)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
   return (
     <div className="rm-frame">
       <Corners />
       <div className="rm-card">
-        <svg className="block h-auto w-full overflow-visible" viewBox="0 0 300 150" role="group" aria-label="Pro">
-          {tiles.map((_, i) => (
-            <path key={i} d={path(i)} className={`rm-flow ${on === i ? "rm-flow-on" : ""}`} />
-          ))}
-          {!still && on >= 0 && (
-            <circle key={on} r="2.2" fill="#fff">
-              <animateMotion dur="1.1s" repeatCount="indefinite" path={path(on)} />
-            </circle>
-          )}
-          <rect x="133" y="58" width="34" height="34" rx="7" className="rm-node" />
-          <Eyes x={139} y={69} w={22} />
-          {tiles.map((tile, i) => (
-            <g key={i} className={`rm-tool ${on === i ? "rm-tool-on" : ""}`} tabIndex={0} role="img" aria-label={pick(PRO[i]!.en, PRO[i]!.zh)} onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(-1)} onFocus={() => setHover(i)} onBlur={() => setHover(-1)}>
-              <rect x={tile.x - 15} y={tile.y - 15} width="30" height="30" rx="6" className="rm-node" />
-              <path transform={`translate(${tile.x},${tile.y})`} d={PRO[i]!.glyph} fill="none" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              <text x={tile.x} y={tile.y + (tile.y < 75 ? -21 : 29)} textAnchor="middle" className="rm-lab" opacity={on === i ? 1 : 0.55}>
-                {pick(PRO[i]!.en, PRO[i]!.zh)}
-              </text>
-            </g>
-          ))}
-          <text x="150" y="112" textAnchor="middle" className="rm-cap">
-            {pick("SOON", "即将")}
-          </text>
-        </svg>
-        <div className="mt-auto">
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          {list("Free", "Stays free", FREE, true)}
+          {list("Pro", "Soon", PRO, false)}
+        </div>
+        <div className="mt-auto pt-2">
           <h3>{t("Pro, the deep x-ray")}</h3>
           <p>{t("The verdict and its main reasons stay free for everyone. Pro opens everything behind them. No price here until it is live.")}</p>
         </div>

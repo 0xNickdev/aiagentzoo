@@ -221,7 +221,7 @@ export const EXPLORING: Planned[] = [
   },
 ];
 
-/** The orbit: seven stops from the first commit to what is next. */
+/** The line at the top of the page: seven stops from the first commit to what is next. */
 export type StopStatus = "shipped" | "now" | "next";
 export interface Stop {
   id: string;
@@ -230,36 +230,49 @@ export interface Stop {
   dateZh: string;
   title: string;
   titleZh: string;
-  text: string;
-  textZh: string;
+  /** One measured fact under the title. */
+  count?: string;
+  countZh?: string;
+  points: Array<{ en: string; zh: string }>;
   /** Where on the page the stop continues. */
   href: string;
-  related: string[];
 }
+const between = (from: string, to: string) => SHIPPED.filter((s) => !s.milestone && s.date >= from && s.date <= to).length;
+const oct = between("2026-10-01", "2026-10-31");
+const nov = between("2026-11-01", "2026-11-14");
+const cutDay = CUT.filter((c) => c.date === "2026-11-20").length;
 export const STOPS: Stop[] = [
   {
     id: "built",
     status: "shipped",
-    date: "Oct 2026",
-    dateZh: "2026 年 10 月",
+    date: "6 - 31 Oct",
+    dateZh: "10 月 6 - 31 日",
     title: "Built",
     titleZh: "建成",
-    text: "From the first commit on 6 October to an x-ray traders use: the chain read directly, bundles, the extension, the bot, the odds.",
-    textZh: "从 10 月 6 日的第一个提交到交易者在用的透视：直接读链、捆绑检测、扩展、机器人、赔率。",
+    count: `${oct} builds`,
+    countZh: `${oct} 项发布`,
+    points: [
+      { en: "Solana read straight from the chain", zh: "直接从链上读 Solana" },
+      { en: "X-Ray, bundles, the odds", zh: "透视、捆绑检测、赔率" },
+      { en: "Extension and Telegram bot", zh: "扩展和 Telegram 机器人" },
+    ],
     href: "#shipped",
-    related: ["own"],
   },
   {
     id: "own",
     status: "shipped",
-    date: "Nov 2026",
-    dateZh: "2026 年 11 月",
+    date: "1 - 14 Nov",
+    dateZh: "11 月 1 - 14 日",
     title: "Own ground",
     titleZh: "自己的地盘",
-    text: "Our own servers, x402 for agents, tool prints, one hand in many wallets, Caller Truth and real volume.",
-    textZh: "自己的服务器、面向代理的 x402、工具指纹、多钱包同一只手、喊单真相和真实成交量。",
+    count: `${nov} builds`,
+    countZh: `${nov} 项发布`,
+    points: [
+      { en: "x402: agents pay per check", zh: "x402：代理按次付费" },
+      { en: "One hand in many wallets", zh: "多钱包同一只手" },
+      { en: "Caller Truth", zh: "喊单真相" },
+    ],
     href: "#shipped",
-    related: ["built", "final"],
   },
   {
     id: "final",
@@ -268,10 +281,12 @@ export const STOPS: Stop[] = [
     dateZh: "11 月 19 日",
     title: "The final",
     titleZh: "决赛",
-    text: "Best Consumer App on Solana at Solana Hackathon 2026. The prize is a place in the accelerator.",
-    textZh: "Solana Hackathon 2026 的 Solana 最佳消费级应用。奖励是加速器名额。",
+    count: "Solana Hackathon 2026",
+    points: [
+      { en: "Best Consumer App on Solana", zh: "Solana 最佳消费级应用" },
+      { en: "The prize: a place in the accelerator", zh: "奖励：加速器名额" },
+    ],
     href: "#shipped",
-    related: ["own", "accelerator"],
   },
   {
     id: "cut",
@@ -280,10 +295,14 @@ export const STOPS: Stop[] = [
     dateZh: "11 月 20 日",
     title: "The cut",
     titleZh: "大删减",
-    text: "The day after the final, everything that was not the x-ray left: the nursery, the brief, the chat, two chains and the pages around them.",
-    textZh: "决赛后的第二天，所有不属于透视的东西都移除了：育婴室、晨报、聊天、两条链，以及围绕它们的页面。",
+    count: `${cutDay} things removed`,
+    countZh: `移除 ${cutDay} 项`,
+    points: [
+      { en: "The site rebuilt around the x-ray", zh: "网站围绕透视重建" },
+      { en: "Solana only", zh: "只做 Solana" },
+      { en: "Contests graded by the odds model", zh: "竞赛以赔率模型评分" },
+    ],
     href: "#cut",
-    related: ["final", "runner"],
   },
   {
     id: "runner",
@@ -292,10 +311,14 @@ export const STOPS: Stop[] = [
     dateZh: "11 月 21 - 28 日",
     title: "Runner radar",
     titleZh: "黑马雷达",
-    text: "The other question, asked of the same chain data: what does a runner look like in its first five minutes. A silent trial on live coins.",
-    textZh: "用同样的链上数据问另一个问题：黑马在最初五分钟是什么样子。正在真实代币上静默试运行。",
+    count: "silent trial",
+    countZh: "静默试运行",
+    points: [
+      { en: "Model frozen 21 Nov", zh: "模型于 11 月 21 日冻结" },
+      { en: "Reads live coins it never saw", zh: "读从未见过的真实代币" },
+      { en: "Graded 28 Nov", zh: "11 月 28 日评分" },
+    ],
     href: "#now",
-    related: ["cut", "pro"],
   },
   {
     id: "accelerator",
@@ -304,10 +327,9 @@ export const STOPS: Stop[] = [
     dateZh: "12 月 7 日",
     title: "Accelerator",
     titleZh: "加速器",
-    text: "The Encode Club x Solana accelerator starts.",
-    textZh: "Encode Club x Solana 加速器开营。",
+    count: "Encode Club x Solana",
+    points: [{ en: "The program starts", zh: "项目开营" }],
     href: "#next",
-    related: ["final", "pro"],
   },
   {
     id: "pro",
@@ -316,10 +338,13 @@ export const STOPS: Stop[] = [
     dateZh: "即将",
     title: "Pro",
     titleZh: "Pro",
-    text: "The deep x-ray for those who want all of it. The verdict stays free.",
-    textZh: "给想看全部的人的深度透视。结论继续免费。",
+    count: "the deep x-ray",
+    countZh: "深度透视",
+    points: [
+      { en: "The verdict stays free", zh: "结论继续免费" },
+      { en: "No price until it is live", zh: "上线前不写价格" },
+    ],
     href: "#next",
-    related: ["runner", "accelerator"],
   },
 ];
 
