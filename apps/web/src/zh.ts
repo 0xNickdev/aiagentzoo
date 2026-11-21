@@ -1934,4 +1934,8 @@ export const ZH: Record<string, string> = {
   "Free deep check opens soon": "免费深度检查即将开放",
   "{p}% alive tomorrow": "明天存活概率 {p}%",
   "No red flags means the known rug signs are not there, not that the coin goes up. Most fresh coins die either way. The quick buy routes through Jupiter with your own wallet; a {p}% fee goes to the zoo. Not financial advice.": "没有危险信号只说明已知的跑路迹象不在，不代表币会涨。大多数新币无论如何都会归零。快速买入通过 Jupiter 用你自己的钱包完成；{p}% 的手续费归动物园。不构成投资建议。",
+  "The wallet behind this coin launched {n} coins since {s} and dumped {d} of them{m}.": "这个币背后的钱包自 {s} 起发了 {n} 个币，砸了 {d} 个{m}。",
+  "of {n} launches dumped since {s}": "/ {n} 个自 {s} 起砸盘",
+  "since {s}": "自 {s} 起",
+  "{n} in the last 48 h": "最近 48 小时 {n} 个",
 };

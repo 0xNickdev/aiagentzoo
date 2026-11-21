@@ -79,7 +79,8 @@ function lead(p: Profile): { tag: string; title: string; sub?: string; tone: Ton
   if (d && d.builder?.isBuilder)
     return { tag: t("Track record"), title: t("{g} of {n} launches grew.", { g: d.builder.grew, n: d.builder.launches }), sub: t("They still hold liquidity, and this dev has not dumped them."), tone: "good" };
   // Launch spam: dozens of coins nobody buys. "0 dumped" there means nobody to dump on, not an honest dev.
-  const empty = d ? d.launches.filter((x) => x.buyers <= 1).length : 0;
+  // A coin that graduated in its first second has its buyers in the pool, not on the curve: it is not empty.
+  const empty = d ? d.launches.filter((x) => x.buyers <= 1 && !x.graduated).length : 0;
   if (d && d.launches48h >= 10 && d.launches.length && empty / d.launches.length >= 0.6)
     return {
       tag: t("Launch spam"),

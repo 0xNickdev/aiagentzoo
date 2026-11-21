@@ -38,6 +38,9 @@ function marked(text: string): ReactNode {
   );
 }
 
+/** "22 Oct": the day the long memory starts counting. */
+const sinceDay = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
 export function VerdictPanel({ r, market }: Ctx) {
   const c = r.check;
   const f = c.facts;
@@ -46,8 +49,9 @@ export function VerdictPanel({ r, market }: Ctx) {
   const vw = VWORD[c.verdict] ?? VWORD.unknown;
   const lede =
     rec && rec.dumped >= 2 && !r.outsideStream
-      ? t("The wallet behind this coin launched {n} coins in two days and dumped {d} of them{m}.", {
+      ? t(rec.counted === "history" && rec.historySince ? "The wallet behind this coin launched {n} coins since {s} and dumped {d} of them{m}." : "The wallet behind this coin launched {n} coins in two days and dumped {d} of them{m}.", {
           n: rec.launches48h.toLocaleString("en-US"),
+          s: rec.historySince ? sinceDay(rec.historySince) : "",
           d: rec.dumped.toLocaleString("en-US"),
           m: rec.medianDumpMin === null ? "" : rec.medianDumpMin <= 1 ? t(", usually within a minute") : rec.medianDumpMin < 120 ? t(", usually {m} min after launch", { m: rec.medianDumpMin }) : t(", usually {h} h after launch", { h: Math.round(rec.medianDumpMin / 60) }),
         })
@@ -452,17 +456,18 @@ export function DevPanel({ r, onPick, go, full }: Ctx & { full?: boolean }) {
   const maxSec = Math.max(1, ...recent.map((x) => secsOf(x) ?? 0));
   const scale = SCALES.find((s) => s >= maxSec) ?? maxSec;
   const bad = rec.dumped >= 2;
+  const span48 = rec.counted === "history" && rec.historySince ? t("since {s}", { s: sinceDay(rec.historySince) }) : t("48 h");
   return (
     <Pn id={full ? undefined : "dev"} span="x-s8" title={t("The dev")} meta={meta} more={more}>
       <div className="x-devhd">
         <p className="x-big">
-          <span className={bad ? "x-d" : ""}>{rec.dumped.toLocaleString("en-US")}</span> {t("of {n} launches dumped in 48 h", { n: rec.launches48h.toLocaleString("en-US") })}
+          <span className={bad ? "x-d" : ""}>{rec.dumped.toLocaleString("en-US")}</span> {rec.counted === "history" && rec.historySince ? t("of {n} launches dumped since {s}", { n: rec.launches48h.toLocaleString("en-US"), s: sinceDay(rec.historySince) }) : t("of {n} launches dumped in 48 h", { n: rec.launches48h.toLocaleString("en-US") })}
         </p>
         <span className="x-sub">
-          {[rec.medianDumpMin !== null ? (rec.medianDumpMin < 120 ? t("median {m} min to first sell", { m: rec.medianDumpMin }) : t("median {h} h to first sell", { h: Math.round(rec.medianDumpMin / 60) })) : null, rec.graduated ? t("{n} graduated before", { n: rec.graduated }) : null].filter(Boolean).join(" · ")}
+          {[rec.medianDumpMin !== null ? (rec.medianDumpMin < 120 ? t("median {m} min to first sell", { m: rec.medianDumpMin }) : t("median {h} h to first sell", { h: Math.round(rec.medianDumpMin / 60) })) : null, rec.graduated ? t("{n} graduated before", { n: rec.graduated }) : null, rec.counted === "history" && rec.last48h ? t("{n} in the last 48 h", { n: rec.last48h.launches }) : null].filter(Boolean).join(" · ")}
         </span>
       </div>
-      {rec.timeline?.length ? <Timeline codes={rec.timeline} label={t("48 h")} /> : <Squares total={rec.launches48h} dumped={rec.dumped} label={t("48 h")} />}
+      {rec.timeline?.length ? <Timeline codes={rec.timeline} label={span48} /> : <Squares total={rec.launches48h} dumped={rec.dumped} label={span48} />}
       {recent.length > 0 && (
         <>
           <div className="x-runs">
