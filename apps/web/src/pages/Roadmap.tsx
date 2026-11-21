@@ -77,9 +77,9 @@ function Row({ s }: { s: Shipped }) {
         <p className="mt-1 text-[13px] leading-[1.55] text-fg-4">{z?.text ?? s.text}</p>
         {s.why && <p className="mt-1.5 border-l border-line-2 pl-2.5 text-[12.5px] leading-[1.55] text-dim">{z?.why ?? s.why}</p>}
         {s.proof.length > 0 && (
-          <p className="mt-2 flex flex-wrap gap-1.5">
+          <p className="mt-2.5 flex flex-wrap gap-2 sm:mt-2 sm:gap-1.5">
             {s.proof.map((p) => (
-              <a key={p.href} href={p.href} target="_blank" rel="noopener noreferrer" className="inline-flex h-[22px] items-center rounded-[4px] border border-line-2 px-1.5 font-mono text-[10.5px] text-fg-3 hover:border-[#4a524e] hover:text-white">
+              <a key={p.href} href={p.href} target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center rounded-[5px] border border-line-2 px-2 font-mono text-[11px] text-fg-3 hover:border-[#4a524e] hover:text-white sm:h-[22px] sm:rounded-[4px] sm:px-1.5 sm:text-[10.5px]">
                 {p.label}
               </a>
             ))}
