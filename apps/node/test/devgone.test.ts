@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkToken, DEV_GONE_REASON, oddsRunNote } from "../src/chain/check.ts";
+import { checkToken, CROWD, DEV_GONE_REASON, oddsRunNote } from "../src/chain/check.ts";
 
 // PHP as the x-ray saw it: a serial dumper's coin they fully left, graduated, its pool grown from 85 to 386 SOL.
-const php = (over: Record<string, unknown> = {}) =>
+const phpAt = (over: Record<string, unknown> = {}) =>
   ({
     ageMin: 41 * 60, buys: 1400, sells: 900, buyers: 611, solIn: 900, solOut: 600, curveSol: null, creatorSold: 1, creatorLaunches24h: 12, graduated: true,
     top5Share: 0.2, repeatBuyers: 80, trades15m: 300, bundleWallets: 1, bundleShare: 0.02, bundlers: 40, bundlersHeld: 0.14, bundlersPeak: 0.48,
     poolSol: 386, ammBuys: 900, ammSells: 500, ammSolIn: 600, ammSolOut: 400, earlyWallets: 8, earlyHeld: 0.03, creatorCrew: 0, ringWallets: 0, serialSnipers: 2, crewHeld: 0, ...over,
   }) as never;
+const php = phpAt;
 const serial = { wallet: "dev", launches24h: 12, launches48h: 24, dumped: 23, medianDumpMin: 3, graduated: 1, recent: [] } as never;
 const spread = (over: Record<string, unknown> = {}) => ({ top10Share: 0.2, topShare: 0.04, programShare: 0.3, creator: "dev", creatorShare: 0, ...over }) as never;
 
@@ -23,6 +24,8 @@ test("dev gone, holders carry it: a serial dumper's coin they left, that graduat
 });
 
 test("dev gone does not apply when the holders are concentrated, the pool shrank, it never graduated or the holders are unknown", () => {
+  // Under 30 buyers on the curve, so the crowd rule stays out of it and only dev gone could soften these.
+  const php = (over: Record<string, unknown> = {}) => phpAt({ buyers: 20, ...over });
   const top = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial }, { holders: spread({ top10Share: 0.45 }) });
   assert.equal(top.verdict, "avoid");
   assert.equal(top.facts!.devGone, false);
@@ -60,7 +63,7 @@ test("a runner dev who sells early but whose coins mostly went past $20K gets ca
   const base = { wallet: "dev", launches24h: 2, launches48h: 6, dumped: 4, medianDumpMin: 1, graduated: 3, recent: [], pattern };
   const runner = base as never;
   // A fresh coin on the curve, the dev sold everything: their usual exit.
-  const fresh = php({ graduated: false, poolSol: null, curveSol: 40, ageMin: 3, creatorLaunches24h: 2, bundleWallets: 1, bundleShare: 0.02 });
+  const fresh = php({ graduated: false, poolSol: null, curveSol: 40, ageMin: 3, creatorLaunches24h: 2, bundleWallets: 1, bundleShare: 0.02, buyers: 20 });
   const c = checkToken("ZIBR", { symbol: "ZIBR", facts: fresh, creatorRecord: runner });
   assert.equal(c.verdict, "caution");
   assert.match(c.reasons[0]!, /60% of their last 6 launches went past \$20K \(usual peak \$27K\)/);
@@ -73,7 +76,7 @@ test("a runner dev who sells early but whose coins mostly went past $20K gets ca
   const flat = checkToken("ZIBR", { symbol: "ZIBR", facts: fresh, creatorRecord: { ...base, pattern: { ...pattern, reached20k: 0.3 } } as never });
   assert.equal(flat.verdict, "avoid");
   // A reason the record cannot soften (the creator's own wallets in the first seconds) keeps it avoid.
-  const crew = checkToken("ZIBR", { symbol: "ZIBR", facts: php({ graduated: false, poolSol: null, curveSol: 40, ageMin: 3, creatorLaunches24h: 2, bundleWallets: 1, bundleShare: 0.02, creatorCrew: 3 }), creatorRecord: runner });
+  const crew = checkToken("ZIBR", { symbol: "ZIBR", facts: php({ graduated: false, poolSol: null, curveSol: 40, ageMin: 3, creatorLaunches24h: 2, bundleWallets: 1, bundleShare: 0.02, creatorCrew: 3, buyers: 20 }), creatorRecord: runner });
   assert.equal(crew.verdict, "avoid");
   assert.equal(crew.facts!.runnerDev, false);
 });
@@ -122,4 +125,32 @@ test("burned: a plain pump.fun coin's billion less the supply left; Mayhem Mode 
   assert.equal(mayhem.holders!.burnedPct, undefined);
   const other = checkToken("Xbonk", { symbol: "B", facts: php(), creatorRecord: null }, { holders: spread({ supply: 900_000_000 }) });
   assert.equal(other.holders!.burnedPct, undefined);
+});
+
+test("a crowd in: a dev selling and a dump record warn instead of deciding, while what traps a holder stays avoid", () => {
+  // 611 buyers, the dev sold and dumps everything, holders unread: dev gone cannot speak, the crowd rule does.
+  const c = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial });
+  assert.equal(c.verdict, "caution");
+  assert.equal(c.proceed, false);
+  assert.ok(c.reasons.some((r) => r.includes("sold 100%")), "the selling still shows");
+  assert.ok(c.reasons.some((r) => r.includes("dumped 23 of their 24 launches")), "the record still shows");
+  assert.ok(c.notes.some((n) => n.startsWith("611 wallets have bought in:")));
+  assert.ok(c.score! < 60, "a caution score");
+
+  // One line under the crowd: unchanged.
+  const thin = checkToken("PHP", { symbol: "PHP", facts: php({ buyers: CROWD.buyers - 1 }), creatorRecord: serial });
+  assert.equal(thin.verdict, "avoid");
+  assert.ok(!thin.notes.some((n) => /wallets have bought in:/.test(n)));
+
+  // Early wallets still sitting on the supply, one wallet holding half, a dead pool, a dev back through their own
+  // wallets: each keeps it avoid however many bought.
+  const early = checkToken("PHP", { symbol: "PHP", facts: php({ earlyWallets: 5, earlyHeld: 0.6 }), creatorRecord: serial });
+  assert.equal(early.verdict, "avoid");
+  assert.ok(!early.notes.some((n) => /wallets have bought in:/.test(n)));
+  const whale = checkToken("PHP", { symbol: "PHP", facts: php(), creatorRecord: serial }, { holders: spread({ topShare: 0.55, top10Share: 0.7 }) });
+  assert.equal(whale.verdict, "avoid");
+  const dead = checkToken("PHP", { symbol: "PHP", facts: php({ poolSol: 0.3 }), creatorRecord: serial });
+  assert.equal(dead.verdict, "avoid");
+  const back = checkToken("PHP", { symbol: "PHP", facts: php({ crewHeld: 0.08, creatorCrew: 3 }), creatorRecord: serial }, { holders: spread() });
+  assert.equal(back.verdict, "avoid");
 });

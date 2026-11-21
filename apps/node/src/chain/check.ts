@@ -34,6 +34,22 @@ export const burnedOf = (mint: string, f: { mayhem?: boolean; venue?: string } |
   mint.endsWith("pump") && !f?.mayhem && (f?.venue ?? "pump.fun") === "pump.fun" && h.supply !== undefined && h.supply > 0 && h.supply <= PUMP_SUPPLY
     ? { burnedPct: Math.round(((PUMP_SUPPLY - h.supply) / PUMP_SUPPLY) * 1000) / 10 }
     : {};
+/**
+ * A coin with a crowd in: the dev's selling, their dump record, a funder's other dumpers, late bundles and the dev's
+ * own sniping wallets are how most launches with buyers look. On 7,655 pump.fun launches with 100+ buyers five minutes
+ * in (13 to 20 Nov 2026) they were on 85% of coins and the coins lived about as often as the rest (1.5% vs 1.8%), so
+ * past this many buyers they warn (caution) and no longer decide. What still traps a holder stays avoid.
+ */
+export const CROWD = { buyers: 30 } as const;
+const CROWD_SOFT = [
+  /^the creator sold \d+% of their own bag$/,
+  /^this creator dumped \d+ of their \d+ launches/,
+  /^the wallet that funded this creator also funded \d+ other launchers?; they dumped \d+ of their/,
+  /wallets bought it in bundles \(four or more in one block\)/,
+  /keep sniping this creator's other launches/,
+];
+export const crowdNote = (buyers: number) =>
+  `${buyers} wallets have bought in: with a crowd like that, a dev selling, a dump record, bundles and the dev's own snipers are how most launches look, so here they are warnings, not the verdict`;
 /** Odds this many times the average launch's make an avoid say the coin may still run. */
 export const ODDS_RUN_NOTE = 4;
 /** An avoid whose odds are well above average: the people around it do rug things, yet launches like it ran. */
@@ -439,6 +455,13 @@ export function checkToken(
   if (runner) {
     for (const r of avoid) weight.set(r, Math.round((weight.get(r) ?? 0) / 2));
     caution.unshift(runnerReason(pat!), ...avoid.splice(0));
+  }
+  // A crowd in: when every avoid reason is one most launches with buyers carry, they give way to caution, at half weight.
+  const crowd = !devGone && !runner && avoid.length > 0 && f.buyers >= CROWD.buyers && avoid.every((r) => CROWD_SOFT.some((re) => re.test(r)));
+  if (crowd) {
+    for (const r of avoid) weight.set(r, Math.round((weight.get(r) ?? 0) / 2));
+    caution.unshift(...avoid.splice(0));
+    notes.push(crowdNote(f.buyers));
   }
   // The mint's rights after the softening: a dev gone or a runner dev's record says nothing about who can freeze it.
   const rights = opts.rights ?? opts.holders?.rights ?? null;

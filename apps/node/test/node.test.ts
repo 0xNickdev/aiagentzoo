@@ -1084,12 +1084,19 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   assert.deepEqual(clean.reasons, []);
   assert.match(clean.notes.join(" "), /not a call that the price goes up/);
 
-  const dumped = checkToken("M", { symbol: "D", facts: facts({ creatorSold: 1 }), creatorRecord: rec() });
+  // Under a crowd (fewer than 30 buyers) the dev's selling and dump record decide.
+  const dumped = checkToken("M", { symbol: "D", facts: facts({ creatorSold: 1, buyers: 20 }), creatorRecord: rec() });
   assert.equal(dumped.verdict, "avoid");
   assert.equal(dumped.proceed, false);
   assert.match(dumped.reasons[0]!, /creator sold 100%/);
+  // With a crowd in they warn: most launches with buyers carry them.
+  const crowded = checkToken("M", { symbol: "D", facts: facts({ creatorSold: 1 }), creatorRecord: rec() });
+  assert.equal(crowded.verdict, "caution");
+  assert.equal(crowded.proceed, false);
+  assert.match(crowded.reasons[0]!, /creator sold 100%/);
+  assert.ok(crowded.notes.some((n) => /^60 wallets have bought in: .*warnings, not the verdict$/.test(n)));
 
-  const serial = checkToken("M", { symbol: "S", facts: facts({ creatorLaunches24h: 40 }), creatorRecord: rec({ launches48h: 40, dumped: 38, medianDumpMin: 0 }) });
+  const serial = checkToken("M", { symbol: "S", facts: facts({ creatorLaunches24h: 40, buyers: 20 }), creatorRecord: rec({ launches48h: 40, dumped: 38, medianDumpMin: 0 }) });
   assert.equal(serial.verdict, "avoid");
   assert.match(serial.reasons[0]!, /dumped 38 of their 40 launches in 48 hours, usually 0 min after launch/);
 
@@ -1121,7 +1128,7 @@ test("the pre-trade check says avoid, caution or pass in plain words, and never 
   const fresh = checkToken("M", { symbol: "F", facts: facts({ ageMin: 2, buyers: 3, top5Share: 1 }), creatorRecord: rec() });
   assert.equal(fresh.verdict, "pass");
   assert.match(fresh.notes[0]!, /only 2 min old/);
-  assert.equal(checkToken("M", { symbol: "F", facts: facts({ ageMin: 2 }), creatorRecord: rec({ launches48h: 9, dumped: 8, medianDumpMin: 1 }) }).verdict, "avoid");
+  assert.equal(checkToken("M", { symbol: "F", facts: facts({ ageMin: 2, buyers: 20 }), creatorRecord: rec({ launches48h: 9, dumped: 8, medianDumpMin: 1 }) }).verdict, "avoid");
 
   // Holders on request: a creator who never sold but holds nothing moved the bag.
   const moved = checkToken("M", { symbol: "H", facts: facts({ creatorSold: 0 }), creatorRecord: rec() }, { holders: { top10Share: 0.3, topShare: 0.05, programShare: 0.6, creator: "c", creatorShare: 0 } });

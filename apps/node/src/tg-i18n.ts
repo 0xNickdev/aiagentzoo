@@ -83,6 +83,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^just launched: more can show up, check again before adding$/, () => "刚刚发币：还可能出现更多信号，加仓前再查一次"],
   [/^only (\d+) min old: no red flags yet, so check again before adding$/, (m) => `才发币 ${m[1]} 分钟：暂无危险信号，加仓前再查一次`],
   [/^only (\d+) min old: more can show up, check again before adding$/, (m) => `才发币 ${m[1]} 分钟：还可能出现更多信号，加仓前再查一次`],
+  [/^(\d+) wallets have bought in: with a crowd like that, .*$/, (m) => `已有 ${m[1]} 个钱包买入：人这么多时，开发者卖出、砸盘记录、捆绑和开发者自己的狙击钱包是大多数发币的常态，所以这里只是警告，不决定结论`],
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^trades here stop at our record of (.+), (\d+) (h|days) after launch: .*$/, (m) => `这里的交易数据截止到我们 ${m[1]} 的记录（发币后 ${m[2]} ${m[3] === "h" ? "小时" : "天"}）：之后发生的不在本次检查内`],
   [/^(\d+) wallets bought it in bundles and held up to (\d+)% of the supply together, under the 30% we flag; they still hold (\d+)%$/, (m) => `${m[1]} 个钱包捆绑买入，合计最多持有 ${m[2]}% 的供应，低于我们 30% 的标记线；现在还持有 ${m[3]}%`],

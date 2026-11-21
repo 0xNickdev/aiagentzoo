@@ -111,6 +111,7 @@ export function LangSwitch({ className = "" }: { className?: string }) {
  * after graduation", the judges' rule flags. Known patterns are translated; anything else passes through.
  */
 const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^(\d+) wallets have bought in: with a crowd like that, .*$/, (m) => `已有 ${m[1]} 个钱包买入：人这么多时，开发者卖出、砸盘记录、捆绑和开发者自己的狙击钱包是大多数发币的常态，所以这里只是警告，不决定结论`],
   [/^this dev sells early, yet (\d+)% of their last (\d+) launches went past \$20K(?: \(usual peak (\$[\d.]+[KM])\))?: .*$/, (m) => `这个开发者习惯早卖，但他最近 ${m[2]} 次发币中有 ${m[1]}% 涨过 $20K${m[3] ? `（通常峰值 ${m[3]}）` : ""}：快速卖出是他的套路，风险在于能否及时离场，而不是跑路`],
   [/^creator sold (\d+)% after (\d+)(s| min| h)$/, (m) => `开发者 ${m[2]}${m[3] === "s" ? " 秒" : m[3] === " h" ? " 小时" : " 分钟"}后卖出 ${m[1]}%`],
   [/^pool drained to ([\d.]+) SOL after graduation$/, (m) => `毕业后池子被抽到只剩 ${m[1]} SOL`],
