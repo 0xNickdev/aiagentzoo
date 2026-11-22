@@ -237,6 +237,8 @@ interface Tracked {
    * on the curve or in the pool. What each bought and sold since, the SOL they put in, and the most they held together.
    */
   bundlers?: Map<string, { tok: number; sold: number }>;
+  /** A pinned coin's newest transaction seen, so a restart can read what it missed from there. */
+  lastTx?: string;
   bundledSol?: number;
   bundleHeld?: number;
   bundlePeak?: number;
@@ -369,6 +371,12 @@ export class PumpTape {
   private readonly prints = new Map<string, ToolPrint>();
   /** PumpSwap pools of the tokens on the tape, pool to mint. */
   private readonly pools = new Map<string, string>();
+  /**
+   * Mints kept past the two-day window for as long as the node runs: the zoo's own coin, read whole from the chain
+   * once and from then on by the stream like any fresh launch. Kept out of the creator, print and sniper lists, which
+   * count the last two days only.
+   */
+  private readonly pinned = new Set<string>();
   /** Every loud moment (not plain launches) of the last two days, oldest first. */
   private moments: PulseEvent[] = [];
   /** Per-second counts over the last minute, a ring indexed by second. */
@@ -586,6 +594,7 @@ export class PumpTape {
       const { creatorCrew, ringWallets } = this.crewOf(t, now);
       t.at5 = { ...this.early(t), creatorCrew, ringWallets, at: ev.ts, curve: t.curveSol, trades: t.buys + t.sells };
     }
+    if (tx && this.pinned.has(t.mint)) t.lastTx = tx;
     // A buy and a sell by one wallet in one transaction is a bump bot, not a trader.
     if (tx) {
       if (t.last && t.last.tx === tx && t.last.user === ev.user && t.last.isBuy !== ev.isBuy) t.bumps = (t.bumps ?? 0) + 1;
@@ -811,6 +820,7 @@ export class PumpTape {
     const mint = this.pools.get(ev.pool);
     const t = mint ? this.tokens.get(mint) : undefined;
     if (!t) return;
+    if (tx && this.pinned.has(t.mint)) t.lastTx = tx;
     this.seen.trades += 1;
     this.count(now, "trades");
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
@@ -905,7 +915,7 @@ export class PumpTape {
       this.bundleSince = saved.bundleSince ?? now;
       this.feedSince = saved.feedSince ?? now;
       for (const s of saved.tokens ?? []) {
-        if (!s?.mint || now - s.createdAt > KEEP_MS || this.tokens.has(s.mint)) continue;
+        if (!s?.mint || (now - s.createdAt > KEEP_MS && !this.pinned.has(s.mint)) || this.tokens.has(s.mint)) continue;
         // Fields added after a snapshot was written start empty.
         const t: Tracked = {
           ...s,
@@ -923,6 +933,9 @@ export class PumpTape {
           bundlers: s.bundlers ? new Map(s.bundlers) : undefined,
         };
         this.tokens.set(t.mint, t);
+        if (t.pool) this.pools.set(t.pool, t.mint);
+        // A pinned coin is weeks old: it is not one of its creator's or its print's last two days.
+        if (this.pinned.has(t.mint)) continue;
         const mine = this.byCreator.get(t.creator) ?? [];
         mine.push(t.mint);
         this.byCreator.set(t.creator, mine);
@@ -939,6 +952,7 @@ export class PumpTape {
       // Who sniped what is in the buyers already: the per-wallet lists are rebuilt in launch order.
       this.earlyBy.clear();
       for (const t of [...this.tokens.values()].sort((a, b) => a.createdAt - b.createdAt)) {
+        if (this.pinned.has(t.mint)) continue;
         for (const w of this.earlyWalletsOf(t)) {
           const list = this.earlyBy.get(w) ?? [];
           list.push(t.mint);
@@ -961,8 +975,32 @@ export class PumpTape {
     }
   }
 
+  /** Keep this mint past the two-day window. Set before load() so a saved copy is restored too. */
+  pin(mint: string): void {
+    this.pinned.add(mint);
+  }
+
+  isPinned(mint: string): boolean {
+    return this.pinned.has(mint);
+  }
+
+  /** The newest transaction a pinned coin's record holds. */
+  lastTxOf(mint: string): string | null {
+    return this.tokens.get(mint)?.lastTx ?? null;
+  }
+
+  /** A pinned mint read on another tape (a replay of its whole life) taken over by this one, with its pools. */
+  adopt(from: PumpTape, mint: string): boolean {
+    const t = from.tokens.get(mint);
+    if (!t || !this.pinned.has(mint)) return false;
+    this.tokens.set(mint, t);
+    for (const [pool, m] of from.pools) if (m === mint) this.pools.set(pool, mint);
+    if (t.pool) this.pools.set(t.pool, mint);
+    return true;
+  }
+
   prune(now = Date.now()): void {
-    for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS) this.tokens.delete(mint);
+    for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS && !this.pinned.has(mint)) this.tokens.delete(mint);
     for (const [pool, mint] of this.pools) if (!this.tokens.has(mint)) this.pools.delete(pool);
     for (const [creator, mints] of this.byCreator) {
       const kept = mints.filter((m) => this.tokens.has(m));
@@ -1386,7 +1424,8 @@ export class PumpTape {
       bundlersHeld: round(Math.min(1, (t.bundleHeld ?? 0) / supplyOf(t))),
       bundlersPeak: round(Math.min(1, (t.bundlePeak ?? 0) / supplyOf(t))),
       bundledSol: t.quote ? null : round(t.bundledSol ?? 0),
-      bundlesSince: t.createdAt >= this.bundleSince ? null : this.bundleSince,
+      // A pinned coin was read whole from its launch, bundles included.
+      bundlesSince: t.createdAt >= this.bundleSince || this.pinned.has(t.mint) ? null : this.bundleSince,
       poolSol: t.poolSol === null ? null : round(t.poolSol),
       ammBuys: t.ammBuys,
       ammSells: t.ammSells,

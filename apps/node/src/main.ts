@@ -12,6 +12,7 @@ import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
+import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
 import { SideWallets } from "./chain/sidewallets.ts";
@@ -131,6 +132,8 @@ const saveTape = () => {
 if (config.role === "north") {
   // Every trade on $ZOOAGENCY's pool, for the buy bot in the holders' group.
   tape.follow(TOKEN_MINT, TOKEN_POOL);
+  // $ZOOAGENCY is kept on the tape for good, not for two days: its x-ray reads what happens now, not a launch-day snapshot.
+  tape.pin(TOKEN_MINT);
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
@@ -196,6 +199,13 @@ if (config.role === "north") {
   const n = labels.loadFile(process.env.ZOO_LABELS_FILE ?? join(config.dataDir, "labels.json"));
   if (n) console.log(`[${config.id}] labels: ${n} wallets from the labels file`);
   stopLabels = labels.start((m) => console.log(`[${config.id}] ${m}`));
+}
+// The pinned coin: what it traded while the node was down is read before the stream starts again; never held on the tape,
+// it is read whole from its launch in the background and handed over when done.
+if (config.role === "north" && tape.isPinned(TOKEN_MINT)) {
+  const pinLog = (m: string) => console.log(`[${config.id}] ${m}`);
+  if (tape.has(TOKEN_MINT)) await Promise.race([catchUpPinned(TOKEN_MINT, tape, { log: pinLog }).catch(() => 0), new Promise((r) => setTimeout(r, 30_000))]);
+  else void seedPinned(TOKEN_MINT, tape, { log: pinLog }).then((r) => pinLog(`pinned ${TOKEN_MINT}: ${JSON.stringify(r)}`), (e: unknown) => pinLog(`pinned ${TOKEN_MINT}: failed ${e instanceof Error ? e.message : String(e)}`));
 }
 // North reads the chain from the relay when it has one (a hosted gRPC endpoint gave a cloud container a tenth of pump.fun), else directly.
 const chainLog = (m: string) => console.log(`[${config.id}] ${m}`);

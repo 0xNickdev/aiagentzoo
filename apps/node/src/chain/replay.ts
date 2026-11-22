@@ -98,6 +98,93 @@ export interface ReplayOptions {
   log?: (m: string) => void;
 }
 
+/** Reads these transactions a few at a time and applies them to the tape oldest first. */
+async function applyAll(tape: PumpTape, sigs: Sig[], f: typeof fetch, concurrency: number, log: (m: string) => void, mint: string): Promise<{ replayed: number; skipped: number }> {
+  const txs: Array<Tx | null> = new Array(sigs.length).fill(null);
+  let next = 0;
+  const worker = async () => {
+    while (next < sigs.length) {
+      const i = next++;
+      txs[i] = await call<Tx>("getTransaction", [sigs[i]!.signature, { encoding: "json", maxSupportedTransactionVersion: 1 }], f);
+    }
+  };
+  const progress = setInterval(() => log(`replay ${mint}: ${next} of ${sigs.length} transactions read`), 60_000);
+  try {
+    await Promise.all(Array.from({ length: concurrency }, worker));
+  } finally {
+    clearInterval(progress);
+  }
+  let replayed = 0, skipped = 0;
+  for (let i = 0; i < sigs.length; i++) {
+    const tx = txs[i];
+    const logs = tx?.meta?.logMessages;
+    if (!tx || tx.meta?.err || !logs) {
+      skipped++;
+      continue;
+    }
+    const at = (tx.blockTime ?? sigs[i]!.blockTime!) * 1000;
+    const events = parsePumpLogs(logs);
+    for (const ev of events) tape.apply(ev, at, sigs[i]!.signature, tx.slot);
+    if (events.length) replayed++;
+  }
+  return { replayed, skipped };
+}
+
+/** Signatures newer than `after`, oldest first: what happened while a long replay was reading. */
+async function signaturesAfter(mint: string, after: string, f: typeof fetch): Promise<Sig[]> {
+  const out: Sig[] = [];
+  let before: string | undefined;
+  for (let page = 0; page < 20; page++) {
+    const batch = (await call<Sig[]>("getSignaturesForAddress", [mint, { until: after, limit: 1_000, ...(before ? { before } : {}) }], f)) ?? [];
+    for (const s of batch) if (!s.err && s.blockTime) out.push(s);
+    if (batch.length < 1_000) break;
+    before = batch[batch.length - 1]!.signature;
+  }
+  return out.reverse();
+}
+
+/**
+ * A pinned coin read whole, from its launch to this minute, then handed to the live tape, which keeps it from then on.
+ * Read twice over: once from the launch, then whatever landed while that ran, until nothing new is left.
+ */
+export async function seedPinned(mint: string, live: PumpTape, opts: { maxTxs?: number; concurrency?: number; log?: (m: string) => void } = {}, f: typeof fetch = fetch): Promise<{ transactions: number; replayed: number } | { error: string }> {
+  if (!fundersEnabled() || !RPC) return { error: "no Helius RPC on this node" };
+  const { maxTxs = 200_000, concurrency = 8, log = () => {} } = opts;
+  live.pin(mint);
+  log(`pinned ${mint}: reading its whole life from the chain`);
+  const all = await signaturesFromLaunch(mint, f, Number.POSITIVE_INFINITY, maxTxs);
+  if (!all.length) return { error: "no transactions for this mint" };
+  if (all.length >= maxTxs) return { error: `more than ${maxTxs} transactions: not read whole, so not pinned` };
+  const own = new PumpTape();
+  let { replayed } = await applyAll(own, all, f, concurrency, log, mint);
+  let total = all.length;
+  let last = all[all.length - 1]!.signature;
+  for (let round = 0; round < 5; round++) {
+    const more = await signaturesAfter(mint, last, f);
+    if (!more.length) break;
+    replayed += (await applyAll(own, more, f, concurrency, log, mint)).replayed;
+    total += more.length;
+    last = more[more.length - 1]!.signature;
+  }
+  if (!live.adopt(own, mint)) return { error: "the first transactions carry no launch the parser knows" };
+  log(`pinned ${mint}: ${total} transactions read, ${replayed} with events; the stream keeps it from here`);
+  return { transactions: total, replayed };
+}
+
+/**
+ * After a restart: what a pinned coin traded while the node was down, read from its newest known transaction on and
+ * applied to the live tape before the stream reconnects.
+ */
+export async function catchUpPinned(mint: string, live: PumpTape, opts: { concurrency?: number; log?: (m: string) => void } = {}, f: typeof fetch = fetch): Promise<number> {
+  const from = live.lastTxOf(mint);
+  if (!from || !fundersEnabled() || !RPC) return 0;
+  const more = await signaturesAfter(mint, from, f);
+  if (!more.length) return 0;
+  await applyAll(live, more, f, opts.concurrency ?? 8, opts.log ?? (() => {}), mint);
+  opts.log?.(`pinned ${mint}: ${more.length} transactions read that landed while the node was down`);
+  return more.length;
+}
+
 export async function replayMint(mint: string, history: HistoryStore, opts: ReplayOptions = {}, f: typeof fetch = fetch): Promise<ReplayResult | { error: string }> {
   if (!fundersEnabled() || !RPC) return { error: "no Helius RPC on this node" };
   const { hours = 6, maxTxs = 8_000, concurrency = 8, funderOf, log = () => {} } = opts;
@@ -108,36 +195,8 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
   const first = window[0]!.blockTime!;
   log(`replay ${mint}: ${window.length} transactions in the first ${hours} h, from ${new Date(first * 1000).toISOString()}`);
 
-  // Transactions in order, read a few at a time.
-  const txs: Array<Tx | null> = new Array(window.length).fill(null);
-  let next = 0;
-  const worker = async () => {
-    while (next < window.length) {
-      const i = next++;
-      txs[i] = await call<Tx>("getTransaction", [window[i]!.signature, { encoding: "json", maxSupportedTransactionVersion: 1 }], f);
-    }
-  };
-  const progress = setInterval(() => log(`replay ${mint}: ${next} of ${window.length} transactions read`), 60_000);
-  try {
-    await Promise.all(Array.from({ length: concurrency }, worker));
-  } finally {
-    clearInterval(progress);
-  }
-
   const tape = new PumpTape();
-  let replayed = 0, skipped = 0;
-  for (let i = 0; i < window.length; i++) {
-    const tx = txs[i];
-    const logs = tx?.meta?.logMessages;
-    if (!tx || tx.meta?.err || !logs) {
-      skipped++;
-      continue;
-    }
-    const at = (tx.blockTime ?? window[i]!.blockTime!) * 1000;
-    const events = parsePumpLogs(logs);
-    for (const ev of events) tape.apply(ev, at, window[i]!.signature, tx.slot);
-    if (events.length) replayed++;
-  }
+  const { replayed, skipped } = await applyAll(tape, window, f, concurrency, log, mint);
   const last = window[window.length - 1]!.blockTime! * 1000;
   const rec = tape.historyOf(mint, last + 1_000);
   if (!rec) {
@@ -145,7 +204,7 @@ export async function replayMint(mint: string, history: HistoryStore, opts: Repl
     return { error: "the first transactions carry no launch the parser knows (not a pump.fun token?)" };
   }
   try {
-    history.write([{ ...rec, funder: funderOf?.(rec.creator) ?? null }]);
+    history.write([{ ...rec, funder: funderOf?.(rec.creator) ?? null }], last);
   } catch (error) {
     log(`replay ${mint}: write failed: ${error instanceof Error ? error.message : String(error)}`);
     return { error: "the long memory refused the record" };
