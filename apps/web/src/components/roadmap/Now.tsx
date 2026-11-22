@@ -227,8 +227,8 @@ function TokenCard() {
           <Go href={ZOOAGENCY_CLAWPUMP_URL} primary>
             {t("Buy on ClawPump")}
           </Go>
+          <Go href="/token">{t("The token page")}</Go>
           <Go href={ZOOAGENCY_DEXSCREENER_URL}>DexScreener</Go>
-          <Go href="/contests">{t("Contests")}</Go>
         </div>
       </div>
     </div>

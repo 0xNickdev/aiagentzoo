@@ -82,6 +82,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/token",
+      "destination": "/index.html"
+    },
+    {
       "source": "/x402",
       "destination": "/index.html"
     },

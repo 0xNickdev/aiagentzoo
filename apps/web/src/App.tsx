@@ -14,6 +14,7 @@ const X402 = lazy(() => import("./components/X402"));
 const Callers = lazy(() => import("./components/Callers"));
 const Volume = lazy(() => import("./components/Volume"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
+const Token = lazy(() => import("./pages/Token"));
 
 const PAGES: Record<Route, React.ComponentType> = {
   "/": Home,
@@ -27,6 +28,7 @@ const PAGES: Record<Route, React.ComponentType> = {
   "/callers": Callers,
   "/volume": Volume,
   "/roadmap": Roadmap,
+  "/token": Token,
 };
 
 export default function App() {

@@ -31,6 +31,7 @@ const COLUMNS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
     title: "$ZOOAGENCY",
     links: [
+      ["What the token does", "/token"],
       ["DexScreener", ZOOAGENCY_DEXSCREENER_URL],
       ["Solscan", ZOOAGENCY_SOLSCAN_URL],
       ["X · @zooclawagency", X_URL],
