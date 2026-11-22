@@ -217,7 +217,7 @@ export default function Token() {
             ))}
           </ul>
           <p className="mt-8 text-[13px] text-dim">
-            {pick("Contract", "合约")} <code className="font-mono text-fg-3">{ZOOAGENCY_MINT}</code> · {pick("launched on ClawPump", "在 ClawPump 发行")} · <a href="/roadmap" className="text-fg-2 underline decoration-[#4a524e] underline-offset-4 hover:text-white">{pick("roadmap", "路线图")}</a>
+            {pick("Launched on ClawPump", "在 ClawPump 发行")} · <a href="/roadmap" className="text-fg-2 underline decoration-[#4a524e] underline-offset-4 hover:text-white">{pick("roadmap", "路线图")}</a>
           </p>
         </div>
       </section>

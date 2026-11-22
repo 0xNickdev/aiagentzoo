@@ -2077,4 +2077,5 @@ export const ZH: Record<string, string> = {
   "The creator fees the coin earns on its trading go to buying $ZOOAGENCY back. Every buyback is listed on ClawPump with its transaction.": "代币交易产生的创作者费用用于回购 $ZOOAGENCY。每一笔回购都在 ClawPump 上列出，附带交易。",
   "Every buyback on ClawPump": "在 ClawPump 查看全部回购",
   "Every buyback is on chain. The creator-fee buybacks are listed on ClawPump today, each with its transaction; the Pro ones will be linked from here.": "每一次回购都在链上。创作者费用的回购现在列在 ClawPump 上，每笔都附交易；Pro 的回购会从这里链接。",
+  "Buybacks, holder perks and Pro: what it does": "回购、持有者权益和 Pro：它有什么用",
 };
