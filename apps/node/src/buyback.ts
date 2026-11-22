@@ -40,6 +40,47 @@ export interface BuybackOptions {
   fetchFn?: typeof fetch;
 }
 
+/** Network fees, the priority fee cap and a wrapped-SOL account's rent the swap may spend on top of what it sells. */
+const SWAP_OVERHEAD_LAMPORTS = 10_000_000;
+const SYSTEM_PROGRAM = "11111111111111111111111111111111";
+
+/** What the simulation reads of the two accounts the swap may touch: the hot wallet and the treasury's token account. */
+export interface SimRead {
+  err: unknown;
+  /** Post-state of [hot wallet, treasury token account], as simulateTransaction returns them. */
+  accounts: Array<{ lamports: number; owner: string; data: [string, string] | string[] } | null>;
+}
+
+/** A token account's amount: a u64 at byte 64 of the SPL layout. */
+export function tokenAmountOf(data: [string, string] | string[] | undefined): bigint {
+  const raw = data?.[0] ? Buffer.from(data[0], "base64") : null;
+  return raw && raw.length >= 72 ? raw.readBigUInt64LE(64) : 0n;
+}
+
+/**
+ * Before the hot wallet signs what Jupiter sent: the transaction must be paid and signed by the hot wallet alone, and
+ * a dry run of it must leave the wallet a system account that spent no more than the SOL it sells plus fees, and put
+ * at least the quote's minimum of the token into the treasury's account. Anything else and nothing is signed.
+ * Throws with the reason; returns the tokens the dry run delivered.
+ */
+export function checkSwap(
+  tx: { message: { header: { numRequiredSignatures: number }; staticAccountKeys: Array<{ toBase58(): string }> } },
+  sim: SimRead,
+  want: { owner: string; lamportsBefore: number; sellLamports: number; tokensBefore: bigint; minTokens: bigint },
+): bigint {
+  const keys = tx.message.staticAccountKeys.map((k) => k.toBase58());
+  if (tx.message.header.numRequiredSignatures !== 1 || keys[0] !== want.owner) throw new Error("swap check: the transaction asks for another signer or fee payer");
+  if (sim.err) throw new Error(`swap check: the dry run failed (${JSON.stringify(sim.err)})`);
+  const [wallet, ata] = sim.accounts;
+  if (!wallet) throw new Error("swap check: the dry run did not return the hot wallet");
+  if (wallet.owner !== SYSTEM_PROGRAM) throw new Error("swap check: the hot wallet would change owner");
+  const spent = want.lamportsBefore - wallet.lamports;
+  if (spent > want.sellLamports + SWAP_OVERHEAD_LAMPORTS) throw new Error(`swap check: the hot wallet would lose ${spent} lamports for a ${want.sellLamports} lamport buy`);
+  const got = tokenAmountOf(ata?.data) - want.tokensBefore;
+  if (got < want.minTokens) throw new Error(`swap check: the treasury would get ${got} of the token, under the quote's minimum ${want.minTokens}`);
+  return got;
+}
+
 const KEY = "buyback:runs";
 const KEEP = 500;
 
@@ -73,7 +114,7 @@ export async function sweepOnce(opts: BuybackOptions): Promise<BuybackRun | null
     // The treasury's token account, made once by the hot wallet, so the buy lands in the treasury straight away.
     const { getAssociatedTokenAddress, createAssociatedTokenAccountIdempotentInstruction } = await import("@solana/spl-token");
     const ata = await getAssociatedTokenAddress(mint, treasury);
-    const q = await (await f(`${JUP}/quote?inputMint=${SOL}&outputMint=${opts.mint}&amount=${Math.round(buySol * LAMPORTS_PER_SOL)}&slippageBps=300`, { signal: AbortSignal.timeout(15_000) })).json() as { outAmount?: string; error?: string };
+    const q = await (await f(`${JUP}/quote?inputMint=${SOL}&outputMint=${opts.mint}&amount=${Math.round(buySol * LAMPORTS_PER_SOL)}&slippageBps=300`, { signal: AbortSignal.timeout(15_000) })).json() as { outAmount?: string; otherAmountThreshold?: string; error?: string };
     if (!q.outAmount) throw new Error(q.error ?? "no route");
     const sw = await (await f(`${JUP}/swap`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ quoteResponse: q, userPublicKey: kp.publicKey.toBase58(), wrapAndUnwrapSol: true, destinationTokenAccount: ata.toBase58(), dynamicComputeUnitLimit: true, prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: 2_000_000, priorityLevel: "high" } } }), signal: AbortSignal.timeout(20_000) })).json() as { swapTransaction?: string; error?: string };
     if (!sw.swapTransaction) throw new Error(sw.error ?? "Jupiter gave no transaction");
@@ -85,6 +126,15 @@ export async function sweepOnce(opts: BuybackOptions): Promise<BuybackRun | null
     const ataSig = await c.sendRawTransaction(ataTx.serialize(), { skipPreflight: false });
     await c.confirmTransaction(ataSig, "confirmed");
     const tx = VersionedTransaction.deserialize(Buffer.from(sw.swapTransaction, "base64"));
+    // What the transaction does, read before it is signed: a dry run with the wallet's and the treasury's accounts back.
+    const lamportsBefore = await c.getBalance(kp.publicKey, "confirmed");
+    const tokensBefore = BigInt((await c.getTokenAccountBalance(ata, "confirmed")).value.amount);
+    const sim = await c.simulateTransaction(tx, { sigVerify: false, commitment: "confirmed", accounts: { encoding: "base64", addresses: [kp.publicKey.toBase58(), ata.toBase58()] } });
+    checkSwap(
+      tx,
+      { err: sim.value.err, accounts: (sim.value.accounts ?? []).map((a) => (a ? { lamports: a.lamports, owner: a.owner, data: a.data as [string, string] } : null)) },
+      { owner: kp.publicKey.toBase58(), lamportsBefore, sellLamports: Math.round(buySol * LAMPORTS_PER_SOL), tokensBefore, minTokens: BigInt(q.otherAmountThreshold ?? q.outAmount) },
+    );
     tx.sign([kp]);
     run.buyTx = await c.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
     await c.confirmTransaction(run.buyTx, "confirmed");
