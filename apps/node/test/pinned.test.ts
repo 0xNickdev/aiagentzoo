@@ -63,3 +63,18 @@ test("a pinned coin is not counted among its creator's last two days", () => {
   const loose = new PumpTape();
   assert.equal(loose.adopt(replayed(t0), MINT), false);
 });
+
+test("a pool that drained and came back to half its best is live again", () => {
+  const t0 = Date.now() - 30 * DAY;
+  const live = new PumpTape();
+  live.pin(MINT);
+  live.adopt(replayed(t0), MINT);
+  const swap = (poolSol: number, tx: string) => live.apply({ kind: "swap", pool: POOL, isBuy: true, sol: 0.1, tokens: 1_000, user: A, ts: Date.now(), poolSol }, Date.now(), tx, 40);
+  swap(150, "a");
+  swap(20, "b");
+  assert.equal(live.facts(MINT)!.drained, true);
+  swap(60, "c");
+  assert.equal(live.facts(MINT)!.drained, true);
+  swap(110, "d");
+  assert.equal(live.facts(MINT)!.drained, undefined);
+});

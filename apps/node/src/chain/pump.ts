@@ -307,6 +307,8 @@ const MOMENTS_MAX = 50_000;
 /** A pool that held at least this much SOL and fell below this share of it was drained. */
 const DRAIN_MIN_PEAK = 20;
 const DRAIN_SHARE = 0.2;
+/** A drained pool back to this share of its best is live again. */
+const DRAIN_RECOVERED = 0.5;
 /** A single buy this big stands out on a fresh pump.fun token. */
 const WHALE_SOL = 10;
 
@@ -831,6 +833,8 @@ export class PumpTape {
       t.poolPeak = Math.max(t.poolPeak ?? 0, ev.poolSol);
     }
     // A graduated pool opens with about 85 SOL. Down to a fifth of its best, the liquidity has left: announced once.
+    // Drained is what the pool is, not what it once was: back to half its best, it is a live pool again.
+    if (ev.pool === t.pool && t.drained && t.poolPeak !== null && ev.poolSol >= t.poolPeak * DRAIN_RECOVERED) t.drained = false;
     if (ev.pool === t.pool && !t.drained && t.poolPeak !== null && t.poolPeak >= DRAIN_MIN_PEAK && ev.poolSol < t.poolPeak * DRAIN_SHARE) {
       t.drained = true;
       this.emit(now, "drained", t, `pool drained to ${ev.poolSol.toFixed(1)} ${this.unit} after graduation`, tx);
