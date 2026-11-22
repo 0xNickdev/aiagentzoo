@@ -227,3 +227,7 @@ body {
   .rm-rise { opacity: 1; transform: none; }
   .orbit-ping { display: none; }
 }
+
+/* Rolling digits: each column slides to its new figure. */
+.roll-strip { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .roll-strip { transition: none; } }

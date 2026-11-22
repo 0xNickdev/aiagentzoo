@@ -3,6 +3,7 @@ import { BOT_URL, ZOOAGENCY_CLAWPUMP_URL, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_M
 import { pick, t } from "../i18n";
 import { CaRow, TokenDot } from "../components/site/ZooToken";
 import { Corners } from "../components/roadmap/Timeline";
+import RollNumber from "../components/site/RollNumber";
 
 /** The market as DexScreener reads the pool right now. Nothing here comes from us, so nothing here is a claim of ours. */
 interface Market {
@@ -118,7 +119,7 @@ export default function Token() {
   const stat = (k: string, v: string | null, tone?: string) => (
     <div className="min-w-0 border-l border-line px-4 py-4 first:border-l-0 sm:px-5">
       <p className="text-[12px] text-dim">{t(k)}</p>
-      <p className={`mt-2 text-[clamp(20px,2.4vw,28px)] font-semibold leading-none tracking-[-0.04em] ${tone ?? "text-white"}`}>{v ?? "-"}</p>
+      <p className={`mt-2 text-[clamp(20px,2.4vw,28px)] font-semibold leading-none tracking-[-0.04em] ${tone ?? "text-white"}`}>{v ? <RollNumber text={v} /> : "-"}</p>
     </div>
   );
   return (
