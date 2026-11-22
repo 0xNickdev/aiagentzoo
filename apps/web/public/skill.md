@@ -123,6 +123,8 @@ On pump.fun launches the answer also carries `odds`: `run` is the chance the mar
 
 In Mayhem Mode pump.fun's own bot trades from the first second, so later bundles, churn and bumps are not flagged, and first-second wallets holding half the supply is caution, not avoid.
 
+An **established coin** (graduated, 3+ days old, its pool alive at 85 SOL or more): bundles and churn read over its whole life are its market by then, not its launch, so they are notes, not reasons, unless the bundlers still hold 40%+.
+
 Three cases soften an `avoid` to `caution`, never further:
 
 - **Dev gone** (`facts.devGone: true`, needs the holders, so `holders=1` or the x-ray): the dev dumped and fully left (sold 99%+ and holds nothing), the coin graduated, its pool holds at least twice what it opened with and never drained, it is 2 hours old or more, the top 10 hold under 30%, no wallet holds 10%+, bundlers hold under 20% and first-second wallets under half. Then the dev's record no longer decides and every avoid reason becomes caution, led by "it runs on its holders now, so the risk is the market, not the dev". If the dev's crew still holds 5% or more, it stays `avoid`: the dev sold to shake out the snipers and came back through their own wallets.

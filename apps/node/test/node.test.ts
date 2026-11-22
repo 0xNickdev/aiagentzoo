@@ -2028,3 +2028,19 @@ test("the top-up read reuses a short history and the transactions the funder rea
   assert.ok(!calls.slice(before).includes("getSignaturesForAddress"));
   assert.ok(calls.slice(before).filter((m) => m === "getTransaction").length <= 1);
 });
+
+test("an established coin: weeks old, graduated, a live pool - bundles and churn over its life are notes; bundlers still holding 40% are not", async () => {
+  const { checkToken } = await import("../src/chain/check.ts");
+  const base = { buys: 80, sells: 30, buyers: 60, solIn: 20, solOut: 5, curveSol: 85, creatorSold: 0, creatorLaunches24h: 1, top5Share: 0.3, repeatBuyers: 8, trades15m: 50, bundleWallets: 0, bundleShare: 0, ammSolIn: 0, ammSolOut: 0 };
+  const rec = { wallet: "w", launches24h: 1, launches48h: 1, dumped: 0, medianDumpMin: null, graduated: 1, recent: [] } as never;
+  const old = (x: Record<string, unknown>) => checkToken("M", { symbol: "OLD", facts: { ...base, ageMin: 39 * 1_440, graduated: true, poolSol: 112, buyers: 618, buys: 5000, sells: 4000, ammBuys: 9000, ammSells: 8000, bundlers: 298, bundlersPeak: 0.44, bundlersHeld: 0.14, washShare: 0.36, ...x } as never, creatorRecord: rec });
+  const c = old({});
+  assert.ok(!c.reasons.some((r: string) => /bundles|selling back/.test(r)), c.reasons.join(" | "));
+  assert.ok(c.notes.some((n: string) => /298 wallets have bought it in bundles over its 39 days/.test(n)));
+  assert.ok(c.notes.some((n: string) => /36% of its trading over its life/.test(n)));
+  // Bundlers still holding 40%+ are a reason at any age (with a crowd in, the crowd rule makes it caution).
+  assert.ok(old({ bundlersHeld: 0.45 }).reasons.some((r: string) => /bundles/.test(r)));
+  // Two days old, or a pool under what it opened with: the launch rules still apply.
+  assert.ok(old({ ageMin: 2 * 1_440 }).reasons.some((r: string) => /bundles/.test(r)));
+  assert.ok(old({ poolSol: 40 }).reasons.some((r: string) => /selling back/.test(r)));
+});

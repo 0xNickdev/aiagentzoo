@@ -40,6 +40,12 @@ export const burnedOf = (mint: string, f: { mayhem?: boolean; venue?: string } |
  * in (13 to 20 Nov 2026) they were on 85% of coins and the coins lived about as often as the rest (1.5% vs 1.8%), so
  * past this many buyers they warn (caution) and no longer decide. What still traps a holder stays avoid.
  */
+/**
+ * An established coin: graduated days ago, its pool alive and at least what a pool opens with. Bundles and churn
+ * read over its whole life are its market by then, not its launch: they become notes. What holds it now still counts.
+ */
+export const ESTABLISHED = { ageDays: 3, poolSol: GRAD_POOL_SOL } as const;
+const establishedOf = (f: ChainFacts) => f.graduated && !f.drained && !f.quote && f.ageMin >= ESTABLISHED.ageDays * 1_440 && (f.poolSol ?? 0) >= ESTABLISHED.poolSol;
 /** Bundlers holding less than this share of the supply together have sold down: their bundle is a note, not a reason. */
 export const BUNDLE_SOLD_DOWN = 0.1;
 export const CROWD = { buyers: 30 } as const;
@@ -342,7 +348,10 @@ export function checkToken(
   // Bundles later in its life: blocks where four or more wallets bought at once, together holding much of the supply.
   // Buyers like that are one hand dressed as a crowd. Mayhem Mode's own bot trades in bursts, so it is left out there.
   // A bundle decides the verdict while it still holds the coin. Once it has sold down, it is the coin's past: a note.
-  if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem && (f.bundlersHeld ?? 0) < BUNDLE_SOLD_DOWN) {
+  const established = establishedOf(f);
+  if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem && established && (f.bundlersHeld ?? 0) < 0.4) {
+    notes.push(`${f.bundlers} wallets have bought it in bundles over its ${Math.floor(f.ageMin / 1_440)} days and held up to ${pct(f.bundlersPeak ?? 0)}% together, ${pct(f.bundlersHeld ?? 0)}% now; on a coin this old with a live pool, same-block buys are mostly its market, so they do not decide the verdict`);
+  } else if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem && (f.bundlersHeld ?? 0) < BUNDLE_SOLD_DOWN) {
     notes.push(`${f.bundlers} wallets bought it in bundles and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they have sold down to ${pct(f.bundlersHeld ?? 0)}%, so they no longer decide the verdict`);
   } else if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem) {
     const said = `${f.bundlers} wallets bought it in bundles (four or more in one block) and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they still hold ${pct(f.bundlersHeld ?? 0)}%`;
@@ -396,7 +405,8 @@ export function checkToken(
     if (f.buyers === 0) flag(caution, "nobody has bought it", WEIGHT.noBuyers);
     else if (!inPool && f.buyers < 10) flag(caution, f.buyers === 1 ? "only 1 wallet has bought it" : `only ${f.buyers} wallets have bought it`, WEIGHT.fewBuyers);
     if (f.sells > f.buys * 2 && f.sells >= 10) flag(caution, `sells outnumber buys ${f.sells} to ${f.buys}`, WEIGHT.sellsOutnumber);
-    if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem) flag(caution, `at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`, WEIGHT.wash);
+    if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem && establishedOf(f)) notes.push(`about ${pct(f.washShare)}% of its trading over its life is wallets selling back what they just bought: on a coin this old that is how its market trades, not a launch being faked`);
+    else if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem) flag(caution, `at least ${pct(f.washShare)}% of the trading is wallets selling back what they just bought: volume, not holders`, WEIGHT.wash);
     if (f.bumps !== undefined && f.bumps >= 3 && !f.mayhem) flag(caution, `a bot bought and sold it in the same transaction ${f.bumps} times to keep it on the front page`, WEIGHT.bumps);
   }
 
