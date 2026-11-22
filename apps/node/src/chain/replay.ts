@@ -130,6 +130,53 @@ async function applyAll(tape: PumpTape, sigs: Sig[], f: typeof fetch, concurrenc
   return { replayed, skipped };
 }
 
+interface FullTx {
+  slot: number;
+  blockTime: number | null;
+  transactionIndex?: number;
+  meta: { err: unknown; logMessages?: string[] } | null;
+  transaction?: { signatures?: string[] };
+}
+
+/**
+ * Every transaction of the address from its first on, a hundred per call with their logs (Helius's full paging):
+ * a coin with twenty thousand transactions is two hundred calls, not twenty thousand.
+ */
+async function fullFromLaunch(mint: string, f: typeof fetch, maxTxs: number, log: (m: string) => void): Promise<{ applied: (tape: PumpTape) => number; count: number; last: string | null } | null> {
+  const rows: Array<{ sig: string; slot: number; at: number; logs: string[] }> = [];
+  let token: string | undefined;
+  for (let page = 0; page < 5_000; page++) {
+    const r = await call<{ data?: FullTx[]; paginationToken?: string }>(
+      "getTransactionsForAddress",
+      [mint, { sortOrder: "asc", limit: 100, transactionDetails: "full", encoding: "json", maxSupportedTransactionVersion: 1, ...(token ? { paginationToken: token } : {}) }],
+      f,
+    );
+    if (!r) return null;
+    for (const tx of r.data ?? []) {
+      const sig = tx.transaction?.signatures?.[0];
+      if (!sig || !tx.blockTime || tx.meta?.err || !tx.meta?.logMessages) continue;
+      rows.push({ sig, slot: tx.slot, at: tx.blockTime * 1000, logs: tx.meta.logMessages });
+    }
+    if (rows.length >= maxTxs) return null;
+    if (page % 50 === 49) log(`replay ${mint}: ${rows.length} transactions read`);
+    token = r.paginationToken;
+    if (!token || !r.data?.length) break;
+  }
+  return {
+    count: rows.length,
+    last: rows.length ? rows[rows.length - 1]!.sig : null,
+    applied: (tape) => {
+      let n = 0;
+      for (const row of rows) {
+        const events = parsePumpLogs(row.logs);
+        for (const ev of events) tape.apply(ev, row.at, row.sig, row.slot);
+        if (events.length) n++;
+      }
+      return n;
+    },
+  };
+}
+
 /** Signatures newer than `after`, oldest first: what happened while a long replay was reading. */
 async function signaturesAfter(mint: string, after: string, f: typeof fetch): Promise<Sig[]> {
   const out: Sig[] = [];
@@ -152,13 +199,13 @@ export async function seedPinned(mint: string, live: PumpTape, opts: { maxTxs?: 
   const { maxTxs = 200_000, concurrency = 8, log = () => {} } = opts;
   live.pin(mint);
   log(`pinned ${mint}: reading its whole life from the chain`);
-  const all = await signaturesFromLaunch(mint, f, Number.POSITIVE_INFINITY, maxTxs);
-  if (!all.length) return { error: "no transactions for this mint" };
-  if (all.length >= maxTxs) return { error: `more than ${maxTxs} transactions: not read whole, so not pinned` };
+  const whole = await fullFromLaunch(mint, f, maxTxs, log);
+  if (!whole) return { error: `could not read every transaction (or more than ${maxTxs}): not pinned` };
+  if (!whole.last) return { error: "no transactions for this mint" };
   const own = new PumpTape();
-  let { replayed } = await applyAll(own, all, f, concurrency, log, mint);
-  let total = all.length;
-  let last = all[all.length - 1]!.signature;
+  let replayed = whole.applied(own);
+  let total = whole.count;
+  let last = whole.last;
   for (let round = 0; round < 5; round++) {
     const more = await signaturesAfter(mint, last, f);
     if (!more.length) break;
