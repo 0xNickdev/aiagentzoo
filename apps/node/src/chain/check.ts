@@ -40,6 +40,8 @@ export const burnedOf = (mint: string, f: { mayhem?: boolean; venue?: string } |
  * in (13 to 20 Nov 2026) they were on 85% of coins and the coins lived about as often as the rest (1.5% vs 1.8%), so
  * past this many buyers they warn (caution) and no longer decide. What still traps a holder stays avoid.
  */
+/** Bundlers holding less than this share of the supply together have sold down: their bundle is a note, not a reason. */
+export const BUNDLE_SOLD_DOWN = 0.1;
 export const CROWD = { buyers: 30 } as const;
 const CROWD_SOFT = [
   /^the creator sold \d+% of their own bag$/,
@@ -339,7 +341,10 @@ export function checkToken(
 
   // Bundles later in its life: blocks where four or more wallets bought at once, together holding much of the supply.
   // Buyers like that are one hand dressed as a crowd. Mayhem Mode's own bot trades in bursts, so it is left out there.
-  if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem) {
+  // A bundle decides the verdict while it still holds the coin. Once it has sold down, it is the coin's past: a note.
+  if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem && (f.bundlersHeld ?? 0) < BUNDLE_SOLD_DOWN) {
+    notes.push(`${f.bundlers} wallets bought it in bundles and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they have sold down to ${pct(f.bundlersHeld ?? 0)}%, so they no longer decide the verdict`);
+  } else if ((f.bundlers ?? 0) >= 10 && (f.bundlersPeak ?? 0) >= 0.3 && !f.mayhem) {
     const said = `${f.bundlers} wallets bought it in bundles (four or more in one block) and held up to ${pct(f.bundlersPeak ?? 0)}% of the supply together; they still hold ${pct(f.bundlersHeld ?? 0)}%`;
     if ((f.bundlersHeld ?? 0) >= 0.4) flag(avoid, said, WEIGHT.bundlersAvoid);
     else flag(caution, said, WEIGHT.bundlersCaution);

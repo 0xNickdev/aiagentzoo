@@ -86,6 +86,7 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+) wallets have bought in: with a crowd like that, .*$/, (m) => `已有 ${m[1]} 个钱包买入：人这么多时，开发者卖出、砸盘记录、捆绑和开发者自己的狙击钱包是大多数发币的常态，所以这里只是警告，不决定结论`],
   [/^launched in Mayhem Mode: .*$/, () => "Mayhem 模式发币：供应 20 亿，前 24 小时 pump.fun 自己的机器人在交易，所以成交量里有一部分是它"],
   [/^trades here stop at our record of (.+), (\d+) (h|days) after launch: .*$/, (m) => `这里的交易数据截止到我们 ${m[1]} 的记录（发币后 ${m[2]} ${m[3] === "h" ? "小时" : "天"}）：之后发生的不在本次检查内`],
+  [/^(\d+) wallets bought it in bundles and held up to (\d+)% of the supply together; they have sold down to (\d+)%, so they no longer decide the verdict$/, (m) => `${m[1]} 个钱包捆绑买入，合计最多持有 ${m[2]}% 的供应；现在已卖到 ${m[3]}%，不再决定结论`],
   [/^(\d+) wallets bought it in bundles and held up to (\d+)% of the supply together, under the 30% we flag; they still hold (\d+)%$/, (m) => `${m[1]} 个钱包捆绑买入，合计最多持有 ${m[2]}% 的供应，低于我们 30% 的标记线；现在还持有 ${m[3]}%`],
   [/^pass means .*$/, () => "通过只代表链上没看到开发者砸盘、大额捆绑、开发者小号、狙击手囤货、连环发币或内盘归零，不代表会涨"],
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],

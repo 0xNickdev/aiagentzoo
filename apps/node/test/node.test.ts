@@ -1721,6 +1721,14 @@ test("bundles anywhere in a token's life: four or more wallets in one block are 
   const c = checkToken(mint, tape.token(mint), { stream: { live: true, lastEventSecAgo: 0 } });
   assert.ok(c.reasons.some((r) => r.startsWith("12 wallets bought it in bundles") && r.includes("48%") && r.includes("24%")));
   assert.equal(c.facts?.bundlers, 12);
+  // The rest sell down to 4%: the bundle is history now, a note and no longer a reason.
+  for (let b = 0; b < 3; b++) sell(w(`Bx${b}`, 2), 40_000_000, 600 + b);
+  for (let b = 0; b < 2; b++) sell(w(`Bx${b}`, 3), 40_000_000, 610 + b);
+  f = tape.facts(mint, now)!;
+  assert.equal(f.bundlersHeld, 0.04);
+  const gone = checkToken(mint, tape.token(mint), { stream: { live: true, lastEventSecAgo: 0 } });
+  assert.ok(!gone.reasons.some((r) => r.includes("bought it in bundles")));
+  assert.ok(gone.notes.some((n) => /12 wallets bought it in bundles and held up to 48%.*sold down to 4%/.test(n)));
   // It survives a restart.
   const again = new PumpTape();
   again.load(tape.snapshot(), now);
