@@ -180,7 +180,7 @@ function Gauge({ run, avg, color }: { run: number; avg: number; color: string })
   const ne = pt(fv, R - 11);
   const hp = pt(fv, R);
   return (
-    <svg viewBox="0 0 300 175" role="img" aria-label={t("Chance to be alive tomorrow: {p} percent; average launch {a} percent", { p: oddsPct(run), a: oddsPct(avg) })}>
+    <svg viewBox="0 0 300 175" role="img" aria-label={t("Chance to run past 85 SOL: {p} percent; average launch {a} percent", { p: oddsPct(run), a: oddsPct(avg) })}>
       <path d={arc(0, 1, R)} fill="none" stroke="#18201c" strokeWidth={1.5} />
       <path d={arc(0, fa, R + 8)} fill="none" stroke="#3a1d1a" strokeWidth={3} />
       {ticks}
@@ -201,6 +201,21 @@ function Gauge({ run, avg, color }: { run: number; avg: number; color: string })
 
 const hoursOf = (min: number) => (min < 120 ? t("{m} min", { m: min }) : t("{h} h", { h: Math.round(min / 60) }));
 
+const sinceOf = (min: number) => (min < 2880 ? hoursOf(min) : t("{d} d", { d: Math.round(min / 1440) }));
+
+/** What minute five said the dev would do, and what the dev did: a forecast a dev has outlived is not a warning. */
+function DevOdds({ o }: { o: NonNullable<Ctx["r"]["check"]["odds"]> }) {
+  const sans = { fontFamily: "var(--sans)" };
+  if (o.devDumps === null) return <i className="x-d" style={sans}>{t("did, by min 5")}</i>;
+  const p = oddsPct(o.devDumps);
+  if (!o.devSettled) return <i className={o.devDumps >= 0.5 ? "x-d" : ""}>{p}%</i>;
+  return (
+    <i className={o.devSettled.dumped ? "x-d" : ""} style={sans}>
+      {o.devSettled.dumped ? t("{p}% at min 5 · it did", { p }) : t("{p}% at min 5 · hasn't in {h}", { p, h: sinceOf(o.devSettled.ageMin) })}
+    </i>
+  );
+}
+
 export function OddsPanel({ r }: Ctx) {
   const c = r.check;
   const o = c.odds;
@@ -208,7 +223,7 @@ export function OddsPanel({ r }: Ctx) {
     const rows = factorsOf(r);
     const bad = rows.filter((x) => x.bad).length;
     return (
-      <Pn span="x-s3" title={t("Odds")} meta={t("alive tomorrow")}>
+      <Pn span="x-s3" title={t("Odds")} meta={t("runs past 85 SOL")}>
         <p className="x-note">
           {r.outsideStream
             ? t("Odds are read at minute five of a launch; this coin launched before our stream.")
@@ -227,7 +242,7 @@ export function OddsPanel({ r }: Ctx) {
   const avg = o.average ?? AVG;
   const color = o.run < avg ? "#ff5a4f" : c.verdict === "pass" ? "#f4f5f4" : "#e6e9e7";
   return (
-    <Pn span="x-s3" title={t("Odds")} meta={t("alive tomorrow · log scale")}>
+    <Pn span="x-s3" title={t("Odds")} meta={o.at === "5min" ? t("as of minute 5 · runs past 85 SOL") : t("so far · runs past 85 SOL")}>
       <div className="x-gwrap">
         <Gauge run={o.run} avg={avg} color={color} />
         <div className="x-read">
@@ -249,7 +264,7 @@ export function OddsPanel({ r }: Ctx) {
           ))}
           <div>
             <span>{t("Dev sells half the bag later")}</span>
-            <i className={o.devDumps === null || o.devDumps >= 0.5 ? "x-d" : ""} style={o.devDumps === null ? { fontFamily: "var(--sans)" } : undefined}>{o.devDumps === null ? t("did, by min 5") : `${oddsPct(o.devDumps)}%`}</i>
+            <DevOdds o={o} />
           </div>
           {o.settled && (
             <div>

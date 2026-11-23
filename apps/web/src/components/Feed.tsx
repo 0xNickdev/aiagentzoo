@@ -19,7 +19,7 @@ interface Coin {
   createdAt: number;
   image?: string;
   verdict: "pass" | "caution";
-  /** Survival odds from the odds model, when the node sends them: the chance the coin is alive tomorrow. */
+  /** Survival odds from the odds model, when the node sends them: the chance, as of minute five, that it runs past 85 SOL. */
   odds?: { run: number } | null;
   reason: string | null;
   buyers: number;
@@ -186,7 +186,7 @@ function Row({ c, solUsd, amount, onState }: { c: Coin; solUsd: number | null; a
         <span className={`inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[4px] border px-1.5 text-[11.5px] font-medium ${pass ? "border-lit-edge text-lit" : "border-[#4a3a22] text-warn"}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${pass ? "bg-lit" : "bg-warn"}`} />
           {pass ? t("no red flags") : t("caution")}
-          {c.odds && Number.isFinite(c.odds.run) ? <span className="font-normal text-fg-2">· {t("{p}% alive tomorrow", { p: oddsPct(c.odds.run) })}</span> : null}
+          {c.odds && Number.isFinite(c.odds.run) ? <span className="font-normal text-fg-2">· {t("{p}% to pass 85 SOL", { p: oddsPct(c.odds.run) })}</span> : null}
         </span>
         {!c.graduated && (
           <span className="h-[3px] flex-1 overflow-hidden rounded-sm bg-night-raised" title={t("bonding curve")}>

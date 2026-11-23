@@ -78,7 +78,7 @@ export async function drawXRay(canvas: HTMLCanvasElement, r: XRayReport): Promis
   ctx.fillText(`${r.mint.slice(0, 6)}…${r.mint.slice(-6)}`, L, 196);
   // The verdict in one word and the odds of a run, as the dashboard reads them; no 0-100 score.
   const word = t((VWORD[c.verdict] ?? VWORD.unknown!).w);
-  const odds = c.odds ? t("{p}% alive tomorrow", { p: oddsPct(c.odds.run) }) : null;
+  const odds = c.odds ? t("{p}% to pass 85 SOL", { p: oddsPct(c.odds.run) }) : null;
   let size = 84;
   ctx.font = `600 ${size}px "Geist", sans-serif`;
   while (size > 48 && ctx.measureText(word).width > 640) ctx.font = `600 ${(size -= 4)}px "Geist", sans-serif`;

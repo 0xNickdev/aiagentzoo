@@ -153,7 +153,7 @@ function Rows({ rows, lit }: { rows: Array<{ en: string; zh: string }>; lit: boo
 
 const FREE = [
   { en: "The verdict and its main reasons", zh: "结论和主要理由" },
-  { en: "The odds it is still alive tomorrow", zh: "明天还活着的赔率" },
+  { en: "The odds it runs, as of minute 5", zh: "第 5 分钟时的上涨概率" },
   { en: "The dev's other launches", zh: "开发者的其他发射" },
   { en: "Who bought in the first seconds", zh: "最初几秒是谁买的" },
 ];

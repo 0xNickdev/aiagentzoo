@@ -93,7 +93,7 @@ function textOf(d: StoryData): StoryText {
     }),
     funders: d.shared.map((g) => t("{w} paid for {n}", { w: short(g.funder), n: g.wallets.length })),
     odds: `${oddsPct(d.run)}%`,
-    oddsSub: t("alive tomorrow"),
+    oddsSub: t("to pass 85 SOL"),
     ticks: ["0.01%", "0.1%", "1%", "10%", "100%"],
   };
 }
@@ -202,7 +202,7 @@ function StillStory({ d }: { d: StoryData }) {
         </svg>
         <p className={`text-[28px] font-semibold tracking-[-0.03em] ${v.text}`}>{t(v.word)}</p>
         <p className="text-[15px] text-fg-3">
-          {oddsPct(d.run)}% {t("alive tomorrow")}
+          {oddsPct(d.run)}% {t("to pass 85 SOL")}
         </p>
         <div className="mt-5 max-w-[640px]">
           <p className="mb-2 text-[15px] font-medium text-white">{t("Check yours.")}</p>
@@ -379,7 +379,7 @@ export default function Story({ chain, sample }: { chain: ChainNow | null; sampl
       <div ref={top} className="pt-8 sm:pt-12">
         <h1 className="text-[38px] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-[56px]">{t("See who you're buying from.")}</h1>
         <p className="mx-auto mt-3 max-w-[62ch] text-[14.5px] leading-[1.5] text-fg-3 sm:text-[16px]">
-          {t("We read the person behind a Solana token: the dev's past launches, who bought in the first seconds, who paid for them, and the odds it is still alive tomorrow.")}
+          {t("We read the person behind a Solana token: the dev's past launches, who bought in the first seconds, who paid for them, and the odds it runs.")}
         </p>
       </div>
       <div className="flex-1" />
