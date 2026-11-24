@@ -1,3 +1,5 @@
+import { solUsd } from "./chain/price.ts";
+import { CURVE_ALIVE_SOL } from "./agents/judgement.ts";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
 import type { Trail } from "./chain/outflows.ts";
@@ -268,16 +270,23 @@ export interface XRayReply {
 }
 
 type OddsLite = { at?: "5min" | "early"; run: number; vsAverage: number; devDumps: number | null; settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number } };
+/** A cap in dollars at today's SOL price, as people read it; in SOL until the first price is in. */
+const capOf = (sol: number) => {
+  const price = solUsd();
+  if (price === null) return `${sol.toLocaleString("en-US")} SOL`;
+  const v = sol * price;
+  return v >= 999_500 ? `$${(v / 1e6).toFixed(1)}M` : v >= 9_950 ? `$${Math.round(v / 1e3)}K` : `$${(v / 1e3).toFixed(1)}K`;
+};
 /** The run odds in one line, as of minute five; once settled, what happened next to what was forecast. */
 const oddsLine = (o: OddsLite | null | undefined) => {
   if (!o) return "";
   const p = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x >= 0.01 ? `${(x * 100).toFixed(1)}%` : "<1%");
   // The peak is the highest cap so far, not where it trades now, and its time is when that high was made.
-  if (o.settled?.ran) return T("Highest so far: {s} SOL market cap, {t} after launch (odds at minute 5: {p})", { s: o.settled.peakSol.toLocaleString("en-US"), t: o.settled.afterMin < 120 ? T("{n} min", { n: o.settled.afterMin }) : T("{n} h", { n: Math.round(o.settled.afterMin / 60) }), p: p(o.run) });
-  if (o.settled) return T("Never passed 85 SOL market cap in {h} h (odds at minute 5: {p})", { h: Math.max(1, Math.round(o.settled.ageMin / 60)), p: p(o.run) });
+  if (o.settled?.ran) return T("Highest so far: {s} market cap, {t} after launch (odds at minute 5: {p})", { s: capOf(o.settled.peakSol), t: o.settled.afterMin < 120 ? T("{n} min", { n: o.settled.afterMin }) : T("{n} h", { n: Math.round(o.settled.afterMin / 60) }), p: p(o.run) });
+  if (o.settled) return T("Never passed {s} market cap in {h} h (odds at minute 5: {p})", { s: capOf(CURVE_ALIVE_SOL), h: Math.max(1, Math.round(o.settled.ageMin / 60)), p: p(o.run) });
   const dev = o.devDumps === null ? "" : ` · ${T("dev still dumps {p}", { p: p(o.devDumps) })}`;
   const x = o.vsAverage < 0.1 ? "<0.1" : o.vsAverage;
-  return `${o.at === "early" ? T("Odds so far: {p} to pass 85 SOL market cap · {x}× the average launch", { p: p(o.run), x }) : T("Odds at minute 5: {p} to pass 85 SOL market cap · {x}× the average launch", { p: p(o.run), x })}${dev}`;
+  return `${o.at === "early" ? T("Odds so far: {p} to pass {s} market cap · {x}× the average launch", { p: p(o.run), s: capOf(CURVE_ALIVE_SOL), x }) : T("Odds at minute 5: {p} to pass {s} market cap · {x}× the average launch", { p: p(o.run), s: capOf(CURVE_ALIVE_SOL), x })}${dev}`;
 };
 /** A few wallets can make the odds look strong on their own; only said while the odds are still a forecast. */
 const thinLine = (c: XRayReply["check"]) => {
@@ -444,6 +453,7 @@ export function devMessage(r: CreatorRecord): string {
 export function startTelegram(opts: TelegramOptions): () => void {
   const f = opts.fetchFn ?? fetch;
   const log = opts.log ?? console.log;
+  solUsd(); // so the first message already has dollars
   const data = opts.data ?? {};
   const call = async (method: string, body: unknown) => {
     const r = await f(`${API}/bot${opts.token}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(40_000) });

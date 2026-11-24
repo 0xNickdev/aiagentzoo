@@ -1499,9 +1499,11 @@ test("a caution x-ray leads with the odds and the coin's own record, and the wor
     ["the creator sold 100% of their own bag", "this creator dumped 76 of their 76 launches in 48 hours, usually 0 min after launch", "18 of the wallets in the first 5 seconds keep sniping this creator's other launches: they are the creator's own wallets", "14 of the first-second wallets have sniped launches together before: one operator", "16 wallets bought 40% of the supply in the launch block and have sold 100% of it", "4 serial snipers got in first: wallets that buy launches in the first seconds to sell to whoever comes next", "at least 43% of the trading is wallets selling back what they just bought: volume, not holders"],
     { at: "5min", run: 0.02, vsAverage: 0.7, devDumps: null },
   );
+  const { setSolUsd } = await import("../src/chain/price.ts");
+  setSolUsd(72);
   const en = inLang("en", () => xrayMessage(karen));
   assert.doesNotMatch(en.split("\n")[0]!, /CAUTION/);
-  assert.match(en, /Odds at minute 5: 2\.0% to pass 85 SOL market cap/);
+  assert.match(en, /Odds at minute 5: 2\.0% to pass \$6\.1K market cap/);
   assert.match(en, /5 wallets did 72% of the buying/);
   assert.match(en, /Worse than usual<\/b>\n• 18 of the wallets[^\n]*\n• this creator dumped 76 of their 76/);
   assert.match(en, /buyers:<\/b> dev sold 100%, sniper ring 14, launch bundle of 40%, 100% of it sold, serial snipers 4, at least 43% churn/);
@@ -1509,9 +1511,11 @@ test("a caution x-ray leads with the odds and the coin's own record, and the wor
   assert.doesNotMatch(inLang("zh", () => xrayMessage(karen)), /wallets|creator|buyers|Odds|Verdict|bundle|churn|sold/);
   // Nothing of its own, and it ran: the high and when it was made, no thin-buying line once settled.
   const ran = inLang("en", () => xrayMessage(make(["the creator has sold 31% of their own bag"], { run: 0.82, vsAverage: 30.4, devDumps: 0.35, settled: { ran: true, peakSol: 3472, afterMin: 580 } })));
-  assert.match(ran, /Highest so far: 3,472 SOL market cap, 10 h after launch \(odds at minute 5: 82%\)/);
+  assert.match(ran, /Highest so far: \$250K market cap, 10 h after launch \(odds at minute 5: 82%\)/);
   assert.match(ran, /Worse than usual:<\/b> nothing found/);
   assert.doesNotMatch(ran, /of the buying/);
+  setSolUsd(null);
+  assert.match(inLang("en", () => xrayMessage(karen)), /to pass 85 SOL market cap/);
   // An avoid keeps its word on the first line and its reasons in one list.
   const av = inLang("en", () => xrayMessage({ ...karen, check: { ...karen.check, verdict: "avoid" as const } }));
   assert.match(av.split("\n")[0]!, /🔴.*AVOID/);
