@@ -119,7 +119,7 @@ export interface XRayReport {
   early: Early[];
   creatorRecord: ({ launches48h: number; launches24h?: number; dumped: number; medianDumpMin: number | null; graduated?: number; recent?: Array<{ mint: string; symbol: string; createdAt: number; firstCapUsd?: number | null } & LaunchOutcome>; /** Every launch oldest to newest, at most the last 1000: d dumped, g graduated, a alive, u under 15 min. Newer nodes only. */ timeline?: Array<"d" | "g" | "a" | "u">; /** "history": the counts run back to historySince, not 48 h; last48h then holds the two days. */ counted?: "history"; historySince?: number; last48h?: { launches: number; dumped: number } } & Habits) | null;
   /** The X account, X community or Telegram group the token links to, and its other launches. */
-  socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number }>;
+  socials?: Array<{ social: { url: string; label: string }; launches: number; fastDumps: number; creators?: number }>;
   /** Earlier launches under the same ticker in the node's memory, this one left out. */
   ticker?: { days: number; launches: number; devs: number; dumped: number; graduated: number; firstAt: number | null } | null;
   funding: Funding | null;

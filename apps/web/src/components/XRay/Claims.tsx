@@ -20,6 +20,8 @@ interface Claims {
     language?: string | null;
     flags: string[];
   };
+  account?: { status: "none" | "unread" | "mutual" | "related" | "oneway"; handle?: string; followers?: number; joinedAt?: number; was?: string[]; flags: string[] };
+  telegram?: { status: "none" | "unread" | "broken" | "group" | "channel"; name?: string; members?: number; tie?: "mutual" | "related" | "oneway"; posts?: number; since?: number; contracts?: number; under?: number; lineUsd?: number; flags: string[] };
   dex: { paid: boolean | null; paidAt?: number; takeover?: boolean; pending?: boolean; boosts?: number };
 }
 
@@ -63,6 +65,8 @@ function flagText(s: string): string {
   if (old) return old[2] === "h" ? t("the GitHub account is {n} h old", { n: old[1]! }) : t("the GitHub account is {n} days old", { n: old[1]! });
   const idle = /^no push in (\d+) months$/.exec(s);
   if (idle) return t("no push in {n} months", { n: idle[1]! });
+  const xage = /^the X account is (\d+) (h|days) old$/.exec(s);
+  if (xage) return xage[2] === "h" ? t("the X account is {n} h old", { n: xage[1]! }) : t("the X account is {n} days old", { n: xage[1]! });
   const fork = /^it is a fork of (.+)$/.exec(s);
   if (fork && fork[1] !== "another project") return t("it is a fork of {r}", { r: fork[1]! });
   return t(s);
@@ -82,25 +86,32 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
   const c = useClaims(r.mint);
   if (c === "down") {
     return chainOf(r.mint) === "solana" && MARSH ? (
-      <Pn span={span} title={t("GitHub and DexScreener")}>
+      <Pn span={span} title={t("Links, checked")}>
         <p className="x-fine">{t("The link reader did not answer. Reload in a minute.")}</p>
       </Pn>
     ) : null;
   }
   if (c === "reading") {
     return (
-      <Pn span={span} title={t("GitHub and DexScreener")} meta={t("reading")}>
+      <Pn span={span} title={t("Links, checked")} meta={t("reading")}>
         <p className="x-fine">{t("Opening what the token links to.")}</p>
       </Pn>
     );
   }
   const g = c.github;
+  // The rename and the contract count have rows of their own.
+  const points = [...g.flags, ...(c.account?.flags ?? []).filter((f) => !f.includes(" before"))];
   const d = c.dex;
   const [word, tone] = g.status === "none" && !c.metadataRead ? (["the token's metadata could not be read", ""] as const) : WORD[g.status];
   const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : t("on its website");
+  const a = c.account;
+  const tg = c.telegram;
+  const x: [string, "d" | "up" | "w" | ""] = !a || a.status === "none" ? ["no link found", ""] : a.status === "unread" ? ["X did not answer", ""] : WORD[a.status];
+  const tgWord: [string, "d" | "up" | "w" | ""] = !tg || tg.status === "none" ? ["no link found", ""] : tg.status === "unread" ? ["Telegram did not answer", ""] : tg.status === "broken" ? ["no public channel or group at that link", ""] : tg.status === "group" ? ["a group, its posts are not public", ""] : WORD[tg.tie ?? "oneway"];
+  const num = (n: number) => n.toLocaleString("en-US");
   const paid = d.paid === null ? t("DexScreener did not answer") : d.paid ? (d.paidAt && d.paidAt >= r.createdAt ? t("paid, {t}", { t: after(r.createdAt, d.paidAt) }) : t("paid")) : d.pending ? t("payment in review") : t("not paid");
   return (
-    <Pn span={span} title={t("GitHub and DexScreener")} meta={t("what it links to, checked")} className={span === "x-s12" ? "x-two" : ""}>
+    <Pn span={span} title={t("Links, checked")} meta={t("what it links to, checked")} className={span === "x-s12" ? "x-two" : ""}>
       <Kv
         flush
         rows={[
@@ -111,19 +122,29 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
           g.createdAt ? [t("Repository created"), day(g.createdAt)] : null,
           g.pushedAt ? [t("Last push"), day(g.pushedAt)] : null,
           g.language ? [t("Main language"), g.language] : null,
+          ["X", t(x[0]), x[1]],
+          a?.handle ? [t("X account"), <a key="x" className="x-link" href={`https://x.com/${a.handle}`} target="_blank" rel="noopener noreferrer nofollow">@{a.handle} ↗</a>] : null,
+          a?.followers !== undefined ? [t("Followers"), num(a.followers)] : null,
+          a?.joinedAt ? [t("On X since"), day(a.joinedAt)] : null,
+          a?.was?.length ? [t("Handle before"), a.was.map((h) => `@${h}`).join(", "), "w"] : null,
+          ["Telegram", t(tgWord[0]), tgWord[1]],
+          tg?.name ? [t("Telegram link"), <a key="t" className="x-link" href={`https://t.me/${tg.name}`} target="_blank" rel="noopener noreferrer nofollow">t.me/{tg.name} ↗</a>] : null,
+          tg?.members !== undefined ? [t("Members"), num(tg.members)] : null,
+          tg?.posts ? [t("Posts read"), tg.since ? t("{n}, back to {d}", { n: tg.posts, d: day(tg.since) }) : num(tg.posts)] : null,
+          tg?.contracts ? [t("Other contracts posted"), tg.under !== undefined && tg.lineUsd ? t("{n}, {u} under {l} or not trading", { n: tg.contracts, u: tg.under, l: `$${num(tg.lineUsd)}` }) : num(tg.contracts), tg.contracts >= 3 && (tg.under ?? 0) / tg.contracts >= 0.8 ? "d" : ""] : null,
           [t("DexScreener profile"), paid],
           d.takeover ? [t("Community takeover"), t("approved")] : null,
           d.boosts ? [t("DexScreener boosts"), d.boosts] : null,
         ]}
       />
-      {g.flags.length > 0 && (
+      {points.length > 0 && (
         <ul className="x-fine" style={{ display: "grid", gap: 4, marginTop: 10 }}>
-          {g.flags.slice(0, 4).map((f) => (
+          {points.slice(0, 5).map((f) => (
             <li key={f}>{flagText(f)}</li>
           ))}
         </ul>
       )}
-      <p className="x-fine" style={{ marginTop: 10 }}>{t("A paid profile is an ad, not a check. A repository that names the token shows whose it is, not that the code works.")}</p>
+      <p className="x-fine" style={{ marginTop: 10 }}>{t("Anyone can link any account: it counts as the token's only when it names the contract back. A paid profile is an ad, not a check.")}</p>
     </Pn>
   );
 }

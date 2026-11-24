@@ -1,5 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 import { type Page, safeFetch } from "./safeFetch.ts";
+import { CURVE_ALIVE_SOL } from "../agents/judgement.ts";
+import { solUsd } from "../chain/price.ts";
+import { type TelegramClaim, telegramClaim, telegramName, type Tie, type XBook, xBook, type XClaim, xClaimOf } from "./social.ts";
 
 /**
  * What a token says about itself, checked: the GitHub it links to (does it exist, is it its own, does it point back)
@@ -50,6 +53,9 @@ export interface Claims {
   websiteRead: boolean | null;
   github: GithubClaim;
   dex: DexClaim;
+  /** The X account it links to (`x` is its handle). */
+  account: XClaim;
+  telegram: TelegramClaim;
 }
 
 type Json = (url: string, headers?: Record<string, string>) => Promise<{ status: number; body: unknown; link: string | null } | null>;
@@ -58,6 +64,8 @@ export interface Deps {
   page: (url: string, opts?: { maxBytes?: number; timeoutMs?: number }) => Promise<Page | null>;
   metadata: (mint: string) => Promise<Record<string, unknown> | null>;
   now: () => number;
+  lineUsd: () => number | null;
+  book: XBook;
 }
 
 const RESERVED = new Set(["about", "apps", "blog", "collections", "contact", "customer-stories", "enterprise", "explore", "events", "features", "join", "login", "marketplace", "new", "notifications", "orgs", "pricing", "pulls", "readme", "search", "security", "settings", "signup", "site", "sponsors", "team", "topics", "trending"]);
@@ -133,6 +141,7 @@ export async function readClaims(mint: string, d: Deps): Promise<Claims> {
   const info = (Array.isArray(pairs?.body) ? (pairs!.body as Array<{ info?: Info }>) : []).find((p) => p.info)?.info;
   const m = meta ?? {};
   const ext = (typeof m.extensions === "object" && m.extensions ? m.extensions : {}) as Record<string, unknown>;
+  const tgName = telegramName([m.telegram, ext.telegram, m.website].map(str).concat((info?.socials ?? []).map((s) => str(s.url))));
   const own = [m.website, m.external_url, m.twitter, m.github, m.description, ext.website, ext.github, ext.twitter].map(str).filter(Boolean);
   const dexLinks = [...(info?.websites ?? []), ...(info?.socials ?? [])].map((x) => str(x.url)).filter(Boolean);
   const site = [m.website, m.external_url, ext.website].map(str).concat((info?.websites ?? []).map((w) => str(w.url))).find((u) => /^https?:\/\//i.test(u) && !SHARED_HOST.test(hostOf(u) ?? "github.com")) ?? null;
@@ -170,6 +179,15 @@ export async function readClaims(mint: string, d: Deps): Promise<Claims> {
       }
     }
   }
+  // One rule for every account: it is the token's when it names the mint, or the site that names the mint.
+  const tie = (words: string): Tie => {
+    const t = tiesOf(words, { mint, website: site, x });
+    return t.includes("mint") || (t.includes("website") && siteNamesMint) ? "mutual" : t.includes("website") ? "related" : "oneway";
+  };
+  const social = Promise.all([
+    x ? d.json(`https://api.fxtwitter.com/${x}`).then((r) => xClaimOf(x, r, tie, now, d.book)) : xClaimOf(null, null, tie, now, d.book),
+    telegramClaim(tgName, mint, tie, d).catch((): TelegramClaim => ({ status: "unread", ...(tgName ? { name: tgName } : {}), flags: [] })),
+  ]);
   let github: GithubClaim = { status: "none", flags: [] };
   // A page can link several projects (its tools, its template). The one that names the token back is the token's.
   for (const link of links.slice(0, foundIn === "website" ? 3 : 2)) {
@@ -179,7 +197,8 @@ export async function readClaims(mint: string, d: Deps): Promise<Claims> {
     if (github.status === "none" || got.status === "mutual") github = got;
     if (got.status === "mutual" || got.status === "unread") break;
   }
-  return { mint, readAt: now, website: site, x, metadataRead: meta !== null, websiteRead, github, dex: dexOf(orders) };
+  const [accountClaim, telegram] = await social;
+  return { mint, readAt: now, website: site, x, metadataRead: meta !== null, websiteRead, github, dex: dexOf(orders), account: accountClaim, telegram };
 }
 
 export function dexOf(r: { status: number; body: unknown } | null): DexClaim {
@@ -328,14 +347,14 @@ async function metadataOf(mint: string): Promise<Record<string, unknown> | null>
 const json: Json = async (url, headers = {}) => {
   try {
     const token = process.env.GITHUB_TOKEN;
-    const r = await fetch(url, { headers: { "user-agent": "zoo-claims", ...headers, ...(token && url.startsWith("https://api.github.com/") ? { authorization: `Bearer ${token}` } : {}) }, signal: AbortSignal.timeout(6_000) });
+    const r = await fetch(url, { headers: { "user-agent": "zoo-claims/1.0", ...headers, ...(token && url.startsWith("https://api.github.com/") ? { authorization: `Bearer ${token}` } : {}) }, signal: AbortSignal.timeout(6_000) });
     return { status: r.status, body: await r.json().catch(() => null), link: r.headers.get("link") };
   } catch {
     return null;
   }
 };
 
-const REAL: Deps = { json, page: safeFetch, metadata: metadataOf, now: () => Date.now() };
+const REAL: Deps = { json, page: safeFetch, metadata: metadataOf, now: () => Date.now(), book: xBook, lineUsd: () => { const p = solUsd(); return p === null ? null : p * CURVE_ALIVE_SOL; } };
 
 const FRESH_MS = 20 * 60_000;
 /** An answer with a hole in it (GitHub's limit, a gateway asleep) is asked again soon. */
@@ -349,7 +368,7 @@ export async function claimsOf(mint: string, deps: Deps = REAL): Promise<Claims 
   const now = deps.now();
   const hit = kept.get(mint);
   if (hit) {
-    const hole = hit.claims.github.status === "unread" || hit.claims.dex.paid === null || !hit.claims.metadataRead;
+    const hole = hit.claims.github.status === "unread" || hit.claims.dex.paid === null || hit.claims.account.status === "unread" || hit.claims.telegram.status === "unread" || !hit.claims.metadataRead;
     if (now - hit.at < (hole ? RETRY_MS : FRESH_MS)) return hit.claims;
   }
   const going = inflight.get(mint);

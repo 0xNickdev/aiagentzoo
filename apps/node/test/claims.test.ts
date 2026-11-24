@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { commitCount, dexOf, githubLinks, readClaims, tiesOf, uriOfMetaplex, xHandle, type Deps } from "../src/claims/claims.ts";
+import { contractsIn, telegramCard, telegramClaim, telegramName, telegramPosts, XBook, xClaimOf } from "../src/claims/social.ts";
 import { publicAddress, safeFetch, safeUrl } from "../src/claims/safeFetch.ts";
 
 const MINT = "2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B";
@@ -53,6 +54,8 @@ test("the uri is read out of a Metaplex account", () => {
 const repo = (over: object = {}) => ({ full_name: "o/r", name: "r", description: null, homepage: null, fork: false, archived: false, size: 50, stargazers_count: 9, language: "TypeScript", created_at: "2026-01-01T00:00:00Z", pushed_at: "2026-11-20T00:00:00Z", default_branch: "main", owner: { login: "o" }, ...over });
 const world = (over: { meta?: Record<string, unknown> | null; repo?: object; repoStatus?: number; readme?: string | null; site?: string; commits?: string | null } = {}): Deps => ({
   now: () => NOW,
+  book: new XBook(null),
+  lineUsd: () => 6_000,
   metadata: async () => (over.meta === undefined ? { website: "https://token.example", twitter: "https://x.com/tok", description: "code: https://github.com/o/r" } : over.meta),
   page: async (u) => {
     if (u.includes("raw.githubusercontent.com")) return over.readme === null ? null : { status: 200, url: u, body: over.readme ?? "" };
@@ -126,4 +129,52 @@ test("the bot says it in two lines, and says nothing about what it could not rea
   assert.match(inLang("en", () => claimsLines({ ...c, dex: { paid: true, paidAt: 1_720_000 } }, 1_000_000)).at(-1)!, /paid, 12 min after launch/);
   assert.deepEqual(inLang("en", () => claimsLines({ ...c, metadataRead: false, github: { status: "none", flags: [] }, dex: { paid: null } })), []);
   assert.doesNotMatch(inLang("zh", () => claimsLines(c).join(" ")), /token|commits|paid/);
+});
+
+const A = "A".repeat(38) + "pump";
+const B = "B".repeat(38) + "pump";
+
+test("an X account is the token's only when it names the mint, and a rename shows by its id", () => {
+  const book = new XBook(null);
+  const tie = (w: string) => (w.includes(MINT) ? ("mutual" as const) : ("oneway" as const));
+  const user = (over: object) => ({ status: 200, body: { user: { id: "7", screen_name: "Tok", followers: 10, tweets: 3, description: "", joined: "Fri Oct 09 09:04:40 +0000 2020", ...over } } });
+  assert.equal(xClaimOf("tok", user({ description: `CA ${MINT}` }), tie, NOW, book).status, "mutual");
+  assert.equal(xClaimOf("tok", user({}), tie, NOW, book).status, "oneway");
+  const renamed = xClaimOf("new", user({ screen_name: "New", joined: "Sat Nov 21 12:00:00 +0000 2026" }), tie, NOW, book);
+  assert.deepEqual(renamed.was, ["tok"]);
+  assert.deepEqual(renamed.flags, ["the X account was @tok before", "the X account is 3 days old"]);
+  // The same account read twice is not a rename.
+  assert.equal(xClaimOf("new", user({ screen_name: "New" }), tie, NOW, new XBook(null)).was, undefined);
+  assert.equal(xClaimOf("gone", { status: 404, body: null }, tie, NOW, book).status, "unread");
+  assert.equal(xClaimOf(null, null, tie, NOW, book).status, "none");
+});
+
+test("a Telegram name, its public card and its posts are read; wallets and quoted replies are not contracts", () => {
+  assert.equal(telegramName(["https://x.com/a", "https://t.me/s/Tok_Chan?x=1"]), "Tok_Chan");
+  assert.equal(telegramName(["https://t.me/+AbCdEf123", "https://t.me/joinchat/abc", "https://notat.me/abcd"]), null);
+  assert.deepEqual(telegramCard('<div class="tgme_page_extra">1 498 subscribers</div><a href="/s/Tok">', "tok"), { members: 1498, about: "", channel: true });
+  assert.equal(telegramCard('<div class="tgme_page_extra">271 members, 32 online</div>', "g")!.channel, false);
+  assert.equal(telegramCard("<html></html>", "nobody"), null);
+  assert.deepEqual(contractsIn(`${A} ${A} So11111111111111111111111111111111111111112 xxxxx${B}`), [A]);
+  const html = `<div class="tgme_widget_message_wrap x"><div class="tgme_widget_message_text js-message_reply_text">${B}</div><div class="tgme_widget_message_text js-message_text" dir="auto">buy <code>${A}</code></div><time datetime="2026-11-20T00:00:00+00:00"></time></div><link rel="prev" href="/s/tok?before=40">`;
+  const got = telegramPosts(html);
+  assert.equal(got.before, "40");
+  assert.equal(got.posts.length, 1);
+  assert.deepEqual(contractsIn(got.posts[0]!.text), [A]);
+});
+
+test("a channel's other contracts are counted against the market; an unanswered market is not 'dead'", async () => {
+  const post = (m: string) => `<div class="tgme_widget_message_wrap x"><div class="tgme_widget_message_text js-message_text">${m}</div><time datetime="2026-11-20T00:00:00+00:00"></time></div>`;
+  const deps = (market: { status: number; body: unknown } | null) => ({
+    now: () => NOW,
+    lineUsd: () => 6_000,
+    page: async (u: string) => ({ status: 200, url: u, body: u.includes("/s/") ? post(A) + post(B) + post(MINT) : '<div class="tgme_page_extra">50 subscribers</div><a href="/s/tok">' }),
+    json: async () => (market ? { ...market, link: null } : null),
+  });
+  const tie = () => "oneway" as const;
+  const c = await telegramClaim("tok", MINT, tie, deps({ status: 200, body: [{ baseToken: { address: A }, marketCap: 90_000, liquidity: { usd: 9_000 } }, { baseToken: { address: B }, marketCap: 5e6, liquidity: { usd: 3 } }] }));
+  assert.deepEqual([c.status, c.contracts, c.under, c.posts], ["channel", 2, 1, 3]);
+  const blind = await telegramClaim("tok", MINT, tie, deps(null));
+  assert.equal(blind.under, undefined);
+  assert.equal(blind.contracts, 2);
 });

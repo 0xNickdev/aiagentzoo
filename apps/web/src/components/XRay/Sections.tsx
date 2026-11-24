@@ -83,7 +83,7 @@ export function DevSection(x: Ctx) {
                 flush
                 rows={r.socials.map((s) => [
                   s.social.label,
-                  <a key={s.social.url} className="x-link" href={s.social.url} target="_blank" rel="noopener noreferrer nofollow">{t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })} ↗</a>,
+                  <a key={s.social.url} className="x-link" href={s.social.url} target="_blank" rel="noopener noreferrer nofollow">{(s.creators ?? 1) > 1 ? t("{n} other launches by {c} devs · {d} fast dumps", { n: s.launches, c: s.creators!, d: s.fastDumps }) : t("{n} other launches · {d} fast dumps", { n: s.launches, d: s.fastDumps })} ↗</a>,
                   s.fastDumps >= 2 ? "d" : "",
                 ])}
               />
