@@ -261,22 +261,61 @@ export interface XRayReply {
     odds?: OddsLite | null;
     reasons: string[];
     notes: string[];
-    facts: { ageMin: number; creatorSoldPct?: number | null; venue?: string; platform?: string; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
+    facts: { ageMin: number; creatorSoldPct?: number | null; venue?: string; platform?: string; top5BuyingPct?: number | null; earlyWallets: number | null; earlyHeldPct: number | null; churnPct: number | null; bumps: number | null; creatorCrew: number | null; ringWallets: number | null; serialSnipers: number | null; mayhem?: boolean } | null;
   };
   early: Array<{ bought: number; held?: number; tags?: string[] }>;
   funding: { funder: string | null; funderIsHot: boolean; funderLabel?: string | null; funderService?: string | null; siblings: unknown[]; siblingLaunches48h: number; siblingDumped48h: number } | null;
 }
 
-type OddsLite = { run: number; vsAverage: number; devDumps: number | null; settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number } };
-/** The run odds in one line: "runs 21% · 7.9x the average launch · dev still dumps 62%"; once settled, what happened. */
+type OddsLite = { at?: "5min" | "early"; run: number; vsAverage: number; devDumps: number | null; settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number } };
+/** The run odds in one line, as of minute five; once settled, what happened next to what was forecast. */
 const oddsLine = (o: OddsLite | null | undefined) => {
   if (!o) return "";
   const p = (x: number) => (x >= 0.1 ? `${Math.round(x * 100)}%` : x >= 0.01 ? `${(x * 100).toFixed(1)}%` : "<1%");
-  if (o.settled?.ran) return T("Ran to {s} SOL cap, {m} min in (odds at five minutes: {p})", { s: o.settled.peakSol, m: o.settled.afterMin, p: p(o.run) });
-  if (o.settled) return T("Has not run in {h} h (odds at five minutes: {p})", { h: Math.max(1, Math.round(o.settled.ageMin / 60)), p: p(o.run) });
+  // The peak is the highest cap so far, not where it trades now, and its time is when that high was made.
+  if (o.settled?.ran) return T("Highest so far: {s} SOL market cap, {t} after launch (odds at minute 5: {p})", { s: o.settled.peakSol.toLocaleString("en-US"), t: o.settled.afterMin < 120 ? T("{n} min", { n: o.settled.afterMin }) : T("{n} h", { n: Math.round(o.settled.afterMin / 60) }), p: p(o.run) });
+  if (o.settled) return T("Never passed 85 SOL market cap in {h} h (odds at minute 5: {p})", { h: Math.max(1, Math.round(o.settled.ageMin / 60)), p: p(o.run) });
   const dev = o.devDumps === null ? "" : ` · ${T("dev still dumps {p}", { p: p(o.devDumps) })}`;
-  return `${T("Odds it runs: {p} · {x}× the average launch", { p: p(o.run), x: o.vsAverage < 0.1 ? "<0.1" : o.vsAverage })}${dev}`;
+  const x = o.vsAverage < 0.1 ? "<0.1" : o.vsAverage;
+  return `${o.at === "early" ? T("Odds so far: {p} to pass 85 SOL market cap · {x}× the average launch", { p: p(o.run), x }) : T("Odds at minute 5: {p} to pass 85 SOL market cap · {x}× the average launch", { p: p(o.run), x })}${dev}`;
 };
+/** A few wallets can make the odds look strong on their own; only said while the odds are still a forecast. */
+const thinLine = (c: XRayReply["check"]) => {
+  const t = c.facts?.top5BuyingPct;
+  return c.odds && !c.odds.settled && t != null && t > 50 ? T("⚠️ 5 wallets did {t}% of the buying, so read the odds with care", { t }) : "";
+};
+
+/**
+ * What most caution coins with buyers carry (87% a dev who sold, 60% a sniper ring, 49% a sold launch bundle; pump.fun,
+ * 30+ buyers, 24 Nov 2026): said in short, so it does not bury what is this coin's own.
+ */
+const COMMON: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^the creator (?:has )?sold (\d+)% of their own bag$/, (m) => T("dev sold {p}%", { p: m[1]! })],
+  [/^\d+ wallets bought (\d+)% of the supply in the launch block and have sold (\d+)% of it$/, (m) => T("launch bundle of {a}%, {b}% of it sold", { a: m[1]!, b: m[2]! })],
+  [/^(\d+) of the first-second wallets have sniped launches together before: one operator$/, (m) => T("sniper ring {n}", { n: m[1]! })],
+  [/^(\d+) serial snipers got in first/, (m) => T("serial snipers {n}", { n: m[1]! })],
+  [/^at least (\d+)% of the trading is wallets selling back/, (m) => T("at least {p}% churn", { p: m[1]! })],
+];
+/** The dev's record and their own wallets first: that is what tells two caution coins apart. */
+const FIRST = [/keep sniping this creator's other launches/, /^the wallet that funded this creator/, /^this creator dumped/];
+/** Why an avoid was softened: the coin's story, neither a fault of its own nor a common one. */
+const STORY = /^the dev who launched it dumps their launches and already sold|^this dev sells early, yet/;
+export function splitReasons(reasons: string[]): { story: string[]; worse: string[]; common: string[] } {
+  const story: string[] = [];
+  const worse: string[] = [];
+  const common: string[] = [];
+  for (const r of reasons) {
+    if (STORY.test(r)) {
+      story.push(r);
+      continue;
+    }
+    const hit = COMMON.map(([re, say]) => [r.match(re), say] as const).find(([m]) => m);
+    if (hit) common.push(hit[1](hit[0]!));
+    else worse.push(r);
+  }
+  const rank = (r: string) => { const i = FIRST.findIndex((re) => re.test(r)); return i < 0 ? FIRST.length : i; };
+  return { story, worse: worse.sort((a, b) => rank(a) - rank(b)), common };
+}
 
 /** The x-ray as a Telegram message: the verdict with every reason, then the first seconds, the money, the churn. */
 export function xrayMessage(x: XRayReply): string {
@@ -285,9 +324,23 @@ export function xrayMessage(x: XRayReply): string {
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
   const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
-  const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b> · ${venue}`, ...(c.odds ? [oddsLine(c.odds)] : []), ""];
-  for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
-  if (c.reasons.length) lines.push("");
+  // Caution is most coins with buyers, so the word goes last and what differs goes first. Avoid and the rest lead with theirs.
+  const caution = c.verdict === "caution";
+  const thin = thinLine(c);
+  const lines = [`${icon} <b>$${esc(x.symbol)}</b>${caution ? "" : ` · <b>${T(label)}</b>`} · ${venue}`, ...(c.odds ? [oddsLine(c.odds)] : []), ...(thin ? [thin] : []), ""];
+  if (caution) {
+    const { story, worse, common } = splitReasons(c.reasons);
+    for (const r of story) lines.push(esc(TC(r)), "");
+    if (worse.length) {
+      lines.push(T("<b>Worse than usual</b>"));
+      for (const r of worse.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
+    } else lines.push(T("<b>Worse than usual:</b> nothing found"));
+    if (common.length) lines.push("", `${T("<b>Common on coins with buyers:</b>")} ${common.join(", ")}`);
+    lines.push("", T("Verdict: {v}", { v: T(label) }), "");
+  } else {
+    for (const r of c.reasons.slice(0, 6)) lines.push(`• ${esc(TC(r))}`);
+    if (c.reasons.length) lines.push("");
+  }
   if (f) {
     // Only what is there: a line of zeros reads like a broken report.
     const took = x.early.reduce((n, e) => n + e.bought, 0);
@@ -580,7 +633,11 @@ export function startTelegram(opts: TelegramOptions): () => void {
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-    const lines = [`${icon} <b>$${esc(x.symbol)}</b> · <b>${T(label)}</b>`, ...(c.odds ? [oddsLine(c.odds)] : []), ...c.reasons.slice(0, 2).map((r) => `• ${esc(TC(r))}`)];
+    const caution = c.verdict === "caution";
+    const { story, worse, common } = caution ? splitReasons(c.reasons) : { story: [], worse: c.reasons, common: [] };
+    const said = story.length || worse.length ? [...worse, ...story].slice(0, 2).map((r) => `• ${esc(TC(r))}`) : common.length ? [`${T("<b>Common on coins with buyers:</b>")} ${common.join(", ")}`] : [];
+    const thin = thinLine(c);
+    const lines = [`${icon} <b>$${esc(x.symbol)}</b>${caution ? "" : ` · <b>${T(label)}</b>`}`, ...(c.odds ? [oddsLine(c.odds)] : []), ...(thin ? [thin] : []), ...said, ...(caution ? [T("Verdict: {v}", { v: T(label) })] : [])];
     return void send(chat, lines.join("\n"), full(`x-${address}`), reply);
   };
 
