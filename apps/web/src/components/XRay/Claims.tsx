@@ -100,7 +100,7 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
   const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : t("on its website");
   const paid = d.paid === null ? t("DexScreener did not answer") : d.paid ? (d.paidAt && d.paidAt >= r.createdAt ? t("paid, {t}", { t: after(r.createdAt, d.paidAt) }) : t("paid")) : d.pending ? t("payment in review") : t("not paid");
   return (
-    <Pn span={span} title={t("GitHub and DexScreener")} meta={t("what it links to, checked")}>
+    <Pn span={span} title={t("GitHub and DexScreener")} meta={t("what it links to, checked")} className={span === "x-s12" ? "x-two" : ""}>
       <Kv
         flush
         rows={[

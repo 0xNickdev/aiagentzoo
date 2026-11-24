@@ -345,6 +345,8 @@
 .x-mtok { display: none; }
 
 /* ---------- responsive ---------- */
+/* a full-width panel of facts reads in two columns */
+@media (min-width: 900px) { .x-two .x-kv { display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; } }
 @media (max-width: 1280px) {
   .x-s3, .x-s4, .x-s5 { grid-column: span 6; }
   .x-s7, .x-s8 { grid-column: span 12; }

@@ -360,8 +360,8 @@ export default function XRay() {
               <TracePanel {...ctx} />
               <ProPanel access={access} />
               <TradeStrip {...ctx} />
+              <ClaimsPanel r={ctx.r} span="x-s12" />
               <FactorsPanel r={ctx.r} />
-              <ClaimsPanel r={ctx.r} />
               <SharePanel r={ctx.r} />
             </>
           )}
