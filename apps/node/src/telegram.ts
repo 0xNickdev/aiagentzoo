@@ -1,4 +1,5 @@
 import { solUsd } from "./chain/price.ts";
+import type { Claims } from "./claims/claims.ts";
 import { CURVE_ALIVE_SOL } from "./agents/judgement.ts";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StateStore } from "@aiagentzoo/sdk";
@@ -69,6 +70,8 @@ export interface TelegramOptions {
   token: string;
   store: StateStore;
   northUrl?: string;
+  /** The node that reads what a token links to; without it the message has no such lines. */
+  marshUrl?: string;
   data?: TelegramData;
   log?: (m: string) => void;
   fetchFn?: typeof fetch;
@@ -255,6 +258,7 @@ const menu = (): Keyboard => [
 /** What /v1/xray answers, as much of it as the bot shows. */
 export interface XRayReply {
   mint: string;
+  createdAt?: number;
   symbol: string;
   check: {
     verdict: "avoid" | "caution" | "pass" | "unknown";
@@ -326,8 +330,29 @@ export function splitReasons(reasons: string[]): { story: string[]; worse: strin
   return { story, worse: worse.sort((a, b) => rank(a) - rank(b)), common };
 }
 
+/** What the token links to and paid for, in two lines; a source that did not answer says nothing. */
+export function claimsLines(c: Claims | null, createdAt?: number | null): string[] {
+  if (!c) return [];
+  const out: string[] = [];
+  const g = c.github;
+  const link = g.url ? `<a href="${esc(g.repo ? `https://github.com/${g.repo}` : g.url)}">${esc(g.repo ?? g.url.replace("https://github.com/", ""))}</a>` : "";
+  const commits = g.commits !== undefined ? ` · ${T("{n} commits", { n: g.commits })}` : "";
+  if (g.status === "mutual") out.push(`<b>GitHub:</b> ${link} · ${T("names this token back")}${commits}`);
+  else if (g.status === "related") out.push(`<b>GitHub:</b> ${link} · ${T("matches its links, but never names this token")}${commits}`);
+  else if (g.status === "oneway") out.push(`<b>GitHub:</b> ⚠️ ${link} · ${T("does not mention this token")}${commits}`);
+  else if (g.status === "broken") out.push(`<b>GitHub:</b> ⚠️ ${T("the link leads nowhere")}`);
+  else if (g.status === "none" && c.metadataRead) out.push(`<b>GitHub:</b> ${T("no link found")}`);
+  if (g.fork) out.push(`   ${g.forkOf ? T("fork of {r}", { r: esc(g.forkOf) }) : T("a fork")}`);
+  const d = c.dex;
+  if (d.paid) {
+    const min = d.paidAt && createdAt && d.paidAt >= createdAt ? Math.round((d.paidAt - createdAt) / 60_000) : null;
+    out.push(`<b>DexScreener:</b> ${min === null ? T("paid") : T("paid, {t} after launch", { t: min < 120 ? T("{n} min", { n: min }) : T("{n} h", { n: Math.round(min / 60) }) })}`);
+  } else if (d.paid === false) out.push(`<b>DexScreener:</b> ${T(d.pending ? "payment in review" : d.takeover ? "community takeover" : "not paid")}`);
+  return out;
+}
+
 /** The x-ray as a Telegram message: the verdict with every reason, then the first seconds, the money, the churn. */
-export function xrayMessage(x: XRayReply): string {
+export function xrayMessage(x: XRayReply, claims: Claims | null = null): string {
   const c = x.check;
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
@@ -379,6 +404,7 @@ export function xrayMessage(x: XRayReply): string {
   else if (fu.funderLabel) lines.push(T("<b>Who paid for the creator:</b> a withdrawal from {x}", { x: fu.funderLabel }));
   else if (fu.funderIsHot) lines.push(T("<b>Who paid for the creator:</b> an exchange, ties no one together"));
   else lines.push(T("<b>Who paid for the creator:</b> <code>{w}</code> · funded {n} other creators, {d} dumps in 48h", { w: `${fu.funder.slice(0, 4)}…${fu.funder.slice(-4)}`, n: fu.siblings.length, d: fu.siblingDumped48h }));
+  lines.push(...claimsLines(claims, x.createdAt));
   if (c.notes.length) lines.push("", `<i>${esc(c.notes.map(TC).join(" · "))}</i>`);
   return lines.join("\n");
 }
@@ -489,6 +515,10 @@ export function startTelegram(opts: TelegramOptions): () => void {
     await call("sendChatAction", { chat_id: chat, action: "typing" }).catch(() => null);
     if (!opts.northUrl) return void send(chat, T("The chain reader is not reachable right now. Try again in a minute."));
     try {
+      // Asked alongside and never waited for long: the x-ray is the answer, the links are a footnote.
+      const claimsP = opts.marshUrl
+        ? f(`${opts.marshUrl}/v1/claims/${mint}`, { signal: AbortSignal.timeout(9_000) }).then((r) => (r.ok ? (r.json() as Promise<Claims>) : null)).catch(() => null)
+        : Promise.resolve(null);
       const r = await f(`${opts.northUrl}/v1/xray/${mint}`, { signal: AbortSignal.timeout(12_000) });
       if (r.status === 404) {
         // Not a token the stream saw: perhaps it is a creator's wallet.
@@ -499,7 +529,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
-      return void send(chat, xrayMessage(x), [
+      const claims = await Promise.race([claimsP, new Promise<null>((done) => setTimeout(() => done(null), 4_000))]);
+      return void send(chat, xrayMessage(x, claims), [
         // Mini app buttons only work in a private chat; a group gets the site.
         [chat > 0 ? { text: T("Open the map"), web_app: { url: `${APP_URL}?mint=${mint}` } } : { text: T("Open the map"), url: `${APP_URL}?mint=${mint}` }],
         terminals(mint),

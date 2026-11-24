@@ -11,6 +11,7 @@ import { Start } from "./Start";
 import { useMarket } from "./Market";
 import { callsLine, useCalls } from "./Calls";
 import { useAccess, useFreeDeepCheck } from "./access";
+import { ClaimsPanel } from "./Claims";
 import { playIntro } from "./motion";
 import { CopyCa, DevPanel, FactorsPanel, FirstPanel, OddsPanel, ProPanel, RightNowPanel, SetupPanel, SharePanel, TokenPanel, TracePanel, TradeStrip, VerdictPanel } from "./Panels";
 import { BundlesSection, CallsSection, DevSection, FirstSection, HoldersSection, SetupSection, SolSection, TraceSection, WalletsSection } from "./Sections";
@@ -360,6 +361,7 @@ export default function XRay() {
               <ProPanel access={access} />
               <TradeStrip {...ctx} />
               <FactorsPanel r={ctx.r} />
+              <ClaimsPanel r={ctx.r} />
               <SharePanel r={ctx.r} />
             </>
           )}

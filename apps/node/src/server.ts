@@ -11,6 +11,7 @@ import { checkRoutes } from "./routes/check.ts";
 import { walletRoutes } from "./routes/wallets.ts";
 import { callRoutes } from "./routes/calls.ts";
 import { poolRoutes } from "./routes/pools.ts";
+import { claimsRoutes } from "./routes/claims.ts";
 import { tgRoutes } from "./routes/tg.ts";
 import { guestWardenRoutes, wardenRoutes } from "./routes/warden.ts";
 
@@ -24,6 +25,7 @@ const ROUTES: Route[] = [
   x402Routes,
   callRoutes,
   poolRoutes,
+  claimsRoutes,
   nodeRoutes,
   boardRoutes,
   agentRoutes,

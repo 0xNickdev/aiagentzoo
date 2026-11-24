@@ -246,6 +246,7 @@ const stopTelegram = telegramHere
       token: process.env.TELEGRAM_BOT_TOKEN!,
       store: enclosure.store,
       northUrl,
+      marshUrl: config.peers.find((p) => p.id === "marsh.zoo")?.url,
       log: (m) => console.log(`[${config.id}] ${m}`),
       data: { board: leaderboard(enclosure, config.briefAt) },
     })

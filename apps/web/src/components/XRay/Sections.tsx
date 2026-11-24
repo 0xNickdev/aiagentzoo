@@ -13,6 +13,7 @@ import { KIND_TAGS, openWallet } from "./shared";
 import { usdShort } from "./Market";
 import { insideOf, timingOf } from "./Calls";
 import { Dossier } from "./Dossier";
+import { ClaimsPanel } from "./Claims";
 import { DevPanel, FirstPanel, ProPanel, SetupPanel, TraceGraph, TracePanel } from "./Panels";
 import { Kv, LockRow, Pn, type Ctx } from "./ui";
 import { useFreeDeepCheck } from "./access";
@@ -98,6 +99,7 @@ export function DevSection(x: Ctx) {
       </Pn>
       )}
       <TracePanel {...x} span="x-s6" />
+      <ClaimsPanel r={r} span="x-s6" />
     </>
   );
 }
