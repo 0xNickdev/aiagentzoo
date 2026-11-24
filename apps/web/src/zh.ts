@@ -2140,6 +2140,8 @@ export const ZH: Record<string, string> = {
   "Links, checked": "链接核对",
   "X did not answer": "X 没有响应",
   "no public channel or group at that link": "该链接不是公开频道或群组",
+  "its bio does not name this token": "简介里没有写这个币",
+  "does not name it in the posts we read": "读到的消息里没有提到",
   "Telegram did not answer": "Telegram 没有响应",
   "a group, its posts are not public": "群组，消息不公开",
   "X account": "X 账号",

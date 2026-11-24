@@ -106,8 +106,8 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
   const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : t("on its website");
   const a = c.account;
   const tg = c.telegram;
-  const x: [string, "d" | "up" | "w" | ""] = !a || a.status === "none" ? ["no link found", ""] : a.status === "unread" ? ["X did not answer", ""] : WORD[a.status];
-  const tgWord: [string, "d" | "up" | "w" | ""] = !tg || tg.status === "none" ? ["no link found", ""] : tg.status === "unread" ? ["Telegram did not answer", ""] : tg.status === "broken" ? ["no public channel or group at that link", ""] : tg.status === "group" ? ["a group, its posts are not public", ""] : WORD[tg.tie ?? "oneway"];
+  const x: [string, "d" | "up" | "w" | ""] = !a || a.status === "none" ? ["no link found", ""] : a.status === "unread" ? ["X did not answer", ""] : a.status === "oneway" ? ["its bio does not name this token", "w"] : WORD[a.status];
+  const tgWord: [string, "d" | "up" | "w" | ""] = !tg || tg.status === "none" ? ["no link found", ""] : tg.status === "unread" ? ["Telegram did not answer", ""] : tg.status === "broken" ? ["no public channel or group at that link", ""] : tg.status === "group" ? ["a group, its posts are not public", ""] : tg.tie === "mutual" || tg.tie === "related" ? WORD[tg.tie] : ["does not name it in the posts we read", "w"];
   const num = (n: number) => n.toLocaleString("en-US");
   const paid = d.paid === null ? t("DexScreener did not answer") : d.paid ? (d.paidAt && d.paidAt >= r.createdAt ? t("paid, {t}", { t: after(r.createdAt, d.paidAt) }) : t("paid")) : d.pending ? t("payment in review") : t("not paid");
   return (

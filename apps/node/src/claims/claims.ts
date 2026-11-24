@@ -185,7 +185,7 @@ export async function readClaims(mint: string, d: Deps): Promise<Claims> {
     return t.includes("mint") || (t.includes("website") && siteNamesMint) ? "mutual" : t.includes("website") ? "related" : "oneway";
   };
   const social = Promise.all([
-    x ? d.json(`https://api.fxtwitter.com/${x}`).then((r) => xClaimOf(x, r, tie, now, d.book)) : xClaimOf(null, null, tie, now, d.book),
+    x ? readX(x, d).then((r) => xClaimOf(x, r, tie, now, d.book)) : xClaimOf(null, null, tie, now, d.book),
     telegramClaim(tgName, mint, tie, d).catch((): TelegramClaim => ({ status: "unread", ...(tgName ? { name: tgName } : {}), flags: [] })),
   ]);
   let github: GithubClaim = { status: "none", flags: [] };
@@ -280,6 +280,25 @@ async function readGithub(link: { owner: string; repo: string | null }, foundIn:
     ...(ownerAt ? { ownerCreatedAt: ownerAt } : {}),
     flags,
   };
+}
+
+/** X's public mirror answers 404 for living accounts about two times in five, so it is asked again before giving up. */
+const X_TRIES = 4;
+const X_KEEP_MS = 6 * 3_600_000;
+const xKept = new Map<string, { at: number; got: { status: number; body: unknown } }>();
+export async function readX(handle: string, d: Pick<Deps, "json" | "now">): Promise<{ status: number; body: unknown } | null> {
+  const hit = xKept.get(handle);
+  if (hit && d.now() - hit.at < X_KEEP_MS) return hit.got;
+  for (let i = 0; i < X_TRIES; i++) {
+    const r = await d.json(`https://api.fxtwitter.com/${handle}`);
+    if (r?.status === 200 && (r.body as { user?: { id?: string } } | null)?.user?.id) {
+      xKept.set(handle, { at: d.now(), got: r });
+      if (xKept.size > 5_000) xKept.delete(xKept.keys().next().value!);
+      return r;
+    }
+    if (r?.status === 429) break;
+  }
+  return null;
 }
 
 const age = (ms: number) => (ms < 2 * DAY ? `${Math.max(1, Math.round(ms / 3_600_000))} h` : `${Math.round(ms / DAY)} days`);

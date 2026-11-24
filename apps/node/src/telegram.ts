@@ -347,13 +347,13 @@ export function claimsLines(c: Claims | null, createdAt?: number | null): string
   const a = c.account;
   if (a?.handle && a.status !== "unread" && a.status !== "none") {
     const extra = [a.followers !== undefined ? T("{n} followers", { n: a.followers.toLocaleString("en-US") }) : "", a.joinedAt ? T("since {d}", { d: new Date(a.joinedAt).toISOString().slice(0, 7) }) : ""].filter(Boolean).join(" · ");
-    out.push(`<b>X:</b> @${esc(a.handle)} · ${tied(a.status)}${extra ? ` · ${extra}` : ""}`);
+    out.push(`<b>X:</b> @${esc(a.handle)} · ${a.status === "oneway" ? T("its bio does not name this token") : tied(a.status)}${extra ? ` · ${extra}` : ""}`);
     if (a.was?.length) out.push(`   ⚠️ ${T("was @{h} before", { h: esc(a.was.at(-1)!) })}`);
   }
   const tg = c.telegram;
   if (tg?.name && (tg.status === "channel" || tg.status === "group")) {
     const n = tg.members !== undefined ? ` · ${T("{n} members", { n: tg.members.toLocaleString("en-US") })}` : "";
-    out.push(`<b>Telegram:</b> ${esc(tg.name)}${n} · ${tg.status === "group" ? T("a group, its posts are not public") : tied(tg.tie)}`);
+    out.push(`<b>Telegram:</b> ${esc(tg.name)}${n} · ${tg.status === "group" ? T("a group, its posts are not public") : tg.tie === "oneway" ? T("does not name it in the posts we read") : tied(tg.tie)}`);
     if ((tg.contracts ?? 0) >= 3) out.push(`   ⚠️ ${tg.under !== undefined ? T("{n} other contracts in its last {p} posts, {u} under ${l} or not trading", { n: tg.contracts!, p: tg.posts ?? 0, u: tg.under, l: (tg.lineUsd ?? 0).toLocaleString("en-US") }) : T("{n} other contracts in its last {p} posts", { n: tg.contracts!, p: tg.posts ?? 0 })}`);
   } else if (tg?.status === "broken") out.push(`<b>Telegram:</b> ${T("no public channel or group at that link")}`);
   const d = c.dex;

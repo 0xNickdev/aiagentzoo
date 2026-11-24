@@ -198,6 +198,8 @@ export const BOT_ZH: Record<string, string> = {
   "launch bundle of {a}%, {b}% of it sold": "开盘捆绑买入 {a}%，其中 {b}% 已卖出",
   "{n} commits": "{n} 次提交",
   "no public channel or group at that link": "该链接不是公开频道或群组",
+  "its bio does not name this token": "简介里没有写这个币",
+  "does not name it in the posts we read": "读到的消息里没有提到",
   "{n} followers": "{n} 粉丝",
   "since {d}": "注册于 {d}",
   "was @{h} before": "以前叫 @{h}",

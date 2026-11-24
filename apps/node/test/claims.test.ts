@@ -178,3 +178,14 @@ test("a channel's other contracts are counted against the market; an unanswered 
   assert.equal(blind.under, undefined);
   assert.equal(blind.contracts, 2);
 });
+
+test("X's mirror is asked again when it says a living account is gone", async () => {
+  const { readX } = await import("../src/claims/claims.ts");
+  let n = 0;
+  const json = async () => (++n < 3 ? { status: 404, body: null, link: null } : { status: 200, body: { user: { id: "1" } }, link: null });
+  assert.equal((await readX("flaky", { json, now: () => NOW }))?.status, 200);
+  assert.equal(n, 3);
+  await readX("flaky", { json, now: () => NOW });
+  assert.equal(n, 3);
+  assert.equal(await readX("gone", { json: async () => ({ status: 404, body: null, link: null }), now: () => NOW }), null);
+});
