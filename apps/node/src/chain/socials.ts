@@ -59,6 +59,15 @@ export interface AccountRecord {
   /** Launches whose creator sold half their bag or more within five minutes. */
   fastDumps: number;
   creators: number;
+  /** Different devs across every launch that linked it, this one included. */
+  devs: number;
+  /** The account names this coin (its ticker is in the handle, or the handle in its ticker): it is the coin's own. */
+  tiesBack: boolean;
+  /**
+   * On launches by more than BORROWED_DEVS different devs and not naming this coin: someone else's account put in
+   * the metadata (a known trader on 29 launches by 23 devs), so it says nothing about who launched this one.
+   */
+  borrowed: boolean;
   /** How far back the launches were looked for: 2 days in memory, 90 with the long memory attached. */
   windowDays: number;
   recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null }>;
@@ -83,6 +92,8 @@ interface LinkRow {
 
 /** Accounts memecoins point to because they are about them, never because they run them. */
 const FAMOUS = new Set(["elonmusk", "chatgpt", "openai", "sama", "solana", "pumpdotfun", "binance", "cz_binance", "realdonaldtrump", "potus", "whitehouse", "x", "grok", "xai", "anthropicai", "claudeai", "nvidia", "tesla", "spacex", "jupiterexchange", "raydiumprotocol", "metdaoteam", "bonk_inu", "coinbase", "base", "jessepollak", "vitalikbuterin", "toly", "aeyakovenko"]);
+/** Past this many different devs, an account that does not name the coin is taken as borrowed, not theirs. */
+export const BORROWED_DEVS = 3;
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export class SocialsRegistry {
@@ -281,8 +292,15 @@ export class SocialsRegistry {
       return handle.length >= 3 && sym.length >= 3 && (handle.includes(sym) || sym.includes(handle));
     }).length;
     if (outlines.length && about / outlines.length >= 0.5) return null;
+    const self = all.find((o) => o.mint === except) ?? (except ? this.tape.outline(except) : null);
+    const own = squash(self?.symbol ?? "");
+    const tiesBack = handle.length >= 3 && own.length >= 3 && (handle.includes(own) || own.includes(handle));
+    const devs = new Set([...all.map((o) => o.creator), ...(self ? [self.creator] : [])]).size;
     return {
       social,
+      devs,
+      tiesBack,
+      borrowed: !tiesBack && devs > BORROWED_DEVS,
       launches: outlines.length,
       fastDumps: outlines.filter((o) => o.fastDump).length,
       creators: new Set(outlines.map((o) => o.creator)).size,

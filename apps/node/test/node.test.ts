@@ -1821,7 +1821,8 @@ test("an X account reused across launches whose devs sold within minutes is name
   const reg = new SocialsRegistry(tape, (async (url: string) => Response.json(meta(String(url).includes("Clean") ? "honestdev" : "RugCrew_"))) as unknown as typeof fetch);
   for (let i = 0; i < 4; i++) {
     const mint = pad(`Rug${i}x`);
-    const dev = pad(`Dev${i}x`);
+    // Three devs: the first two launches came from the same wallet (more devs than that reads as a borrowed account).
+    const dev = pad(`Dev${Math.max(1, i)}x`);
     const at = now - (60 - i) * 60_000;
     tape.apply({ kind: "create", name: "r", symbol: `R${i}`, mint, creator: dev, ts: at, uri: `https://ipfs.io/ipfs/Qm${"a".repeat(44)}${i}` }, at);
     tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: dev, ts: at, curveSol: 1 }, at);

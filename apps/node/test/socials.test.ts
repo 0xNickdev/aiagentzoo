@@ -51,7 +51,7 @@ test("socials memory: account -> launches kept 90 days on disk, read back after 
   // Three launches by three devs on @OldCrew; their metadata is read at launch, before anyone sold.
   for (let i = 0; i < 3; i++) {
     const mint = pad(`Old${i}`);
-    const dev = pad(`OldDev${i}`);
+    const dev = pad(`OldDev${Math.min(i, 1)}`);
     const at = now - 30 * 60_000 + i * 60_000;
     tape.apply({ kind: "create", name: "o", symbol: `O${i}`, mint, creator: dev, ts: at }, at);
     tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: dev, ts: at, curveSol: 1 }, at);
@@ -82,4 +82,40 @@ test("socials memory: account -> launches kept 90 days on disk, read back after 
   // Past 90 days, gone.
   reg2.prune(now + 91 * day);
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM social_links").get() as { n: number }).n, 0);
+});
+
+test("borrowed names: someone else's X account on launches by many devs is a note, not a reason; one that names the coin still counts", async () => {
+  const { checkToken } = await import("../src/chain/check.ts");
+  const tape = new PumpTape();
+  const reg = new SocialsRegistry(tape);
+  const now = Date.now();
+  // @blknoiz06 in the metadata of 29 launches by 23 devs, most of them dumped in the first minute.
+  const launch = (mint: string, dev: string, symbol: string, at: number, handle: string, dump: boolean) => {
+    tape.apply({ kind: "create", name: symbol, symbol, mint, creator: dev, ts: at }, at);
+    tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: true, user: dev, ts: at, curveSol: 1 }, at);
+    if (dump) tape.apply({ kind: "trade", mint, sol: 1, tokens: 1e7, isBuy: false, user: dev, ts: at + 30_000, curveSol: 0.1 }, at + 30_000);
+    reg.add(mint, socialsOf({ twitter: `https://x.com/${handle}` }));
+  };
+  for (let i = 0; i < 28; i++) launch(pad(`Blk${i}`), pad(`BDev${i % 23}`), `B${i}`, now - (90 - i) * 60_000, "blknoiz06", true);
+  const mint = pad("BlkLast");
+  launch(mint, pad("BDevLast"), "LAST", now - 60_000, "blknoiz06", false);
+  const [rec] = reg.forMint(mint);
+  assert.equal(rec!.borrowed, true);
+  assert.equal(rec!.devs, 24);
+  const c = checkToken(mint, { symbol: "LAST", facts: tape.facts(mint)!, creatorRecord: tape.creator(pad("BDevLast")) }, { socials: reg.forMint(mint) });
+  assert.doesNotMatch(c.reasons.join(" "), /blknoiz06/);
+  assert.ok(c.notes.includes("this X account (@blknoiz06) appears on 29 launches by 24 different devs; it is likely borrowed"), c.notes.join(" | "));
+  // Few devs on the account: theirs, and it still counts against the coin.
+  for (let i = 0; i < 3; i++) launch(pad(`Crew${i}`), pad(`CDev${i % 2}`), `C${i}`, now - (50 - i) * 60_000, "crewcalls", true);
+  const crew = pad("CrewLast");
+  launch(crew, pad("CDev2"), "CNEXT", now - 60_000, "crewcalls", false);
+  const cc = checkToken(crew, { symbol: "CNEXT", facts: tape.facts(crew)!, creatorRecord: tape.creator(pad("CDev2")) }, { socials: reg.forMint(crew) });
+  assert.match(cc.reasons.join(" "), /\(@crewcalls\) is also on 3 other launches/);
+  // An account named after this coin ties back to it: counted however many devs used it before.
+  for (let i = 0; i < 6; i++) launch(pad(`Moo${i}`), pad(`MDev${i}`), `X${i}`, now - (40 - i) * 60_000, "moonfrog", true);
+  const own = pad("MooOwn");
+  launch(own, pad("MDevOwn"), "FROG", now - 60_000, "moonfrog", false);
+  const [ownRec] = reg.forMint(own);
+  assert.equal(ownRec!.tiesBack, true);
+  assert.equal(ownRec!.borrowed, false);
 });

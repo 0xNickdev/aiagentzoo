@@ -409,9 +409,16 @@ export function checkToken(
   }
 
   // The account the token advertises, reused on other launches whose devs sold within minutes: the same hands.
+  // Someone else's account in the metadata (a known trader on launches by many devs) says nothing about this dev:
+  // said as a note, never counted. Counted only when it names this coin or few devs share it.
   for (const a of opts.socials ?? []) {
+    const kind = a.social.kind === "telegram" ? "Telegram group" : a.social.kind === "x-community" ? "X community" : "X account";
+    if (a.borrowed) {
+      notes.push(`this ${kind} (${a.social.label}) appears on ${a.launches + 1} launches by ${a.devs} different devs; it is likely borrowed`);
+      continue;
+    }
     if (a.fastDumps < 2) continue;
-    const said = `the ${a.social.kind === "telegram" ? "Telegram group" : a.social.kind === "x-community" ? "X community" : "X account"} this token links to (${a.social.label}) is also on ${a.launches} other launch${a.launches === 1 ? "" : "es"} from the last ${(a.windowDays ?? 2) <= 2 ? "48 hours" : `${a.windowDays} days`}; their dev sold within 5 minutes on ${a.fastDumps}`;
+    const said = `the ${kind} this token links to (${a.social.label}) is also on ${a.launches} other launch${a.launches === 1 ? "" : "es"} from the last ${(a.windowDays ?? 2) <= 2 ? "48 hours" : `${a.windowDays} days`}; their dev sold within 5 minutes on ${a.fastDumps}`;
     if (a.fastDumps >= 3) flag(avoid, said, WEIGHT.socialsAvoid);
     else flag(caution, said, WEIGHT.socialsCaution);
   }
