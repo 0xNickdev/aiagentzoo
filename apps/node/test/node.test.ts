@@ -2583,3 +2583,34 @@ test("adoption puts the card up from the first trades read in parallel, the rest
   assert.equal(tape.token(mint)!.creator, "");
   assert.equal(tape.token(mint)!.facts.creatorPending, undefined);
 });
+
+test("a coin the long memory knew is adopted with its kept creator and launch, and its opening is not searched for", async () => {
+  const { Adopter } = await import("../src/chain/adopt.ts");
+  const { RAYDIUM_AMM_PROGRAM } = await import("../src/chain/launchpads.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  const pool = "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v";
+  const asked: string[] = [];
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    asked.push(`${method}:${(params[1] as { limit?: number } | undefined)?.limit ?? ""}`);
+    if (method === "getAccountInfo") return { value: params[0] === pool ? { owner: RAYDIUM_AMM_PROGRAM } : null } as T;
+    if (method === "getSignaturesForAddress") return [] as T;
+    return null;
+  };
+  const dex = (async () => new Response(JSON.stringify([{ dexId: "raydium", pairAddress: pool, quoteToken: { address: "So11111111111111111111111111111111111111112" }, liquidity: { usd: 1 } }]))) as typeof fetch;
+  const tape = new PumpTape();
+  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0 });
+  const launched = Date.now() - 30 * 86_400_000;
+  assert.equal((await a.ensure(mint, 5_000, { creator: "K".padEnd(44, "k"), createdAt: launched, symbol: "OLD" })).state, "tracked");
+  await a.idle();
+  const t = tape.token(mint)!;
+  assert.equal(t.creator, "K".padEnd(44, "k"));
+  assert.equal(t.createdAt, launched);
+  assert.equal(t.symbol, "OLD");
+  assert.equal(t.facts.creatorPending, undefined);
+  assert.equal(t.facts.adopted, true);
+  assert.ok(!asked.includes("getSignaturesForAddress:1000"), asked.join(","));
+  // Out of the trial and the odds like any adopted coin.
+  assert.equal(tape.dueMarks(Date.now()).length, 0);
+  assert.equal(tape.oddsInputs(mint, { social: false, funderExchange: false, funderMany: false }), null);
+});

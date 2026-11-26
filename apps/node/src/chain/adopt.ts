@@ -14,6 +14,14 @@ import type { DexRead, PumpTape } from "./pump.ts";
  * curves: what the stream reads. Meteora's DAMM pools (where its curve graduates) are not read.
  */
 
+/** A coin's launch as the long memory kept it. */
+export interface Known {
+  creator: string;
+  createdAt: number;
+  name?: string;
+  symbol?: string;
+}
+
 type Rpc = <T>(method: string, params: unknown[]) => Promise<T | null>;
 
 const WSOL = "So11111111111111111111111111111111111111112";
@@ -254,7 +262,11 @@ export class Adopter {
   }
 
   /** Asks for the coin to be read; says where it stands. */
-  request(mint: string, now = Date.now()): AdoptState {
+  /** What the long memory already knows of a coin: then its opening is not searched for. */
+  private readonly known = new Map<string, Known>();
+
+  request(mint: string, now = Date.now(), known?: Known): AdoptState {
+    if (known) this.known.set(mint, known);
     const s = this.state(mint, now);
     if (s) return s;
     if (this.queue.length >= this.maxQueue) return { state: "busy" };
@@ -264,8 +276,8 @@ export class Adopter {
   }
 
   /** Asks, then waits up to `ms` for the answer. */
-  async ensure(mint: string, ms: number): Promise<AdoptState> {
-    const first = this.request(mint);
+  async ensure(mint: string, ms: number, known?: Known): Promise<AdoptState> {
+    const first = this.request(mint, Date.now(), known);
     if (first.state !== "reading" || ms <= 0) return first;
     await Promise.race([new Promise<void>((r) => this.waiters.set(mint, [...(this.waiters.get(mint) ?? []), r])), sleep(ms)]);
     return this.state(mint) ?? { state: "busy" };
@@ -306,12 +318,26 @@ export class Adopter {
     ]);
     const createdAt = (w.listedAt ?? (Array.isArray(page) && page.length ? (page[page.length - 1]!.blockTime ?? 0) * 1000 : 0)) || Date.now();
     // The card goes up now and the stream follows it from here; who opened it is looked up after.
-    const adopted = this.tape.adoptToken({ mint, kind: w.kind, ...(w.venue ? { venue: w.venue } : {}), pool: w.pool, creator: "", createdAt, creatorPending: true, ...meta });
+    const k = this.known.get(mint);
+    this.known.delete(mint);
+    const adopted = this.tape.adoptToken({
+      mint,
+      kind: w.kind,
+      ...(w.venue ? { venue: w.venue } : {}),
+      pool: w.pool,
+      // Known from the long memory: its creator and launch, no search.
+      creator: k?.creator ?? "",
+      createdAt: k?.createdAt ?? createdAt,
+      ...(k ? {} : { creatorPending: true }),
+      ...(k?.name ? { name: k.name } : {}),
+      ...(k?.symbol ? { symbol: k.symbol } : {}),
+      ...meta,
+    });
     if (!adopted) return null;
     const sigs = Array.isArray(page) ? page : null;
     await this.readBack(mint, w, sigs ? sigs.slice(0, this.firstN) : null, w.dex ?? null, 0, true);
     if (sigs && sigs.length > this.firstN) this.later(() => this.readBack(mint, w, sigs.slice(this.firstN, this.backfillN), null, this.retries, false));
-    this.later(() => this.findOpening(mint, w));
+    if (!k) this.later(() => this.findOpening(mint, w));
     return null;
   }
 

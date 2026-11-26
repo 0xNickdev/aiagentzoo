@@ -94,12 +94,18 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const stream = { live: tape.connected && Date.now() - tape.lastEventAt < 60_000, lastEventSecAgo: Math.round((Date.now() - tape.lastEventAt) / 1000) };
     let found = tape.token(mint);
     // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
-    const past = !found && history ? history.report(mint) : null;
-    // Launched before the stream watched: read from the chain now and followed from here on, unless the long memory or the PumpSwap pools already have it.
-    if (!found && !past && adoption.current && !pools()?.ofMint(mint)) {
-      const s = await adoption.current.ensure(mint, deep ? 6_000 : 2_500);
-      if (s.state === "tracked") found = tape.token(mint);
-      else if (s.state === "reading" || s.state === "busy") {
+    let past = !found && history ? history.report(mint) : null;
+    // Not on the tape: read from the chain now and followed live from here on. What the long memory kept of its launch
+    // (creator, launch time, first wallets, bundle) is handed over and kept: it is better than a rebuild.
+    let memo: typeof past = null;
+    if (!found && adoption.current) {
+      const s = await adoption.current.ensure(mint, deep ? 6_000 : 2_500, past ? { creator: past.creator, createdAt: past.createdAt, name: past.name, symbol: past.symbol } : undefined);
+      if (s.state === "tracked") {
+        found = tape.token(mint);
+        if (found) [memo, past] = [past, null];
+      } else if (past) {
+        // Still reading, or missed: the memory answers now, the live state follows on the next ask.
+      } else if (s.state === "reading" || s.state === "busy") {
         const etaSec = s.state === "reading" ? s.etaSec : 30;
         res.setHeader("cache-control", "no-store");
         res.setHeader("retry-after", String(Math.min(30, Math.max(2, etaSec))));
@@ -224,8 +230,10 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       const where = "pump.fun, LaunchLab, Meteora, Raydium";
       return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
     }
-    const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
-    const earlyTagged = withCabal(tagAll(tape.earlyOf(mint) ?? [], kept));
+    // An adopted coin the long memory knew: its first wallets and launch bundle come from that record.
+    const launchBundle = memo && !found.bundle.length ? memo.bundle : found.bundle;
+    const bundle = launchBundle.length >= 2 ? await within(traceFunders(found.mint, launchBundle.map((b) => b.wallet))) : null;
+    const earlyTagged = withCabal(tagAll(memo && !(tape.earlyOf(mint) ?? []).length ? memo.early : (tape.earlyOf(mint) ?? []), kept));
     return json(res, 200, {
       mint,
       chain,
@@ -238,7 +246,8 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       ...shills(mint, earlyTagged, found.createdAt, check),
       creatorRecord: preferHistory(found.creatorRecord, found.creator),
       funding: funding ?? null,
-      bundle: { wallets: withCabal(tagAll(found.bundle, kept)), funding: bundle },
+      bundle: { wallets: withCabal(tagAll(launchBundle, kept)), funding: bundle },
+      ...(memo ? { memory: { recordedAt: memo.recordedAt, historySince: history!.since() } } : {}),
       socials: linked,
       ticker: history ? history.ticker(found.symbol, mint) : null,
       ...born,
