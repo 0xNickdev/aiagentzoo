@@ -147,6 +147,53 @@ var ZooPanel = (() => {
     );
   }
 
+  /**
+   * A caution split the way the bot says it: the coin's story, what is worse than usual, and in one short line what
+   * most caution coins with buyers carry. Mirrors splitReasons in the node's telegram.ts.
+   */
+  const COMMON = [
+    [/^the creator (?:has )?sold (\d+)% of their own bag$/, (m) => t("dev sold {p}%", { p: m[1] })],
+    [/^\d+ wallets bought (\d+)% of the supply in the launch block and have sold (\d+)% of it$/, (m) => t("launch bundle of {a}%, {b}% of it sold", { a: m[1], b: m[2] })],
+    [/^(\d+) of the first-second wallets have sniped launches together before: one operator$/, (m) => t("sniper ring {n}", { n: m[1] })],
+    [/^(\d+) serial snipers got in first/, (m) => t("serial snipers {n}", { n: m[1] })],
+    [/^at least (\d+)% of the trading is wallets selling back/, (m) => t("at least {p}% churn", { p: m[1] })],
+  ];
+  const FIRST = [/keep sniping this creator's other launches/, /^the wallet that funded this creator/, /^this creator dumped/];
+  const STORY = /^the dev who launched it dumps their launches and already sold|^this dev sells early, yet/;
+  function splitReasons(reasons) {
+    const story = [];
+    const worse = [];
+    const common = [];
+    for (const r of reasons) {
+      if (STORY.test(r)) {
+        story.push(r);
+        continue;
+      }
+      const hit = COMMON.map(([re, say]) => [r.match(re), say]).find(([m]) => m);
+      if (hit) common.push(hit[1](hit[0]));
+      else worse.push(r);
+    }
+    const rank = (r) => {
+      const i = FIRST.findIndex((re) => re.test(r));
+      return i < 0 ? FIRST.length : i;
+    };
+    return { story, worse: worse.sort((a, b) => rank(a) - rank(b)), common };
+  }
+
+  /** The reasons under the verdict: as they come, or for a caution in the bot's order. */
+  function reasonsOf(c, compact) {
+    const max = compact ? 3 : 5;
+    const list = (xs) => h("ol", { class: "reasons" }, ...xs.slice(0, max).map((x, i) => h("li", {}, h("b", {}, String(i + 1).padStart(2, "0")), h("span", {}, tChain(x)))));
+    if (c.verdict !== "caution") return c.reasons?.length ? [list(c.reasons)] : [];
+    const { story, worse, common } = splitReasons(c.reasons || []);
+    return [
+      ...story.map((x) => h("p", { class: "notes" }, tChain(x))),
+      h("p", { class: "r-head mono" }, worse.length ? t("Worse than usual") : t("Worse than usual: nothing found")),
+      worse.length ? list(worse) : null,
+      common.length ? h("p", { class: "notes" }, `${t("Common on coins with buyers:")} ${common.join(", ")}`) : null,
+    ];
+  }
+
   /** A token's X-Ray. */
   function drawToken(ctx, r) {
     const compact = !!ctx.opts.compact;
@@ -167,7 +214,7 @@ var ZooPanel = (() => {
       h("p", { class: "verdict" }, tone.label),
       odds(c),
       ...meter(c.verdict),
-      c.reasons?.length ? h("ol", { class: "reasons" }, ...c.reasons.slice(0, compact ? 3 : 5).map((x, i) => h("li", {}, h("b", {}, String(i + 1).padStart(2, "0")), h("span", {}, tChain(x))))) : null,
+      ...reasonsOf(c, compact),
       c.notes?.length && !compact ? h("p", { class: "notes" }, c.notes.map(tChain).join(" · ")) : null,
       track,
     );

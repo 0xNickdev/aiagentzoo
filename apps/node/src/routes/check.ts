@@ -11,6 +11,7 @@ import { pools } from "./pools.ts";
 import { tagAll } from "../chain/tags.ts";
 import { originOf } from "../chain/origin.ts";
 import { oddsOf } from "../chain/odds.ts";
+import { solUsd } from "../chain/price.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, issueKey, keyFrom, walletOfKey } from "../chain/keys.ts";
 import { HOLDER_MIN, isHolder, TOKEN_MINT } from "../holders.ts";
 import { tape } from "../chain/pump.ts";
@@ -148,7 +149,9 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
         const odds = oddsOf(read.inputs, read.at, read);
         // What the dev did since: the odds stay, as the record of what minute five said.
         const dumped = (found.facts.creatorSold ?? 0) >= 0.5;
-        check.odds = odds.devDumps !== null && (dumped || read.ageMin >= 60) ? { ...odds, devSettled: { dumped, ageMin: read.ageMin } } : odds;
+        // Today's SOL price beside the odds, so the site says caps in dollars as the bot does.
+        const usd = solUsd();
+        check.odds = { ...(odds.devDumps !== null && (dumped || read.ageMin >= 60) ? { ...odds, devSettled: { dumped, ageMin: read.ageMin } } : odds), ...(usd !== null ? { solUsd: Math.round(usd * 100) / 100 } : {}) };
         const runs = oddsRunNote(check.verdict, odds.vsAverage);
         if (runs) check.notes.unshift(runs);
       }

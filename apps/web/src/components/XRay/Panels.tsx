@@ -9,7 +9,7 @@ import Swap from "../Swap";
 import { factorsOf } from "../Factors";
 import { KIND, kindOf } from "../XRayRadar";
 import type { Early, XRayReport } from "./types";
-import { ageOf, TONE, venueLabel, VWORD } from "./shared";
+import { ageOf, capOf, splitReasons, TONE, venueLabel, VWORD } from "./shared";
 import { pctMove, usdShort } from "./Market";
 import { TERMINALS, TradeOnEvm } from "./Trade";
 import { drawXRay } from "./shareCard";
@@ -98,7 +98,8 @@ export function VerdictPanel({ r, market }: Ctx) {
         </span>
       </div>
       {lede && <p className="x-lede">{lede}</p>}
-      {c.reasons.length > 0 && (
+      {c.verdict === "caution" && <CautionReasons reasons={c.reasons} devNow={devNow} isDevRecord={isDevRecord} />}
+      {c.verdict !== "caution" && c.reasons.length > 0 && (
         <ol className="x-rs">
           {c.reasons.map((x, i) => (
             <li key={x} data-x="reason">
@@ -119,6 +120,42 @@ export function VerdictPanel({ r, market }: Ctx) {
         </ul>
       )}
     </Pn>
+  );
+}
+
+/**
+ * Caution is most coins with buyers, so it reads as the bot says it: the coin's story, what is worse than usual, and
+ * in one line what most coins with buyers carry.
+ */
+function CautionReasons({ reasons, devNow, isDevRecord }: { reasons: string[]; devNow: string | null; isDevRecord: (x: string) => boolean }) {
+  const { story, worse, common } = splitReasons(reasons);
+  return (
+    <>
+      {story.map((x) => (
+        <p key={x} className="x-lede">
+          {tChain(x)}
+        </p>
+      ))}
+      <p className="x-rh">{worse.length ? t("Worse than usual") : t("Worse than usual: nothing found")}</p>
+      {worse.length > 0 && (
+        <ol className="x-rs">
+          {worse.map((x, i) => (
+            <li key={x} data-x="reason">
+              <b>{String(i + 1).padStart(2, "0")}</b>
+              <span>
+                {marked(tChain(x))}
+                {isDevRecord(x) && devNow ? `; ${devNow}` : ""}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {common.length > 0 && (
+        <p className="x-rc">
+          <span>{t("Common on coins with buyers:")}</span> {common.join(", ")}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -243,7 +280,7 @@ export function OddsPanel({ r }: Ctx) {
   const avg = o.average ?? AVG;
   const color = o.run < avg ? "#ff5a4f" : c.verdict === "pass" ? "#f4f5f4" : "#e6e9e7";
   return (
-    <Pn span="x-s3" title={t("Odds")} meta={o.at === "5min" ? t("as of minute 5 · runs past 85 SOL") : t("so far · runs past 85 SOL")}>
+    <Pn span="x-s3" title={t("Odds")} meta={o.at === "5min" ? t("as of minute 5 · passes {s} market cap", { s: capOf(GRAD_SOL, o.solUsd) }) : t("so far · passes {s} market cap", { s: capOf(GRAD_SOL, o.solUsd) })}>
       <div className="x-gwrap">
         <Gauge run={o.run} avg={avg} color={color} />
         <div className="x-read">
@@ -270,7 +307,7 @@ export function OddsPanel({ r }: Ctx) {
           {o.settled && (
             <div>
               <span>{t("What happened since")}</span>
-              <i className={o.settled.ran ? "x-up" : "x-d"} style={{ fontFamily: "var(--sans)" }}>{o.settled.ran ? t("ran to {s} SOL", { s: o.settled.peakSol }) : t("no run in {h}", { h: hoursOf(o.settled.ageMin) })}</i>
+              <i className={o.settled.ran ? "x-up" : "x-d"} style={{ fontFamily: "var(--sans)" }}>{o.settled.ran ? t("ran to {s}", { s: capOf(o.settled.peakSol, o.solUsd) }) : t("no run in {h}", { h: hoursOf(o.settled.ageMin) })}</i>
             </div>
           )}
         </div>

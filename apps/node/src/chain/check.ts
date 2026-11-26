@@ -94,7 +94,7 @@ export interface TokenCheck {
    * pump.fun launches only: the odds the first five minutes give, fitted on what launches like it went on to do. The
    * run odds rank launches far better than the verdict does; the verdict says who is behind it.
    */
-  odds?: Odds | null;
+  odds?: (Odds & { solUsd?: number }) | null;
   /** The launch transaction's tool print and what the other launches made with it did; pump.fun, LaunchLab, Meteora. */
   /** Wallets that signed a transaction with the dev, and what they launched and dumped in two days. Solana only. */
   operator?: { wallets: number; launches: number; settled: number; dumped: number } | null;
@@ -245,12 +245,16 @@ export function rightsWarnings(mint: string, r: TokenRights | null | undefined):
 const issuedNote = (mint: string, r: TokenRights | null | undefined) =>
   ISSUED[mint] && r && (r.freezeAuthority || r.mintAuthority || r.permanentDelegate) ? `${ISSUED[mint]} issues it and keeps the rights to mint and freeze it, as a stablecoin issuer does: said, not scored` : null;
 
+/** Caution's band above its floor, and the weight that fills about two thirds of it. */
+const CAUTION_SPAN = 34;
+const CAUTION_K = 25;
 /** The score for a verdict from its reasons' weights: avoid 60..100, caution 25..59, pass 0..24. */
 export function scoreOf(verdict: CheckVerdict, weights: number[], opts: { early?: boolean } = {}): RiskScore {
   const raw = weights.reduce((n, w) => n + w, 0);
   if (verdict === "unknown") return null;
   if (verdict === "avoid") return Math.min(100, 60 + Math.round(Math.min(40, Math.max(0, raw - 25) * 0.5 + 10)));
-  if (verdict === "caution") return Math.min(59, 25 + Math.round(Math.min(34, raw)));
+  // Compressed smoothly into 25..59: more reasons still read higher, and no caution ever reaches avoid's band.
+  if (verdict === "caution") return 25 + Math.min(34, Math.round(CAUTION_SPAN * (1 - Math.exp(-Math.max(0, raw) / CAUTION_K))));
   return opts.early ? 10 : 0;
 }
 

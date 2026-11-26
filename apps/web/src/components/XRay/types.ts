@@ -34,6 +34,8 @@ export interface Odds {
   average?: number;
   settled?: { ran: true; peakSol: number; afterMin: number } | { ran: false; ageMin: number };
   devSettled?: { dumped: boolean; ageMin: number };
+  /** Today's SOL price, sent with the odds so caps read in dollars. */
+  solUsd?: number;
 }
 
 export interface ToolStat {

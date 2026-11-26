@@ -8,6 +8,47 @@ import { short } from "../../format";
 import type { Verdict, XRayReport } from "./types";
 
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
+
+/**
+ * A caution split the way the bot says it: the coin's story first, then what is worse than usual, and last in short
+ * what most caution coins with buyers carry (a dev who sold, a sniper ring, a sold launch bundle), so it does not bury
+ * what is this coin's own. Mirrors splitReasons in the node's telegram.ts.
+ */
+const COMMON: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^the creator (?:has )?sold (\d+)% of their own bag$/, (m) => t("dev sold {p}%", { p: m[1]! })],
+  [/^\d+ wallets bought (\d+)% of the supply in the launch block and have sold (\d+)% of it$/, (m) => t("launch bundle of {a}%, {b}% of it sold", { a: m[1]!, b: m[2]! })],
+  [/^(\d+) of the first-second wallets have sniped launches together before: one operator$/, (m) => t("sniper ring {n}", { n: m[1]! })],
+  [/^(\d+) serial snipers got in first/, (m) => t("serial snipers {n}", { n: m[1]! })],
+  [/^at least (\d+)% of the trading is wallets selling back/, (m) => t("at least {p}% churn", { p: m[1]! })],
+];
+const FIRST = [/keep sniping this creator's other launches/, /^the wallet that funded this creator/, /^this creator dumped/];
+const STORY = /^the dev who launched it dumps their launches and already sold|^this dev sells early, yet/;
+export function splitReasons(reasons: string[]): { story: string[]; worse: string[]; common: string[] } {
+  const story: string[] = [];
+  const worse: string[] = [];
+  const common: string[] = [];
+  for (const r of reasons) {
+    if (STORY.test(r)) {
+      story.push(r);
+      continue;
+    }
+    const hit = COMMON.map(([re, say]) => [r.match(re), say] as const).find(([m]) => m);
+    if (hit) common.push(hit[1](hit[0]!));
+    else worse.push(r);
+  }
+  const rank = (r: string) => {
+    const i = FIRST.findIndex((re) => re.test(r));
+    return i < 0 ? FIRST.length : i;
+  };
+  return { story, worse: worse.sort((a, b) => rank(a) - rank(b)), common };
+}
+
+/** A cap in dollars at the SOL price the node sent, as the bot says it; in SOL when there is no price. */
+export const capOf = (sol: number, solUsd: number | null | undefined) => {
+  if (!solUsd) return `${sol.toLocaleString("en-US")} SOL`;
+  const v = sol * solUsd;
+  return v >= 999_500 ? `$${(v / 1e6).toFixed(1)}M` : v >= 9_950 ? `$${Math.round(v / 1e3)}K` : `$${(v / 1e3).toFixed(1)}K`;
+};
 /** Where the token was launched, as people know the places. */
 export const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", raydium: "Raydium", cpmm: "Raydium CPMM", stonk: "StonkFun", fourmeme: "four.meme", flap: "Flap", clanker: "Clanker" };
 /** The launchpad and, when it names one, the platform on it: "StonkFun", "Flap · tax 9%", "Clanker · Bankr". */
