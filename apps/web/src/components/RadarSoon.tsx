@@ -19,7 +19,7 @@ export default function RadarSoon({ onOpen }: { onOpen: () => void }) {
           <VaporCountdown targetDate={RADAR_RELEASE_AT} labels={[t("hours"), t("minutes"), t("seconds")]} onZero={onOpen} />
         </div>
         <p className="max-w-[60ch] text-[13.5px] leading-[1.55] text-fg-2 sm:text-[15px]">
-          {t("Frozen on 21 Nov, graded in public: its sharpest picks graduated 46% of the time, against 1.3% for a random launch.")}
+          {t("Tested blind on 38,976 launches since 21 Nov: its top signals graduated 46% of the time, against 1.3% for a random launch.")}
         </p>
         <p className="mt-2 max-w-[60ch] text-[13.5px] leading-[1.55] text-dim sm:text-[15px]">{t("Signals at minute five, live in the site and in Telegram.")}</p>
         <div className="mt-7 flex flex-wrap justify-center gap-2.5">
