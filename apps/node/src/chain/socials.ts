@@ -88,6 +88,8 @@ export class SocialsRegistry {
 
   /** Records what one token links to. */
   add(mint: string, socials: Social[]): void {
+    // Read once with links, kept with links: a later empty read (another gateway, an edited file) does not flip it.
+    if (!socials.length && this.byMint.get(mint)?.length) return;
     this.byMint.set(mint, socials);
     for (const s of socials) {
       const set = this.byKey.get(s.key) ?? new Set();
@@ -123,7 +125,8 @@ export class SocialsRegistry {
         // Next gateway.
       }
     }
-    this.byMint.set(mint, []);
+    // A miss after a good read keeps what was read: a gateway timing out must not take the coin's links away.
+    if (!this.byMint.has(mint)) this.byMint.set(mint, []);
     return !refused;
   }
 
@@ -153,6 +156,15 @@ export class SocialsRegistry {
     void this.read(mint, uri)
       .catch(() => false)
       .finally(() => (this.inflightNow -= 1));
+  }
+
+  /**
+   * Whether the token's own metadata links an X account, X community or Telegram: the odds' `social` input, as the
+   * odds were fitted (any link in the metadata, before the famous-account and reuse filters the check applies). A good
+   * read is never undone by a later miss, so the same coin reads the same odds from one ask to the next.
+   */
+  linksSocial(mint: string): boolean {
+    return (this.byMint.get(mint)?.length ?? 0) > 0;
   }
 
   /** The token's picture, once its metadata was read. */

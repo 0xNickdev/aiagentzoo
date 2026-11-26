@@ -143,7 +143,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found) {
       const funder = lineage.funderOf(found.creator) ?? null;
-      const read = tape.oddsInputs(mint, { social: linked.length > 0, funderExchange: exchangeOf(funder) != null, funderMany: funder ? lineage.devsOf(funder).size >= 3 : false });
+      const read = tape.oddsInputs(mint, { social: socials.linksSocial(mint), funderExchange: exchangeOf(funder) != null, funderMany: funder ? lineage.devsOf(funder).size >= 3 : false });
       if (read) {
         const odds = oddsOf(read.inputs, read.at, read);
         // What the dev did since: the odds stay, as the record of what minute five said.
