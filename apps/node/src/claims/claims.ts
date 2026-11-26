@@ -16,7 +16,7 @@ export interface GithubClaim {
   status: "none" | "unread" | "broken" | "oneway" | "related" | "mutual";
   url?: string;
   /** Where the link was found. */
-  foundIn?: "metadata" | "dexscreener" | "website";
+  foundIn?: "metadata" | "dexscreener" | "website" | "x";
   repo?: string;
   /** What ties the repository to the token, when something does. */
   tiedBy?: Array<"mint" | "website" | "x">;
@@ -182,6 +182,16 @@ export async function readClaims(mint: string, d: Deps): Promise<Claims> {
           fromScript = links.length > 0;
         }
       }
+    }
+  }
+  // Teams often put the repository on their X profile, in the bio or the profile link.
+  if (!links.length && x) {
+    const xr = await readX(x, d).catch(() => null);
+    const u = (xr?.body as { user?: { description?: string; website?: { url?: string; display_url?: string } | null } } | null)?.user;
+    const xLinks = githubLinks([u?.description, u?.website?.url, u?.website?.display_url].map(str).join("\n"));
+    if (xLinks.length) {
+      foundIn = "x";
+      links = xLinks;
     }
   }
   // One rule for every account: it is the token's when it names the mint, or the site that names the mint.

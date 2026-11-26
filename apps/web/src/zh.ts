@@ -2100,6 +2100,7 @@ export const ZH: Record<string, string> = {
   "in the token's metadata": "在代币元数据里",
   "on its DexScreener page": "在它的 DexScreener 页面",
   "on its website": "在它的网站上",
+  "on its X profile": "在它的 X 主页上",
   "DexScreener did not answer": "DexScreener 没有响应",
   "paid, {t}": "已付费，{t}",
   "paid": "已付费",

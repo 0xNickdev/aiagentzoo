@@ -13,7 +13,7 @@ interface Claims {
     status: "none" | "unread" | "broken" | "oneway" | "related" | "mutual";
     url?: string;
     repo?: string;
-    foundIn?: "metadata" | "dexscreener" | "website";
+    foundIn?: "metadata" | "dexscreener" | "website" | "x";
     createdAt?: number;
     pushedAt?: number;
     commits?: number;
@@ -231,7 +231,7 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
   const g = c.github;
     const d = c.dex;
   const [word, tone] = g.status === "none" && !c.metadataRead ? (["the token's metadata could not be read", ""] as const) : WORD[g.status];
-  const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : t("on its website");
+  const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : g.foundIn === "x" ? t("on its X profile") : t("on its website");
   const a = c.account;
   const tg = c.telegram;
   const x: [string, "d" | "up" | "w" | ""] = !a || a.status === "none" ? ["no link found", ""] : a.status === "unread" ? ["X did not answer", ""] : a.status === "oneway" ? ["its bio does not name this token", "w"] : WORD[a.status];
