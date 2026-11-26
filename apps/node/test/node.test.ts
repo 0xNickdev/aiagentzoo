@@ -2217,6 +2217,7 @@ test("an established coin: weeks old, graduated, a live pool - bundles and churn
 test("a Raydium coin launched before the stream watched is read from the chain on demand, then followed quietly", async () => {
   const { readFileSync } = await import("node:fs");
   const { Adopter, findPool } = await import("../src/chain/adopt.ts");
+  const { checkToken: ck } = await import("../src/chain/check.ts");
   const { RAYDIUM_AMM_PROGRAM } = await import("../src/chain/launchpads.ts");
   const { metadataAddress } = await import("../src/chain/poolMeta.ts");
   const { PumpTape } = await import("../src/chain/pump.ts");
@@ -2279,6 +2280,12 @@ test("a Raydium coin launched before the stream watched is read from the chain o
   const done = await adopter.ensure(mint, 5_000);
   assert.equal(done.state, "tracked");
   assert.deepEqual(followed, [pool]);
+  // The card is up before its opening is found: no dev yet, said so.
+  assert.equal(tape.token(mint)!.creator, "");
+  assert.equal(tape.token(mint)!.facts.creatorPending, true);
+  assert.ok(ck(mint, tape.token(mint)!).notes.some((n) => n.startsWith("dev is still being looked up")));
+  await adopter.idle();
+  assert.equal(tape.token(mint)!.facts.creatorPending, undefined);
 
   const t = tape.token(mint)!;
   assert.equal(t.symbol, "SANTA");
@@ -2470,6 +2477,7 @@ test("adoption beyond Raydium: a pump.fun curve, a PumpSwap pool after graduatio
   const tape = new PumpTape();
   const a = new Adopter(tape, { rpc, fetchFn: dexOf([]), gapMs: 0, backoffMs: 0 });
   assert.equal((await a.ensure(MINT, 5_000)).state, "tracked");
+  await a.idle();
   let t = tape.token(MINT)!;
   assert.equal(t.creator, CREATOR);
   assert.equal(t.symbol, "SILK");
@@ -2493,6 +2501,7 @@ test("adoption beyond Raydium: a pump.fun curve, a PumpSwap pool after graduatio
   ];
   const a2 = new Adopter(tape2, { rpc, fetchFn: dexOf(pairs), gapMs: 0, backoffMs: 0 });
   assert.equal((await a2.ensure(MINT, 5_000)).state, "tracked");
+  await a2.idle();
   t = tape2.token(MINT)!;
   assert.equal(t.creator, CREATOR);
   assert.equal(t.facts.graduated, true);
@@ -2517,9 +2526,60 @@ test("adoption beyond Raydium: a pump.fun curve, a PumpSwap pool after graduatio
   const tape3 = new PumpTape();
   const a3 = new Adopter(tape3, { rpc: rpc3, fetchFn: dexOf([{ dexId: "meteora", pairAddress: VPOOL, liquidity: { usd: 5 } }]), gapMs: 0, backoffMs: 0 });
   assert.equal((await a3.ensure(DBC_MINT, 5_000)).state, "tracked");
+  await a3.idle();
   const d = tape3.token(DBC_MINT)!;
   assert.equal(d.creator, "GDEUpEgzz3w6uff4pLAHjt94QdaWnn5jWaehU2G7yruo");
   assert.equal(d.symbol, "VAK");
   assert.equal(d.facts.venue, "dbc");
   assert.equal(d.facts.buys, 1);
+});
+
+test("adoption puts the card up from the first trades read in parallel, the rest and the opening later, with an ETA from the stage it is in", async () => {
+  const { Adopter } = await import("../src/chain/adopt.ts");
+  const { RAYDIUM_AMM_PROGRAM } = await import("../src/chain/launchpads.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const { readFileSync } = await import("node:fs");
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/raydium.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const buy = fixtures.find((f) => f.what === "amm:buy")!.tx;
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  const pool = "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v";
+  let inFlight = 0;
+  let most = 0;
+  let pagesAsked = 0;
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const a = params[0] as string;
+    if (method === "getAccountInfo") return { value: a === pool ? { owner: RAYDIUM_AMM_PROGRAM } : null } as T;
+    if (method === "getSignaturesForAddress" && a === pool) {
+      pagesAsked += 1;
+      const o = params[1] as { before?: string; limit: number };
+      // 120 recent trades, and an opening far back the background search never reaches in time.
+      return (o.limit === 1000 ? Array.from({ length: 1000 }, (_, i) => ({ signature: `old${pagesAsked}-${i}` })) : Array.from({ length: 120 }, (_, i) => ({ signature: `s${i}`, blockTime: buy.blockTime }))) as T;
+    }
+    if (method === "getSignaturesForAddress") return [] as T;
+    if (method === "getTransaction") {
+      inFlight += 1;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return buy as T;
+    }
+    return null;
+  };
+  const dex = (async () => new Response(JSON.stringify([{ dexId: "raydium", pairAddress: pool, pairCreatedAt: Date.now() - 86_400_000, quoteToken: { address: "So11111111111111111111111111111111111111112" }, liquidity: { usd: 1 } }]))) as typeof fetch;
+  const tape = new PumpTape();
+  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0, batch: 10, firstTrades: 50, backfill: 120, openingMs: 50 });
+  const eta = a.request(mint);
+  assert.equal(eta.state, "reading");
+  assert.ok(eta.state === "reading" && eta.etaSec >= 5 && eta.etaSec <= 15, JSON.stringify(eta));
+  const started = Date.now();
+  assert.equal((await a.ensure(mint, 5_000)).state, "tracked");
+  assert.ok(Date.now() - started < 1_000);
+  // The card: the first 50, ten at a time.
+  assert.equal(tape.token(mint)!.facts.buys, 50);
+  assert.equal(most, 10);
+  await a.idle();
+  // The rest read in the background; the opening search gave up on time, the coin kept.
+  assert.equal(tape.token(mint)!.facts.buys, 120);
+  assert.equal(tape.token(mint)!.creator, "");
+  assert.equal(tape.token(mint)!.facts.creatorPending, undefined);
 });

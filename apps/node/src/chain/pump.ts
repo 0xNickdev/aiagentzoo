@@ -46,6 +46,8 @@ export interface ChainFacts {
   ageMin: number;
   /** Read from the chain on demand: launched before the stream watched. */
   adopted?: boolean;
+  /** Adopted, and its dev is still being looked up. */
+  creatorPending?: boolean;
   /** Adopted, and its trades before adoption could not be read back yet: the counts below start at adoption. */
   partial?: boolean;
   /** DexScreener's read of the pool, for an adopted coin whose trades could not be read back. */
@@ -187,6 +189,8 @@ interface Tracked {
   /** Launched before the stream watched: read from the chain on demand, live from adoptedAt on. Never marked or graded. */
   adopted?: boolean;
   adoptedAt?: number;
+  /** Adopted, and who launched it is still being looked up: no dev facts until then. */
+  creatorPending?: boolean;
   /** Where an adopted coin was found trading, so a read-back can be tried again after a restart. */
   adoptFrom?: { kind: "raydium" | "pumpswap" | "curve"; pool: string };
   /** Whether the read-back of its past trades worked, and how many it read. */
@@ -450,7 +454,7 @@ export class PumpTape {
    * followed, and the recent trades read back from the chain are applied quietly, oldest first. Not in the feed, the
    * launches list, the timed readings or the odds: none of those can judge a coin whose launch nobody here saw.
    */
-  adoptToken(a: { mint: string; kind?: "raydium" | "pumpswap" | "curve"; venue?: Venue; quote?: string; platform?: string; mayhem?: boolean; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
+  adoptToken(a: { mint: string; creatorPending?: boolean; kind?: "raydium" | "pumpswap" | "curve"; venue?: Venue; quote?: string; platform?: string; mayhem?: boolean; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
     if (this.tokens.has(a.mint)) return false;
     this.tokens.set(a.mint, {
       mint: a.mint,
@@ -459,6 +463,7 @@ export class PumpTape {
       ...(a.platform ? { platform: a.platform } : {}),
       ...(a.mayhem ? { mayhem: true } : {}),
       adoptFrom: { kind: a.kind ?? "raydium", pool: a.pool },
+      ...(a.creatorPending ? { creatorPending: true } : {}),
       ...(a.supply ? { supply: a.supply } : {}),
       ...((a.kind ?? "raydium") === "raydium" ? { rayPool: a.pool } : {}),
       adopted: true,
@@ -510,6 +515,39 @@ export class PumpTape {
       this.pools.set(a.pool, a.mint);
     }
     if (a.trades?.length) this.backfill(a.mint, a.trades, now);
+    return true;
+  }
+
+  /**
+   * The opening of an adopted coin, found after its card went up: its creator and launch time, and what the trades
+   * already read say about the creator. No moments: this is the past.
+   */
+  fillOpening(mint: string, o: { creator?: string; createdAt?: number; name?: string; symbol?: string; quote?: string; platform?: string; supply?: number; mintCreatedAt?: number }): boolean {
+    const t = this.tokens.get(mint);
+    if (!t || !t.adopted) return false;
+    t.creatorPending = undefined;
+    if (o.name && !t.name) t.name = o.name;
+    if (o.symbol && !t.symbol) t.symbol = o.symbol;
+    if (o.quote && !t.quote) t.quote = o.quote;
+    if (o.platform && !t.platform) t.platform = o.platform;
+    if (o.supply && !t.supply) t.supply = o.supply;
+    if (o.createdAt) t.createdAt = o.createdAt;
+    if (o.mintCreatedAt && o.mintCreatedAt < t.createdAt - 60_000) t.mintCreatedAt = o.mintCreatedAt;
+    if (o.creator && !t.creator) {
+      t.creator = o.creator;
+      const mine = this.byCreator.get(o.creator) ?? [];
+      mine.push(mint);
+      this.byCreator.set(o.creator, mine);
+      // Trades read before the creator was known: theirs become the dev's.
+      const b = t.buyers.get(o.creator);
+      if (b) {
+        t.devBought = b.tok ?? 0;
+        t.devSold = b.sold ?? 0;
+        t.devIn = b.sol;
+        t.devOut = b.out ?? 0;
+        if (t.devBought > 0 && t.devSold / t.devBought >= 0.5) t.dumped = true;
+      }
+    }
     return true;
   }
 
@@ -1583,6 +1621,7 @@ export class PumpTape {
       ...(t.venue ? { venue: t.venue } : {}),
       ...(t.platform ? { platform: t.platform } : {}),
       ...(t.adopted ? { adopted: true } : {}),
+      ...(t.creatorPending ? { creatorPending: true } : {}),
       ...(t.adopted && !t.backfillOk ? { partial: true } : {}),
       ...(t.adopted && t.dex ? { dex: t.dex } : {}),
       buys: t.buys,

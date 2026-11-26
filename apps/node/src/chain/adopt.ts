@@ -29,6 +29,10 @@ export interface AdoptOptions {
   fetchFn?: typeof fetch;
   /** Most recent pool transactions read back for buyers, sells and price. */
   backfill?: number;
+  /** Trades read before the card goes up, how many at once, and how long the opening is searched for. */
+  firstTrades?: number;
+  batch?: number;
+  openingMs?: number;
   /** Pages of 1,000 signatures walked back to the pool's opening; a busier pool keeps its opening unknown. */
   pages?: number;
   /** Gap between transaction reads. */
@@ -176,23 +180,32 @@ export class Adopter {
   private readonly log: (m: string) => void;
   private readonly queue: string[] = [];
   private readonly missed = new Map<string, { at: number; reason: string }>();
-  private current: { mint: string; startedAt: number } | null = null;
+  private current: { mint: string; startedAt: number; stage: Stage; stageAt: number; batchesLeft: number } | null = null;
   private readonly waiters = new Map<string, Array<() => void>>();
-  /** Seconds one coin takes, as the last ones took; a first guess before any. */
-  private took = 20;
+  /** Seconds one coin takes to a usable card, as the last ones took; a first guess before any. */
+  private took = 8;
+  /** The slow work (the rest of the read-back, the search for the opening), one job at a time, behind the cards. */
+  private readonly slow: Array<() => Promise<void>> = [];
+  private slowRunning = false;
+  private readonly batch: number;
+  private readonly firstN: number;
+  private readonly openingMs: number;
 
   constructor(tape: PumpTape, o: AdoptOptions) {
     this.tape = tape;
     this.rpc = o.rpc;
     this.fetchFn = o.fetchFn ?? fetch;
-    this.backfillN = o.backfill ?? 120;
+    this.backfillN = o.backfill ?? 200;
+    this.firstN = Math.min(this.backfillN, o.firstTrades ?? 50);
+    this.batch = o.batch ?? 15;
     this.pages = o.pages ?? 32;
-    this.gapMs = o.gapMs ?? 250;
+    this.gapMs = o.gapMs ?? 100;
     this.missMs = o.missMs ?? 10 * 60_000;
     this.maxQueue = o.maxQueue ?? 3;
     this.backoffMs = o.backoffMs ?? 1_000;
     this.retryMs = o.retryMs ?? 60_000;
     this.retries = o.retries ?? 3;
+    this.openingMs = o.openingMs ?? 3 * 60_000;
     this.log = o.log ?? (() => {});
   }
 
@@ -204,15 +217,40 @@ export class Adopter {
   /** Where this coin stands, without starting anything. */
   state(mint: string, now = Date.now()): AdoptState | null {
     if (this.tape.has(mint) && this.current?.mint !== mint) return { state: "tracked" };
-    if (this.current?.mint === mint) return { state: "reading", etaSec: Math.max(2, Math.round(this.took - (now - this.current.startedAt) / 1000)) };
+    if (this.current?.mint === mint) return { state: "reading", etaSec: this.leftOfCurrent(now) };
     const at = this.queue.indexOf(mint);
-    if (at >= 0) {
-      const left = this.current ? Math.max(2, this.took - (now - this.current.startedAt) / 1000) : 0;
-      return { state: "reading", etaSec: Math.round(left + this.took * (at + 1)) };
-    }
+    if (at >= 0) return { state: "reading", etaSec: Math.round((this.current ? this.leftOfCurrent(now) : 0) + this.took * (at + 1)) };
     const miss = this.missed.get(mint);
     if (miss && now - miss.at < this.missMs) return { state: "missed", reason: miss.reason };
     return null;
+  }
+
+  /** Seconds the coin being read still needs, from the stage it is in: what that stage usually takes, less its time so far, plus the stages after. */
+  private leftOfCurrent(now: number): number {
+    const c = this.current!;
+    const after = STAGES.slice(STAGES.indexOf(c.stage) + 1).reduce((n, st) => n + (st === "trades" ? STAGE_SEC.trades * Math.max(1, Math.ceil(this.firstN / this.batch)) : STAGE_SEC[st]), 0);
+    const here = c.stage === "trades" ? STAGE_SEC.trades * Math.max(1, c.batchesLeft) : STAGE_SEC[c.stage];
+    return Math.max(1, Math.round(Math.max(0.5, here - (now - c.stageAt) / 1000) + after));
+  }
+
+  private stage(stage: Stage, batchesLeft = 0): void {
+    if (this.current) Object.assign(this.current, { stage, stageAt: Date.now(), batchesLeft });
+  }
+
+  /** Queues slow work behind the cards; one job at a time. */
+  private later(job: () => Promise<void>): void {
+    this.slow.push(job);
+    if (this.slowRunning) return;
+    this.slowRunning = true;
+    void (async () => {
+      while (this.slow.length) await this.slow.shift()!().catch(() => {});
+      this.slowRunning = false;
+    })();
+  }
+
+  /** Waits until the slow lane is empty (for tests and shutdown). */
+  async idle(): Promise<void> {
+    while (this.slowRunning || this.slow.length) await sleep(5);
   }
 
   /** Asks for the coin to be read; says where it stands. */
@@ -237,7 +275,7 @@ export class Adopter {
     while (this.queue.length) {
       const mint = this.queue.shift()!;
       const startedAt = Date.now();
-      this.current = { mint, startedAt };
+      this.current = { mint, startedAt, stage: "find", stageAt: startedAt, batchesLeft: 0 };
       try {
         const reason = await this.read(mint);
         if (reason) this.missed.set(mint, { at: Date.now(), reason });
@@ -254,63 +292,62 @@ export class Adopter {
     }
   }
 
-  /** Reads one coin onto the tape; the reason it could not, or null. */
+  /**
+   * Reads one coin onto the tape as fast as a usable card allows: where it trades, its name and supply, its latest
+   * trades in parallel batches. The opening (creator, launch time) and the older trades are read in the slow lane after.
+   */
   private async read(mint: string): Promise<string | null> {
     const w = await findPool(mint, this.rpc, this.fetchFn);
     if (!w) return "no pool or curve we can read";
-    const opening = await this.walk(w.pool);
-    let creator = "";
-    let openedAt: number | null = w.listedAt;
-    let made: Extract<PumpEvent, { kind: "create" }> | null = null;
-    // A PumpSwap pool opens at graduation: the launch itself is on pump.fun's curve, read from there when reachable.
-    const first = w.kind === "pumpswap" ? ((await this.walk(bondingCurveOf(mint))).oldest ?? opening.oldest) : opening.oldest;
+    this.stage("meta");
+    const [meta, page] = await Promise.all([
+      readPoolMeta(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs)),
+      patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [w.pool, { limit: Math.max(PAGE, this.backfillN) }]), this.backoffMs),
+    ]);
+    const createdAt = (w.listedAt ?? (Array.isArray(page) && page.length ? (page[page.length - 1]!.blockTime ?? 0) * 1000 : 0)) || Date.now();
+    // The card goes up now and the stream follows it from here; who opened it is looked up after.
+    const adopted = this.tape.adoptToken({ mint, kind: w.kind, ...(w.venue ? { venue: w.venue } : {}), pool: w.pool, creator: "", createdAt, creatorPending: true, ...meta });
+    if (!adopted) return null;
+    const sigs = Array.isArray(page) ? page : null;
+    await this.readBack(mint, w, sigs ? sigs.slice(0, this.firstN) : null, w.dex ?? null, 0, true);
+    if (sigs && sigs.length > this.firstN) this.later(() => this.readBack(mint, w, sigs.slice(this.firstN, this.backfillN), null, this.retries, false));
+    this.later(() => this.findOpening(mint, w));
+    return null;
+  }
+
+  /** Who opened the pool or launched the coin, and when: paged back in the slow lane, given up after `openingMs`. */
+  private async findOpening(mint: string, w: Where): Promise<void> {
+    const until = Date.now() + this.openingMs;
+    // A PumpSwap pool opens at graduation: the launch itself is on pump.fun's curve.
+    const where = w.kind === "pumpswap" ? bondingCurveOf(mint) : w.pool;
+    const first = (await this.walk(where, until)).oldest;
+    let found: Parameters<PumpTape["fillOpening"]>[1] = {};
     if (first) {
       const tx = await patient(() => this.getTx(first.signature), this.backoffMs);
       if (tx) {
         const ts = (tx.blockTime ?? first.blockTime ?? 0) * 1000;
-        const lineOf: Where = w.kind === "pumpswap" && first !== opening.oldest ? { ...w, kind: "curve" } : w;
-        const open = eventsOf(lineOf, tx, ts).find((e) => e.kind === "create" && e.mint === mint);
-        if (open?.kind === "create") made = open;
-        creator = made ? made.creator : (tx.transaction.message.accountKeys[0] ?? "");
-        if (made?.ts) openedAt = made.ts;
-        else if (ts) openedAt = ts;
+        const made = eventsOf(w.kind === "pumpswap" ? { kind: "curve" } : w, tx, ts).find((e) => e.kind === "create" && e.mint === mint);
+        found = made?.kind === "create"
+          ? { creator: made.creator, createdAt: made.ts || ts, ...(made.name ? { name: made.name } : {}), ...(made.symbol ? { symbol: made.symbol } : {}), ...(made.quote ? { quote: made.quote } : {}), ...(made.platform ? { platform: made.platform } : {}), ...(made.supply ? { supply: made.supply } : {}) }
+          : { creator: tx.transaction.message.accountKeys[0] ?? "", ...(ts ? { createdAt: ts } : {}) };
       }
     }
-    openedAt ??= (opening.newest[opening.newest.length - 1]?.blockTime ?? Math.floor(Date.now() / 1000)) * 1000;
-    const meta = await readPoolMeta(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs));
-    const born = await firstSeen(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs), 2);
-    const named = { ...(made?.name ? { name: made.name } : {}), ...(made?.symbol ? { symbol: made.symbol } : {}), ...meta };
-    // From here on the stream follows it; the trades before now are read back after, so none falls in between.
-    const adopted = this.tape.adoptToken({
-      mint,
-      kind: w.kind,
-      ...(w.venue ? { venue: w.venue } : {}),
-      pool: w.pool,
-      creator,
-      createdAt: openedAt,
-      mintCreatedAt: born?.at ?? null,
-      ...(made?.quote ? { quote: made.quote } : {}),
-      ...(made?.platform ? { platform: made.platform } : {}),
-      ...(made?.mayhem ? { mayhem: true } : {}),
-      ...(made?.supply && !meta.supply ? { supply: made.supply } : {}),
-      ...named,
-    });
-    if (!adopted) return null;
-    await this.readBack(mint, w, opening.newest.length ? opening.newest : null, w.dex ?? null, 0);
-    return null;
+    const born = Date.now() < until ? await firstSeen(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs), 2) : null;
+    this.tape.fillOpening(mint, { ...found, ...(born ? { mintCreatedAt: born.at } : {}) });
+    this.log(`adopt ${mint}: opening ${found.creator ? `by ${found.creator}` : "not found"}`);
   }
 
   /** An account's signatures, newest first, in pages of 250: the first page is its recent trades, the last its opening. */
-  private async walk(address: string): Promise<{ newest: Sig[]; oldest: Sig | null }> {
+  private async walk(address: string, until = Infinity): Promise<{ newest: Sig[]; oldest: Sig | null }> {
     let newest: Sig[] = [];
     let oldest: Sig | null = null;
     let before: string | undefined;
-    for (let i = 0; i < this.pages; i++) {
+    for (let i = 0; i < this.pages && Date.now() < until; i++) {
       if (i) await sleep(this.gapMs);
-      const page = await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [address, { limit: PAGE, ...(before ? { before } : {}) }]), this.backoffMs);
+      const page = await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [address, { limit: 1000, ...(before ? { before } : {}) }]), this.backoffMs);
       if (!Array.isArray(page) || !page.length) break;
       if (!i) newest = page;
-      if (page.length < PAGE) {
+      if (page.length < 1000) {
         oldest = page[page.length - 1]!;
         break;
       }
@@ -327,19 +364,24 @@ export class Adopter {
    * The latest trades read back onto the tape. When the signatures or none of the transactions can be read, the coin
    * is marked partial with DexScreener's numbers, and the read is tried again in the background, a few times.
    */
-  private async readBack(mint: string, w: Where, page: Sig[] | null, dex: DexRead | null, attempt: number): Promise<void> {
-    page ??= await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [w.pool, { limit: PAGE }]), this.backoffMs);
+  private async readBack(mint: string, w: Where, page: Sig[] | null, dex: DexRead | null, attempt: number, front = false): Promise<void> {
+    page ??= await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [w.pool, { limit: this.firstN }]), this.backoffMs);
     const wanted = Array.isArray(page) ? page.filter((x) => !x.err).slice(0, this.backfillN) : null;
     const trades: Array<{ ev: PumpEvent; tx?: string; slot?: number }> = [];
     let read = 0;
-    for (const s of wanted ?? []) {
-      await sleep(this.gapMs);
-      const tx = await patient(() => this.getTx(s.signature), this.backoffMs, 3);
-      if (!tx) continue;
-      read += 1;
-      if (tx.meta?.err) continue;
-      const ts = (tx.blockTime ?? s.blockTime ?? 0) * 1000;
-      for (const ev of eventsOf(w, tx, ts)) if (isTrade(w, mint, ev)) trades.push({ ev, tx: s.signature, ...(tx.slot ?? s.slot ? { slot: tx.slot ?? s.slot } : {}) });
+    // Newest first, in parallel batches; each call still backs off on a refusal.
+    for (let i = 0; wanted && i < wanted.length; i += this.batch) {
+      if (front) this.stage("trades", Math.ceil((wanted.length - i) / this.batch));
+      const part = wanted.slice(i, i + this.batch);
+      const got = await Promise.all(part.map((s) => patient(() => this.getTx(s.signature), this.backoffMs, 3)));
+      got.forEach((tx, k) => {
+        if (!tx) return;
+        read += 1;
+        if (tx.meta?.err) return;
+        const s = part[k]!;
+        const ts = (tx.blockTime ?? s.blockTime ?? 0) * 1000;
+        for (const ev of eventsOf(w, tx, ts)) if (isTrade(w, mint, ev)) trades.push({ ev, tx: s.signature, ...(tx.slot ?? s.slot ? { slot: tx.slot ?? s.slot } : {}) });
+      });
     }
     const ok = wanted !== null && (wanted.length === 0 || read > 0);
     const n = ok ? this.tape.backfill(mint, trades) : 0;
@@ -347,7 +389,7 @@ export class Adopter {
     this.tape.noteBackfill(mint, { ok, read: n, dex: ok ? null : dex });
     this.log(`adopt ${mint}: read back ${n} trades${ok ? "" : ", not read, partial"}`);
     if (!ok && attempt < this.retries && this.tape.has(mint)) {
-      const timer = setTimeout(() => void this.readBack(mint, w, null, null, attempt + 1).catch(() => {}), this.retryMs);
+      const timer = setTimeout(() => this.later(() => this.readBack(mint, w, null, null, attempt + 1)), this.retryMs);
       timer.unref?.();
     }
   }
@@ -364,8 +406,12 @@ export class Adopter {
   }
 }
 
-/** Signatures asked per page: small, so a refused page costs little. */
+/** Signatures asked for the card's first page. */
 const PAGE = 250;
+type Stage = "find" | "meta" | "trades";
+const STAGES: Stage[] = ["find", "meta", "trades"];
+/** What each stage usually takes, in seconds; trades per batch. */
+const STAGE_SEC: Record<Stage, number> = { find: 2, meta: 1.5, trades: 1.5 };
 
 /** The node's one adopter, set on the node that reads the chain. */
 export const adoption: { current: Adopter | null } = { current: null };

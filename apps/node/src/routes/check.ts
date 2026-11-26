@@ -116,7 +116,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const handP = deep && found ? handWithin(mint, tape.bigBuyersOf(mint), found.creator) : Promise.resolve(null);
     const [holders, , poolSol] = await Promise.all([
       deep && (found || past) && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
-      deep && found && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
+      deep && found && found.creator && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
       // The pool's SOL as it is now, not as the last trade the tape saw left it.
       pool ? within(poolSolOf(pool)) : Promise.resolve(null),
     ]);
@@ -125,7 +125,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       found = tape.token(mint);
     }
     let funding: LineageView | null | undefined;
-    if (found && fundersEnabled()) {
+    if (found && found.creator && fundersEnabled()) {
       funding = lineage.view(found.creator);
       if (!funding) lineage.enqueue(found.creator, true);
     }

@@ -493,6 +493,7 @@ export function checkToken(
   const issued = issuedNote(mint, rights);
   if (issued) notes.push(issued);
   if (partial) notes.unshift(PARTIAL_NOTE);
+  if (f.creatorPending) notes.unshift("dev is still being looked up: who launched it is not in this answer yet");
   // Nothing found and the trades not read: not a pass, just not known yet.
   const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : partial ? "unknown" : "pass";
   const score = scoreOf(verdict, [...avoid, ...caution].map((r) => weight.get(r) ?? 0), { early });
