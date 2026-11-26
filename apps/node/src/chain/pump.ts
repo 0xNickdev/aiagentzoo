@@ -163,6 +163,8 @@ interface Tracked {
   platform?: string;
   /** The whole supply, when it is not pump.fun's billion. */
   supply?: number;
+  /** The Raydium AMM v4 or CPMM pool a launch straight into Raydium opened; never one of the PumpSwap pools. */
+  rayPool?: string;
   /** Where its metadata lives. */
   uri?: string;
   /** The keys of its launch transaction's tool print: the exact build and its shape. */
@@ -384,6 +386,26 @@ export class PumpTape {
   /** Per-second counts over the last minute, a ring indexed by second. */
   private readonly seconds = Array.from({ length: 60 }, () => ({ sec: -1, launches: 0, trades: 0 }));
 
+  /** Called on a launch straight into a Raydium pool, whose name, symbol and supply are read from the chain afterwards. */
+  onPoolLaunch?: (mint: string) => void;
+
+  /** What the chain said of a Raydium launch after the fact: a name and symbol where it had none, its real supply. */
+  fillMeta(mint: string, meta: { name?: string; symbol?: string; supply?: number }): boolean {
+    const t = this.tokens.get(mint);
+    if (!t) return false;
+    if (meta.name && !t.name) t.name = meta.name;
+    if (meta.symbol && !t.symbol) t.symbol = meta.symbol;
+    if (meta.supply && meta.supply > 0) t.supply = meta.supply;
+    return true;
+  }
+
+  /** The Raydium pools of launches the tape keeps from the last 48 hours, oldest first, for the stream to follow again after a restart. */
+  raydiumPools(now = Date.now()): Array<{ pool: string; venue: Venue; createdAt: number }> {
+    const out: Array<{ pool: string; venue: Venue; createdAt: number }> = [];
+    for (const t of this.tokens.values()) if (t.rayPool && t.venue && now - t.createdAt <= 48 * 3_600_000) out.push({ pool: t.rayPool, venue: t.venue, createdAt: t.createdAt });
+    return out.sort((a, b) => a.createdAt - b.createdAt);
+  }
+
   /** Called on every moment, launches included: the long-memory store listens here. Must stay cheap. */
   onMoment?: (e: PulseEvent) => void;
 
@@ -506,6 +528,7 @@ export class PumpTape {
         ...(ev.venue ? { venue: ev.venue } : {}),
         ...(ev.platform ? { platform: ev.platform } : {}),
         ...(ev.supply ? { supply: ev.supply } : {}),
+        ...(ev.pool && (ev.venue === "raydium" || ev.venue === "cpmm") ? { rayPool: ev.pool } : {}),
         ...(ev.uri ? { uri: ev.uri } : {}),
         ...(ev.print ? { print: ev.print.key, shape: ev.print.shape } : {}),
         name: ev.name,
@@ -558,6 +581,7 @@ export class PumpTape {
       if (this.recent.length > RECENT_KEEP) this.recent.length = RECENT_KEEP;
       this.seen.launches += 1;
       if (ev.venue) this.seen[ev.venue] = (this.seen[ev.venue] ?? 0) + 1;
+      if (ev.venue === "raydium" || ev.venue === "cpmm") this.onPoolLaunch?.(ev.mint);
       this.count(now, "launches");
       if (times.length >= 5) this.emit(now, "serial", ev, `wallet's ${ordinal(times.length)} launch today`, tx);
       else this.emit(now, "launch", ev, "new launch", tx);

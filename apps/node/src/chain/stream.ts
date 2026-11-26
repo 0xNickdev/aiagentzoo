@@ -16,7 +16,7 @@ export interface StreamOptions {
 }
 
 /** Where the stream's events go: the tape, or the relay's buffer. */
-export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"] };
+export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"]; raydiumPools?: PumpTape["raydiumPools"] };
 
 /** Raydium pools opened by a launch the stream saw, kept as long as the tape keeps a token, and no more than this many. */
 const RAYDIUM_KEEP_MS = 48 * 3_600_000;
@@ -32,6 +32,34 @@ const STREAM_STALL_MS = 90_000;
 const CHANNEL = { grpcHttp2AdaptiveWindow: true, grpcInitialStreamWindowSize: 16 << 20, grpcInitialConnectionWindowSize: 32 << 20, grpcMaxDecodingMessageSize: 64 << 20 };
 
 type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown };
+
+/**
+ * Raydium pools opened by launches, as hex of their 32 bytes -> when they opened. Most Raydium swaps are in old pools;
+ * those are dropped by comparing raw account keys, before the transaction is decoded. Seeded with the pools the tape
+ * kept from before a restart; none of them enter the PumpSwap lane.
+ */
+export function raydiumFollower(t: Pick<StreamSink, "raydiumPools">) {
+  const pools = new Map<string, number>();
+  const hex = (k: Uint8Array) => Buffer.from(k.buffer, k.byteOffset, k.byteLength).toString("hex");
+  const wanted = (raw: NonNullable<StreamUpdate["transaction"]>["transaction"], logs: string[]) => {
+    if (logs.some((l) => RAYDIUM_OPENS.has(l) || l.startsWith(AMM_OPEN))) return true;
+    if (!pools.size) return false;
+    for (const k of raw?.transaction?.message?.accountKeys ?? []) if (pools.has(hex(k))) return true;
+    for (const k of raw?.meta?.loadedWritableAddresses ?? []) if (pools.has(hex(k))) return true;
+    return false;
+  };
+  const follow = (pool: string, now: number) => {
+    pools.set(Buffer.from(fromBase58(pool)).toString("hex"), now);
+    if (pools.size <= RAYDIUM_MAX) return;
+    // Oldest first, as a Map keeps them: drop what aged out, then the oldest until under the cap.
+    for (const [k, at] of pools) {
+      if (pools.size <= RAYDIUM_MAX && now - at <= RAYDIUM_KEEP_MS) break;
+      pools.delete(k);
+    }
+  };
+  for (const p of t.raydiumPools?.() ?? []) follow(p.pool, p.createdAt);
+  return { pools, wanted, follow };
+}
 
 /**
  * Keeps Yellowstone subscriptions open, reconnecting with backoff, feeding the tape. Two connections: launches and the
@@ -52,26 +80,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
   const filter = (accounts: string[]) => ({ vote: false, failed: false, accountInclude: accounts, accountExclude: [], accountRequired: [] });
   const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
 
-  // Pool address as hex of its 32 bytes -> when it opened. Most Raydium swaps are in old pools; those are dropped here
-  // by comparing raw account keys, before the transaction is decoded.
-  const raydiumPools = new Map<string, number>();
-  const hex = (k: Uint8Array) => Buffer.from(k.buffer, k.byteOffset, k.byteLength).toString("hex");
-  const raydiumWanted = (raw: NonNullable<StreamUpdate["transaction"]>["transaction"], logs: string[]) => {
-    if (logs.some((l) => RAYDIUM_OPENS.has(l) || l.startsWith(AMM_OPEN))) return true;
-    if (!raydiumPools.size) return false;
-    for (const k of raw?.transaction?.message?.accountKeys ?? []) if (raydiumPools.has(hex(k))) return true;
-    for (const k of raw?.meta?.loadedWritableAddresses ?? []) if (raydiumPools.has(hex(k))) return true;
-    return false;
-  };
-  const followPool = (pool: string, now: number) => {
-    raydiumPools.set(Buffer.from(fromBase58(pool)).toString("hex"), now);
-    if (raydiumPools.size <= RAYDIUM_MAX) return;
-    // Oldest first, as a Map keeps them: drop what aged out, then the oldest until under the cap.
-    for (const [k, at] of raydiumPools) {
-      if (raydiumPools.size <= RAYDIUM_MAX && now - at <= RAYDIUM_KEEP_MS) break;
-      raydiumPools.delete(k);
-    }
-  };
+  const { wanted: raydiumWanted, follow: followPool } = raydiumFollower(t);
 
   const onData = (update: StreamUpdate) => {
     const logs = update.transaction?.transaction?.meta?.logMessages;

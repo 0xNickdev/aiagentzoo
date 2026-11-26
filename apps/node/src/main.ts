@@ -11,6 +11,7 @@ import { PassportIndex } from "./passport.ts";
 import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
+import { PoolMetaQueue } from "./chain/poolMeta.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
@@ -24,7 +25,7 @@ import { startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
-import { TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
+import { rpcRead, TOKEN_MINT, TOKEN_POOL } from "./holders.ts";
 import { startBuyBot } from "./buybot.ts";
 import { buybackView, startBuyback } from "./buyback.ts";
 import { openDatabase, SqliteLogStore, SqliteStateStore } from "./sqlite.ts";
@@ -136,6 +137,9 @@ if (config.role === "north") {
   tape.pin(TOKEN_MINT);
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
+  // A coin launched straight into a Raydium pool comes with no name, symbol or supply: read from the chain afterwards.
+  const poolMeta = new PoolMetaQueue((method, params) => rpcRead(method, params), (mint, meta) => void tape.fillMeta(mint, meta));
+  tape.onPoolLaunch = (mint) => poolMeta.add(mint);
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
   // Every launch's first-second and launch-block wallets, traced to their funder a minute and a half in.

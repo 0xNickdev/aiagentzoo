@@ -1661,6 +1661,83 @@ test("a coin launched straight into a Raydium pool, from real mainnet transactio
   assert.equal(tape.facts(pump, now)!.buyers, 0);
 });
 
+test("a Raydium launch gets its name, symbol and real supply from the chain afterwards, quietly", async () => {
+  const { metadataAddress, PoolMetaQueue, readPoolMeta } = await import("../src/chain/poolMeta.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  // Checked against @solana/web3.js findProgramAddressSync.
+  const pda = metadataAddress(mint);
+  assert.equal(pda, "DRWGqUijx42TGTXisXiqE567pqcRorkrdmevmnXjLpH9");
+  const str = (x: string, pad: number) => {
+    const b = Buffer.alloc(4 + pad);
+    b.writeUInt32LE(pad);
+    b.write(x, 4);
+    return b;
+  };
+  const metaAccount = Buffer.concat([Buffer.from([4]), Buffer.alloc(64), str("Beaver Coin", 32), str("BVR", 10), str("https://x", 200)]).toString("base64");
+  const calls: string[] = [];
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const addr = params[0] as string;
+    calls.push(`${method}:${addr}`);
+    if (addr === mint) return { value: { data: { parsed: { info: { supply: "420690000000000", decimals: 6 } } } } } as T;
+    if (addr === pda) return { value: { data: [metaAccount, "base64"] } } as T;
+    return null;
+  };
+  assert.deepEqual(await readPoolMeta(mint, rpc), { supply: 420_690_000, name: "Beaver Coin", symbol: "BVR" });
+
+  // Token-2022 with its metadata extension: no second read.
+  calls.length = 0;
+  const t22 = async <T,>(): Promise<T | null> => ({ value: { data: { parsed: { info: { supply: "1000000000", decimals: 9, extensions: [{ extension: "tokenMetadata", state: { name: "Two", symbol: "TWO" } }] } } } } }) as T;
+  assert.deepEqual(await readPoolMeta(mint, t22), { supply: 1, name: "Two", symbol: "TWO" });
+
+  // An RPC that throws or answers nothing: nothing filled, nothing thrown.
+  assert.deepEqual(await readPoolMeta(mint, async () => { throw new Error("down"); }), {});
+  assert.deepEqual(await readPoolMeta(mint, async () => null), {});
+
+  // On the tape: the launch is recorded first, the read fills it in later; market cap uses the real supply.
+  const tape = new PumpTape();
+  const queue = new PoolMetaQueue(rpc, (m, meta) => void tape.fillMeta(m, meta), 0);
+  tape.onPoolLaunch = (m) => queue.add(m);
+  const now = Date.now();
+  tape.apply({ kind: "create", venue: "raydium", name: "", symbol: "", mint, creator: "HTzhUPE8jXxLgugWkK8RACVihaRjizmSHcQkG3yTHaXP", ts: now - 60_000, pool: "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v" }, now);
+  assert.equal(tape.token(mint, now)!.symbol, "");
+  while (queue.pending) await new Promise((r) => setTimeout(r, 5));
+  assert.equal(tape.token(mint, now)!.name, "Beaver Coin");
+  assert.equal(tape.token(mint, now)!.symbol, "BVR");
+  tape.apply({ kind: "trade", venue: "raydium", mint, user: "B".padEnd(44, "b"), isBuy: true, sol: 1, tokens: 1_000_000, ts: now - 50_000, curveSol: null }, now);
+  // 1 SOL for a million tokens of 420.69 million: 420.69 SOL, not the 1,000 a billion would make it.
+  assert.ok(Math.abs((tape as any).tokens.get(mint).capPeak - 420.69) < 0.01);
+
+  // A failed read leaves the billion.
+  const tape2 = new PumpTape();
+  const q2 = new PoolMetaQueue(async () => { throw new Error("down"); }, (m, meta) => void tape2.fillMeta(m, meta), 0);
+  tape2.onPoolLaunch = (m) => q2.add(m);
+  tape2.apply({ kind: "create", venue: "cpmm", name: "", symbol: "", mint, creator: "C".padEnd(44, "c"), ts: now - 60_000, pool: "GdTEWLhzhmNJnY8wR2MGNBRSZ2oz94qzYNEq3VVKmRED" }, now);
+  while (q2.pending) await new Promise((r) => setTimeout(r, 5));
+  tape2.apply({ kind: "trade", venue: "cpmm", mint, user: "B".padEnd(44, "b"), isBuy: true, sol: 1, tokens: 1_000_000, ts: now - 50_000, curveSol: null }, now);
+  assert.ok(Math.abs((tape2 as any).tokens.get(mint).capPeak - 1000) < 0.01);
+});
+
+test("Raydium pools a launch opened survive a restart, and stay out of the PumpSwap lane", async () => {
+  const { PumpTape, fromBase58 } = await import("../src/chain/pump.ts");
+  const { raydiumFollower } = await import("../src/chain/stream.ts");
+  const now = Date.now();
+  const tape = new PumpTape();
+  const pool = "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v";
+  const old = "GdTEWLhzhmNJnY8wR2MGNBRSZ2oz94qzYNEq3VVKmRED";
+  tape.apply({ kind: "create", venue: "raydium", name: "", symbol: "", mint: "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27", creator: "H".padEnd(44, "h"), ts: now - 3_600_000, pool }, now);
+  tape.apply({ kind: "create", venue: "cpmm", name: "", symbol: "", mint: "2yPZkA68pCYJJc2SeJVzAG886MsQrBopPZ31K7ZjNKCt", creator: "C".padEnd(44, "c"), ts: now - 49 * 3_600_000, pool: old }, now);
+  const restored = new PumpTape();
+  restored.load(tape.snapshot(), now);
+  assert.deepEqual(restored.raydiumPools(now), [{ pool, venue: "raydium", createdAt: now - 3_600_000 }]);
+  assert.deepEqual(restored.poolAddresses(), []);
+  const f = raydiumFollower(restored);
+  assert.equal(f.pools.size, 1);
+  const tx = { transaction: { message: { accountKeys: [new Uint8Array(fromBase58(pool))], instructions: [] } }, meta: {} } as any;
+  assert.equal(f.wanted(tx, []), true);
+  assert.equal(f.wanted({ transaction: { message: { accountKeys: [new Uint8Array(fromBase58(old))], instructions: [] } }, meta: {} } as any, []), false);
+});
+
 test("the stream's own transaction format reads the same as the RPC's", async () => {
   const { readFileSync } = await import("node:fs");
   const { fromRpc, fromYellowstone, parseLaunchpads } = await import("../src/chain/launchpads.ts");
