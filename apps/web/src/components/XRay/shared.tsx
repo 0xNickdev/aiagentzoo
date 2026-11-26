@@ -9,7 +9,7 @@ import type { Verdict, XRayReport } from "./types";
 
 export const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 /** Where the token was launched, as people know the places. */
-export const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", stonk: "StonkFun", fourmeme: "four.meme", flap: "Flap", clanker: "Clanker" };
+export const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "Raydium LaunchLab", dbc: "Meteora", raydium: "Raydium", cpmm: "Raydium CPMM", stonk: "StonkFun", fourmeme: "four.meme", flap: "Flap", clanker: "Clanker" };
 /** The launchpad and, when it names one, the platform on it: "StonkFun", "Flap · tax 9%", "Clanker · Bankr". */
 export const venueLabel = (f: { venue?: string; platform?: string } | null | undefined) => {
   const v = f?.venue ?? "pump.fun";

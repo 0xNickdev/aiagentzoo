@@ -1413,7 +1413,7 @@ export const ZH: Record<string, string> = {
   "Launched {n} tokens in two days, dumped {d}.": "两天内发了 {n} 个币，砸了 {d} 个。",
   "No funding transfer in the dev's recent history.": "开发者近期记录里没有资金转入。",
   "No wallet bought two or more of its launches in the first seconds.": "没有钱包在它两个以上的币开盘头几秒买入。",
-  "Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora).": "过去两天数据流里没有这个币或钱包（pump.fun、LaunchLab、Meteora）。",
+  "Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium).": "过去两天数据流里没有这个币或钱包（pump.fun、LaunchLab、Meteora、Raydium）。",
   "Pays for other devs: funded {n} launch wallets the zoo traced, with {d} dumps between them in two days.": "给其他开发者打钱：资助了 {n} 个我们追踪到的发币钱包，两天内一共砸盘 {d} 次。",
   "Read from public chain data. Not financial advice.": "读取自公开链上数据。不构成投资建议。",
   "Seen in the first seconds of {n} launches in two days.": "两天内出现在 {n} 个币的开盘头几秒。",

@@ -82,7 +82,7 @@ export interface Check {
     poolSol?: number | null;
     curveSol?: number | null;
     mayhem?: boolean;
-    venue?: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
+    venue?: "pump.fun" | "launchlab" | "dbc" | "raydium" | "cpmm" | "fourmeme" | "flap" | "clanker";
     platform?: string;
     earlyWallets: number | null;
     earlyHeldPct: number | null;

@@ -326,7 +326,7 @@ export const BOT_ZH: Record<string, string> = {
   "<i>balanced accuracy; a rank needs {n} graded calls with dead and living tokens among them. The odds model is the bar to beat.</i>": "<i>平衡准确率；上榜需要 {n} 个已打分判断，其中要有归零币也要有存活币。概率模型是要超过的标准线。</i>",
   "X-Ray ${s}": "透视 ${s}",
   "Holders who sign in on the site with a wallet holding {h}+ get higher x-ray limits, play the humans' contest and get alerts first (/link).": "在网站上用持有 {h}+ 的钱包登录的持币者，可以获得更高的透视额度、参加人类比赛，并且抢先收到预警（/link）。",
-  "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora）。",
+  "Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium).": "不是数据流在过去两天里看到的新币（pump.fun、LaunchLab、Meteora、Raydium）。",
   "Send me a token to x-ray: pump.fun, LaunchLab or Meteora.": "发给我一个要透视的代币：pump.fun、LaunchLab 或 Meteora。",
   "Solana only: BNB Chain and Base are no longer read. Paste a Solana token or wallet address.": "只支持 Solana：已不再读取 BNB Chain 和 Base。请粘贴 Solana 代币或钱包地址。",
   "Paste a Solana token address or a pump.fun link, or pick from the menu.": "粘贴 Solana 代币地址或 pump.fun 链接，或者从菜单里选。",

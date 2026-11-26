@@ -20,8 +20,11 @@ const DISC = {
   ammSell: Buffer.from([62, 47, 55, 10, 165, 3, 220, 42]),
 };
 
-/** Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, four.meme on BNB Chain, or Clanker on Base. */
-export type Venue = "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
+/**
+ * Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, straight into a Raydium AMM v4 or
+ * CPMM pool, four.meme or Flap on BNB Chain, or Clanker on Base.
+ */
+export type Venue = "launchlab" | "dbc" | "raydium" | "cpmm" | "fourmeme" | "flap" | "clanker";
 
 export type PumpEvent =
   /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
@@ -40,6 +43,8 @@ export type PumpEvent =
       platform?: string;
       /** The whole supply, when it is not pump.fun's billion. */
       supply?: number;
+      /** The pool a launch straight into Raydium opened. */
+      pool?: string;
       /** Where the token's metadata lives (its X, Telegram, website). */
       uri?: string;
       /** How the launch transaction was built; read from the whole transaction by the stream. */
@@ -47,7 +52,8 @@ export type PumpEvent =
       /** Every wallet that signed the transaction, when more than one did; the mint's own keypair left out. */
       signers?: string[];
     }
-  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[] }
+  /** venue: set on a trade in a Raydium pool, which counts only for a coin launched there. */
+  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[]; venue?: Venue }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
   | { kind: "pool"; mint: string; pool: string }

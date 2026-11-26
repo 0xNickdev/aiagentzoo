@@ -2,9 +2,9 @@
  * The chain's live feed into the tape: Yellowstone gRPC subscriptions to pump.fun, LaunchLab, Meteora's curve and
  * PumpSwap, or a relay that reads them where the stream runs at full speed.
  */
-import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, type YellowstoneTx } from "./launchpads.ts";
+import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type YellowstoneTx } from "./launchpads.ts";
 import { type PrintableTx, signersOf, toolPrintOf } from "./fingerprint.ts";
-import { base58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent } from "./pumpParse.ts";
+import { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent } from "./pumpParse.ts";
 import type { PumpTape } from "./pump.ts";
 
 export interface StreamOptions {
@@ -16,7 +16,15 @@ export interface StreamOptions {
 }
 
 /** Where the stream's events go: the tape, or the relay's buffer. */
-export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean };
+export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"] };
+
+/** Raydium pools opened by a launch the stream saw, kept as long as the tape keeps a token, and no more than this many. */
+const RAYDIUM_KEEP_MS = 48 * 3_600_000;
+const RAYDIUM_MAX = 20_000;
+/** The log line each Raydium program writes when a pool opens: AMM v4's initialize2, CPMM's initialize and its permissioned form. */
+// Exact lines: the token program's "Instruction: InitializeAccount3" is in nearly every swap.
+const RAYDIUM_OPENS = new Set(["Program log: Instruction: Initialize", "Program log: Instruction: InitializeWithPermission"]);
+const AMM_OPEN = "Program log: initialize2: InitializeInstruction2";
 
 const STREAM_STALL_MS = 90_000;
 // North runs in California and the stream comes from Europe: with the default HTTP/2 window a connection carries only
@@ -27,7 +35,7 @@ type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number
 
 /**
  * Keeps Yellowstone subscriptions open, reconnecting with backoff, feeding the tape. Two connections: launches and the
- * curves (pump.fun, LaunchLab, Meteora) on one, PumpSwap on the other, and that one only for the pools of tokens on the
+ * curves (pump.fun, LaunchLab, Meteora) and Raydium's pools on one, PumpSwap on the other, and that one only for the pools of tokens on the
  * tape. All of PumpSwap on one connection was more than the stream could carry: it fell minutes behind the chain and
  * took the launches down with it.
  */
@@ -43,6 +51,27 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
   const open = new Set<{ end(): void }>();
   const filter = (accounts: string[]) => ({ vote: false, failed: false, accountInclude: accounts, accountExclude: [], accountRequired: [] });
   const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
+
+  // Pool address as hex of its 32 bytes -> when it opened. Most Raydium swaps are in old pools; those are dropped here
+  // by comparing raw account keys, before the transaction is decoded.
+  const raydiumPools = new Map<string, number>();
+  const hex = (k: Uint8Array) => Buffer.from(k.buffer, k.byteOffset, k.byteLength).toString("hex");
+  const raydiumWanted = (raw: NonNullable<StreamUpdate["transaction"]>["transaction"], logs: string[]) => {
+    if (logs.some((l) => RAYDIUM_OPENS.has(l) || l.startsWith(AMM_OPEN))) return true;
+    if (!raydiumPools.size) return false;
+    for (const k of raw?.transaction?.message?.accountKeys ?? []) if (raydiumPools.has(hex(k))) return true;
+    for (const k of raw?.meta?.loadedWritableAddresses ?? []) if (raydiumPools.has(hex(k))) return true;
+    return false;
+  };
+  const followPool = (pool: string, now: number) => {
+    raydiumPools.set(Buffer.from(fromBase58(pool)).toString("hex"), now);
+    if (raydiumPools.size <= RAYDIUM_MAX) return;
+    // Oldest first, as a Map keeps them: drop what aged out, then the oldest until under the cap.
+    for (const [k, at] of raydiumPools) {
+      if (raydiumPools.size <= RAYDIUM_MAX && now - at <= RAYDIUM_KEEP_MS) break;
+      raydiumPools.delete(k);
+    }
+  };
 
   const onData = (update: StreamUpdate) => {
     const logs = update.transaction?.transaction?.meta?.logMessages;
@@ -70,11 +99,19 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
       }
       t.apply(ev, Date.now(), tx, at);
     }
-    // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction.
-    if (update.filters?.some((f) => f === "launchlab" || f === "dbc")) {
+    // LaunchLab and Meteora's curve write their events into inner instructions: read the whole transaction. A Raydium
+    // transaction only when it opens a pool or trades in one a launch opened.
+    const curves = update.filters?.some((f) => f === "launchlab" || f === "dbc");
+    const raydium = update.filters?.some((f) => f === "raydium" || f === "cpmm");
+    if (curves || (raydium && raydiumWanted(update.transaction!.transaction!, logs))) {
       const raw = fromYellowstone(update.transaction!.transaction!);
       if (raw)
         for (const ev of parseLaunchpads(raw, Date.now())) {
+          if (ev.kind === "create" && ev.pool) {
+            // A pool for a coin the tape already has is that coin's pool, not a launch.
+            if (t.venueOf?.(ev.mint)) continue;
+            followPool(ev.pool, Date.now());
+          }
           mark(ev);
           if (ev.kind === "create") {
             const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
@@ -139,7 +176,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
             if (opts.core && !t.connected) {
               t.connected = true;
               delay = 1_000;
-              log("[chain] pump.fun, LaunchLab and Meteora stream live");
+              log("[chain] pump.fun, LaunchLab, Meteora and Raydium stream live");
             } else if (!opts.core && delay > 1_000) delay = 1_000;
             onData(update);
           });
@@ -161,7 +198,11 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
     }
   };
 
-  void lane("launches", () => ({ pump: filter([PUMP_PROGRAM]), launchlab: filter([LAUNCHLAB_PROGRAM]), dbc: filter([DBC_PROGRAM]) }), { stallMs: STREAM_STALL_MS, core: true });
+  void lane(
+    "launches",
+    () => ({ pump: filter([PUMP_PROGRAM]), launchlab: filter([LAUNCHLAB_PROGRAM]), dbc: filter([DBC_PROGRAM]), raydium: filter([RAYDIUM_AMM_PROGRAM]), cpmm: filter([RAYDIUM_CPMM_PROGRAM]) }),
+    { stallMs: STREAM_STALL_MS, core: true },
+  );
   // Only the pools we follow: an empty list would mean every PumpSwap transaction, so no pools means no connection.
   void lane(
     "pools",
@@ -220,7 +261,7 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
             if (!t.connected) {
               t.connected = true;
               delay = 1_000;
-              log("[chain] relay live: pump.fun, LaunchLab and Meteora");
+              log("[chain] relay live: pump.fun, LaunchLab, Meteora and Raydium");
             }
             t.apply(ev, Date.now(), tx ?? undefined, slot ?? undefined);
           }

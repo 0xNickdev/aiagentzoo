@@ -21,7 +21,7 @@ export { capsFrom, devPattern, type DevPattern, type LaunchCode, launchCode, typ
 export { startPumpStream, startRelayFeed, type StreamOptions, type StreamSink } from "./stream.ts";
 
 /** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
-export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
+export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", raydium: "solana", cpmm: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
 export const UNIT_OF_CHAIN: Record<"solana" | "bsc" | "base", Unit> = { solana: "SOL", bsc: "BNB", base: "ETH" };
 
 /** A trade on a followed pool, as the buy bot reads it. */
@@ -352,7 +352,7 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number } = { launches: 0, trades: 0 };
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; fourmeme?: number; flap?: number; clanker?: number } = { launches: 0, trades: 0 };
   /** What the amounts are in: SOL on Solana, BNB on BNB Chain, ETH on Base. The moments' wording and the dollar caps read it. */
   readonly unit: Unit;
 
@@ -574,6 +574,8 @@ export class PumpTape {
     const t = this.tokens.get(ev.mint);
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
+    // A trade in a Raydium pool counts only for a coin launched there: a graduated coin's pool is not its curve.
+    if (ev.kind === "trade" && ev.venue && ev.venue !== t.venue) return;
     if (ev.kind === "complete" || ev.kind === "pool") {
       if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
       t.graduated = true;
@@ -905,7 +907,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut" | "bundlers"> & Partial<Omit<Tracked, "bundlers">> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][]; bundlers?: [string, { tok: number; sold: number }][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; fourmeme?: number; flap?: number; clanker?: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
         feedSince?: number;
         prints?: [string, ToolPrint][];
@@ -971,7 +973,7 @@ export class PumpTape {
       this.recent = [...(saved.recent ?? []).filter((m) => this.tokens.has(m)), ...this.recent.filter((m) => !(saved.recent ?? []).includes(m))].slice(0, RECENT_KEEP);
       if (saved.seen) {
         const add = (k: Venue) => (this.seen[k] ?? 0) + (saved.seen![k] ?? 0);
-        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}), ...(add("flap") ? { flap: add("flap") } : {}), ...(add("clanker") ? { clanker: add("clanker") } : {}) };
+        this.seen = { launches: this.seen.launches + saved.seen.launches, trades: this.seen.trades + saved.seen.trades, launchlab: add("launchlab"), dbc: add("dbc"), ...(add("raydium") ? { raydium: add("raydium") } : {}), ...(add("cpmm") ? { cpmm: add("cpmm") } : {}), ...(add("fourmeme") ? { fourmeme: add("fourmeme") } : {}), ...(add("flap") ? { flap: add("flap") } : {}), ...(add("clanker") ? { clanker: add("clanker") } : {}) };
       }
       return this.tokens.size;
     } catch {

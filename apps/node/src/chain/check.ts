@@ -123,8 +123,8 @@ export interface TokenCheck {
     /** The token it trades against when not SOL; then curveSol is null. */
     quote: string | null;
     mayhem: boolean;
-    /** Where it was launched: pump.fun, Raydium LaunchLab or Meteora's bonding curve. */
-    venue: "pump.fun" | "launchlab" | "dbc" | "fourmeme" | "flap" | "clanker";
+    /** Where it was launched: pump.fun, Raydium LaunchLab, Meteora's bonding curve, or a Raydium pool. */
+    venue: "pump.fun" | "launchlab" | "dbc" | "raydium" | "cpmm" | "fourmeme" | "flap" | "clanker";
     /** The platform on that launchpad when known, e.g. "stonk" (StonkFun on LaunchLab). */
     platform?: string;
     curveSol: number | null;

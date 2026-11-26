@@ -370,7 +370,7 @@ export function xrayMessage(x: XRayReply, claims: Claims | null = null): string 
   const f = c.facts;
   const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
   const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];
-  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
+  const venue = { stonk: "StonkFun", launchlab: "Raydium LaunchLab", dbc: "Meteora", raydium: "Raydium", cpmm: "Raydium CPMM" }[f?.platform ?? f?.venue ?? ""] ?? "pump.fun";
   // Caution is most coins with buyers, so the word goes last and what differs goes first. Avoid and the rest lead with theirs.
   const caution = c.verdict === "caution";
   const thin = thinLine(c);
@@ -537,7 +537,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
         // Not a token the stream saw: perhaps it is a creator's wallet.
         const d = await north<CreatorRecord>(`/v1/chain/creator/${mint}`);
         if (d) return void send(chat, devMessage(d));
-        return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."));
+        return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium)."));
       }
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
       if (!r.ok) throw new Error(String(r.status));
@@ -683,7 +683,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       return void send(chat, [`<b>${T("Dev {w}", { w: short(r.wallet) })}</b> · ${creatorLine(r)}`, line ? `${T("last:")} $${esc(r.recent[0]!.symbol)} · ${line}` : ""].filter(Boolean).join("\n"), full(`d-${address}`), reply);
     }
     const x = await north<XRayReply>(`/v1/xray/${address}`);
-    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora)."), undefined, reply);
+    if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium)."), undefined, reply);
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
     const label = { avoid: "AVOID", caution: "CAUTION", pass: "NO RED FLAGS", unknown: "NOT ON THE STREAM" }[c.verdict];

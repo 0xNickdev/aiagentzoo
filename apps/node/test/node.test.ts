@@ -1603,11 +1603,70 @@ test("LaunchLab and Meteora's curve are read from real mainnet transactions: the
   assert.equal(tape.token(create.mint, now)!.creator, "GDEUpEgzz3w6uff4pLAHjt94QdaWnn5jWaehU2G7yruo");
 });
 
+test("a coin launched straight into a Raydium pool, from real mainnet transactions: the opener, then buys and sells", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fromRpc, LAUNCHLAB_PROGRAM, parseLaunchpads } = await import("../src/chain/launchpads.ts");
+  const { fromBase58, PumpTape } = await import("../src/chain/pump.ts");
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/raydium.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const raw = (what: string) => fromRpc(fixtures.find((f) => f.what === what)!.tx, fromBase58);
+  const parse = (what: string, ts = 0) => parseLaunchpads(raw(what), ts) as any[];
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+
+  // AMM v4: initialize2 run from inside a fair-launch program; the wallet that signed opened the pool.
+  const [create] = parse("amm:create", 1_000);
+  assert.deepEqual(create, { kind: "create", venue: "raydium", name: "", symbol: "", mint, creator: "HTzhUPE8jXxLgugWkK8RACVihaRjizmSHcQkG3yTHaXP", ts: 1_000, pool: "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v" });
+  const [buy] = parse("amm:buy", 2_000);
+  assert.deepEqual([buy.kind, buy.venue, buy.mint, buy.user, buy.isBuy, buy.sol, buy.tokens], ["trade", "raydium", mint, "3YL3aEtLy5XAKeugG4AQLprJvjZG5JxAjsWt2Nx5vPuW", true, 2, 1_105_911.932868]);
+  // A bot routing through the pool is a buyer too: SOL went in, tokens came out to its account.
+  const [arb] = parse("amm:arb");
+  assert.equal(arb.user, "CatyeC3LgBxub7HcpW2n7cZZZ66CUKdcZ8DzHucHrSiP");
+  assert.equal(arb.isBuy, true);
+  // A sell: the seller is whoever owns the account the tokens left, not the wallet that paid the fee.
+  const [sell] = parse("amm:sell", 3_000);
+  assert.deepEqual([sell.isBuy, sell.user, sell.sol, sell.tokens], [false, "FvdJ5oieRkfz8BZhfvWSQvo2XnrXUHgqUrSQCzQEnxK2", 0.104783235, 44_290.235504]);
+
+  // CPMM: the pool opens with SOL as token 0; the coin is the other side.
+  const [cpmm] = parse("cpmm:create");
+  assert.equal(cpmm.venue, "cpmm");
+  assert.equal(cpmm.mint, "2yPZkA68pCYJJc2SeJVzAG886MsQrBopPZ31K7ZjNKCt");
+  assert.equal(cpmm.creator, "7Fih4YdXE9R2UQp7ypRFztz3FFijJjGRuC6qxBjP7mct");
+  assert.equal(cpmm.pool, "GdTEWLhzhmNJnY8wR2MGNBRSZ2oz94qzYNEq3VVKmRED");
+  const [cbuy] = parse("cpmm:buy");
+  assert.deepEqual([cbuy.isBuy, cbuy.user, cbuy.mint], [true, "CUkKyTN2GnkLKSucTF24qjhFn6jgSDAUQHF3RzLKhsZf", cpmm.mint]);
+  const [csell] = parse("cpmm:sell");
+  assert.deepEqual([csell.isBuy, csell.user, csell.sol, csell.tokens], [false, "DLCgPvxKkHU5QLeJmt9LEGxDAQbeujNvomyUND6Ljrb5", 0.060600798, 208_924_792.069987]);
+
+  // A pool opened in a transaction that runs a launchpad is a coin graduating, not a launch.
+  const grad = raw("amm:create");
+  grad.ixs.push({ program: LAUNCHLAB_PROGRAM, accounts: [], data: Buffer.alloc(0) });
+  assert.equal(parseLaunchpads(grad, 0).length, 0);
+
+  // On the tape: the dev and the first buyers like any launch, counted apart, and out of the pump.fun-only lists.
+  const tape = new PumpTape();
+  const now = Date.now();
+  tape.apply({ ...(create as any), ts: now - 60_000 }, now);
+  tape.apply({ ...buy, ts: now - 59_000 }, now);
+  tape.apply({ ...sell, ts: now - 58_000 }, now);
+  const f = tape.facts(mint, now)!;
+  assert.equal(f.venue, "raydium");
+  assert.equal(f.buyers, 1);
+  assert.equal(tape.seen.raydium, 1);
+  assert.equal(tape.launches(10, now).length, 0);
+  assert.equal(tape.token(mint, now)!.creator, "HTzhUPE8jXxLgugWkK8RACVihaRjizmSHcQkG3yTHaXP");
+
+  // A Raydium trade in a coin the tape knows from pump.fun is its graduated pool: it does not count.
+  const pump = "Pump".padEnd(40, "x") + "pump";
+  tape.apply({ kind: "create", name: "P", symbol: "P", mint: pump, creator: "Dev".padEnd(44, "d"), ts: now - 60_000 }, now);
+  tape.apply({ ...buy, mint: pump, ts: now - 50_000 }, now);
+  assert.equal(tape.facts(pump, now)!.buyers, 0);
+});
+
 test("the stream's own transaction format reads the same as the RPC's", async () => {
   const { readFileSync } = await import("node:fs");
   const { fromRpc, fromYellowstone, parseLaunchpads } = await import("../src/chain/launchpads.ts");
   const { fromBase58 } = await import("../src/chain/pump.ts");
-  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/launchpads.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const read = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const fixtures = [...read("launchpads.json"), ...read("raydium.json")];
   for (const { what, tx } of fixtures) {
     // The same transaction as Yellowstone sends it: keys and data as bytes, address-table keys apart.
     const ix = (i: any) => ({ programIdIndex: i.programIdIndex, accounts: Uint8Array.from(i.accounts), data: new Uint8Array(fromBase58(i.data)) });

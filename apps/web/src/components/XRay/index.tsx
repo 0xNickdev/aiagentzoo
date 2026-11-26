@@ -127,7 +127,7 @@ export default function XRay() {
           return;
         }
       }
-      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora).") : t("Something went wrong."));
+      if (!r.ok) throw new Error(body.error ? t("Not a launch or a wallet the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium).") : t("Something went wrong."));
       setReport(body);
       setReadAt(Date.now());
       const tab = new URLSearchParams(location.search).get("tab");

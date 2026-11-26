@@ -11,7 +11,7 @@ import { agoTight, short } from "../format";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
 const sym = (s: string) => s.replace(/^\$+/, "");
-const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "LaunchLab", dbc: "Meteora", stonk: "StonkFun" };
+const VENUE: Record<string, string> = { "pump.fun": "pump.fun", launchlab: "LaunchLab", dbc: "Meteora", raydium: "Raydium", cpmm: "Raydium CPMM", stonk: "StonkFun" };
 
 interface Profile {
   wallet: string;

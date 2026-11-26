@@ -11,6 +11,10 @@ import { base58, type PumpEvent, Reader, type Venue, WSOL } from "./pumpParse.ts
 
 export const LAUNCHLAB_PROGRAM = "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj";
 export const DBC_PROGRAM = "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN";
+/** Raydium's AMM v4 and its CPMM: a coin launched straight into a pool, no curve first. */
+export const RAYDIUM_AMM_PROGRAM = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+export const RAYDIUM_CPMM_PROGRAM = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+const PUMP = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
 
 /** Anchor's prefix on an event written by a program calling itself. */
 const EVENT_CPI = Buffer.from([0xe4, 0x45, 0xa5, 0x2e, 0x51, 0xcb, 0x9a, 0x1d]);
@@ -202,14 +206,77 @@ export function fromRpc(tx: RpcTx, fromB58: (s: string) => Buffer): LaunchpadTx 
 }
 
 /** True when any instruction of the transaction runs one of the launchpads. */
-export const touchesLaunchpads = (tx: LaunchpadTx) => tx.ixs.some((i) => i.program === LAUNCHLAB_PROGRAM || i.program === DBC_PROGRAM);
+export const touchesLaunchpads = (tx: LaunchpadTx) =>
+  tx.ixs.some((i) => i.program === LAUNCHLAB_PROGRAM || i.program === DBC_PROGRAM || i.program === RAYDIUM_AMM_PROGRAM || i.program === RAYDIUM_CPMM_PROGRAM);
+
+/**
+ * Where a Raydium pool's accounts sit in the instruction that opens it. AMM v4's initialize2 is instruction 1 (its first
+ * data byte, not an Anchor discriminator), accounts from raydium-io/raydium-amm program/src/instruction.rs; CPMM's are
+ * from the raydium_cp_swap IDL. Both checked against mainnet pools.
+ */
+const RAYDIUM_OPEN: Record<string, { creator: number; pool: number; mints: [number, number]; vaults: [number, number] }> = {
+  amm: { creator: 17, pool: 4, mints: [8, 9], vaults: [10, 11] }, // initialize2
+  [disc(175, 175, 109, 31, 13, 152, 155, 237)]: { creator: 0, pool: 3, mints: [4, 5], vaults: [10, 11] }, // initialize
+  [disc(63, 55, 254, 65, 49, 178, 89, 121)]: { creator: 1, pool: 4, mints: [5, 6], vaults: [11, 12] }, // initialize_with_permission
+};
+/** AMM v4 swaps by their first data byte: SwapBaseIn, SwapBaseOut and their V2 forms without the order book accounts. */
+const AMM_SWAPS = new Set([9, 11, 16, 17]);
+const CPMM_SWAPS = new Set([disc(143, 190, 90, 218, 196, 30, 51, 222), disc(55, 217, 98, 86, 163, 74, 180, 173)]); // swap_base_input, swap_base_output
+
+/**
+ * Raydium launches and trades. A new pool against SOL is a launch: its creator is the wallet that opened it, its token
+ * the side that is not SOL. A pool opened in a transaction that also runs a launchpad is that coin graduating, not a
+ * launch. Swaps carry no event, so a trade is what moved in the pool's two vaults, the accounts its authority owns:
+ * SOL into the pool is a buy. The trader owns the account the tokens went to or came from.
+ */
+function parseRaydium(tx: LaunchpadTx, ts: number): PumpEvent[] {
+  const out: PumpEvent[] = [];
+  const graduating = tx.ixs.some((i) => i.program === LAUNCHLAB_PROGRAM || i.program === DBC_PROGRAM || i.program === PUMP);
+  // Balances come as decimal numbers: the difference is rounded back to the mint's own decimals.
+  const delta = (a: string) => {
+    const d = 10 ** (tx.decimals.get(tx.mints.get(a) ?? "") ?? 9);
+    return Math.round(((tx.after.get(a) ?? 0) - (tx.before.get(a) ?? 0)) * d) / d;
+  };
+  const done = new Set<string>();
+  for (const ix of tx.ixs) {
+    const venue: Venue | null = ix.program === RAYDIUM_AMM_PROGRAM ? "raydium" : ix.program === RAYDIUM_CPMM_PROGRAM ? "cpmm" : null;
+    if (!venue || !ix.data.length) continue;
+    const a = ix.accounts;
+    const open = venue === "raydium" ? (ix.data[0] === 1 && a.length >= 21 ? RAYDIUM_OPEN.amm : undefined) : ix.data.length >= 8 ? RAYDIUM_OPEN[ix.data.subarray(0, 8).toString("hex")] : undefined;
+    if (open) {
+      const [m0, m1] = [a[open.mints[0]], a[open.mints[1]]];
+      if (graduating || !m0 || !m1 || (m0 === WSOL) === (m1 === WSOL)) continue;
+      out.push({ kind: "create", venue, name: "", symbol: "", mint: m0 === WSOL ? m1 : m0, creator: a[open.creator]!, ts, pool: a[open.pool]! });
+      continue;
+    }
+    const isSwap = venue === "raydium" ? AMM_SWAPS.has(ix.data[0]!) : ix.data.length >= 8 && CPMM_SWAPS.has(ix.data.subarray(0, 8).toString("hex"));
+    // AMM v4: pool at 1, authority at 2, the trader's source, destination and wallet last. CPMM: payer 0, authority 1, pool 3.
+    const pool = a[venue === "raydium" ? 1 : 3];
+    const authority = a[venue === "raydium" ? 2 : 1];
+    if (!isSwap || !pool || !authority || done.has(pool)) continue;
+    done.add(pool);
+    const vaults = a.filter((x) => tx.owners.get(x) === authority);
+    const solVault = vaults.find((v) => tx.mints.get(v) === WSOL);
+    const tokenVault = vaults.find((v) => tx.mints.get(v) !== WSOL);
+    if (!solVault || !tokenVault) continue;
+    const mint = tx.mints.get(tokenVault)!;
+    const sol = delta(solVault);
+    const tokens = Math.abs(delta(tokenVault));
+    if (!sol || !tokens) continue;
+    const isBuy = sol > 0;
+    const user = venue === "raydium" ? a[a.length - (isBuy ? 2 : 3)] : a[tx.mints.get(a[4] ?? "") === mint ? 4 : 5];
+    const wallet = venue === "raydium" ? a[a.length - 1] : a[0];
+    out.push({ kind: "trade", venue, mint, user: tx.owners.get(user ?? "") ?? wallet ?? "", isBuy, sol: Math.abs(sol), tokens, ts, curveSol: null });
+  }
+  return out;
+}
 
 /**
  * The launch, trade and graduation events in a transaction, as the tape takes them. `ts` is when it happened:
  * these events carry no time of their own, so the stream passes the moment it saw them.
  */
 export function parseLaunchpads(tx: LaunchpadTx, ts: number): PumpEvent[] {
-  const out: PumpEvent[] = [];
+  const out: PumpEvent[] = parseRaydium(tx, ts);
   // The last instruction each launchpad ran: the next event it writes belongs to it.
   const last: Record<string, { role: Role; accounts: string[]; data: Buffer } | undefined> = {};
   const dec = (mint: string, fallback: number) => tx.decimals.get(mint) ?? fallback;
