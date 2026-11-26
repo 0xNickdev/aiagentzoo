@@ -351,6 +351,23 @@
 .x-links h4 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--fg); }
 .x-links h4 b { font-weight: 500; font-size: 12.5px; color: var(--fg-3); text-align: right; }
 .x-links h4.x-lnh2 { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.x-bc { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.x-bc .x-btn small { margin-left: 2px; }
+.xr2 .x-bc button:disabled { opacity: 0.6; cursor: default; }
+.x-bcs { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.x-bcs strong { font-size: 30px; font-weight: 600; color: var(--fg); line-height: 1; }
+.x-bcs strong small { font-size: 13px; color: var(--fg-4); font-weight: 400; }
+.x-bcs ul, .x-bcl { list-style: none; margin: 0; padding: 0; }
+.x-bcs ul { display: grid; grid-template-columns: repeat(2, minmax(140px, auto)); gap: 4px 24px; font-size: 12.5px; }
+.x-bcs li { display: flex; justify-content: space-between; gap: 12px; color: var(--fg-3); }
+.x-bcs li b { color: var(--fg); font-weight: 500; }
+.x-bcl { margin-top: 14px; display: grid; gap: 10px; }
+.x-bcl li div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--fg); }
+.x-bcl li div b { font-weight: 500; font-size: 12.5px; color: var(--fg-3); text-align: right; white-space: nowrap; }
+.x-bcl li div b.x-d { color: var(--danger); }
+.x-bcl li p { margin: 3px 0 0; font-size: 11.5px; color: var(--fg-4); line-height: 1.45; overflow-wrap: anywhere; }
+.x-bcm { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--fg); }
+@media (max-width: 520px) { .x-bcs ul { grid-template-columns: 1fr; width: 100%; } .x-bcl li div { flex-direction: column; gap: 2px; } .x-bcl li div b { text-align: left; white-space: normal; } }
 .x-lnf { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 3px; color: var(--warn); font-size: 11.5px; line-height: 1.45; }
 .x-gh { margin: 2px 0 10px; width: 100%; }
 .x-gh > div { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 3px; width: 100%; }

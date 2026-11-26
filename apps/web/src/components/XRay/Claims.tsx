@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { chainOf } from "../../chain";
 import { t } from "../../i18n";
 import { NODE_URLS } from "../../sim/live";
+import { useGuardian } from "../../zoo";
 import { Kv, Pn, type Ctx } from "./ui";
 
 /** What the marsh node read about a token's links (apps/node/src/claims/claims.ts). */
@@ -50,6 +51,97 @@ function useClaims(mint: string): State {
     };
   }, [mint]);
   return c;
+}
+
+/** The holders' code check (apps/node/src/claims/build.ts): the repository read against what the token claims. */
+interface Build {
+  repo: string;
+  sha: string;
+  filesRead: string[];
+  filesTotal: number;
+  facts: { ai: string[]; solana: string[]; ownCodeBytes: number; template: string[] };
+  claims: Array<{ claim: string; status: "matches" | "partly" | "not found" | "contradicts"; evidence: Array<{ path: string; why: string }> }>;
+  summary: string;
+  score: { total: number; claims: number; substance: number; activity: number; ties: number };
+}
+type BuildState = null | "signing" | "reading" | Build | { error: string };
+
+const STATUS_WORD: Record<Build["claims"][number]["status"], string> = { matches: "matches", partly: "partly", "not found": "not found in the files we read", contradicts: "contradicts" };
+
+function BuildCheck({ mint }: { mint: string }) {
+  const { session, signIn } = useGuardian();
+  const [b, setB] = useState<BuildState>(null);
+  const [want, setWant] = useState(false);
+  useEffect(() => setB(null), [mint]);
+  useEffect(() => {
+    if (!want || !session) return;
+    setWant(false);
+    setB("reading");
+    fetch(`${MARSH}/v1/claims/${mint}/build`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ guardian: session }), signal: AbortSignal.timeout(120_000) })
+      .then(async (r) => {
+        const j = (await r.json().catch(() => null)) as (Build & { error?: string }) | null;
+        setB(r.ok && j && !j.error ? j : { error: j?.error ?? "the check failed, try again later" });
+      })
+      .catch(() => setB({ error: "the check did not answer, try again later" }));
+  }, [want, session, mint]);
+  const start = () => {
+    setWant(true);
+    if (!session) {
+      setB("signing");
+      void signIn().finally(() => setB((v) => (v === "signing" ? null : v)));
+    }
+  };
+  if (b === null || b === "signing") {
+    return (
+      <div className="x-bc">
+        <button type="button" className="x-btn" onClick={start} disabled={b === "signing"}>
+          {t("Check the code against the claims")}
+          <small>{t("holders")}</small>
+        </button>
+      </div>
+    );
+  }
+  if (b === "reading") return <p className="x-fine x-bc">{t("Reading the repository and comparing it with what the token claims. This takes up to a minute.")}</p>;
+  if ("error" in b) {
+    return (
+      <div className="x-bc">
+        <p className="x-fine">{t(b.error)}</p>
+        <button type="button" className="x-btn" onClick={() => setB(null)}>{t("Back")}</button>
+      </div>
+    );
+  }
+  const at = (path: string) => `https://github.com/${b.repo}/blob/${b.sha}/${path.split("/").map(encodeURIComponent).join("/")}`;
+  const parts: Array<[string, number, number]> = [
+    [t("claims match"), b.score.claims, 40],
+    [t("code substance"), b.score.substance, 25],
+    [t("activity"), b.score.activity, 20],
+    [t("ties to the token"), b.score.ties, 15],
+  ];
+  return (
+    <div className="x-bc x-bcr">
+      <div className="x-bcs">
+        <strong>{b.score.total}<small>/100</small></strong>
+        <ul>
+          {parts.map(([k, v, max]) => (
+            <li key={k}><span>{k}</span><b>{v}/{max}</b></li>
+          ))}
+        </ul>
+      </div>
+      <ul className="x-bcl">
+        {b.claims.map((c) => (
+          <li key={c.claim}>
+            <div><span>{c.claim}</span><b className={c.status === "contradicts" ? "x-d" : ""}>{t(STATUS_WORD[c.status])}</b></div>
+            {c.evidence.map((e) => (
+              <p key={e.path}><a className="x-link" href={at(e.path)} target="_blank" rel="noopener noreferrer nofollow">{e.path}</a>{e.why ? ` - ${e.why}` : ""}</p>
+            ))}
+          </li>
+        ))}
+      </ul>
+      {b.summary && <p className="x-bcm">{b.summary}</p>}
+      {b.facts.template.length > 0 && <p className="x-fine">{b.facts.template.map((x) => t(x)).join(", ")}</p>}
+      <p className="x-fine">{t("Read {n} files of {m} at commit {c}; an AI read them, it can be wrong.", { n: b.filesRead.length, m: b.filesTotal, c: b.sha.slice(0, 7) })}</p>
+    </div>
+  );
 }
 
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -207,6 +299,7 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
           />
         </section>
       </div>
+      {g.repo && (g.status === "mutual" || g.status === "related" || g.status === "oneway") && <BuildCheck mint={r.mint} />}
       <p className="x-fine" style={{ marginTop: 14 }}>{t("Anyone can link any account: it counts as the token's only when it names the contract back. A paid profile is an ad, not a check.")}</p>
     </Pn>
   );
