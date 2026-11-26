@@ -338,7 +338,7 @@ export async function checkBuild(mint: string, caller: string, d: BuildDeps, gat
   if (going) return going;
   if (inflight.size >= MAX_INFLIGHT) return { error: "busy, try again in a minute", state: "busy" };
   const p = run(mint, caller, c, sha, d, gate)
-    .catch((): BuildError => ({ error: "the check failed, try again later", state: "failed" }))
+    .catch((e: unknown): BuildError => { console.log(`[build] ${mint}: ${String((e as Error)?.message ?? e).slice(0, 200)}`); return { error: "the check failed, try again later", state: "failed" }; })
     .then((r) => {
       if ("score" in r) d.store.set(key, r);
       return r;
