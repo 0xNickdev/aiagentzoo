@@ -98,3 +98,29 @@ test("the bot's runner alert is short and says what it is not", async () => {
   assert.match(text, /Not a call to buy/);
   assert.doesNotMatch(text, /—/);
 });
+
+test("today's scored count survives a restart: day file first, else the marks file read backwards", async () => {
+  const { writeFileSync } = await import("node:fs");
+  const { countMarksSince } = await import("../src/chain/radar.ts");
+  const dir = mkdtempSync(join(tmpdir(), "radar-day-"));
+  const now = Date.parse("2026-11-26T12:00:00Z");
+  const mid = Date.parse("2026-11-26T00:00:00Z");
+  const marks = join(dir, "chain-marks.jsonl");
+  const lines = [
+    { min: 5, at: mid - 60_000 },
+    { min: 5, at: mid + 1_000 },
+    { min: 20, at: mid + 2_000 },
+    { min: 5, at: mid + 3_000, graduated: true },
+    { min: 5, at: mid + 4_000 },
+  ];
+  writeFileSync(marks, lines.map((l) => JSON.stringify({ mint: "m", ...l })).join("\n") + "\n");
+  assert.equal(countMarksSince(marks, mid, 16), 2, "small chunks split lines and still count");
+  const day = join(dir, "radar-day.json");
+  assert.equal(new Radar(null, null).restoreDay(day, marks, now), 2);
+  writeFileSync(day, JSON.stringify({ day: "2026-11-26", n: 41 }));
+  const r = new Radar(null, null);
+  assert.equal(r.restoreDay(day, marks, now), 41);
+  writeFileSync(day, JSON.stringify({ day: "2026-11-25", n: 99 }));
+  assert.equal(new Radar(null, null).restoreDay(day, marks, now), 2, "yesterday's file is ignored");
+  assert.equal(r.lastSignalAt(), null);
+});

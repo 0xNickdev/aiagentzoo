@@ -37,13 +37,18 @@ interface RadarBody {
   state?: "sign-in" | "holders";
   model: { frozenAt: number };
   stats: { settledAfterHours: number; days: number; all: Tally };
-  today?: { scored: number; signals: number };
+  today?: { scored: number; signals: number; lastSignalAt?: number | null };
   signals: Signal[];
 }
 
 const ago = (ms: number) => {
   const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
   return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : s < 86_400 ? `${Math.round(s / 3600)}h` : `${Math.round(s / 86_400)}d`;
+};
+/** "12 min ago" style for the counter: words, not a bare letter. */
+const agoLong = (ms: number) => {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  return s < 60 ? t("{n} s", { n: s }) : s < 3600 ? t("{n} min", { n: Math.round(s / 60) }) : s < 86_400 ? t("{n} h", { n: Math.round(s / 3600) }) : t("{n} d", { n: Math.round(s / 86_400) });
 };
 const sol = (v: number | null | undefined) => (v == null ? "-" : `${v >= 100 ? Math.round(v) : v.toFixed(1)} SOL`);
 const times = (v: number | null | undefined) => (v == null ? "-" : `${v >= 10 ? Math.round(v) : v.toFixed(1)}x`);
@@ -169,7 +174,8 @@ export default function Radar() {
   const recent = (data?.signals ?? []).filter((s) => now - s.at < LIVE_MS);
   const past = (data?.signals ?? []).filter((s) => now - s.at >= LIVE_MS);
   const a = data?.stats.all;
-  const last = data?.signals[0];
+  // The node says when the newest signal fired to everyone (time only), so the hour-late page is not stuck on "-".
+  const lastAt = data?.today?.lastSignalAt ?? data?.signals[0]?.at ?? null;
   const frozen = data ? new Date(data.model.frozenAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "21 Nov";
   const cards = width < 640;
 
@@ -195,7 +201,7 @@ export default function Radar() {
           <Counter k={t("coins scored today")} v={data?.today?.scored ?? null} />
           <div className="flex min-w-0 flex-col gap-2">
             <span className="text-[12px] text-dim">{t("last signal")}</span>
-            <span className="text-[22px] font-medium leading-none tracking-[-0.035em] text-white sm:text-[28px] tabular-nums">{last ? t("{a} ago", { a: ago(last.at) }) : "-"}</span>
+            <span className="text-[22px] font-medium leading-none tracking-[-0.035em] text-white sm:text-[28px] tabular-nums">{lastAt ? t("{a} ago", { a: agoLong(lastAt) }) : "-"}</span>
           </div>
           <p className="col-span-3 text-[12.5px] leading-[1.55] text-dim">
             {t("Each square is a live signal: nearer the centre is fresher, filled is strong, outlined is watch. The model is frozen since {d} and graded publicly.", { d: frozen })}
@@ -290,6 +296,15 @@ export default function Radar() {
         </div>
 
         <Panel title={t("History")} meta={t("how each coin moved after its signal")} className="lg:col-span-12" bodyClass="p-0">
+          {data && !past.length ? (
+            <p className="px-3.5 py-8 text-center text-[12.5px] leading-[1.55] text-faint">{t("Nothing older than two hours yet.")}</p>
+          ) : cards ? (
+            <div>
+              {past.slice(0, 150).map((s) => (
+                <PastCard key={s.mint} s={s} />
+              ))}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-[12.5px]">
               <thead className="text-[11.5px] text-faint">
@@ -319,16 +334,10 @@ export default function Radar() {
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.outcome ? t(s.outcome.graduated ? "yes" : "no") : "-"}</td>
                   </tr>
                 ))}
-                {data && !past.length && (
-                  <tr>
-                    <td colSpan={7} className="px-3.5 py-8 text-center text-faint">
-                      {t("Nothing older than two hours yet.")}
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
+          )}
         </Panel>
       </div>
 
@@ -417,6 +426,33 @@ function Card({ s }: { s: Signal }) {
         <a href={`/xray?mint=${s.mint}`} className="ml-auto text-dim hover:text-white">
           {t("X-Ray ↗")}
         </a>
+      </div>
+    </div>
+  );
+}
+
+/** A history row as a card for a narrow column: the same six facts, two to a line. */
+function PastCard({ s }: { s: Signal }) {
+  const fact = (k: string, v: string) => (
+    <span className="flex min-w-0 justify-between gap-2">
+      <span className="text-faint">{k}</span>
+      <span className="truncate text-fg-2 tabular-nums">{v}</span>
+    </span>
+  );
+  return (
+    <div className="flex flex-col gap-2 border-b border-line px-3.5 py-3 text-[12.5px] last:border-0">
+      <div className="flex items-baseline gap-2">
+        <a href={`/xray?mint=${s.mint}`} className="truncate text-[15px] font-medium tracking-[-0.02em] text-white hover:underline">
+          ${s.symbol}
+        </a>
+        <Tier s={s} />
+        <span className="ml-auto text-faint tabular-nums">{t("{a} ago", { a: ago(s.at) })}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-y-1">
+        {fact(t("Cap at signal"), sol(s.capAtSignal))}
+        {fact(t("Highest after"), s.outcome ? `${sol(s.outcome.peakCap)} · ${times(s.outcome.peakX)}` : "-")}
+        {fact(t("Now"), s.capNow == null ? "-" : `${sol(s.capNow)} · ${times(s.xNow)}`)}
+        {fact(t("Graduated"), s.outcome ? t(s.outcome.graduated ? "yes" : "no") : "-")}
       </div>
     </div>
   );

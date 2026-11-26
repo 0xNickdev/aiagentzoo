@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from "node:fs";
 import type { DatabaseSync, StatementSync } from "node:sqlite";
 
 /**
@@ -206,6 +206,47 @@ export const SETTLED_MS = DAY;
 /** What a caller without the holder pass sees: signals at least this old. */
 export const PUBLIC_DELAY_MS = 60 * 60_000;
 
+/**
+ * Counts the 5-minute readings the radar would have scored since `since`, reading chain-marks.jsonl backwards in
+ * chunks so a file of a gigabyte costs only today's tail. A line is a reading of minute five that had not graduated.
+ */
+export function countMarksSince(file: string, since: number, chunk = 1 << 20): number {
+  if (!existsSync(file)) return 0;
+  const fd = openSync(file, "r");
+  try {
+    let pos = fstatSync(fd).size;
+    let rest = "";
+    let n = 0;
+    while (pos > 0) {
+      const len = Math.min(chunk, pos);
+      pos -= len;
+      const buf = Buffer.alloc(len);
+      readSync(fd, buf, 0, len, pos);
+      const lines = (buf.toString("utf8") + rest).split("\n");
+      // The first piece may be half a line; it is kept for the next chunk unless the file starts here.
+      rest = pos > 0 ? lines.shift()! : "";
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (!line) continue;
+        let x: { min?: number; at?: number; graduated?: boolean | null };
+        try {
+          x = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (typeof x.at !== "number") continue;
+        if (x.at < since) return n;
+        if (x.min === 5 && !x.graduated) n++;
+      }
+    }
+    return n;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -218,6 +259,8 @@ export class Radar {
   private q: { token?: StatementSync; prior?: StatementSync; early?: StatementSync; peak?: StatementSync } = {};
 
   private readonly file: string | null;
+  private dayFile: string | null = null;
+  private dayWritten = 0;
   private readonly db: DatabaseSync | null;
   private readonly frozen: Frozen;
 
@@ -248,6 +291,48 @@ export class Radar {
     }
     this.list.sort((a, b) => b.at - a.at);
     return this.list.length;
+  }
+
+  /**
+   * Brings back today's scored count after a restart: from the small day file when it is today's, else counted from
+   * the marks file. From then on every scored reading updates the day file (at most every 5 seconds).
+   */
+  restoreDay(dayFile: string, marksFile: string | null, now = Date.now()): number {
+    this.dayFile = dayFile;
+    const day = utcDay(now);
+    let n = 0;
+    try {
+      const x = JSON.parse(readFileSync(dayFile, "utf8")) as { day?: string; n?: number };
+      if (x.day === day && typeof x.n === "number") n = x.n;
+    } catch {
+      /* no day file yet */
+    }
+    if (!n && marksFile) {
+      try {
+        n = countMarksSince(marksFile, Date.parse(day));
+      } catch {
+        /* the count starts from zero */
+      }
+    }
+    this.scored = { day, n: Math.max(n, this.scored.day === day ? this.scored.n : 0) };
+    this.saveDay(now, true);
+    return this.scored.n;
+  }
+
+  private saveDay(now: number, force = false) {
+    if (!this.dayFile || (!force && now - this.dayWritten < 5_000)) return;
+    this.dayWritten = now;
+    try {
+      writeFileSync(`${this.dayFile}.tmp`, JSON.stringify(this.scored));
+      renameSync(`${this.dayFile}.tmp`, this.dayFile);
+    } catch {
+      /* the count is still served from memory */
+    }
+  }
+
+  /** When the newest signal fired, held back nothing: the page says how long ago, without naming the coin. */
+  lastSignalAt(): number | null {
+    return this.list[0]?.at ?? null;
   }
 
   private stmts() {
@@ -281,9 +366,10 @@ export class Radar {
     if (!l) return null;
     const f = featuresOf(x, l);
     const j = judge(f, this.frozen);
-    const day = new Date(now).toISOString().slice(0, 10);
+    const day = utcDay(now);
     if (this.scored.day !== day) this.scored = { day, n: 0 };
     this.scored.n++;
+    this.saveDay(now);
     if (!j.tier) return null;
     // Reasons come from the model that fired hardest over its own cut-off.
     const lead = [...j.models].sort((a, b) => j.scores[b] - this.frozen.models[b].top1 - (j.scores[a] - this.frozen.models[a].top1))[0]!;

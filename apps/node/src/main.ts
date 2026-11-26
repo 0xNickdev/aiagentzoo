@@ -220,7 +220,7 @@ if (history) socials.attach(history.db);
 // The runner radar: the models frozen on 21 Nov scored on every 5-minute reading; signals kept in radar.jsonl.
 const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db) : null;
 if (radar) {
-  console.log(`[${config.id}] radar restored: ${radar.load()} signals`);
+  console.log(`[${config.id}] radar restored: ${radar.load()} signals, ${radar.restoreDay(join(config.dataDir, "radar-day.json"), join(config.dataDir, "chain-marks.jsonl"))} scored today`);
   setInterval(() => {
     try {
       radar.refresh((mint) => {
