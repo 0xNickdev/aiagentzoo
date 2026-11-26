@@ -383,7 +383,7 @@ export class Adopter {
   }
 
   private getTx(sig: string): Promise<Tx | null> {
-    return this.rpc<Tx>("getTransaction", [sig, { encoding: "json", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
+    return this.rpc<Tx>("getTransaction", [sig, { encoding: "json", maxSupportedTransactionVersion: 1, commitment: "confirmed" }]);
   }
 
   /**
