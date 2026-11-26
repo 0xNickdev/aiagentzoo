@@ -38,8 +38,17 @@ export interface FollowedSwap {
   tx: string | null;
 }
 
+/** The creator's cut where an event does not say it: pump.fun's curve takes 0.30%, PumpSwap's lowest tier 0.05%. */
+const CURVE_CREATOR_FEE = 0.003;
+const POOL_CREATOR_FEE = 0.0005;
+
 /** What the chain says about a token, as of now. */
 export interface ChainFacts {
+  /**
+   * Creator fees paid on this coin in SOL, from pump.fun's trade events: curve and PumpSwap pool. estimated: some
+   * events were too old to carry the fee. partial: adopted, so only the trades read back or seen live.
+   */
+  creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean };
   /** The odds model on this launch (see odds.ts): chance it runs past 85 SOL cap after minute five, chance the dev still dumps. */
   odds?: { run: number; devDumps: number | null; vsAverage: number } | null;
   /** Minutes since launch. */
@@ -303,6 +312,11 @@ interface Tracked {
   bundlePeak?: number;
   /** Which timed readings were taken of it: 1 for five minutes in, 2 for twenty. */
   marked?: number;
+  /** Creator fees its trades paid, in SOL: on the curve and in the PumpSwap pool, from pump.fun's events. */
+  cfCurve?: number;
+  cfPool?: number;
+  /** Some of it estimated from volume: events too old to carry the fee. */
+  cfEst?: boolean;
   /** The block being read and who bought in it. Not saved. */
   bslot?: number;
   bpend?: Map<string, { tok: number; sol: number }>;
@@ -840,6 +854,11 @@ export class PumpTape {
     }
     this.seen.trades += 1;
     if (!this.quiet) this.count(now, "trades");
+    // pump.fun's own curve, paired with SOL: the creator's cut, as the event says or estimated from the trade.
+    if (!t.quote && !t.venue && !ev.venue) {
+      if (ev.creatorFee === undefined) t.cfEst = true;
+      t.cfCurve = (t.cfCurve ?? 0) + (ev.creatorFee ?? ev.sol * CURVE_CREATOR_FEE);
+    }
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     if (!t.quote) this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
@@ -1080,6 +1099,8 @@ export class PumpTape {
     if (tx && this.pinned.has(t.mint)) t.lastTx = tx;
     this.seen.trades += 1;
     if (!this.quiet) this.count(now, "trades");
+    if (ev.creatorFee === undefined) t.cfEst = true;
+    t.cfPool = (t.cfPool ?? 0) + (ev.creatorFee ?? ev.sol * POOL_CREATOR_FEE);
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     // Trades on a side pool still count, but only the main pool says how much SOL is left.
@@ -1697,6 +1718,17 @@ export class PumpTape {
       ammSolIn: round(t.ammSolIn),
       ammSolOut: round(t.ammSolOut),
       ...(t.drained ? { drained: true } : {}),
+      ...(t.cfCurve !== undefined || t.cfPool !== undefined
+        ? {
+            creatorFees: {
+              total: Math.round(((t.cfCurve ?? 0) + (t.cfPool ?? 0)) * 1e6) / 1e6,
+              curve: Math.round((t.cfCurve ?? 0) * 1e6) / 1e6,
+              pool: Math.round((t.cfPool ?? 0) * 1e6) / 1e6,
+              ...(t.cfEst ? { estimated: true } : {}),
+              ...(t.adopted ? { partial: true } : {}),
+            },
+          }
+        : {}),
       ...this.earlyFacts(t),
       ...(light ? {} : { ...this.crewOf(t, now), crewHeld: this.crewHeldOf(t) }),
     };

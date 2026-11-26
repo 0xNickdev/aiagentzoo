@@ -196,6 +196,8 @@ export function SetupSection(x: Ctx) {
 
 /* ------------------------------------------------------------------ bundles */
 
+const sol3 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: n >= 10 ? 1 : 3 });
+
 export function BundlesSection({ r }: Ctx) {
   const f = r.check.facts;
   const may = !!f?.mayhem;
@@ -218,6 +220,16 @@ export function BundlesSection({ r }: Ctx) {
             [t("Bought in bundles"), `${f.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f.bundlesSince ? ` · ${t("since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`, (f.bundlers ?? 0) >= 10 && (f.bundlersPeakPct ?? 0) >= 30 && !may ? "d" : ""],
             f.bundlers ? [t("Bundlers hold now · at most"), `${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`, (f.bundlersPeakPct ?? 0) >= 30 && !may ? "d" : ""] : null,
             f.bundledSol ? [t("{u} through bundles", { u: unitOf(r.mint) }), f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })] : null,
+            f.creatorFees
+              ? [
+                  t("Creator fees on this coin"),
+                  <span title={t("curve {c} SOL · pool {p} SOL", { c: sol3(f.creatorFees.curve), p: sol3(f.creatorFees.pool) })}>
+                    {sol3(f.creatorFees.total)} SOL
+                    {f.creatorFees.estimated || f.creatorFees.partial ? <small> · {[f.creatorFees.estimated && t("partly estimated"), f.creatorFees.partial && t("since we started reading it")].filter(Boolean).join(" · ")}</small> : null}
+                  </span>,
+                ]
+              : null,
+            f.creatorFees && f.creatorFees.curve && f.creatorFees.pool ? ["", t("curve {c} SOL · pool {p} SOL", { c: sol3(f.creatorFees.curve), p: sol3(f.creatorFees.pool) })] : null,
             f.bundleWallets ? [t("Launch block"), t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 }), (f.bundleSharePct ?? 0) >= 15 ? "d" : ""] : null,
             f.top5BuyingPct != null && [t("Bought by the top 5"), `${f.top5BuyingPct}%`, f.top5BuyingPct >= 70 ? "d" : ""],
           ]}

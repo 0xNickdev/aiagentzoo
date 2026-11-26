@@ -53,12 +53,13 @@ export type PumpEvent =
       signers?: string[];
     }
   /** venue: set on a trade in a Raydium pool, which counts only for a coin launched there. */
-  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[]; venue?: Venue }
+  /** creatorFee: SOL the trade paid the coin's creator, from pump.fun's event; absent on older events and other launchpads. */
+  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[]; venue?: Venue; creatorFee?: number }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
   | { kind: "pool"; mint: string; pool: string }
   /** A buy or sell on a PumpSwap pool. Its event names only the pool, so the tape maps it back to a token. */
-  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number; signers?: string[] };
+  | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number; signers?: string[]; creatorFee?: number };
 
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -200,7 +201,13 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
           r.u64(); // virtual tokens
           curveSol = Number(r.u64()) / LAMPORTS; // real sol in the curve
         }
-        out.push({ kind: "trade", mint: base58(mint), sol, tokens, isBuy, user: base58(user), ts, curveSol });
+        // Newer events go on: real tokens, fee recipient, fee bps, fee, creator, creator fee bps, creator fee.
+        let creatorFee: number | undefined;
+        if (curveSol !== null && r.left() >= 8 + 32 + 16 + 32 + 16) {
+          r.skip(8 + 32 + 16 + 32 + 8);
+          creatorFee = Number(r.u64()) / LAMPORTS;
+        }
+        out.push({ kind: "trade", mint: base58(mint), sol, tokens, isBuy, user: base58(user), ts, curveSol, ...(creatorFee !== undefined ? { creatorFee } : {}) });
       } else if (head.equals(DISC.complete)) {
         r.key(); // user
         out.push({ kind: "complete", mint: base58(r.key()) });
@@ -226,7 +233,13 @@ export function parsePumpLogs(logs: readonly string[]): PumpEvent[] {
         const isBuy = head.equals(DISC.ammBuy);
         const [reserve, moved] = [f[5]!, f[11]!];
         const poolSol = Math.max(0, Number(isBuy ? reserve + moved : reserve - moved) / LAMPORTS);
-        out.push({ kind: "swap", pool, isBuy, tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol, user, ts });
+        // Then four token accounts and the fee recipient's, the coin creator, its fee bps and the fee it was paid.
+        let creatorFee: number | undefined;
+        if (r.left() >= 4 * 32 + 32 + 16) {
+          r.skip(4 * 32 + 32 + 8);
+          creatorFee = Number(r.u64()) / LAMPORTS;
+        }
+        out.push({ kind: "swap", pool, isBuy, tokens: Number(f[0]) / TOKEN_UNITS, sol: Number(f[12]) / LAMPORTS, poolSol, user, ts, ...(creatorFee !== undefined ? { creatorFee } : {}) });
       }
     } catch {
       // A truncated or unfamiliar event: skip it.

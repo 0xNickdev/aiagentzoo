@@ -46,6 +46,7 @@ export function writeMarks(file: string, now = Date.now()): number {
       top5BuyingPct: f?.top5BuyingPct ?? null,
       earlyHeldPct: f?.earlyHeldPct ?? null,
       churnPct: f?.churnPct ?? null,
+      creatorFeesSol: f?.creatorFees?.total ?? null,
     })}\n`;
     n++;
   }

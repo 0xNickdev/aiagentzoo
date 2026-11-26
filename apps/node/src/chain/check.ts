@@ -118,6 +118,8 @@ export interface TokenCheck {
     bundlersHeldPct: number | null;
     bundlersPeakPct: number | null;
     bundledSol: number | null;
+    /** Creator fees paid on this coin in SOL (curve + PumpSwap), from pump.fun's events; estimated: partly from volume; partial: adopted. */
+    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean };
     /** Older than the bundle reader: bundles counted only from this time (ms). */
     bundlesSince: number | null;
     top5BuyingPct: number | null;
@@ -572,6 +574,7 @@ export function checkToken(
       bundlersHeldPct: pct(f.bundlersHeld ?? null),
       bundlersPeakPct: pct(f.bundlersPeak ?? null),
       bundledSol: f.bundledSol ?? null,
+      ...(f.creatorFees ? { creatorFees: f.creatorFees } : {}),
       bundlesSince: f.bundlesSince ?? null,
       top5BuyingPct: pct(f.top5Share),
       graduated: f.graduated,

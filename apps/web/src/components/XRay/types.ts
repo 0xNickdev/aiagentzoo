@@ -75,6 +75,8 @@ export interface Check {
     bundlersHeldPct?: number | null;
     bundlersPeakPct?: number | null;
     bundledSol?: number | null;
+    /** Creator fees paid on this coin in SOL, from pump.fun's events. */
+    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean };
     bundlesSince?: number | null;
     /** Share of all buying the five largest buyers did. */
     top5BuyingPct?: number | null;
