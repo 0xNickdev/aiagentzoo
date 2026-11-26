@@ -376,7 +376,7 @@ async function metadataUri(mint: string): Promise<string | null> {
   return raw ? uriOfMetaplex(Buffer.from(raw[0], "base64")) : null;
 }
 
-async function metadataOf(mint: string): Promise<Record<string, unknown> | null> {
+export async function metadataOf(mint: string): Promise<Record<string, unknown> | null> {
   const uri = await metadataUri(mint);
   if (!uri) return null;
   const cid = /(?:\/ipfs\/|^ipfs:\/\/)([A-Za-z0-9]{40,80})/.exec(uri)?.[1];

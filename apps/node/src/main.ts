@@ -38,8 +38,9 @@ process.on("unhandledRejection", (reason) => console.error(`unhandled rejection:
 const config = loadConfig();
 const db = openDatabase(join(config.dataDir, "node.db"));
 
-// No model: every kept feature runs on the chain, rules and arithmetic (2026-11-20). OPENAI_API_KEY, ANTHROPIC_API_KEY and
-// ZOO_MODEL are no longer read.
+// No model: every kept feature runs on the chain, rules and arithmetic (2026-11-20). OPENAI_API_KEY and ZOO_MODEL are no
+// longer read. The one exception is the holders' on-request code check on the marsh (claims/build.ts), which reads
+// ANTHROPIC_API_KEY and ZOO_BUILD_MODEL there only.
 
 // Free by default: no feed, no stake.
 // ZOO_FEED_MODE=credits switches on the old internal credit ledger, kept for the agent network's tests.
