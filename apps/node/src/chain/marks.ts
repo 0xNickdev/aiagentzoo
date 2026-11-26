@@ -15,7 +15,13 @@ const MAX_BYTES = 1200 * 1024 * 1024;
  * These lines can: one JSON line per reading, to be set against where the coin stood hours later. The verdict is the
  * one the live feed shows (chain facts only, without holders, funders or socials).
  */
-export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow, info: { symbol: string; skip: boolean }) => void): number {
+export function writeMarks(
+  file: string,
+  now = Date.now(),
+  onRow?: (row: MarkRow, info: { symbol: string; skip: boolean }) => void,
+  /** Extra fields for a reading, added at the end of the line; for training later, never read by the frozen models. */
+  extra?: (mint: string, min: number, createdAt: number, now: number) => Record<string, unknown> | null,
+): number {
   const stream = { live: tape.live(now), lastEventSecAgo: Math.round((now - tape.lastEventAt) / 1000) };
   // A reading taken while the stream is down would describe the outage, not the coin.
   if (!stream.live) return 0;
@@ -53,6 +59,13 @@ export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow
       solOut: t.facts.solOut ?? null,
       ...tape.buyShape(mint),
     };
+    // Added 26 Nov, after everything else: who called it by this reading (5-minute line only).
+    try {
+      const more = extra?.(mint, min, t.createdAt, now);
+      if (more) Object.assign(row, more);
+    } catch {
+      /* the mark stands without it */
+    }
     const line = JSON.stringify(row);
     lines += `${line}\n`;
     // The runner radar reads the same line the trial grades (parsed back, as the trial reads it); a failure there never costs the reading.

@@ -42,6 +42,8 @@ export interface Thesis {
 }
 export interface Calls {
   callouts: Callout[];
+  /** Callers with a good Caller Truth record who called it by fifteen minutes after launch, and the node's line for them. */
+  early?: { n: number; good: number; line: string | null } | null;
   theses: Thesis[];
   thesesStatus: "ok" | "off" | "budget" | "error" | "idle";
 }

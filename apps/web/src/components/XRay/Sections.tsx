@@ -346,6 +346,7 @@ export function CallsSection({ r, calls, market, access, unlock }: Ctx) {
       <Pn span="x-s7" title={t("pump.fun callouts")} meta={t("each caller set against the chain")}>
         {!total && <p className="x-note">{t("No pump.fun callouts or FOMO theses on this coin yet.")}</p>}
         {total > 0 && !calls.callouts.length && <p className="x-note">{t("No pump.fun callouts on this coin yet.")}</p>}
+        {calls.early?.line && <p className="x-note">{calls.early.line}</p>}
         <ul className="x-list">
           {callouts.map((c) => {
             const inside = insideOf(r, c.wallet);

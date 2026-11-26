@@ -23,9 +23,10 @@ import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
 import { writeMarks } from "./chain/marks.ts";
+import { markField } from "./chain/earlycalls.ts";
 import { curveCap, Radar } from "./chain/radar.ts";
 import { RadarV2, type V2Row } from "./chain/radar-v2.ts";
-import { startCallers } from "./routes/calls.ts";
+import { earlyCallsAt, startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
 import { notifyGraded } from "./notify.ts";
@@ -191,6 +192,11 @@ if (config.role === "north") {
         } catch (error) {
           console.log(`[${config.id}] radar v2 not scored: ${(error as Error).message}`);
         }
+      }, (mint, min, createdAt, now) => {
+        // The callers who called it by the five-minute reading, and how many have a good record: kept for training, not scored.
+        if (min !== 5) return null;
+        const e = earlyCallsAt(mint, createdAt, now);
+        return e ? { earlyCalls: markField(e) } : null;
       });
     } catch (error) {
       console.log(`[${config.id}] marks not written: ${(error as Error).message}`);

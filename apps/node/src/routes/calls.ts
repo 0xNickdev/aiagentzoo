@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { CalloutFeed, FomoTheses } from "../chain/calls.ts";
 import { CallerLedger, FOLLOW_MS, MIN_SETTLED } from "../chain/callers.ts";
 import { solUsd } from "../chain/price.ts";
+import { EARLY_CALL_MIN, earlyCallLine, earlyCallsOf, type EarlyCalls, READING_MIN } from "../chain/earlycalls.ts";
 import { tape } from "../chain/pump.ts";
 
 const MINT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -45,6 +46,14 @@ function sources(): { feed: CalloutFeed | null; fomo: FomoTheses; ledger: Caller
 /** The node that reads the chain follows calls from its first minute, not from the first reader. */
 export function startCallers(): void {
   sources();
+}
+
+/** Calls on a coin made by `until`, judged by each caller's record; null when the callouts feed is off. */
+export function earlyCallsAt(mint: string, createdAt: number, until: number): EarlyCalls | null {
+  const s = sources();
+  if (!s.feed || !s.ledger) return null;
+  const ledger = s.ledger;
+  return earlyCallsOf(s.feed.of(mint), createdAt, until, (w) => ledger.recordOf(w));
 }
 
 const SOURCE = "pump.fun callouts, relayed by t.me/pumpfun_lp";
@@ -100,9 +109,13 @@ export async function callRoutes(_ctx: RouteContext, req: IncomingMessage, res: 
     const r = c.wallet ? s.ledger?.recordOf(c.wallet) : null;
     return { ...c, walletBoughtAt: b?.at ?? null, walletSoldOut: b ? b.soldOut : null, walletExitAt: b?.exitAt ?? null, walletSeen: !!b, record: r && r.settled >= MIN_SETTLED ? r : null };
   });
+  // Called early: by the 5-minute reading or within EARLY_CALL_MIN minutes of it, by callers with a good record.
+  const createdAt = tape.token(mint)?.createdAt ?? null;
+  const early = createdAt !== null && s.feed && s.ledger ? earlyCallsOf(s.feed.of(mint), createdAt, createdAt + (READING_MIN + EARLY_CALL_MIN) * 60_000, (w) => s.ledger!.recordOf(w)) : null;
   return json(res, 200, {
     mint,
     callouts,
+    ...(early ? { early: { n: early.n, good: early.good, line: earlyCallLine(early), calls: early.calls.filter((c) => c.good) } } : {}),
     calloutsSource: s.feed ? SOURCE : "off",
     theses: theses.theses,
     thesesStatus: theses.status,
