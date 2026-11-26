@@ -149,6 +149,11 @@ export class Adopter {
     this.log = o.log ?? (() => {});
   }
 
+  /** After a restart: tries again to read the past trades of adopted coins that came back partial. */
+  async resume(): Promise<void> {
+    for (const c of this.tape.unreadAdopted()) await this.readBack(c.mint, c.pool, c.venue, null, null, 0).catch(() => {});
+  }
+
   /** Where this coin stands, without starting anything. */
   state(mint: string, now = Date.now()): AdoptState | null {
     if (this.tape.has(mint) && this.current?.mint !== mint) return { state: "tracked" };

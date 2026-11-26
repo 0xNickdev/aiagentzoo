@@ -542,6 +542,13 @@ export class PumpTape {
     return out.sort((a, b) => a.createdAt - b.createdAt);
   }
 
+  /** Adopted coins whose past trades were never read, for a retry after a restart. */
+  unreadAdopted(): Array<{ mint: string; pool: string; venue: Venue }> {
+    const out: Array<{ mint: string; pool: string; venue: Venue }> = [];
+    for (const t of this.tokens.values()) if (t.adopted && !t.backfillOk && t.rayPool && t.venue) out.push({ mint: t.mint, pool: t.rayPool, venue: t.venue });
+    return out;
+  }
+
   /** Called on every moment, launches included: the long-memory store listens here. Must stay cheap. */
   onMoment?: (e: PulseEvent) => void;
 

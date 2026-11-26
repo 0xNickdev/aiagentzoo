@@ -143,6 +143,7 @@ if (config.role === "north") {
   tape.onPoolLaunch = (mint) => poolMeta.add(mint);
   // A coin asked about that launched before the stream watched: read from the chain once, then followed live.
   adoption.current = new Adopter(tape, { rpc: (method, params) => rpcRead(method, params), log: (m) => console.log(`[${config.id}] ${m}`) });
+  setTimeout(() => void adoption.current?.resume().catch(() => {}), 30_000).unref();
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
   // Every launch's first-second and launch-block wallets, traced to their funder a minute and a half in.
