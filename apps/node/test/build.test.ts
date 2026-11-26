@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { IncomingMessage } from "node:http";
 import { test } from "node:test";
-import { CallBudget, checkBuild, dependenciesOf, factsOf, parseVerdict, pickFiles, promptOf, scoreOf, SYSTEM, type BuildCheck, type BuildDeps, type TreeEntry } from "../src/claims/build.ts";
+import { CallBudget, checkBuild, dependenciesOf, entryPointsOf, factsOf, parseVerdict, pickFiles, rankFiles, rerankByImports, promptOf, scoreOf, SYSTEM, type BuildCheck, type BuildDeps, type TreeEntry } from "../src/claims/build.ts";
 import type { Claims } from "../src/claims/claims.ts";
 import { buildCaller } from "../src/routes/claims.ts";
 
@@ -56,11 +56,46 @@ function world(over: { llm?: BuildDeps["llm"]; tree?: TreeEntry[]; head?: number
   return { d, calls, mem };
 }
 
+test("an eliza-like monorepo sends the runtime and entry points, not android tests or plugin shells", () => {
+  const tree: TreeEntry[] = [];
+  const f = (path: string, size = 6_000) => tree.push({ path, type: "blob", size });
+  for (let i = 0; i < 30; i++) f(`packages/os/android/app-update/src/androidTest/java/ai/eliza/agent/AgentContract${i}.java`);
+  for (let i = 0; i < 10; i++) f(`packages/plugin-x/android/src/main/kotlin/ai/eliza/AgentModel${i}.kt`);
+  for (let i = 0; i < 10; i++) f(`packages/core/src/__tests__/agent${i}.test.ts`);
+  for (let i = 0; i < 6; i++) f(`examples/agent-chat/src/agent${i}.ts`);
+  f("docs/agent/memory.ts");
+  f("scripts/build-agent.ts");
+  f("packages/core/vitest.config.ts");
+  f("packages/core/src/index.ts");
+  f("packages/core/src/runtime.ts", 30_000);
+  for (let i = 0; i < 8; i++) f(`packages/core/src/agent/step${i}.ts`);
+  f("packages/core/src/memory.ts");
+  f("packages/cli/src/main.ts");
+  f("packages/server/src/server.ts");
+  f("packages/plugin-solana/src/index.ts");
+  f("packages/plugin-solana/src/actions/swap.ts");
+  const manifests = [{ path: "packages/cli/package.json", text: JSON.stringify({ bin: { eliza: "./dist/main.js" } }) }];
+  const picked = pickFiles(tree, "Autonomous AI agent built on elizaOS that trades on Solana", manifests).map((e) => e.path);
+  for (const p of ["packages/core/src/index.ts", "packages/core/src/runtime.ts", "packages/cli/src/main.ts", "packages/server/src/server.ts"]) assert.ok(picked.includes(p), p);
+  assert.ok(!picked.some((p) => /androidTest|android\/|__tests__|\.test\.|examples\/|docs\/|scripts\/|config\./.test(p)), picked.join(","));
+  assert.ok(picked.filter((p) => p.startsWith("packages/core/src/agent/")).length <= 3);
+  // A phone claim lets the platform shell back in.
+  assert.ok(pickFiles(tree, "a mobile android app", manifests).some((p) => p.path.includes("/android/") && !p.path.includes("androidTest")));
+  assert.ok(entryPointsOf(manifests).has("packages/cli/src/main"));
+});
+
+test("files that import AI or Solana libraries move up after reading", () => {
+  const tree: TreeEntry[] = Array.from({ length: 40 }, (_, i): TreeEntry => ({ path: `src/m${String(i).padStart(2, "0")}/x.ts`, type: "blob", size: 5_000 }));
+  const ranked = rankFiles(tree, "");
+  const bodies = new Map(tree.map((e) => [e.path, e.path === "src/m39/x.ts" ? 'import OpenAI from "openai";' : "export const a = 1;"]));
+  assert.equal(rerankByImports(ranked, bodies)[0]!.path, "src/m39/x.ts");
+});
+
 test("files are ranked by the claims and vendored code, lockfiles and built bundles are never sent", () => {
   const picked = pickFiles(TREE, "an AI agent that trades on Jupiter").map((e) => e.path);
   assert.deepEqual(picked.slice(0, 2).sort(), ["src/agent/brain.ts", "src/trade/jupiter.ts"]);
   assert.ok(!picked.some((p) => p.includes("node_modules") || p.includes("dist/") || p.endsWith(".json")));
-  assert.equal(picked.at(-1), "test/agent.test.ts");
+  assert.ok(!picked.includes("test/agent.test.ts"));
   const many = Array.from({ length: 100 }, (_, i): TreeEntry => ({ path: `src/f${i}.ts`, type: "blob", size: 9_000 }));
   const capped = pickFiles(many, "");
   assert.ok(capped.length * 9_000 <= 72_000 && capped.length > 0);

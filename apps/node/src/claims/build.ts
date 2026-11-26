@@ -130,35 +130,149 @@ const TOPICS: Array<{ claim: RegExp; path: RegExp }> = [
   { claim: /\b(app|dashboard|website|platform|analytics|tracker|scanner)/i, path: /(app|page|server|api|route|dashboard|scan|track)/i },
 ];
 
-/** The files worth sending, best first, within the byte and count caps. */
-export function pickFiles(tree: TreeEntry[], claimsText: string): TreeEntry[] {
+/** Paths that are never the product: tests, examples, docs, tooling, generated code. */
+const NOT_PRODUCT = /(^|\/)(tests?|__tests__|__mocks__|androidTest|testFixtures|spec|specs|e2e|fixtures?|mocks?|examples?|samples?|demos?|docs?|documentation|scripts|tools|benchmarks?|bench|generated|gen|migrations?|\.github|\.storybook|stories|storybook)(\/|$)|\.(test|spec|stories|e2e)\.[a-z]+$|_test\.(go|py)$|(^|\/)test_[^/]+\.py$|\.d\.ts$|\.generated\.|(^|\/)(jest|vitest|vite|webpack|rollup|babel|eslint|prettier|tailwind|postcss|next|nuxt|svelte|astro|tsup|playwright|karma|metro|hardhat|truffle)\.config\.[a-z]+$/i;
+/** Platform shells: only worth reading when the claims are about a phone app. */
+const SHELL = /(^|\/)(android|ios|native|electron|tauri|src-tauri|capacitor|cordova|macos|windows|linux)(\/|$)|\.(java|kt|swift|m|mm)$/i;
+const MOBILE_CLAIM = /\b(mobile|android|ios|iphone|phone app|app store|play store|desktop app)\b/i;
+const CORE_DIR = /(^|\/)(core|runtime|agents?|engine|kernel|server|bot|brain|program|programs)(\/|$)/i;
+const ENTRY_NAME = /^(main|index|app|server|bot|agent|runtime|lib|mod|cli)\.[a-z]+$/;
+/** Imports of libraries a claim could be about (AI or Solana), for re-ranking read files. */
+const LIB_IMPORT = /(from\s+["']|require\(\s*["']|import\s+["']|^\s*(?:import|from)\s+|^\s*use\s+|extern crate\s+)(openai|@anthropic-ai|anthropic|langchain|@langchain|llama_?index|@elizaos|@ai16z|@ai-sdk|ai["']|ollama|groq|@google\/gen|google\.generativeai|@solana|solana_program|solana_sdk|anchor_lang|anchor_spl|@coral-xyz|@project-serum|@jup-ag|@raydium-io|@orca-so|@meteora-ag|@metaplex|solders|anchorpy|solana)/im;
+export const PER_DIR_MAX = 3;
+export const CANDIDATES_MAX = 44;
+
+/** Entry points a manifest names: package.json main/module/bin/exports, Cargo [lib]/[[bin]] paths, pyproject scripts. */
+export function entryPointsOf(manifests: Array<{ path: string; text: string }>): Set<string> {
+  const out = new Set<string>();
+  const add = (dir: string, rel: string) => {
+    const r = rel.replace(/^\.\//, "").replace(/^\//, "");
+    const p = dir ? `${dir}/${r}` : r;
+    out.add(p.toLowerCase());
+    // A built path (dist/index.js) usually comes from src/index.ts.
+    const src = p.replace(/(^|\/)(dist|build|lib|out)\//, "$1src/").replace(/\.(m|c)?js$/, "");
+    out.add(src.toLowerCase());
+  };
+  for (const m of manifests) {
+    const dir = m.path.includes("/") ? m.path.slice(0, m.path.lastIndexOf("/")) : "";
+    const name = m.path.split("/").pop()!.toLowerCase();
+    try {
+      if (name === "package.json") {
+        const j = JSON.parse(m.text) as Record<string, unknown>;
+        const walk = (v: unknown, depth = 0): void => {
+          if (depth > 4) return;
+          if (typeof v === "string") add(dir, v);
+          else if (v && typeof v === "object") for (const x of Object.values(v as Record<string, unknown>)) walk(x, depth + 1);
+        };
+        for (const k of ["main", "module", "bin", "exports", "source"]) walk(j[k]);
+      } else if (name === "cargo.toml") {
+        for (const x of m.text.matchAll(/^\s*path\s*=\s*["']([^"']+)["']/gm)) add(dir, x[1]!);
+        add(dir, "src/lib.rs");
+        add(dir, "src/main.rs");
+      } else if (name === "pyproject.toml") {
+        for (const x of m.text.matchAll(/^\s*[A-Za-z0-9_.-]+\s*=\s*["']([A-Za-z0-9_.]+):[A-Za-z0-9_]+["']/gm)) {
+          const mod = x[1]!.replace(/\./g, "/");
+          add(dir, `${mod}.py`);
+          add(dir, `${mod}/__init__.py`);
+          add(dir, `src/${mod}.py`);
+        }
+      }
+    } catch {
+      // A broken manifest names nothing.
+    }
+  }
+  return out;
+}
+
+function stem(p: string): string {
+  return p.replace(/\.[a-z]+$/, "");
+}
+
+/** Every readable source file with its score, best first. */
+export function rankFiles(tree: TreeEntry[], claimsText: string, manifests: Array<{ path: string; text: string }> = []): Array<{ e: TreeEntry; s: number }> {
   // A path word counts from its start ("trader" is trading, "index" is not a dex).
   const topics = TOPICS.filter((t) => t.claim.test(claimsText)).map((t) => new RegExp(`(^|[/_.\\-])${t.path.source}`, "i"));
-  const scored = tree
-    .filter((e) => e.type === "blob" && CODE.test(e.path) && !VENDORED.test(e.path) && !LOCK.test(e.path) && !MINIFIED.test(e.path) && (e.size ?? 0) > 40 && (e.size ?? 0) < 400_000)
+  const mobile = MOBILE_CLAIM.test(claimsText);
+  const entries = entryPointsOf(manifests);
+  const entryStems = new Set([...entries].map(stem));
+  const anchor = tree.some((e) => /(^|\/)Anchor\.toml$/i.test(e.path));
+  return tree
+    .filter((e) => e.type === "blob" && CODE.test(e.path) && !VENDORED.test(e.path) && !LOCK.test(e.path) && !MINIFIED.test(e.path) && !NOT_PRODUCT.test(e.path) && (e.size ?? 0) > 40 && (e.size ?? 0) < 400_000)
+    .filter((e) => mobile || !SHELL.test(e.path))
     .map((e) => {
       const p = e.path.toLowerCase();
       const name = p.split("/").pop()!;
+      const size = e.size ?? 0;
       let s = 0;
-      for (const t of topics) if (t.test(p)) s += 6;
+      // Claim words in the path are one signal, capped so they cannot drown the rest.
+      let hits = 0;
+      for (const t of topics) if (t.test(p)) hits += 1;
+      s += Math.min(hits, 2) * 5;
+      if (entries.has(p) || entryStems.has(stem(p))) s += 8;
       if (/^(src|lib|app|programs|server|bot|agent|core|packages\/[^/]+\/src)\//.test(p)) s += 3;
-      if (/^(main|index|app|server|bot|agent|lib|mod)\.[a-z]+$/.test(name)) s += 3;
-      if (/(test|spec|mock|fixture|example|demo|stories)/.test(p)) s -= 4;
-      if (/(config|\.d\.ts$|types?\.(ts|js)$|constants?)/.test(p)) s -= 2;
+      if (ENTRY_NAME.test(name)) s += 3;
+      if (/(^|\/)src\/(index|main|lib|app|server)\.[a-z]+$/.test(p) || /(^|\/)(lib|main)\.rs$/.test(p)) s += 4;
+      if (CORE_DIR.test(p)) s += 3;
+      if (/(^|\/)programs\/[^/]+\/src\/lib\.rs$/.test(p)) s += anchor ? 10 : 6;
+      if (/(config|types?\.(ts|js)$|constants?)/.test(p)) s -= 3;
+      // Real source files beat stubs; huge files are mostly cut off anyway.
+      if (size < 400) s -= 3;
+      else if (size < 1_500) s -= 1;
+      else if (size <= 40_000) s += 1.5;
+      if (mobile && SHELL.test(p)) s += 2;
       s -= p.split("/").length * 0.3;
       return { e, s };
     })
     .sort((a, b) => b.s - a.s || a.e.path.localeCompare(b.e.path));
+}
+
+/** The package a path belongs to in a monorepo (packages/x, apps/x), or its top folder. */
+function packageOf(p: string): string {
+  const parts = p.split("/");
+  if (parts.length > 2 && /^(packages|apps|crates|programs|services|libs|plugins|modules)$/i.test(parts[0]!)) return `${parts[0]}/${parts[1]}`;
+  return parts.length > 1 ? parts[0]! : "";
+}
+
+/** Takes from a ranked list with the caps, at most PER_DIR_MAX per folder, spread across packages. */
+export function selectFiles(ranked: Array<{ e: TreeEntry; s: number }>, max = FILES_MAX, maxBytes = FILES_MAX_BYTES): TreeEntry[] {
   const out: TreeEntry[] = [];
+  const perDir = new Map<string, number>();
+  const perPkg = new Map<string, number>();
+  const pkgs = new Set(ranked.map((r) => packageOf(r.e.path)));
+  // One package may take at most a share that leaves room for others (never below 6).
+  const pkgMax = pkgs.size > 1 ? Math.max(6, Math.ceil(max / Math.min(pkgs.size, 4))) : max;
   let bytes = 0;
-  for (const { e } of scored) {
-    if (out.length >= FILES_MAX) break;
-    const take = Math.min(e.size ?? FILE_MAX_BYTES, FILE_MAX_BYTES);
-    if (bytes + take > FILES_MAX_BYTES) continue;
-    out.push(e);
-    bytes += take;
+  for (const pass of [0, 1]) {
+    for (const { e } of ranked) {
+      if (out.length >= max) break;
+      if (out.includes(e)) continue;
+      const dir = e.path.includes("/") ? e.path.slice(0, e.path.lastIndexOf("/")) : "";
+      const pkg = packageOf(e.path);
+      if ((perDir.get(dir) ?? 0) >= PER_DIR_MAX) continue;
+      if (pass === 0 && (perPkg.get(pkg) ?? 0) >= pkgMax) continue;
+      const take = Math.min(e.size ?? FILE_MAX_BYTES, FILE_MAX_BYTES);
+      if (bytes + take > maxBytes) continue;
+      out.push(e);
+      bytes += take;
+      perDir.set(dir, (perDir.get(dir) ?? 0) + 1);
+      perPkg.set(pkg, (perPkg.get(pkg) ?? 0) + 1);
+    }
   }
   return out;
+}
+
+/** The files worth sending, best first, within the byte and count caps. */
+export function pickFiles(tree: TreeEntry[], claimsText: string, manifests: Array<{ path: string; text: string }> = []): TreeEntry[] {
+  return selectFiles(rankFiles(tree, claimsText, manifests));
+}
+
+/** After reading candidates: files importing AI or Solana libraries move up, then the caps apply again. */
+export function rerankByImports(ranked: Array<{ e: TreeEntry; s: number }>, bodies: Map<string, string>): TreeEntry[] {
+  const again = ranked
+    .filter((r) => bodies.has(r.e.path))
+    .map((r) => ({ e: r.e, s: r.s + (LIB_IMPORT.test(bodies.get(r.e.path)!.slice(0, 6_000)) ? 5 : 0) }))
+    .sort((a, b) => b.s - a.s || a.e.path.localeCompare(b.e.path));
+  return selectFiles(again);
 }
 
 const AI_LIBS = /^(openai|@anthropic-ai\/sdk|anthropic|langchain|@langchain\/.+|langgraph|llamaindex|llama-index.*|llama_index.*|@ai16z\/.+|@elizaos\/.+|elizaos|ai|@ai-sdk\/.+|cohere.*|@google\/generative-ai|google-generativeai|@google\/genai|google-genai|transformers|torch|tensorflow|ollama|groq-sdk|groq|mistralai|@mistralai\/.+|replicate|together-ai|together|crewai|autogen.*|pyautogen|async-openai|openai-api-rs|rig-core|langchain-rust|go-openai|github\.com\/sashabaranov\/go-openai|@modelcontextprotocol\/sdk|mcp|solana-agent-kit|@goat-sdk\/.+)$/i;
@@ -383,8 +497,13 @@ async function run(mint: string, caller: string, c: Claims, sha: string, d: Buil
   const facts = factsOf(tree, manifests, readme ?? "", languages, c.github);
   if (!claimsText.trim() && !readme) return { error: "the token claims nothing we could read to check against", state: "nothing-claimed" };
 
-  const picked = pickFiles(tree, `${claimsText}\n${readme ?? ""}`);
-  const bodies = await Promise.all(picked.map((e) => raw(e.path)));
+  const ranked = rankFiles(tree, `${claimsText}\n${readme ?? ""}`, manifests);
+  const candidates = selectFiles(ranked, CANDIDATES_MAX, CANDIDATES_MAX * FILE_MAX_BYTES);
+  const candidateBodies = await Promise.all(candidates.map((e) => raw(e.path)));
+  const read = new Map<string, string>();
+  candidates.forEach((e, i) => candidateBodies[i] && read.set(e.path, candidateBodies[i]!));
+  const picked = rerankByImports(ranked, read);
+  const bodies = picked.map((e) => read.get(e.path) ?? null);
   const files: Array<{ path: string; text: string }> = [];
   if (readmeEntry && readme) files.push({ path: readmeEntry.path, text: readme });
   for (const mf of manifests) files.push({ path: mf.path, text: mf.text.slice(0, 4_000) });
