@@ -23,6 +23,7 @@ import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
 import { writeMarks } from "./chain/marks.ts";
 import { curveCap, Radar } from "./chain/radar.ts";
+import { RadarV2, type V2Row } from "./chain/radar-v2.ts";
 import { startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
@@ -182,7 +183,14 @@ if (config.role === "north") {
   // How each launch stood one, two, three, five and twenty minutes in (every 10 s, so the early ones land on time), and the verdict it had then: kept to test rules against later.
   setInterval(() => {
     try {
-      writeMarks(join(config.dataDir, "chain-marks.jsonl"), Date.now(), (row, info) => void radar?.consider(row, info));
+      writeMarks(join(config.dataDir, "chain-marks.jsonl"), Date.now(), (row, info) => {
+        radar?.consider(row, info);
+        try {
+          radarV2?.consider(row as unknown as V2Row, info);
+        } catch (error) {
+          console.log(`[${config.id}] radar v2 not scored: ${(error as Error).message}`);
+        }
+      });
     } catch (error) {
       console.log(`[${config.id}] marks not written: ${(error as Error).message}`);
     }
@@ -216,6 +224,14 @@ if (radar) {
     }
   }, 60_000).unref();
 }
+// Radar v2 on paper: the 20-minute graduation model, picks and their real entry cap in radar-v2.jsonl, shown nowhere.
+const radarV2 = config.role === "north" && history
+  ? new RadarV2(join(config.dataDir, "radar-v2.jsonl"), history.db, (mint) => {
+      const f = tape.facts(mint);
+      if (!f) return null;
+      return f.graduated ? tape.capNow(mint) : curveCap(f.curveSol);
+    })
+  : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;

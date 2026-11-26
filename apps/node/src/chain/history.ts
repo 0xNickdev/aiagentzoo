@@ -130,6 +130,7 @@ export class HistoryStore {
       CREATE INDEX IF NOT EXISTS tokens_creator ON tokens (creator_id, created_at);
       CREATE INDEX IF NOT EXISTS tokens_created ON tokens (created_at);
       CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens (symbol COLLATE NOCASE, created_at);
+      CREATE INDEX IF NOT EXISTS tokens_funder ON tokens (funder, created_at) WHERE funder IS NOT NULL;
       CREATE TABLE IF NOT EXISTS wallet_tokens (
         wallet_id INTEGER NOT NULL,
         token_id INTEGER NOT NULL,
