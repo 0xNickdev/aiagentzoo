@@ -129,6 +129,13 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^copies the ticker of (.+)$/, (m) => `抄袭 ${m[1]} 的代号`],
   // The creator check's reasons and notes (apps/node/src/chain/check.ts).
   [/^the creator (?:has )?sold (\d+)% of their own bag$/, (m) => `开发者已卖出自己 ${m[1]}% 的筹码`],
+  [/^the dev sold at a loss$/, () => "开发者亏本卖出"],
+  [/^the dev bought back after selling$/, () => "开发者卖出后又买回"],
+  [/^the dev took back what they put in and still holds (\d+)%$/, (m) => `开发者收回了投入的本金，仍持有 ${m[1]}%`],
+  [/^the dev took back (\d+)% of what they put in and still holds (\d+)%$/, (m) => `开发者收回了投入的 ${m[1]}%，仍持有 ${m[2]}%`],
+  [/^the dev sold (\d+)% in the first minute$/, (m) => `开发者在第一分钟内卖出 ${m[1]}%`],
+  [/^the dev sold (\d+)% after (\d+) minutes?$/, (m) => `开发者在 ${m[2]} 分钟后卖出 ${m[1]}%`],
+  [/^the dev sold (\d+)% after (\d+) hours$/, (m) => `开发者在 ${m[2]} 小时后卖出 ${m[1]}%`],
   [/^this creator dumped (\d+) of their (\d+) launches in 48 hours(?:, usually (\d+) min after launch)?$/, (m) => `这个开发者 48 小时内 ${m[2]} 个币砸了 ${m[1]} 个${m[3] ? `，通常在发币 ${m[3]} 分钟后` : ""}`],
   [/^the creator launched (\d+) tokens in the last 24 hours$/, (m) => `开发者过去 24 小时发了 ${m[1]} 个币`],
   [/^the wallet that funded this creator also funded (\d+) other launchers?; they dumped (\d+) of their (\d+) launches in 48 hours$/, (m) => `给这个开发者打钱的钱包还资助了另外 ${m[1]} 个发币号；它们 48 小时内 ${m[3]} 个币砸了 ${m[2]} 个`],

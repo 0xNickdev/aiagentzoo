@@ -277,6 +277,42 @@ const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: 
 
 /** Raydium pools have no curve: curve wording and curve lines never apply to them. */
 const POOL_VENUE = (v: string | undefined) => v === "raydium" || v === "cpmm";
+/**
+ * Dev selling, read on 23,184 pump.fun coins (Nov 2026). What stays avoid: half or more sold within five minutes with
+ * under a fifth left. A dev who took back about what they put in and still holds, sold at a loss, bought back, or
+ * only trimmed under a tenth ran as often as a dev who never sold. Selling after five minutes is a caution; after
+ * thirty, or once the cap had tripled from launch, coins ran several times the base rate, so it is only a note.
+ */
+export const DEV_SELL = { trimMin: 0.1, mainSold: 0.5, tookBackX: 1.2, holdKeep: 0.2, lossX: 0.9, earlySec: 300, lateSec: 1800, lateRunX: 3 } as const;
+
+const afterText = (sec: number) =>
+  sec < 60 ? "in the first minute" : sec < 7200 ? `after ${Math.round(sec / 60)} minute${Math.round(sec / 60) === 1 ? "" : "s"}` : `after ${Math.round(sec / 3600)} hours`;
+
+/** Where the dev's selling lands (avoid, caution or nothing) and one plain line saying how they sold. */
+export function devSellRead(f: Pick<ChainFacts, "creatorSold" | "devSell">): { level: "avoid" | "caution" | null; line: string | null } {
+  const sold = f.creatorSold;
+  if (sold === null || sold < DEV_SELL.trimMin) return { level: null, line: null };
+  const d = f.devSell;
+  // Read before the sell shape was kept: as before, by the share sold alone.
+  if (!d) return { level: sold >= DEV_SELL.mainSold ? "avoid" : "caution", line: null };
+  const p = pct(Math.min(1, sold))!;
+  const held = d.held ?? Math.max(0, 1 - sold);
+  const paid = d.solIn !== null && d.solIn > 0 && d.solOut !== null ? d.solIn : null;
+  // A loss is on the price: what the sold part brought against what that part cost.
+  if (paid !== null && d.solOut! < DEV_SELL.lossX * paid * Math.min(1, sold)) return { level: null, line: "the dev sold at a loss" };
+  if (d.rebuy) return { level: null, line: "the dev bought back after selling" };
+  if (paid !== null && d.solOut! <= DEV_SELL.tookBackX * paid && held >= DEV_SELL.holdKeep) {
+    const back = d.solOut! / paid;
+    return { level: null, line: back >= DEV_SELL.lossX ? `the dev took back what they put in and still holds ${pct(held)}%` : `the dev took back ${pct(back)}% of what they put in and still holds ${pct(held)}%` };
+  }
+  const main = sold >= DEV_SELL.mainSold;
+  const at = (main ? d.mainSec : null) ?? d.firstSec;
+  const line = at === null ? null : `the dev sold ${p}% ${afterText(at)}`;
+  if (at !== null && (at > DEV_SELL.lateSec || (d.capX !== null && d.capX >= DEV_SELL.lateRunX))) return { level: null, line };
+  if (at !== null && at > DEV_SELL.earlySec) return { level: "caution", line };
+  return { level: main && held < DEV_SELL.holdKeep ? "avoid" : "caution", line };
+}
+
 export const PARTIAL_NOTE = "trades before we watched could not be read yet";
 
 export function checkToken(
@@ -313,8 +349,11 @@ export function checkToken(
   const early = f.ageMin < EARLY_MIN;
 
   // The creator selling their own bag is the pump.fun rug.
-  if (f.creatorSold !== null && f.creatorSold >= 0.5) flag(avoid, `the creator sold ${pct(Math.min(1, f.creatorSold))}% of their own bag`, WEIGHT.creatorSold);
-  else if (f.creatorSold !== null && f.creatorSold > 0.1) flag(caution, `the creator has sold ${pct(f.creatorSold)}% of their own bag`, WEIGHT.creatorSelling);
+  // How they sold decides how much it weighs (see devSellRead); the plain line says which kind it was.
+  const devRead = devSellRead(f);
+  if (devRead.level === "avoid") flag(avoid, `the creator sold ${pct(Math.min(1, f.creatorSold ?? 0))}% of their own bag`, WEIGHT.creatorSold);
+  else if (devRead.level === "caution") flag(caution, `the creator has sold ${pct(Math.min(1, f.creatorSold ?? 0))}% of their own bag`, WEIGHT.creatorSelling);
+  if (devRead.line) notes.push(devRead.line);
 
   // A launchpad's own deployer wallet creates every coin on that platform: hundreds a day, none of them its own. Named
   // when known, else read from the shape: thirty or more launches a day, none dumped, some graduated.

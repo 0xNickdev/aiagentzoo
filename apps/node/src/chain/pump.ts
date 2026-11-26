@@ -72,6 +72,12 @@ export interface ChainFacts {
   curveSol: number | null;
   /** Share of the creator's own bought tokens they have sold, 0..1; null if the creator never bought. */
   creatorSold: number | null;
+  /**
+   * How the creator sold, when they sold anything: seconds from launch to the first sell and to the sell that took them
+   * past half, SOL in and out (null on tokens first seen before it was counted), the share of their peak position
+   * still held, whether they bought again after selling, and the cap at that main sell over the launch cap.
+   */
+  devSell?: { firstSec: number | null; mainSec: number | null; solIn: number | null; solOut: number | null; held: number | null; rebuy: boolean; capX: number | null };
   /** Tokens this creator launched in the last 24 hours, this one included. */
   creatorLaunches24h: number;
   graduated: boolean;
@@ -157,6 +163,23 @@ const notePeak = (b: Buyer) => {
   const pos = (b.tok ?? 0) - (b.sold ?? 0);
   if (pos > (b.peak ?? 0)) b.peak = pos;
 };
+/** How the creator sold, read from their own trades on the tape. */
+const devSellOf = (t: Tracked): NonNullable<ChainFacts["devSell"]> => {
+  const sec = (at: number | null | undefined) => (at === null || at === undefined ? null : Math.max(0, Math.round((at - t.createdAt) / 1000)));
+  // Everything they bought is the peak they could hold: a rebuy is counted in it, so the share held reads against it.
+  const peak = t.devBought;
+  const held = Math.max(0, t.devBought - t.devSold);
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  return {
+    firstSec: sec(t.devFirstSellAt),
+    mainSec: sec(t.dumpedAt),
+    solIn: t.devIn === undefined ? null : r3(t.devIn),
+    solOut: t.devOut === undefined ? null : r3(t.devOut),
+    held: peak > 0 ? r3(Math.min(1, held / peak)) : null,
+    rebuy: t.devRebuy === true,
+    capX: t.capDump !== undefined && t.capFirst ? Math.round((t.capDump / t.capFirst) * 100) / 100 : null,
+  };
+};
 /** What a first buyer took: the most they held at once (older snapshots only have the total bought). */
 const tookOf = (b: Buyer, supply: number) => Math.min(b.peak ?? b.tok ?? 0, supply);
 
@@ -224,6 +247,8 @@ interface Tracked {
   heldAtDump?: number;
   /** When the creator first sold anything. */
   devFirstSellAt?: number;
+  /** The creator bought again after they had sold. */
+  devRebuy?: boolean;
   /**
    * Market cap in SOL, from each trade's price: the most in the first second, the peak and when, at the creator's
    * dump, and the lowest and highest in the 30 minutes after it. Absent on tokens first seen before caps were kept.
@@ -849,6 +874,7 @@ export class PumpTape {
       if (ev.user === t.creator) {
         t.devBought += ev.tokens;
         if (t.devIn !== undefined) t.devIn += ev.sol;
+        if (t.devFirstSellAt !== undefined) t.devRebuy = true;
       } else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
       }
@@ -1078,6 +1104,7 @@ export class PumpTape {
         notePeak(b);
       }
       if (ev.user === t.creator && t.devIn !== undefined) t.devIn += ev.sol;
+      if (ev.user === t.creator && t.devFirstSellAt !== undefined) t.devRebuy = true;
       if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy after graduation`, tx);
     } else {
       t.ammSells += 1;
@@ -1632,6 +1659,7 @@ export class PumpTape {
       solOut: round(t.solOut),
       curveSol: t.curveSol === null ? null : round(t.curveSol),
       creatorSold: t.devBought > 0 ? Math.min(1, round(t.devSold / t.devBought)) : null,
+      ...(t.devSold > 0 && t.devBought > 0 ? { devSell: devSellOf(t) } : {}),
       creatorLaunches24h: (this.launchesBy.get(t.creator) ?? []).filter((x) => now - x < DAY_MS).length,
       graduated: t.graduated,
       top5Share:
