@@ -981,6 +981,7 @@ test("the tape follows a token onto PumpSwap after it graduates", async () => {
   const tape = new PumpTape();
   const now = 1_791_600_000_000;
   const events = parsePumpLogs([create, buy, realPool, swap(true, "11111111111111111111111111111111", 1_000n, 2_000_000_000n, 90_000_000_000n), swap(false, CREATOR, 6_000_000n, 3_000_000_000n, 88_000_000_000n)]);
+  events.splice(2, 0, { kind: "complete", mint: GRAD });
   for (const e of events) tape.apply(e, now);
   const f = tape.facts(GRAD, now)!;
   assert.equal(f.graduated, true);
@@ -1554,6 +1555,7 @@ test("a sniper who sells in the PumpSwap pool after graduation no longer counts 
   tape.apply({ kind: "create", name: "g", symbol: "G", mint, creator: "Dev".padEnd(44, "z"), ts: t0 }, t0);
   for (const u of [sniper, "Other".padEnd(44, "z")]) tape.apply({ kind: "trade", mint, sol: 3, tokens: 150_000_000, isBuy: true, user: u, ts: t0 + 1_000, curveSol: 6 }, t0);
   assert.equal(tape.facts(mint)!.earlyHeld, 0.3);
+  tape.apply({ kind: "complete", mint }, t0 + 30 * 60_000);
   tape.apply({ kind: "pool", mint, pool }, t0 + 30 * 60_000);
   tape.apply({ kind: "swap", pool, isBuy: false, sol: 9, tokens: 150_000_000, user: sniper, ts: t0 + 31 * 60_000, poolSol: 80 }, t0 + 31 * 60_000);
   assert.equal(tape.facts(mint)!.earlyHeld, 0.15);
@@ -2614,4 +2616,44 @@ test("a coin the long memory knew is adopted with its kept creator and launch, a
   // Out of the trial and the odds like any adopted coin.
   assert.equal(tape.dueMarks(Date.now()).length, 0);
   assert.equal(tape.oddsInputs(mint, { social: false, funderExchange: false, funderMany: false }), null);
+});
+
+test("a PumpSwap pool opened by anyone for a coin still on the curve is followed but is not a graduation", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const t0 = Date.now() - 20 * 60_000;
+  const mint = "Side".padEnd(44, "z");
+  const side = "SidePool".padEnd(44, "z");
+  const main = "MainPool".padEnd(44, "z");
+  const u = "Buyer".padEnd(44, "z");
+  tape.apply({ kind: "create", name: "s", symbol: "S", mint, creator: "Dev".padEnd(44, "z"), ts: t0 }, t0);
+  tape.apply({ kind: "trade", mint, sol: 1, tokens: 30_000_000, isBuy: true, user: u, ts: t0 + 1_000, curveSol: 1.5 }, t0 + 1_000);
+  // A third party opens a pool at 1.5 SOL on the curve: its trades count, the coin has not graduated.
+  tape.apply({ kind: "pool", mint, pool: side }, t0 + 60_000);
+  tape.apply({ kind: "swap", pool: side, isBuy: true, sol: 12, tokens: 1_000, user: u, ts: t0 + 61_000, poolSol: 3 }, t0 + 61_000);
+  let f = tape.facts(mint)!;
+  assert.equal(f.graduated, false);
+  assert.equal(f.ammBuys, 1);
+  assert.equal(f.poolSol, null);
+  assert.ok(!tape.pulseAfter(0).some((e) => e.kind === "graduated" || e.kind === "whale"));
+  // The curve completes and migrates: now it graduated, and the migration's pool is the one followed.
+  tape.apply({ kind: "trade", mint, sol: 84, tokens: 700_000_000, isBuy: true, user: u, ts: t0 + 120_000, curveSol: 85 }, t0 + 120_000);
+  tape.apply({ kind: "complete", mint }, t0 + 120_000);
+  tape.apply({ kind: "pool", mint, pool: main }, t0 + 125_000);
+  tape.apply({ kind: "swap", pool: main, isBuy: true, sol: 1, tokens: 1_000, user: u, ts: t0 + 126_000, poolSol: 86 }, t0 + 126_000);
+  f = tape.facts(mint)!;
+  assert.equal(f.graduated, true);
+  assert.equal(f.poolSol, 86);
+  assert.equal(tape.pulseAfter(0).filter((e) => e.kind === "graduated").length, 1);
+});
+
+test("a pool opened when the curve sits at its end is the migration, even with the complete event missed", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const t0 = Date.now() - 20 * 60_000;
+  const mint = "Late".padEnd(44, "z");
+  tape.apply({ kind: "create", name: "l", symbol: "L", mint, creator: "Dev".padEnd(44, "z"), ts: t0 }, t0);
+  tape.apply({ kind: "trade", mint, sol: 85, tokens: 790_000_000, isBuy: true, user: "B".padEnd(44, "z"), ts: t0 + 1_000, curveSol: 84.9 }, t0 + 1_000);
+  tape.apply({ kind: "pool", mint, pool: "P".padEnd(44, "z") }, t0 + 5_000);
+  assert.equal(tape.facts(mint)!.graduated, true);
 });

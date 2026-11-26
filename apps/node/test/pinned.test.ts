@@ -16,6 +16,7 @@ function replayed(t0: number): PumpTape {
   own.pin(MINT);
   own.apply({ kind: "create", name: "zoo", symbol: "ZOO", mint: MINT, creator: DEV, ts: t0 }, t0, "c0", 10);
   own.apply({ kind: "trade", mint: MINT, sol: 2, tokens: 60_000_000, isBuy: true, user: A, ts: t0 + 2_000, curveSol: 32 }, t0 + 2_000, "t1", 11);
+  own.apply({ kind: "complete", mint: MINT }, t0 + 50_000, "k0", 19);
   own.apply({ kind: "pool", mint: MINT, pool: POOL }, t0 + 60_000, "p0", 20);
   return own;
 }

@@ -384,6 +384,8 @@ const DRAIN_SHARE = 0.2;
 const DRAIN_RECOVERED = 0.5;
 /** A single buy this big stands out on a fresh pump.fun token. */
 const WHALE_SOL = 10;
+/** Real SOL in a pump.fun curve near its end (it completes at about 85): a pool opened past it is the migration. */
+const GRAD_CURVE_SOL = 80;
 
 const KEEP_MS = 48 * 3_600_000;
 /**
@@ -843,11 +845,17 @@ export class PumpTape {
     // A trade in a Raydium pool counts only for a coin launched there: a graduated coin's pool is not its curve.
     if (ev.kind === "trade" && ev.venue && ev.venue !== t.venue) return;
     if (ev.kind === "complete" || ev.kind === "pool") {
-      if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
-      t.graduated = true;
+      // Only the curve's end is a graduation: the complete event, or a pool opened once the curve sits at its end
+      // (the complete event missed). Anyone can open a PumpSwap pool for a coin still on the curve; such a pool is
+      // followed for its trades but graduates nothing.
+      const done = ev.kind === "complete" || (!t.venue && !t.quote && (t.curveSol ?? 0) >= GRAD_CURVE_SOL);
+      if (done) {
+        if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
+        t.graduated = true;
+      }
       if (ev.kind === "pool") {
-        // Anyone can open another SOL pool for a token; the first one, from the migration, is the one we follow.
-        t.pool ??= ev.pool;
+        // The first pool after graduation is the migration's, the one we follow; another is a side pool.
+        if (t.graduated) t.pool ??= ev.pool;
         this.pools.set(ev.pool, t.mint);
       }
       return;
@@ -1126,7 +1134,7 @@ export class PumpTape {
       }
       if (ev.user === t.creator && t.devIn !== undefined) t.devIn += ev.sol;
       if (ev.user === t.creator && t.devFirstSellAt !== undefined) t.devRebuy = true;
-      if (ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy after graduation`, tx);
+      if (ev.sol >= WHALE_SOL && t.graduated) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy after graduation`, tx);
     } else {
       t.ammSells += 1;
       t.ammSolOut += ev.sol;
