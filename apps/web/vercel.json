@@ -168,11 +168,6 @@
       "permanent": true
     },
     {
-      "source": "/radar",
-      "destination": "/xray",
-      "permanent": true
-    },
-    {
       "source": "/app",
       "destination": "/xray",
       "permanent": true
