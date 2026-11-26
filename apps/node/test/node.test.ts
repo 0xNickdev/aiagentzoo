@@ -2262,7 +2262,7 @@ test("a Raydium coin launched before the stream watched is read from the chain o
   }) as typeof fetch;
 
   const where = await findPool(mint, rpc, dex);
-  assert.deepEqual({ ...where, dex: undefined }, { pool, venue: "raydium", listedAt: 1, dex: undefined });
+  assert.deepEqual({ ...where, dex: undefined }, { kind: "raydium", pool, venue: "raydium", listedAt: 1, dex: undefined });
   assert.equal(where!.dex!.liquidityUsd, 50_000);
 
   const tape = new PumpTape();
@@ -2416,4 +2416,110 @@ test("a Raydium launch hours old with no trades is never called a dead curve", a
   tape.apply({ kind: "create", venue: "raydium", name: "S", symbol: "S", mint, creator: "C".padEnd(44, "c"), ts: now - 8 * 3_600_000, pool: "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v" }, now);
   const c = checkToken(mint, tape.token(mint, now), { now });
   assert.ok(![...c.reasons, ...c.notes].some((r) => /curve/.test(r)), JSON.stringify(c.reasons));
+});
+
+test("adoption beyond Raydium: a pump.fun curve, a PumpSwap pool after graduation, and Meteora's curve, each read back and kept out of the trial", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { Adopter, bondingCurveOf, findPool } = await import("../src/chain/adopt.ts");
+  const { DBC_PROGRAM } = await import("../src/chain/launchpads.ts");
+  const { checkToken } = await import("../src/chain/check.ts");
+  const { fromBase58, PUMP_AMM_PROGRAM, PUMP_PROGRAM, PumpTape } = await import("../src/chain/pump.ts");
+  const key = (s: string) => fromBase58(s);
+  const str = (s: string) => {
+    const b = Buffer.from(s);
+    const len = Buffer.alloc(4);
+    len.writeUInt32LE(b.length);
+    return Buffer.concat([len, b]);
+  };
+  const u64 = (n: bigint) => {
+    const b = Buffer.alloc(8);
+    b.writeBigUInt64LE(n);
+    return b;
+  };
+  const line = (disc: number[], body: Buffer) => `Program data: ${Buffer.concat([Buffer.from(disc), body]).toString("base64")}`;
+  const MINT = "Gfur7siWmL1SjkBit3mA4rJ1PqBGJzje5ZwQZkqapump";
+  const CREATOR = "So11111111111111111111111111111111111111112";
+  const BUYER = "11111111111111111111111111111111";
+  const now = Date.now();
+  const sec = BigInt(Math.floor(now / 1000) - 3 * 86_400);
+  const create = line([27, 114, 169, 77, 222, 235, 99, 118], Buffer.concat([str("silk road"), str("SILK"), str("ipfs://x"), key(MINT), key(BUYER), key(CREATOR)]));
+  const trade = (user: string, isBuy: boolean, tokens: bigint) =>
+    line([189, 219, 127, 211, 78, 230, 97, 238], Buffer.concat([key(MINT), u64(500_000_000n), u64(tokens * 1_000_000n), Buffer.from([isBuy ? 1 : 0]), key(user), u64(sec + 100n), u64(0n), u64(0n), u64(40_000_000_000n)]));
+  const tx = (logs: string[], blockTime = Number(sec)) => ({ blockTime, slot: 1, transaction: { message: { accountKeys: [CREATOR], instructions: [] } }, meta: { err: null, logMessages: logs } });
+  const realSell =
+    "Program data: Pi83CqUD3CovcdBqAAAAABkaUl4BAAAAd8piXdX1AQAZGlJeAQAAADdBQP+s5wMA568N9aIAAABPTx3M/6kGAQwtWRb3LwIAGQAAAAAAAACYJLJgZgEAAAUAAAAAAAAAuG3wrEcAAAB0CKe1kC4CALyatghJLgIARdq8folYGiZgs8xYV4Fu5R5hivgdSvWEpFJwUyXUDOZEgAMe6AHxidtaU/9QdEAQ+3KCTi/4ky8ebR8WSdG5MTdS4IgTCT2TGl4EcxRbqvuSq9lLzJQOs8JCyKq3QlerhTWFkd2+V3gQvzFGNuCfmhW3UqHe2j1T3idKaWgPm95KwvjQ3Vy8l+MonBl8tQYqVPPZVrnOblEV+WVnqlyz5ryFgGo/TURi+0sX74LE2NiJZ56XysFhBl168zXVUH8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAA3DZ41iMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const SWAP_POOL = "5hgao1gkk4742tsPbJaJoXtKViRNVYw6KPEn2Jvm4HaM";
+  const curve = bondingCurveOf(MINT);
+  const txs: Record<string, unknown> = { "C-create": tx([create]), "C-buy": tx([trade(BUYER, true, 50n)]), "C-sell": tx([trade(BUYER, false, 20n)]), "P-sell": tx([realSell]) };
+  const owners: Record<string, string> = { [curve]: PUMP_PROGRAM, [SWAP_POOL]: PUMP_AMM_PROGRAM };
+  const sigs: Record<string, unknown[]> = {
+    [curve]: [{ signature: "C-sell", blockTime: Number(sec) + 200 }, { signature: "C-buy", blockTime: Number(sec) + 100 }, { signature: "C-create", blockTime: Number(sec) }],
+    [SWAP_POOL]: [{ signature: "P-sell", blockTime: Number(sec) + 500 }],
+  };
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const a = params[0] as string;
+    if (method === "getAccountInfo") return { value: owners[a] ? { owner: owners[a] } : null } as T;
+    if (method === "getSignaturesForAddress") return (sigs[a] ?? []) as T;
+    if (method === "getTransaction") return (txs[a] ?? null) as T;
+    return null;
+  };
+  const dexOf = (pairs: unknown[]) => (async () => new Response(JSON.stringify(pairs))) as typeof fetch;
+
+  // On the curve: found by its curve account even without DexScreener, read from its logs, the launch its opening.
+  assert.deepEqual(await findPool(MINT, rpc, dexOf([])), { kind: "curve", pool: curve, listedAt: null });
+  const tape = new PumpTape();
+  const a = new Adopter(tape, { rpc, fetchFn: dexOf([]), gapMs: 0, backoffMs: 0 });
+  assert.equal((await a.ensure(MINT, 5_000)).state, "tracked");
+  let t = tape.token(MINT)!;
+  assert.equal(t.creator, CREATOR);
+  assert.equal(t.symbol, "SILK");
+  assert.equal(t.facts.buys, 1);
+  assert.equal(t.facts.sells, 1);
+  assert.equal(t.facts.adopted, true);
+  assert.equal(t.facts.venue, undefined);
+  // Out of the trial, the odds and the launches, though it is a pump.fun coin.
+  assert.equal(tape.dueMarks(now + 6 * 60_000).length, 0);
+  assert.equal(tape.oddsInputs(MINT, { social: false, funderExchange: false, funderMany: false }), null);
+  assert.equal(tape.launches(10).length, 0);
+  // Its live curve trades come in from the stream's pump.fun lane like any other.
+  tape.apply({ kind: "trade", mint: MINT, user: "B".padEnd(44, "b"), isBuy: true, sol: 1, tokens: 1e6, ts: now, curveSol: 41 }, now);
+  assert.equal(tape.token(MINT)!.facts.buys, 2);
+
+  // Graduated: DexScreener's deepest pair is the PumpSwap pool; the launch is still read from the curve account.
+  const tape2 = new PumpTape();
+  const pairs = [
+    { dexId: "pumpfun", pairAddress: curve, liquidity: { usd: 0 }, quoteToken: { address: CREATOR } },
+    { dexId: "pumpswap", pairAddress: SWAP_POOL, liquidity: { usd: 90_000 }, quoteToken: { address: CREATOR } },
+  ];
+  const a2 = new Adopter(tape2, { rpc, fetchFn: dexOf(pairs), gapMs: 0, backoffMs: 0 });
+  assert.equal((await a2.ensure(MINT, 5_000)).state, "tracked");
+  t = tape2.token(MINT)!;
+  assert.equal(t.creator, CREATOR);
+  assert.equal(t.facts.graduated, true);
+  assert.equal(t.facts.ammSells, 1);
+  assert.deepEqual(tape2.poolAddresses(), [SWAP_POOL]);
+  // Buyers in the pool only: not "nobody has bought it".
+  t.facts.ammBuys = 3;
+  assert.ok(!checkToken(MINT, t).reasons.includes("nobody has bought it"));
+
+  // Meteora's curve, from real mainnet transactions: the launch its opening, the buy read back.
+  const fx = JSON.parse(readFileSync(new URL("./fixtures/launchpads.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const DBC_MINT = "3UNs3RobwhxDqRcYAgNV5fKKdCf4sJPCfeh3CSDBRYbt";
+  const VPOOL = "V".padEnd(44, "v");
+  const at = (what: string, d: number) => ({ ...fx.find((f) => f.what === what)!.tx, blockTime: Number(sec) + d });
+  const rpc3 = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const x = params[0] as string;
+    if (method === "getAccountInfo") return { value: x === VPOOL ? { owner: DBC_PROGRAM } : null } as T;
+    if (method === "getSignaturesForAddress") return (x === VPOOL ? [{ signature: "D-buy" }, { signature: "D-create" }] : []) as T;
+    if (method === "getTransaction") return (x === "D-buy" ? at("dbc:buy", 60) : x === "D-create" ? at("dbc:create", 0) : null) as T;
+    return null;
+  };
+  const tape3 = new PumpTape();
+  const a3 = new Adopter(tape3, { rpc: rpc3, fetchFn: dexOf([{ dexId: "meteora", pairAddress: VPOOL, liquidity: { usd: 5 } }]), gapMs: 0, backoffMs: 0 });
+  assert.equal((await a3.ensure(DBC_MINT, 5_000)).state, "tracked");
+  const d = tape3.token(DBC_MINT)!;
+  assert.equal(d.creator, "GDEUpEgzz3w6uff4pLAHjt94QdaWnn5jWaehU2G7yruo");
+  assert.equal(d.symbol, "VAK");
+  assert.equal(d.facts.venue, "dbc");
+  assert.equal(d.facts.buys, 1);
 });

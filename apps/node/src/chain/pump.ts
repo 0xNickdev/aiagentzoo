@@ -44,6 +44,8 @@ export interface ChainFacts {
   odds?: { run: number; devDumps: number | null; vsAverage: number } | null;
   /** Minutes since launch. */
   ageMin: number;
+  /** Read from the chain on demand: launched before the stream watched. */
+  adopted?: boolean;
   /** Adopted, and its trades before adoption could not be read back yet: the counts below start at adoption. */
   partial?: boolean;
   /** DexScreener's read of the pool, for an adopted coin whose trades could not be read back. */
@@ -185,6 +187,8 @@ interface Tracked {
   /** Launched before the stream watched: read from the chain on demand, live from adoptedAt on. Never marked or graded. */
   adopted?: boolean;
   adoptedAt?: number;
+  /** Where an adopted coin was found trading, so a read-back can be tried again after a restart. */
+  adoptFrom?: { kind: "raydium" | "pumpswap" | "curve"; pool: string };
   /** Whether the read-back of its past trades worked, and how many it read. */
   backfillOk?: boolean;
   tradesRead?: number;
@@ -446,14 +450,17 @@ export class PumpTape {
    * followed, and the recent trades read back from the chain are applied quietly, oldest first. Not in the feed, the
    * launches list, the timed readings or the odds: none of those can judge a coin whose launch nobody here saw.
    */
-  adoptToken(a: { mint: string; venue: Venue; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
+  adoptToken(a: { mint: string; kind?: "raydium" | "pumpswap" | "curve"; venue?: Venue; quote?: string; platform?: string; mayhem?: boolean; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
     if (this.tokens.has(a.mint)) return false;
     this.tokens.set(a.mint, {
       mint: a.mint,
-      quote: null,
-      venue: a.venue,
+      quote: a.quote ?? null,
+      ...(a.venue ? { venue: a.venue } : {}),
+      ...(a.platform ? { platform: a.platform } : {}),
+      ...(a.mayhem ? { mayhem: true } : {}),
+      adoptFrom: { kind: a.kind ?? "raydium", pool: a.pool },
       ...(a.supply ? { supply: a.supply } : {}),
-      rayPool: a.pool,
+      ...((a.kind ?? "raydium") === "raydium" ? { rayPool: a.pool } : {}),
       adopted: true,
       adoptedAt: now,
       ...(a.mintCreatedAt && a.mintCreatedAt < a.createdAt - 60_000 ? { mintCreatedAt: a.mintCreatedAt } : {}),
@@ -492,7 +499,16 @@ export class PumpTape {
       mine.push(a.mint);
       this.byCreator.set(a.creator, mine);
     }
-    this.followRaydium?.(a.pool, now);
+    const kind = a.kind ?? "raydium";
+    // Followed where it trades: a Raydium pool by the stream's Raydium lane, a PumpSwap pool by the pools lane. A curve
+    // needs nothing: the stream reads every pump.fun, LaunchLab and Meteora curve trade already.
+    if (kind === "raydium") this.followRaydium?.(a.pool, now);
+    if (kind === "pumpswap") {
+      const t = this.tokens.get(a.mint)!;
+      t.graduated = true;
+      t.pool = a.pool;
+      this.pools.set(a.pool, a.mint);
+    }
     if (a.trades?.length) this.backfill(a.mint, a.trades, now);
     return true;
   }
@@ -514,9 +530,10 @@ export class PumpTape {
     this.quiet = true;
     let n = 0;
     try {
-      const tsOf = (e: PumpEvent) => (e.kind === "trade" ? e.ts : 0);
+      const tsOf = (e: PumpEvent) => (e.kind === "trade" || e.kind === "swap" ? e.ts : 0);
       for (const { ev, tx, slot } of [...trades].sort((x, y) => tsOf(x.ev) - tsOf(y.ev))) {
-        if (ev.kind !== "trade" || ev.mint !== mint) continue;
+        // A curve or Raydium trade names the coin; a PumpSwap swap names its pool, which must be this coin's.
+        if (ev.kind === "trade" ? ev.mint !== mint : ev.kind !== "swap" || this.pools.get(ev.pool) !== mint) continue;
         this.apply(ev, now, tx, slot);
         n += 1;
       }
@@ -543,9 +560,13 @@ export class PumpTape {
   }
 
   /** Adopted coins whose past trades were never read, for a retry after a restart. */
-  unreadAdopted(): Array<{ mint: string; pool: string; venue: Venue }> {
-    const out: Array<{ mint: string; pool: string; venue: Venue }> = [];
-    for (const t of this.tokens.values()) if (t.adopted && !t.backfillOk && t.rayPool && t.venue) out.push({ mint: t.mint, pool: t.rayPool, venue: t.venue });
+  unreadAdopted(): Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue }> {
+    const out: Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue }> = [];
+    for (const t of this.tokens.values()) {
+      if (!t.adopted || t.backfillOk) continue;
+      const from = t.adoptFrom ?? (t.rayPool ? { kind: "raydium" as const, pool: t.rayPool } : null);
+      if (from) out.push({ mint: t.mint, pool: from.pool, kind: from.kind, ...(t.venue ? { venue: t.venue } : {}) });
+    }
     return out;
   }
 
@@ -994,7 +1015,7 @@ export class PumpTape {
     if (!t) return;
     if (tx && this.pinned.has(t.mint)) t.lastTx = tx;
     this.seen.trades += 1;
-    this.count(now, "trades");
+    if (!this.quiet) this.count(now, "trades");
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     // Trades on a side pool still count, but only the main pool says how much SOL is left.
@@ -1561,6 +1582,7 @@ export class PumpTape {
       ...(t.mayhem ? { mayhem: true } : {}),
       ...(t.venue ? { venue: t.venue } : {}),
       ...(t.platform ? { platform: t.platform } : {}),
+      ...(t.adopted ? { adopted: true } : {}),
       ...(t.adopted && !t.backfillOk ? { partial: true } : {}),
       ...(t.adopted && t.dex ? { dex: t.dex } : {}),
       buys: t.buys,

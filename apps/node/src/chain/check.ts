@@ -410,7 +410,8 @@ export function checkToken(
     // Buyers are counted on the curve. A coin that left it in seconds has a handful there and its whole market in the pool.
     const inPool = f.graduated && (f.ammBuys >= 10 || (f.poolSol ?? 0) >= 20);
     if (!inPool && f.top5Share !== null && f.top5Share > 0.5) flag(caution, `the top 5 buyers took ${pct(f.top5Share)}% of all buying`, WEIGHT.top5);
-    if (f.buyers === 0) flag(caution, "nobody has bought it", WEIGHT.noBuyers);
+    // A coin read from the chain after it graduated has its buyers in the pool, not on a curve the tape never saw.
+    if (f.buyers === 0 && !(f.adopted && f.ammBuys > 0)) flag(caution, "nobody has bought it", WEIGHT.noBuyers);
     else if (!inPool && f.buyers < 10) flag(caution, f.buyers === 1 ? "only 1 wallet has bought it" : `only ${f.buyers} wallets have bought it`, WEIGHT.fewBuyers);
     if (f.sells > f.buys * 2 && f.sells >= 10) flag(caution, `sells outnumber buys ${f.sells} to ${f.buys}`, WEIGHT.sellsOutnumber);
     if (f.washShare !== undefined && f.washShare >= 0.3 && !f.mayhem && establishedOf(f)) notes.push(`about ${pct(f.washShare)}% of its trading over its life is wallets selling back what they just bought: on a coin this old that is how its market trades, not a launch being faked`);

@@ -1,6 +1,6 @@
-import { fromRpc, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type RpcTx } from "./launchpads.ts";
-import { firstSeen, readPoolMeta } from "./poolMeta.ts";
-import { fromBase58, type PumpEvent, type Venue } from "./pumpParse.ts";
+import { DBC_PROGRAM, fromRpc, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type RpcTx } from "./launchpads.ts";
+import { firstSeen, programAddress, readPoolMeta } from "./poolMeta.ts";
+import { fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, type Venue } from "./pumpParse.ts";
 import type { DexRead, PumpTape } from "./pump.ts";
 
 /**
@@ -10,7 +10,8 @@ import type { DexRead, PumpTape } from "./pump.ts";
  * the mint's own birth when its history is short, name, symbol and supply, and the pool's most recent swaps.
  *
  * One coin at a time, a short queue, and a miss is not asked again for ten minutes: a burst of x-rays for coins
- * nobody launched on Raydium cannot run the RPC dry. Raydium AMM v4 and CPMM only, the pools the stream can follow.
+ * nobody launched cannot run the RPC dry. Raydium AMM v4 and CPMM, PumpSwap, and the pump.fun, LaunchLab and Meteora
+ * curves: what the stream reads. Meteora's DAMM pools (where its curve graduates) are not read.
  */
 
 type Rpc = <T>(method: string, params: unknown[]) => Promise<T | null>;
@@ -71,33 +72,65 @@ export async function patient<T>(call: () => Promise<T | null>, baseMs = 1_000, 
   return null;
 }
 type Sig = { signature: string; blockTime?: number | null; err?: unknown; slot?: number };
-type Tx = RpcTx & { slot?: number; blockTime?: number | null; meta: RpcTx["meta"] & { err?: unknown } };
+type Tx = RpcTx & { slot?: number; blockTime?: number | null; meta: RpcTx["meta"] & { err?: unknown; logMessages?: string[] | null } };
 
 const sleep = (ms: number) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
 
-/** The pool's program says what it is: AMM v4 or CPMM, or neither. */
-async function venueOfPool(pool: string, rpc: Rpc): Promise<Venue | null> {
-  const a = await rpc<{ value?: { owner?: string } | null }>("getAccountInfo", [pool, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }]).catch(() => null);
-  const owner = a?.value?.owner;
-  return owner === RAYDIUM_AMM_PROGRAM ? "raydium" : owner === RAYDIUM_CPMM_PROGRAM ? "cpmm" : null;
+
+/** Where a coin trades, as the adopter reads it: a Raydium pool, a PumpSwap pool, or a launchpad's curve. */
+export interface Where {
+  kind: "raydium" | "pumpswap" | "curve";
+  /** Undefined is pump.fun (its curve, or PumpSwap after graduation). */
+  venue?: Venue;
+  /** The pool or curve account: its signatures are the coin's trades. */
+  pool: string;
+  listedAt: number | null;
+  dex?: DexRead;
 }
 
-/** The coin's deepest SOL pool on Raydium AMM v4 or CPMM, or null. */
-export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = fetch): Promise<{ pool: string; venue: Venue; listedAt: number | null; dex?: DexRead } | null> {
+/** Which program owns an account, and so what it is. */
+const OWNERS: Record<string, Pick<Where, "kind" | "venue">> = {
+  [RAYDIUM_AMM_PROGRAM]: { kind: "raydium", venue: "raydium" },
+  [RAYDIUM_CPMM_PROGRAM]: { kind: "raydium", venue: "cpmm" },
+  [PUMP_AMM_PROGRAM]: { kind: "pumpswap" },
+  [PUMP_PROGRAM]: { kind: "curve" },
+  [LAUNCHLAB_PROGRAM]: { kind: "curve", venue: "launchlab" },
+  [DBC_PROGRAM]: { kind: "curve", venue: "dbc" },
+};
+
+async function ownerOf(address: string, rpc: Rpc): Promise<{ owner: string; size: number } | null> {
+  const a = await rpc<{ value?: { owner?: string; space?: number; data?: [string, string] } | null }>("getAccountInfo", [address, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }]).catch(() => null);
+  return a?.value?.owner ? { owner: a.value.owner, size: a.value.space ?? 0 } : null;
+}
+
+/** pump.fun's bonding curve account for a mint. */
+export const bondingCurveOf = (mint: string) => programAddress([Buffer.from("bonding-curve"), fromBase58(mint)], PUMP_PROGRAM);
+
+/**
+ * Where the coin trades now: the deepest pair DexScreener lists whose account one of the programs we read owns
+ * (Raydium AMM v4 and CPMM, PumpSwap, pump.fun's curve, LaunchLab, Meteora's curve). Raydium only against SOL, as its
+ * reader counts the SOL vault. Without DexScreener: pump.fun's curve account, then the Raydium pools by mint.
+ */
+export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = fetch): Promise<Where | null> {
   try {
     const r = await fetchFn(`https://api.dexscreener.com/tokens/v1/solana/${mint}`, { signal: AbortSignal.timeout(6_000) });
     const pairs = r.ok ? ((await r.json()) as Pair[]) : [];
-    const sol = (Array.isArray(pairs) ? pairs : [])
-      .filter((p) => p.dexId === "raydium" && p.pairAddress && (p.quoteToken?.address === WSOL || p.baseToken?.address === WSOL))
-      .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
-    for (const p of sol.slice(0, 3)) {
-      const venue = await venueOfPool(p.pairAddress!, rpc);
-      if (venue) return { pool: p.pairAddress!, venue, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
+    const listed = (Array.isArray(pairs) ? pairs : []).filter((p) => p.pairAddress).sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+    for (const p of listed.slice(0, 4)) {
+      const o = await ownerOf(p.pairAddress!, rpc);
+      const what = o ? OWNERS[o.owner] : undefined;
+      if (!what) continue;
+      const sol = p.quoteToken?.address === WSOL || p.baseToken?.address === WSOL;
+      if (what.kind === "raydium" && !sol) continue;
+      return { ...what, pool: p.pairAddress!, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
     }
   } catch {
-    /* the programs' accounts next */
+    /* read the chain instead */
   }
-  // Without DexScreener: the pool accounts that hold this mint, AMM v4 (coin mint at 400, pc at 432) and CPMM (token 0 at 168, 1 at 200).
+  const curve = bondingCurveOf(mint);
+  const o = await ownerOf(curve, rpc);
+  if (o?.owner === PUMP_PROGRAM) return { kind: "curve", pool: curve, listedAt: null };
+  // The pool accounts that hold this mint, AMM v4 (coin mint at 400, pc at 432) and CPMM (token 0 at 168, 1 at 200).
   const scans: Array<[string, Venue, number, number]> = [
     [RAYDIUM_CPMM_PROGRAM, "cpmm", 168, 200],
     [RAYDIUM_AMM_PROGRAM, "raydium", 400, 432],
@@ -108,10 +141,24 @@ export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = f
       [b, a],
     ] as const) {
       const found = await rpc<Array<{ pubkey: string }>>("getProgramAccounts", [program, { encoding: "base64", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: mine, bytes: mint } }, { memcmp: { offset: other, bytes: WSOL } }] }]).catch(() => null);
-      if (found?.[0]?.pubkey) return { pool: found[0].pubkey, venue, listedAt: null };
+      if (found?.[0]?.pubkey) return { kind: "raydium", venue, pool: found[0].pubkey, listedAt: null };
     }
   }
   return null;
+}
+
+/** The events of one transaction as the stream would read them: pump.fun and PumpSwap from their logs, the rest whole. */
+function eventsOf(w: Pick<Where, "kind" | "venue">, tx: Tx, ts: number): PumpEvent[] {
+  const fromLogs = w.kind === "pumpswap" || (w.kind === "curve" && !w.venue);
+  if (fromLogs) return parsePumpLogs(tx.meta?.logMessages ?? []).map((e) => (e.kind === "trade" || e.kind === "swap" ? { ...e, ts: e.ts || ts } : e));
+  return parseLaunchpads(fromRpc(tx, fromBase58), ts);
+}
+
+/** Whether an event is one of this coin's trades where it trades now. */
+function isTrade(w: Where, mint: string, ev: PumpEvent): boolean {
+  if (w.kind === "pumpswap") return ev.kind === "swap" && ev.pool === w.pool;
+  if (ev.kind !== "trade" || ev.mint !== mint) return false;
+  return w.kind === "raydium" ? ev.venue === w.venue : true;
 }
 
 export class Adopter {
@@ -151,7 +198,7 @@ export class Adopter {
 
   /** After a restart: tries again to read the past trades of adopted coins that came back partial. */
   async resume(): Promise<void> {
-    for (const c of this.tape.unreadAdopted()) await this.readBack(c.mint, c.pool, c.venue, null, null, 0).catch(() => {});
+    for (const c of this.tape.unreadAdopted()) await this.readBack(c.mint, { kind: c.kind, ...(c.venue ? { venue: c.venue } : {}), pool: c.pool, listedAt: null }, null, null, 0).catch(() => {});
   }
 
   /** Where this coin stands, without starting anything. */
@@ -209,17 +256,58 @@ export class Adopter {
 
   /** Reads one coin onto the tape; the reason it could not, or null. */
   private async read(mint: string): Promise<string | null> {
-    const found = await findPool(mint, this.rpc, this.fetchFn);
-    if (!found) return "no Raydium pool against SOL";
-    const { pool, venue } = found;
-    // The pool's signatures, newest first, in pages of 250: the first page is the recent trades, the last its opening.
-    const sigs = (before?: string) => patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [pool, { limit: PAGE, ...(before ? { before } : {}) }]), this.backoffMs);
+    const w = await findPool(mint, this.rpc, this.fetchFn);
+    if (!w) return "no pool or curve we can read";
+    const opening = await this.walk(w.pool);
+    let creator = "";
+    let openedAt: number | null = w.listedAt;
+    let made: Extract<PumpEvent, { kind: "create" }> | null = null;
+    // A PumpSwap pool opens at graduation: the launch itself is on pump.fun's curve, read from there when reachable.
+    const first = w.kind === "pumpswap" ? ((await this.walk(bondingCurveOf(mint))).oldest ?? opening.oldest) : opening.oldest;
+    if (first) {
+      const tx = await patient(() => this.getTx(first.signature), this.backoffMs);
+      if (tx) {
+        const ts = (tx.blockTime ?? first.blockTime ?? 0) * 1000;
+        const lineOf: Where = w.kind === "pumpswap" && first !== opening.oldest ? { ...w, kind: "curve" } : w;
+        const open = eventsOf(lineOf, tx, ts).find((e) => e.kind === "create" && e.mint === mint);
+        if (open?.kind === "create") made = open;
+        creator = made ? made.creator : (tx.transaction.message.accountKeys[0] ?? "");
+        if (made?.ts) openedAt = made.ts;
+        else if (ts) openedAt = ts;
+      }
+    }
+    openedAt ??= (opening.newest[opening.newest.length - 1]?.blockTime ?? Math.floor(Date.now() / 1000)) * 1000;
+    const meta = await readPoolMeta(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs));
+    const born = await firstSeen(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs), 2);
+    const named = { ...(made?.name ? { name: made.name } : {}), ...(made?.symbol ? { symbol: made.symbol } : {}), ...meta };
+    // From here on the stream follows it; the trades before now are read back after, so none falls in between.
+    const adopted = this.tape.adoptToken({
+      mint,
+      kind: w.kind,
+      ...(w.venue ? { venue: w.venue } : {}),
+      pool: w.pool,
+      creator,
+      createdAt: openedAt,
+      mintCreatedAt: born?.at ?? null,
+      ...(made?.quote ? { quote: made.quote } : {}),
+      ...(made?.platform ? { platform: made.platform } : {}),
+      ...(made?.mayhem ? { mayhem: true } : {}),
+      ...(made?.supply && !meta.supply ? { supply: made.supply } : {}),
+      ...named,
+    });
+    if (!adopted) return null;
+    await this.readBack(mint, w, opening.newest.length ? opening.newest : null, w.dex ?? null, 0);
+    return null;
+  }
+
+  /** An account's signatures, newest first, in pages of 250: the first page is its recent trades, the last its opening. */
+  private async walk(address: string): Promise<{ newest: Sig[]; oldest: Sig | null }> {
     let newest: Sig[] = [];
     let oldest: Sig | null = null;
     let before: string | undefined;
     for (let i = 0; i < this.pages; i++) {
       if (i) await sleep(this.gapMs);
-      const page = await sigs(before);
+      const page = await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [address, { limit: PAGE, ...(before ? { before } : {}) }]), this.backoffMs);
       if (!Array.isArray(page) || !page.length) break;
       if (!i) newest = page;
       if (page.length < PAGE) {
@@ -228,24 +316,7 @@ export class Adopter {
       }
       before = page[page.length - 1]!.signature;
     }
-    let creator = "";
-    let openedAt: number | null = found.listedAt;
-    if (oldest) {
-      const tx = await patient(() => this.getTx(oldest!.signature), this.backoffMs);
-      if (tx) {
-        const ts = (tx.blockTime ?? oldest.blockTime ?? 0) * 1000;
-        const open = parseLaunchpads(fromRpc(tx, fromBase58), ts).find((e) => e.kind === "create" && e.mint === mint);
-        creator = open?.kind === "create" ? open.creator : (tx.transaction.message.accountKeys[0] ?? "");
-        if (ts) openedAt = ts;
-      }
-    }
-    openedAt ??= (newest[newest.length - 1]?.blockTime ?? Math.floor(Date.now() / 1000)) * 1000;
-    const meta = await readPoolMeta(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs));
-    const born = await firstSeen(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs), 2);
-    // From here on the stream follows it; the trades before now are read back after, so none falls in between.
-    if (!this.tape.adoptToken({ mint, venue, pool, creator, createdAt: openedAt, mintCreatedAt: born?.at ?? null, ...meta })) return null;
-    await this.readBack(mint, pool, venue, newest.length ? newest : null, found.dex ?? null, 0);
-    return null;
+    return { newest, oldest };
   }
 
   private getTx(sig: string): Promise<Tx | null> {
@@ -253,11 +324,11 @@ export class Adopter {
   }
 
   /**
-   * The pool's latest swaps read back onto the tape. When the signatures or none of the transactions can be read, the
-   * coin is marked partial with DexScreener's numbers, and the read is tried again in the background, a few times.
+   * The latest trades read back onto the tape. When the signatures or none of the transactions can be read, the coin
+   * is marked partial with DexScreener's numbers, and the read is tried again in the background, a few times.
    */
-  private async readBack(mint: string, pool: string, venue: Venue, page: Sig[] | null, dex: DexRead | null, attempt: number): Promise<void> {
-    page ??= await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [pool, { limit: PAGE }]), this.backoffMs);
+  private async readBack(mint: string, w: Where, page: Sig[] | null, dex: DexRead | null, attempt: number): Promise<void> {
+    page ??= await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [w.pool, { limit: PAGE }]), this.backoffMs);
     const wanted = Array.isArray(page) ? page.filter((x) => !x.err).slice(0, this.backfillN) : null;
     const trades: Array<{ ev: PumpEvent; tx?: string; slot?: number }> = [];
     let read = 0;
@@ -268,15 +339,15 @@ export class Adopter {
       read += 1;
       if (tx.meta?.err) continue;
       const ts = (tx.blockTime ?? s.blockTime ?? 0) * 1000;
-      for (const ev of parseLaunchpads(fromRpc(tx, fromBase58), ts)) if (ev.kind === "trade" && ev.mint === mint && ev.venue === venue) trades.push({ ev, tx: s.signature, ...(tx.slot ?? s.slot ? { slot: tx.slot ?? s.slot } : {}) });
+      for (const ev of eventsOf(w, tx, ts)) if (isTrade(w, mint, ev)) trades.push({ ev, tx: s.signature, ...(tx.slot ?? s.slot ? { slot: tx.slot ?? s.slot } : {}) });
     }
     const ok = wanted !== null && (wanted.length === 0 || read > 0);
     const n = ok ? this.tape.backfill(mint, trades) : 0;
-    if (!ok && !dex) dex = await this.dexOf(mint, pool);
+    if (!ok && !dex) dex = await this.dexOf(mint, w.pool);
     this.tape.noteBackfill(mint, { ok, read: n, dex: ok ? null : dex });
     this.log(`adopt ${mint}: read back ${n} trades${ok ? "" : ", not read, partial"}`);
     if (!ok && attempt < this.retries && this.tape.has(mint)) {
-      const timer = setTimeout(() => void this.readBack(mint, pool, venue, null, null, attempt + 1).catch(() => {}), this.retryMs);
+      const timer = setTimeout(() => void this.readBack(mint, w, null, null, attempt + 1).catch(() => {}), this.retryMs);
       timer.unref?.();
     }
   }
