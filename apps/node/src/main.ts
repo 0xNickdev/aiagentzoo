@@ -198,6 +198,8 @@ if (config.role === "north") {
 }
 // The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
 const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
+// Which launches linked which X account or Telegram, kept beside it for 90 days instead of the tape's two.
+if (history) socials.attach(history.db);
 // The runner radar: the models frozen on 21 Nov scored on every 5-minute reading; signals kept in radar.jsonl.
 const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db) : null;
 if (radar) {

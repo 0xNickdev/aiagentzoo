@@ -411,7 +411,7 @@ export function checkToken(
   // The account the token advertises, reused on other launches whose devs sold within minutes: the same hands.
   for (const a of opts.socials ?? []) {
     if (a.fastDumps < 2) continue;
-    const said = `the ${a.social.kind === "telegram" ? "Telegram group" : a.social.kind === "x-community" ? "X community" : "X account"} this token links to (${a.social.label}) is also on ${a.launches} other launch${a.launches === 1 ? "" : "es"} from the last 48 hours; their dev sold within 5 minutes on ${a.fastDumps}`;
+    const said = `the ${a.social.kind === "telegram" ? "Telegram group" : a.social.kind === "x-community" ? "X community" : "X account"} this token links to (${a.social.label}) is also on ${a.launches} other launch${a.launches === 1 ? "" : "es"} from the last ${(a.windowDays ?? 2) <= 2 ? "48 hours" : `${a.windowDays} days`}; their dev sold within 5 minutes on ${a.fastDumps}`;
     if (a.fastDumps >= 3) flag(avoid, said, WEIGHT.socialsAvoid);
     else flag(caution, said, WEIGHT.socialsCaution);
   }

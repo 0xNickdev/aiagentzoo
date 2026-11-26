@@ -90,7 +90,7 @@ export async function chainBoardRoutes(ctx: RouteContext, req: IncomingMessage, 
   }
   // X accounts, X communities and Telegram groups reused across launches, the most-dumped first.
   if (req.method === "GET" && path === "/v1/chain/socials") {
-    return json(res, 200, { hours: 48, read: socials.size, accounts: socials.reused(clampInt(url.searchParams.get("limit"), 30, 1, 100)) });
+    return json(res, 200, { hours: 48, days: socials.windowDays, read: socials.size, accounts: socials.reused(clampInt(url.searchParams.get("limit"), 30, 1, 100)) });
   }
   if (req.method === "GET" && path === "/v1/usage") {
     return json(res, 200, await usage.view());

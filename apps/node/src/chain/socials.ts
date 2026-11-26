@@ -1,3 +1,4 @@
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 import { type PumpTape, tape } from "./pump.ts";
 
 /**
@@ -58,10 +59,27 @@ export interface AccountRecord {
   /** Launches whose creator sold half their bag or more within five minutes. */
   fastDumps: number;
   creators: number;
+  /** How far back the launches were looked for: 2 days in memory, 90 with the long memory attached. */
+  windowDays: number;
   recent: Array<{ mint: string; symbol: string; createdAt: number; dumpedAfterMin: number | null }>;
 }
 
 const KEEP_MS = 48 * 3_600_000;
+/** The long memory keeps which launches linked which account this long. */
+export const SOCIALS_KEEP_MS = 90 * 24 * 3_600_000;
+/** At most this many of an account's launches are read back for one answer, newest first. */
+const ROWS_MAX = 5_000;
+
+interface LinkRow {
+  mint: string;
+  kind: string;
+  url: string;
+  label: string;
+  creator: string;
+  symbol: string;
+  created_at: number;
+  dumped_after_min: number | null;
+}
 
 /** Accounts memecoins point to because they are about them, never because they run them. */
 const FAMOUS = new Set(["elonmusk", "chatgpt", "openai", "sama", "solana", "pumpdotfun", "binance", "cz_binance", "realdonaldtrump", "potus", "whitehouse", "x", "grok", "xai", "anthropicai", "claudeai", "nvidia", "tesla", "spacex", "jupiterexchange", "raydiumprotocol", "metdaoteam", "bonk_inu", "coinbase", "base", "jessepollak", "vitalikbuterin", "toly", "aeyakovenko"]);
@@ -80,10 +98,65 @@ export class SocialsRegistry {
   private queue: Array<{ mint: string; uri: string }> = [];
   private pausedUntil = 0;
   private timer: NodeJS.Timeout | null = null;
+  /** The long memory: account -> launches (mint, dev, time, dump) for 90 days, in the history database. */
+  private db: { db: DatabaseSync; put: StatementSync; byAccount: StatementSync; ofMint: StatementSync; prune: StatementSync } | null = null;
 
   constructor(t: PumpTape, fetchFn: typeof fetch = fetch) {
     this.tape = t;
     this.fetchFn = fetchFn;
+  }
+
+  /**
+   * Keeps account -> launches in `db` (the north node's history.db) for 90 days, so an account is known by every
+   * launch it was on, not only the last two days the tape holds. Memory stays at the two days; the rest is on disk.
+   */
+  attach(db: DatabaseSync): void {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS social_links (
+        account TEXT NOT NULL,
+        mint TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        url TEXT NOT NULL,
+        label TEXT NOT NULL,
+        creator TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        dumped_after_min INTEGER,
+        PRIMARY KEY (account, mint)
+      ) WITHOUT ROWID;
+      CREATE INDEX IF NOT EXISTS social_links_mint ON social_links (mint);
+      CREATE INDEX IF NOT EXISTS social_links_created ON social_links (created_at);
+    `);
+    this.db = {
+      db,
+      put: db.prepare(`INSERT INTO social_links (account, mint, kind, url, label, creator, symbol, created_at, dumped_after_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (account, mint) DO UPDATE SET dumped_after_min = excluded.dumped_after_min, symbol = excluded.symbol`),
+      byAccount: db.prepare("SELECT mint, kind, url, label, creator, symbol, created_at, dumped_after_min FROM social_links WHERE account = ? ORDER BY created_at DESC LIMIT ?"),
+      ofMint: db.prepare("SELECT account, kind, url, label FROM social_links WHERE mint = ?"),
+      prune: db.prepare("DELETE FROM social_links WHERE created_at < ?"),
+    };
+    this.persistAll();
+  }
+
+  /** Writes one launch's links with what the tape knows of it now (its dev, and whether they dumped). */
+  private persist(mint: string, socials: Social[]): void {
+    if (!this.db || !socials.length) return;
+    const o = this.tape.outline(mint);
+    if (!o) return;
+    for (const s of socials) this.db.put.run(s.key, mint, s.kind, s.url, s.label, o.creator, o.symbol, o.createdAt, o.dumpedAfterMin);
+  }
+
+  /** Every launch in memory written again in one transaction: dumps seen since the first write land on disk. */
+  private persistAll(): void {
+    if (!this.db) return;
+    this.db.db.exec("BEGIN");
+    try {
+      for (const [mint, s] of this.byMint) this.persist(mint, s);
+      this.db.db.exec("COMMIT");
+    } catch (e) {
+      this.db.db.exec("ROLLBACK");
+      throw e;
+    }
   }
 
   /** Records what one token links to. */
@@ -96,6 +169,7 @@ export class SocialsRegistry {
       set.add(mint);
       this.byKey.set(s.key, set);
     }
+    this.persist(mint, socials);
   }
 
   /** A launch whose accounts and picture came from somewhere else (four.meme's own API): kept as if read. */
@@ -172,15 +246,31 @@ export class SocialsRegistry {
     return this.images.get(mint);
   }
 
-  /** What a token links to, and every other launch of the last two days that links to the same. */
+  /** What a token links to, and every other launch that links to the same: two days in memory, 90 on disk. */
   forMint(mint: string): Array<AccountRecord> {
-    return (this.byMint.get(mint) ?? []).map((s) => this.record(s.key, mint)).filter((r): r is AccountRecord => Boolean(r));
+    const own = this.byMint.get(mint) ?? (this.db ? (this.db.ofMint.all(mint) as Array<{ account: string; kind: SocialKind; url: string; label: string }>).map((r) => ({ key: r.account, kind: r.kind, url: r.url, label: r.label })) : []);
+    return own.map((s) => this.record(s.key, mint, s)).filter((r): r is AccountRecord => Boolean(r));
   }
 
-  private record(key: string, except?: string): AccountRecord | null {
-    const mints = [...(this.byKey.get(key) ?? [])];
-    const outlines = mints.map((m) => this.tape.outline(m)).filter((o): o is NonNullable<ReturnType<PumpTape["outline"]>> => Boolean(o) && o!.mint !== except);
-    const social = this.byMint.get(mints[0] ?? "")?.find((s) => s.key === key);
+  /** The launches that linked one account: from disk when attached (the tape's live state wins for coins it still holds). */
+  private launchesOf(key: string): Array<{ mint: string; symbol: string; creator: string; createdAt: number; dumpedAfterMin: number | null; fastDump: boolean; social?: Social }> {
+    if (this.db) {
+      return (this.db.byAccount.all(key, ROWS_MAX) as unknown as LinkRow[]).map((r) => {
+        const live = this.tape.outline(r.mint);
+        if (live) return { ...live, social: { key, kind: r.kind as SocialKind, url: r.url, label: r.label } };
+        return { mint: r.mint, symbol: r.symbol, creator: r.creator, createdAt: r.created_at, dumpedAfterMin: r.dumped_after_min, fastDump: r.dumped_after_min !== null && r.dumped_after_min <= 5, social: { key, kind: r.kind as SocialKind, url: r.url, label: r.label } };
+      });
+    }
+    return [...(this.byKey.get(key) ?? [])].map((m) => {
+      const o = this.tape.outline(m);
+      return o ? { ...o, social: this.byMint.get(m)?.find((s) => s.key === key) } : null;
+    }).filter((o): o is NonNullable<typeof o> => Boolean(o));
+  }
+
+  private record(key: string, except?: string, known?: Social): AccountRecord | null {
+    const all = this.launchesOf(key);
+    const outlines = all.filter((o) => o.mint !== except);
+    const social = known ?? all.find((o) => o.social)?.social;
     if (!social) return null;
     // A token named after the account it links to is about that account (a ChatGPT coin linking @chatgpt): the
     // account is the meme's subject, not the hand behind it. Most of its launches like that, and it is left out.
@@ -196,6 +286,7 @@ export class SocialsRegistry {
       launches: outlines.length,
       fastDumps: outlines.filter((o) => o.fastDump).length,
       creators: new Set(outlines.map((o) => o.creator)).size,
+      windowDays: this.windowDays,
       recent: outlines
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 8)
@@ -213,12 +304,19 @@ export class SocialsRegistry {
     return out.sort((a, b) => b.fastDumps - a.fastDumps || b.launches - a.launches).slice(0, limit);
   }
 
+  /** How far back an account's launches reach: 90 days with the long memory, the tape's two without. */
+  get windowDays(): number {
+    return this.db ? 90 : 2;
+  }
+
   get size() {
     return { read: this.byMint.size, accounts: this.byKey.size, queued: this.queue.length };
   }
 
-  /** Forgets launches the tape no longer keeps. */
+  /** Forgets launches the tape no longer keeps; on disk, writes the last dumps and drops what is past 90 days. */
   prune(now = Date.now()): void {
+    // Written before memory lets go, so the dumps of the last hour are kept.
+    this.persistAll();
     for (const mint of this.byMint.keys()) {
       const o = this.tape.outline(mint);
       if (!o || now - o.createdAt > KEEP_MS) {
@@ -229,6 +327,9 @@ export class SocialsRegistry {
     for (const [key, mints] of this.byKey) {
       for (const m of mints) if (!this.byMint.has(m)) mints.delete(m);
       if (!mints.size) this.byKey.delete(key);
+    }
+    if (this.db) {
+      this.db.prune.run(now - SOCIALS_KEEP_MS);
     }
   }
 
