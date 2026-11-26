@@ -12,7 +12,7 @@ import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { PoolMetaQueue } from "./chain/poolMeta.ts";
-import { Adopter, adoption } from "./chain/adopt.ts";
+import { Adopter, adoption, patient } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
@@ -139,7 +139,7 @@ if (config.role === "north") {
   if (existsSync(momentsFile)) tape.restore(readFileSync(momentsFile, "utf8"));
   if (existsSync(tapeFile)) console.log(`[${config.id}] tape restored: ${tape.load(readFileSync(tapeFile, "utf8"))} tokens`);
   // A coin launched straight into a Raydium pool comes with no name, symbol or supply: read from the chain afterwards.
-  const poolMeta = new PoolMetaQueue((method, params) => rpcRead(method, params), (mint, meta) => void tape.fillMeta(mint, meta));
+  const poolMeta = new PoolMetaQueue((method, params) => patient(() => rpcRead(method, params)), (mint, meta) => void tape.fillMeta(mint, meta));
   tape.onPoolLaunch = (mint) => poolMeta.add(mint);
   // A coin asked about that launched before the stream watched: read from the chain once, then followed live.
   adoption.current = new Adopter(tape, { rpc: (method, params) => rpcRead(method, params), log: (m) => console.log(`[${config.id}] ${m}`) });

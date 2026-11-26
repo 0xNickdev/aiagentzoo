@@ -88,6 +88,8 @@ export interface TokenCheck {
   reasons: string[];
   /** Worth knowing, never a reason to refuse: "too early to tell", "holders not checked". */
   notes: string[];
+  /** A coin read from the chain whose earlier trades could not be read yet: its counts are not the whole story. */
+  partial?: boolean;
   /**
    * pump.fun launches only: the odds the first five minutes give, fitted on what launches like it went on to do. The
    * run odds rank launches far better than the verdict does; the verdict says who is behind it.
@@ -273,6 +275,10 @@ export interface CheckInput {
 
 const brief = (r: PrintRecord) => ({ key: r.key, launches: r.launches, wallets: r.wallets, settled: r.settled, dumped: r.dumped, common: r.common });
 
+/** Raydium pools have no curve: curve wording and curve lines never apply to them. */
+const POOL_VENUE = (v: string | undefined) => v === "raydium" || v === "cpmm";
+export const PARTIAL_NOTE = "trades before we watched could not be read yet";
+
 export function checkToken(
   mint: string,
   found: CheckInput | null,
@@ -388,14 +394,16 @@ export function checkToken(
 
   if (f.graduated) {
     if (f.poolSol !== null && f.poolSol < POOL_DEAD_SOL) flag(avoid, `graduated, but the pool is down to ${f.poolSol.toFixed(2)} SOL`, WEIGHT.poolDead);
-  } else if (f.ageMin >= 360 && !f.quote) {
+  } else if (f.ageMin >= 360 && !f.quote && !POOL_VENUE(f.venue) && !f.partial) {
     const real = f.curveSol ?? (f.buys === 0 ? 0 : null);
     if (real !== null && curveCapOf(real) < CURVE_DEAD_SOL) flag(avoid, `${Math.round(f.ageMin / 60)} hours old and the curve is back where it opened: nobody is holding it`, WEIGHT.curveDead);
   }
 
   if (f.mayhem) notes.push("launched in Mayhem Mode: two billion supply, and pump.fun's own bot trades it for the first 24 hours, so its volume is partly that bot");
 
-  if (early) {
+  const partial = Boolean(f.partial);
+  if (early || partial) {
+    // Partial: a coin read from the chain whose earlier trades could not be read yet has no buyer counts to judge by.
     // Minutes in, a handful of buyers is normal; only the creator's own record can speak yet.
     // Said once the verdict is known: "no red flags yet" next to an avoid would contradict it.
   } else {
@@ -428,7 +436,7 @@ export function checkToken(
         // Moved into a locker is the opposite of moved to sell: the dev's bag waits there until the lock's date.
         if ((h.creatorLockedShare ?? 0) >= 0.005) notes.push(`the creator never sold: they locked ${pct1(h.creatorLockedShare!)}% of the supply in a token locker until its date`);
         else if ((h.lockedShare ?? 0) >= 0.005) notes.push(`the creator never sold: the bag left their wallet, and ${pct1(h.lockedShare!)}% of the supply is locked in a token locker until its date`);
-        else flag(caution, "the creator no longer holds any of it, but never sold on the curve: the bag moved to other wallets", WEIGHT.bagMoved);
+        else flag(caution, `the creator no longer holds any of it, but never sold ${POOL_VENUE(f.venue) ? "in the pool" : "on the curve"}: the bag moved to other wallets`, WEIGHT.bagMoved);
       }
     }
   }
@@ -483,7 +491,9 @@ export function checkToken(
   for (const w of rightsWarnings(mint, rights)) flag(w.avoid ? avoid : caution, w.text, w.weight);
   const issued = issuedNote(mint, rights);
   if (issued) notes.push(issued);
-  const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : "pass";
+  if (partial) notes.unshift(PARTIAL_NOTE);
+  // Nothing found and the trades not read: not a pass, just not known yet.
+  const verdict: CheckVerdict = avoid.length ? "avoid" : caution.length ? "caution" : partial ? "unknown" : "pass";
   const score = scoreOf(verdict, [...avoid, ...caution].map((r) => weight.get(r) ?? 0), { early });
   if (early) {
     const age = Math.max(0, Math.round(f.ageMin));
@@ -498,8 +508,9 @@ export function checkToken(
     verdict,
     score,
     proceed: verdict === "pass",
-    reasons: [...avoid, ...caution],
+    reasons: verdict === "unknown" ? [PARTIAL_NOTE] : [...avoid, ...caution],
     notes,
+    ...(partial ? { partial: true } : {}),
     ...(opts.operator ? { operator: { wallets: opts.operator.wallets, launches: opts.operator.launches, settled: opts.operator.settled, dumped: opts.operator.dumped } } : {}),
     ...(opts.tool ? { tool: { ...brief(opts.tool), ...(opts.toolShape ? { shape: brief(opts.toolShape) } : {}) } } : {}),
     facts: {
@@ -509,6 +520,7 @@ export function checkToken(
       sells: f.sells + (f.ammSells ?? 0),
       poolBuys: f.ammBuys ?? 0,
       poolSells: f.ammSells ?? 0,
+      ...(f.dex ? { dex: f.dex } : {}),
       creatorSoldPct: pct(f.creatorSold === null ? null : Math.min(1, f.creatorSold)),
       creatorLaunches24h: f.creatorLaunches24h,
       creatorDumped48h: c ? c.dumped : null,

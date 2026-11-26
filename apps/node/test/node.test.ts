@@ -2261,7 +2261,9 @@ test("a Raydium coin launched before the stream watched is read from the chain o
     ]));
   }) as typeof fetch;
 
-  assert.deepEqual(await findPool(mint, rpc, dex), { pool, venue: "raydium", listedAt: 1 });
+  const where = await findPool(mint, rpc, dex);
+  assert.deepEqual({ ...where, dex: undefined }, { pool, venue: "raydium", listedAt: 1, dex: undefined });
+  assert.equal(where!.dex!.liquidityUsd, 50_000);
 
   const tape = new PumpTape();
   tape.connected = true;
@@ -2269,7 +2271,7 @@ test("a Raydium coin launched before the stream watched is read from the chain o
   tape.lastEventAt = heard;
   const followed: string[] = [];
   tape.followRaydium = (p) => void followed.push(p);
-  const adopter = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0 });
+  const adopter = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0 });
   const first = adopter.request(mint);
   assert.equal(first.state, "reading");
   // A second ask while it reads starts nothing new.
@@ -2306,7 +2308,7 @@ test("a Raydium coin launched before the stream watched is read from the chain o
 
   // A live trade after adoption counts like any other.
   const tape2 = new PumpTape();
-  const a2 = new Adopter(tape2, { rpc, fetchFn: dex, gapMs: 0, backfill: 0 });
+  const a2 = new Adopter(tape2, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0, backfill: 0 });
   assert.equal((await a2.ensure(mint, 5_000)).state, "tracked");
   tape2.apply({ kind: "trade", venue: "raydium", mint, user: "B".padEnd(44, "b"), isBuy: true, sol: 1, tokens: 1_000, ts: Date.now(), curveSol: null }, Date.now());
   assert.equal(tape2.token(mint)!.facts.buys, 1);
@@ -2322,7 +2324,7 @@ test("adoption: a coin with no Raydium pool is a miss kept ten minutes, and a fu
   };
   const dex = (async () => new Response("[]")) as typeof fetch;
   const tape = new PumpTape();
-  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, maxQueue: 1 });
+  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0, maxQueue: 1 });
   const mint = "A".padEnd(44, "a");
   assert.equal((await a.ensure(mint, 5_000)).state, "missed");
   const before = asked;
@@ -2355,4 +2357,63 @@ test("a Raydium launch's '?' symbol is replaced in the moments once its name arr
   tape2.apply({ kind: "create", venue: "cpmm", name: "", symbol: "", mint, creator: "C".padEnd(44, "c"), ts: now - 60_000, pool: "GdTEWLhzhmNJnY8wR2MGNBRSZ2oz94qzYNEq3VVKmRED" }, now);
   tape2.fillMeta(mint, { mintCreatedAt: now - 70_000 });
   assert.equal(tape2.birthOf(mint)!.mintCreatedAt, null);
+});
+
+test("adoption under 429s: backoff retries, a failed read-back is partial with DexScreener's numbers, never a dead-coin avoid, and tried again", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { Adopter, patient } = await import("../src/chain/adopt.ts");
+  const { RAYDIUM_AMM_PROGRAM } = await import("../src/chain/launchpads.ts");
+  const { checkToken, PARTIAL_NOTE } = await import("../src/chain/check.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  // Two refusals, then the answer.
+  let n = 0;
+  assert.equal(await patient(async () => (++n < 3 ? null : 7), 0), 7);
+  assert.equal(n, 3);
+  assert.equal(await patient(async () => null, 0, 4), null);
+
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/raydium.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  const pool = "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v";
+  let refuse = true;
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const a = params[0] as string;
+    if (method === "getAccountInfo" && a === pool) return { value: { owner: RAYDIUM_AMM_PROGRAM } } as T;
+    if (method === "getAccountInfo") return { value: null } as T;
+    // The public RPC refusing every signature page, until it stops.
+    if (method === "getSignaturesForAddress" && a === pool) return refuse ? null : ([{ signature: "S-buy", blockTime: fixtures.find((f) => f.what === "amm:buy")!.tx.blockTime }] as T);
+    if (method === "getSignaturesForAddress") return [] as T;
+    if (method === "getTransaction") return fixtures.find((f) => f.what === "amm:buy")!.tx as T;
+    return null;
+  };
+  const pair = { chainId: "solana", dexId: "raydium", pairAddress: pool, pairCreatedAt: Date.now() - 2 * 86_400_000, priceUsd: "0.0012", marketCap: 1_200_000, baseToken: { address: mint }, quoteToken: { address: "So11111111111111111111111111111111111111112" }, liquidity: { usd: 80_000, base: 3e7, quote: 260 }, txns: { h24: { buys: 900, sells: 700 } } };
+  const dex = (async () => new Response(JSON.stringify([pair]))) as typeof fetch;
+  const tape = new PumpTape();
+  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, backoffMs: 0, retryMs: 20, retries: 3 });
+  assert.equal((await a.ensure(mint, 5_000)).state, "tracked");
+  const t = tape.token(mint)!;
+  assert.equal(t.facts.partial, true);
+  assert.equal(t.facts.dex!.poolSol, 260);
+  assert.equal(t.facts.dex!.buys24h, 900);
+  // Two days old, no trades read: not "nobody bought", not "the curve is back where it opened", not an avoid.
+  const c = checkToken(mint, t);
+  assert.equal(c.verdict, "unknown");
+  assert.equal(c.partial, true);
+  assert.deepEqual(c.reasons, [PARTIAL_NOTE]);
+  assert.ok(![...c.reasons, ...c.notes].some((r) => /curve|nobody/.test(r)), JSON.stringify(c));
+  // The background retry reads it once the RPC answers again.
+  refuse = false;
+  for (let i = 0; i < 100 && tape.token(mint)!.facts.partial; i++) await new Promise((r) => setTimeout(r, 10));
+  assert.equal(tape.token(mint)!.facts.partial, undefined);
+  assert.equal(tape.token(mint)!.facts.buys, 1);
+});
+
+test("a Raydium launch hours old with no trades is never called a dead curve", async () => {
+  const { checkToken } = await import("../src/chain/check.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const now = Date.now();
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  tape.apply({ kind: "create", venue: "raydium", name: "S", symbol: "S", mint, creator: "C".padEnd(44, "c"), ts: now - 8 * 3_600_000, pool: "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v" }, now);
+  const c = checkToken(mint, tape.token(mint, now), { now });
+  assert.ok(![...c.reasons, ...c.notes].some((r) => /curve/.test(r)), JSON.stringify(c.reasons));
 });

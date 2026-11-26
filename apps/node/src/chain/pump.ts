@@ -44,6 +44,10 @@ export interface ChainFacts {
   odds?: { run: number; devDumps: number | null; vsAverage: number } | null;
   /** Minutes since launch. */
   ageMin: number;
+  /** Adopted, and its trades before adoption could not be read back yet: the counts below start at adoption. */
+  partial?: boolean;
+  /** DexScreener's read of the pool, for an adopted coin whose trades could not be read back. */
+  dex?: DexRead;
   /** Launched in Mayhem Mode: pump.fun's bot trades it for its first 24 hours, so its volume and churn are partly that bot. */
   mayhem?: boolean;
   /** Launched on Raydium LaunchLab or Meteora's bonding curve; absent for pump.fun. */
@@ -152,6 +156,17 @@ const notePeak = (b: Buyer) => {
 /** What a first buyer took: the most they held at once (older snapshots only have the total bought). */
 const tookOf = (b: Buyer, supply: number) => Math.min(b.peak ?? b.tok ?? 0, supply);
 
+/** A pool as DexScreener reads it. */
+export interface DexRead {
+  priceUsd: number | null;
+  mcapUsd: number | null;
+  liquidityUsd: number | null;
+  poolSol: number | null;
+  buys24h: number | null;
+  sells24h: number | null;
+  at: number;
+}
+
 interface Tracked {
   mint: string;
   /** The token it trades against when not SOL; its amounts below are then in that token, not SOL. */
@@ -170,6 +185,10 @@ interface Tracked {
   /** Launched before the stream watched: read from the chain on demand, live from adoptedAt on. Never marked or graded. */
   adopted?: boolean;
   adoptedAt?: number;
+  /** Whether the read-back of its past trades worked, and how many it read. */
+  backfillOk?: boolean;
+  tradesRead?: number;
+  dex?: DexRead;
   /** When the mint itself was made, when that is well before its pool opened (createdAt is the pool's opening then). */
   mintCreatedAt?: number;
   /** The keys of its launch transaction's tool print: the exact build and its shape. */
@@ -476,6 +495,15 @@ export class PumpTape {
     this.followRaydium?.(a.pool, now);
     if (a.trades?.length) this.backfill(a.mint, a.trades, now);
     return true;
+  }
+
+  /** How the read-back of an adopted coin went; DexScreener's numbers stand in while it has not. */
+  noteBackfill(mint: string, r: { ok: boolean; read: number; dex?: DexRead | null }): void {
+    const t = this.tokens.get(mint);
+    if (!t) return;
+    t.backfillOk = r.ok || Boolean(t.backfillOk);
+    t.tradesRead = (t.tradesRead ?? 0) + r.read;
+    if (r.dex) t.dex = r.dex;
   }
 
   /** Past trades of a coin applied without moments, counters or the stream's heartbeat moving. */
@@ -1526,6 +1554,8 @@ export class PumpTape {
       ...(t.mayhem ? { mayhem: true } : {}),
       ...(t.venue ? { venue: t.venue } : {}),
       ...(t.platform ? { platform: t.platform } : {}),
+      ...(t.adopted && !t.backfillOk ? { partial: true } : {}),
+      ...(t.adopted && t.dex ? { dex: t.dex } : {}),
       buys: t.buys,
       sells: t.sells,
       buyers: t.buyers.size + (t.moreBuyers?.size ?? 0),

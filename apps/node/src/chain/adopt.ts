@@ -1,7 +1,7 @@
 import { fromRpc, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type RpcTx } from "./launchpads.ts";
 import { firstSeen, readPoolMeta } from "./poolMeta.ts";
 import { fromBase58, type PumpEvent, type Venue } from "./pumpParse.ts";
-import type { PumpTape } from "./pump.ts";
+import type { DexRead, PumpTape } from "./pump.ts";
 
 /**
  * A coin asked about that launched before the stream watched: found and read from the chain on demand, then kept on
@@ -33,12 +33,43 @@ export interface AdoptOptions {
   /** Gap between transaction reads. */
   gapMs?: number;
   missMs?: number;
+  /** First wait of the 429 backoff (then doubled), and the wait before a failed read-back is tried again. */
+  backoffMs?: number;
+  retryMs?: number;
+  retries?: number;
   /** Coins waiting behind the one being read; more are told to come back. */
   maxQueue?: number;
   log?: (m: string) => void;
 }
 
-type Pair = { chainId?: string; dexId?: string; pairAddress?: string; pairCreatedAt?: number; baseToken?: { address?: string }; quoteToken?: { address?: string }; liquidity?: { usd?: number } };
+type Pair = { chainId?: string; dexId?: string; pairAddress?: string; pairCreatedAt?: number; priceUsd?: string; marketCap?: number; fdv?: number; baseToken?: { address?: string }; quoteToken?: { address?: string }; liquidity?: { usd?: number; base?: number; quote?: number }; txns?: { h24?: { buys?: number; sells?: number } } };
+
+/** DexScreener's numbers for a pool: price, cap, the SOL side of its liquidity, the day's buys and sells. */
+export function dexReadOf(p: Pair, now = Date.now()): DexRead {
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : typeof x === "string" && x && Number.isFinite(Number(x)) ? Number(x) : null);
+  return {
+    priceUsd: num(p.priceUsd),
+    mcapUsd: num(p.marketCap ?? p.fdv),
+    liquidityUsd: num(p.liquidity?.usd),
+    poolSol: num(p.quoteToken?.address === WSOL ? p.liquidity?.quote : p.liquidity?.base),
+    buys24h: num(p.txns?.h24?.buys),
+    sells24h: num(p.txns?.h24?.sells),
+    at: now,
+  };
+}
+
+/**
+ * An RPC call that the public endpoint may refuse with 429 (rpcRead then answers null): tried again after 1, 2, 4
+ * and 8 seconds before giving up. `baseMs` 0 in tests.
+ */
+export async function patient<T>(call: () => Promise<T | null>, baseMs = 1_000, tries = 5): Promise<T | null> {
+  for (let i = 0; i < tries; i++) {
+    const r = await call().catch(() => null);
+    if (r !== null && r !== undefined) return r;
+    if (i < tries - 1) await sleep(baseMs * 2 ** i);
+  }
+  return null;
+}
 type Sig = { signature: string; blockTime?: number | null; err?: unknown; slot?: number };
 type Tx = RpcTx & { slot?: number; blockTime?: number | null; meta: RpcTx["meta"] & { err?: unknown } };
 
@@ -52,7 +83,7 @@ async function venueOfPool(pool: string, rpc: Rpc): Promise<Venue | null> {
 }
 
 /** The coin's deepest SOL pool on Raydium AMM v4 or CPMM, or null. */
-export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = fetch): Promise<{ pool: string; venue: Venue; listedAt: number | null } | null> {
+export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = fetch): Promise<{ pool: string; venue: Venue; listedAt: number | null; dex?: DexRead } | null> {
   try {
     const r = await fetchFn(`https://api.dexscreener.com/tokens/v1/solana/${mint}`, { signal: AbortSignal.timeout(6_000) });
     const pairs = r.ok ? ((await r.json()) as Pair[]) : [];
@@ -61,7 +92,7 @@ export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = f
       .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
     for (const p of sol.slice(0, 3)) {
       const venue = await venueOfPool(p.pairAddress!, rpc);
-      if (venue) return { pool: p.pairAddress!, venue, listedAt: p.pairCreatedAt ?? null };
+      if (venue) return { pool: p.pairAddress!, venue, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
     }
   } catch {
     /* the programs' accounts next */
@@ -92,6 +123,9 @@ export class Adopter {
   private readonly gapMs: number;
   private readonly missMs: number;
   private readonly maxQueue: number;
+  private readonly backoffMs: number;
+  private readonly retryMs: number;
+  private readonly retries: number;
   private readonly log: (m: string) => void;
   private readonly queue: string[] = [];
   private readonly missed = new Map<string, { at: number; reason: string }>();
@@ -105,10 +139,13 @@ export class Adopter {
     this.rpc = o.rpc;
     this.fetchFn = o.fetchFn ?? fetch;
     this.backfillN = o.backfill ?? 120;
-    this.pages = o.pages ?? 8;
-    this.gapMs = o.gapMs ?? 120;
+    this.pages = o.pages ?? 32;
+    this.gapMs = o.gapMs ?? 250;
     this.missMs = o.missMs ?? 10 * 60_000;
     this.maxQueue = o.maxQueue ?? 3;
+    this.backoffMs = o.backoffMs ?? 1_000;
+    this.retryMs = o.retryMs ?? 60_000;
+    this.retries = o.retries ?? 3;
     this.log = o.log ?? (() => {});
   }
 
@@ -170,26 +207,26 @@ export class Adopter {
     const found = await findPool(mint, this.rpc, this.fetchFn);
     if (!found) return "no Raydium pool against SOL";
     const { pool, venue } = found;
-    // The pool's signatures, newest first: the first page is the recent trades, the last page its opening.
+    // The pool's signatures, newest first, in pages of 250: the first page is the recent trades, the last its opening.
+    const sigs = (before?: string) => patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [pool, { limit: PAGE, ...(before ? { before } : {}) }]), this.backoffMs);
     let newest: Sig[] = [];
     let oldest: Sig | null = null;
     let before: string | undefined;
     for (let i = 0; i < this.pages; i++) {
-      const sigs = await this.rpc<Sig[]>("getSignaturesForAddress", [pool, { limit: 1000, ...(before ? { before } : {}) }]);
-      if (!Array.isArray(sigs) || !sigs.length) break;
-      if (!i) newest = sigs;
-      if (sigs.length < 1000) {
-        oldest = sigs[sigs.length - 1]!;
+      if (i) await sleep(this.gapMs);
+      const page = await sigs(before);
+      if (!Array.isArray(page) || !page.length) break;
+      if (!i) newest = page;
+      if (page.length < PAGE) {
+        oldest = page[page.length - 1]!;
         break;
       }
-      before = sigs[sigs.length - 1]!.signature;
+      before = page[page.length - 1]!.signature;
     }
-    if (!newest.length) return "the pool's history could not be read";
-    const getTx = (sig: string) => this.rpc<Tx>("getTransaction", [sig, { encoding: "json", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
     let creator = "";
     let openedAt: number | null = found.listedAt;
     if (oldest) {
-      const tx = await getTx(oldest.signature);
+      const tx = await patient(() => this.getTx(oldest!.signature), this.backoffMs);
       if (tx) {
         const ts = (tx.blockTime ?? oldest.blockTime ?? 0) * 1000;
         const open = parseLaunchpads(fromRpc(tx, fromBase58), ts).find((e) => e.kind === "create" && e.mint === mint);
@@ -198,22 +235,61 @@ export class Adopter {
       }
     }
     openedAt ??= (newest[newest.length - 1]?.blockTime ?? Math.floor(Date.now() / 1000)) * 1000;
-    const meta = await readPoolMeta(mint, this.rpc);
-    const born = await firstSeen(mint, this.rpc, 2);
+    const meta = await readPoolMeta(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs));
+    const born = await firstSeen(mint, (m, p) => patient(() => this.rpc(m, p), this.backoffMs), 2);
     // From here on the stream follows it; the trades before now are read back after, so none falls in between.
     if (!this.tape.adoptToken({ mint, venue, pool, creator, createdAt: openedAt, mintCreatedAt: born?.at ?? null, ...meta })) return null;
+    await this.readBack(mint, pool, venue, newest.length ? newest : null, found.dex ?? null, 0);
+    return null;
+  }
+
+  private getTx(sig: string): Promise<Tx | null> {
+    return this.rpc<Tx>("getTransaction", [sig, { encoding: "json", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
+  }
+
+  /**
+   * The pool's latest swaps read back onto the tape. When the signatures or none of the transactions can be read, the
+   * coin is marked partial with DexScreener's numbers, and the read is tried again in the background, a few times.
+   */
+  private async readBack(mint: string, pool: string, venue: Venue, page: Sig[] | null, dex: DexRead | null, attempt: number): Promise<void> {
+    page ??= await patient(() => this.rpc<Sig[]>("getSignaturesForAddress", [pool, { limit: PAGE }]), this.backoffMs);
+    const wanted = Array.isArray(page) ? page.filter((x) => !x.err).slice(0, this.backfillN) : null;
     const trades: Array<{ ev: PumpEvent; tx?: string; slot?: number }> = [];
-    for (const s of newest.filter((x) => !x.err).slice(0, this.backfillN)) {
+    let read = 0;
+    for (const s of wanted ?? []) {
       await sleep(this.gapMs);
-      const tx = await getTx(s.signature).catch(() => null);
-      if (!tx || tx.meta?.err) continue;
+      const tx = await patient(() => this.getTx(s.signature), this.backoffMs, 3);
+      if (!tx) continue;
+      read += 1;
+      if (tx.meta?.err) continue;
       const ts = (tx.blockTime ?? s.blockTime ?? 0) * 1000;
       for (const ev of parseLaunchpads(fromRpc(tx, fromBase58), ts)) if (ev.kind === "trade" && ev.mint === mint && ev.venue === venue) trades.push({ ev, tx: s.signature, ...(tx.slot ?? s.slot ? { slot: tx.slot ?? s.slot } : {}) });
     }
-    this.tape.backfill(mint, trades);
-    return null;
+    const ok = wanted !== null && (wanted.length === 0 || read > 0);
+    const n = ok ? this.tape.backfill(mint, trades) : 0;
+    if (!ok && !dex) dex = await this.dexOf(mint, pool);
+    this.tape.noteBackfill(mint, { ok, read: n, dex: ok ? null : dex });
+    this.log(`adopt ${mint}: read back ${n} trades${ok ? "" : ", not read, partial"}`);
+    if (!ok && attempt < this.retries && this.tape.has(mint)) {
+      const timer = setTimeout(() => void this.readBack(mint, pool, venue, null, null, attempt + 1).catch(() => {}), this.retryMs);
+      timer.unref?.();
+    }
+  }
+
+  private async dexOf(mint: string, pool: string): Promise<DexRead | null> {
+    try {
+      const r = await this.fetchFn(`https://api.dexscreener.com/tokens/v1/solana/${mint}`, { signal: AbortSignal.timeout(6_000) });
+      const pairs = r.ok ? ((await r.json()) as Pair[]) : [];
+      const p = Array.isArray(pairs) ? pairs.find((x) => x.pairAddress === pool) : undefined;
+      return p ? dexReadOf(p) : null;
+    } catch {
+      return null;
+    }
   }
 }
+
+/** Signatures asked per page: small, so a refused page costs little. */
+const PAGE = 250;
 
 /** The node's one adopter, set on the node that reads the chain. */
 export const adoption: { current: Adopter | null } = { current: null };
