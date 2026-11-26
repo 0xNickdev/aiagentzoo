@@ -79,6 +79,34 @@ export interface TelegramOptions {
   isHolder?: (wallet: string) => Promise<boolean>;
 }
 
+/** A runner radar signal as north serves it (the fields the bot uses). */
+export interface RadarSignal {
+  mint: string;
+  symbol: string;
+  at: number;
+  capAtSignal: number;
+  tier: "strong" | "watch";
+  reasons: string[];
+  outcome?: { peakX: number; graduated: boolean };
+}
+interface RadarStats {
+  days: number;
+  all: { n: number; x2: number; x5: number; graduated: number };
+}
+/** At most this many runner alerts reach one chat in an hour. */
+const RUNNER_PER_HOUR = 8;
+
+/** A runner alert: short, the coin, its cap at the signal, why the model fired, and what it is not. */
+export function runnerAlert(s: RadarSignal): string {
+  return [
+    `<b>${T(s.tier === "strong" ? "Runner radar · strong" : "Runner radar · watch")}</b> · <b>$${esc(s.symbol)}</b>`,
+    T("{c} SOL cap at the signal", { c: s.capAtSignal }),
+    ...s.reasons.slice(0, 3).map((r) => `• ${esc(r)}`),
+    `<code>${s.mint}</code>`,
+    T("<i>Not a call to buy. Most coins still die.</i>"),
+  ].join("\n");
+}
+
 /** Holders get chain alerts this much sooner than everyone else. */
 export const HOLDER_HEAD_START_MS = 10 * 60_000;
 const CODE_TTL_MS = 15 * 60_000;
@@ -200,7 +228,8 @@ const HELP_LINES = () => [
   "/rugs · the latest creator dumps, with transactions",
   "/clean · fresh launches that passed the basic checks",
   T("/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to {n})", { n: WATCH_MAX }),
-  T("/radar on · holders: a ping the moment a coin with no red flags turns"),
+  T("/radar on · holders: runner radar signals, and a ping the moment a coin with no red flags turns"),
+  T("/radar · the latest runner radar signals · /radar all adds the watch tier"),
   T("/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 }),
   "/unwatch &lt;token&gt; · /list",
   "/leaderboard · the contests: guest agents and the odds model on one honest scale",
@@ -226,7 +255,7 @@ export const COMMANDS = [
   { command: "dev", description: "A creator wallet's launches and dumps" },
   { command: "rugs", description: "Latest creator dumps, with transactions" },
   { command: "clean", description: "Fresh coins with no red flags so far" },
-  { command: "radar", description: "Holders: a ping when a clean coin turns" },
+  { command: "radar", description: "Holders: runner radar signals and turn pings" },
   { command: "watch", description: "Alert when a token's creator dumps" },
   { command: "unwatch", description: "Stop watching a token" },
   { command: "list", description: "Tokens you watch" },
@@ -603,14 +632,45 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(chat, lines.join("\n"), keyboard);
   };
 
-  /** Holders can have the radar come to them: a ping the moment a coin that passed turns. */
-  const radarPings = async (chat: number, on: boolean) => {
+  /**
+   * Holders can have the radar come to them: runner radar signals as they fire (strong only, or with the watch tier
+   * after /radar all), and a ping the moment a coin that passed the clean list turns.
+   */
+  const radarPings = async (chat: number, on: boolean, all = false) => {
     const list = new Set((await opts.store.get<number[]>("tg:radar")) ?? []);
+    const wide = new Set((await opts.store.get<number[]>("tg:radar:all")) ?? []);
     if (on && !(await isHolderChat(chat))) return void send(chat, T("Radar pings are a holder perk: hold {h}+ $ZOOAGENCY and /link your wallet, then /radar on.", { h: HOLDER_MIN.toLocaleString("en-US") }));
     if (on) list.add(chat);
     else list.delete(chat);
+    if (on && all) wide.add(chat);
+    else wide.delete(chat);
     await opts.store.set("tg:radar", [...list]);
-    return void send(chat, on ? T("Radar pings on. Coins with no red flags are re-checked every minute; the moment one turns, the dev sells, bundles leave, the pool drains, you hear first. /radar off to stop.") : T("Radar pings off."));
+    await opts.store.set("tg:radar:all", [...wide]);
+    if (!on) return void send(chat, T("Radar pings off."));
+    return void send(
+      chat,
+      [
+        T(all ? "Runner radar on, strong and watch signals." : "Runner radar on, strong signals only. /radar all adds the watch tier."),
+        T("A signal is not a call to buy: the model is frozen since 21 Nov and graded in public, and most coins still die."),
+        T("You also get a ping when a coin with no red flags turns. /radar off to stop."),
+      ].join("\n"),
+    );
+  };
+
+  /** The runner radar's latest signals, live for holders, an hour late for everyone else. */
+  const runnerList = async (chat: number) => {
+    const body = await north<{ signals: RadarSignal[]; stats: RadarStats }>("/v1/radar?limit=8");
+    if (!body) return void send(chat, T("The radar is not reachable right now. Try again in a minute."));
+    const holder = await isHolderChat(chat);
+    const now = Date.now();
+    const list = body.signals.filter((s) => holder || now - s.at >= 60 * 60_000).slice(0, 6);
+    const lines = [T("<b>Runner radar</b>"), T(holder ? "<i>live, holders</i>" : "<i>an hour late; holders see it live: /link, then /radar on</i>"), ""];
+    if (!list.length) lines.push(T("No signal in this window. Most hours have a few; some have none."));
+    for (const s of list) lines.push(`• <b>$${esc(s.symbol)}</b> · ${T(s.tier)} · ${T("{a} min ago at {c} SOL", { a: Math.round((now - s.at) / 60_000), c: s.capAtSignal })}${s.outcome ? ` · ${T("peak {x}x", { x: s.outcome.peakX })}` : ""}`);
+    const a = body.stats.all;
+    if (a.n) lines.push("", T("<i>Settled signals, last {d} days: {n}; {x2} reached 2x their cap at the signal, {x5} reached 5x, {g} graduated. A peak is not an exit.</i>", { d: body.stats.days, n: a.n, x2: a.x2, x5: a.x5, g: a.graduated }));
+    lines.push("", T("<i>A signal is not a call to buy.</i>"));
+    return void send(chat, lines.join("\n"), [[{ text: T("Open the radar"), url: `${SITE}/radar` }]]);
   };
 
   const leaderboard = async (chat: number) => {
@@ -748,7 +808,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return rugs(chat);
       case "/radar":
       case "/clean":
-        return arg === "on" || arg === "off" ? radarPings(chat, arg === "on") : clean(chat);
+        if (arg === "on" || arg === "off" || arg === "all") return radarPings(chat, arg !== "off", arg === "all");
+        return cmd === "/radar" ? runnerList(chat) : clean(chat);
       case "/leaderboard":
         return leaderboard(chat);
       case "/token":
@@ -791,7 +852,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
       case "ask":
         return MINT_ONLY.test(value) ? xray(chat, value) : undefined;
       case "radar":
-        return radarPings(chat, value === "on");
+        return radarPings(chat, value === "on" || value === "all", value === "all");
       case "watch":
         return MINT_ONLY.test(value) ? watch(chat, value, true) : undefined;
       case "unwatch":
@@ -945,8 +1006,46 @@ export function startTelegram(opts: TelegramOptions): () => void {
     }
   };
 
+  // Runner radar signals from north, to holders who turned the radar on. Each coin once; a chat gets at most
+  // RUNNER_PER_HOUR an hour, so a busy hour cannot bury it. Signals older than a quarter hour are not news.
+  let runnersAt = 0;
+  const seenRunners = new Set<string>();
+  const sentTo = new Map<number, number[]>();
+  const runnersReady = Promise.resolve(opts.store.get<string[]>("tg:radar:seen"))
+    .then((saved) => {
+      for (const m of saved ?? []) seenRunners.add(m);
+    })
+    .catch(() => undefined);
+  const runnerTick = async () => {
+    if (stopped || !opts.northUrl || Date.now() - runnersAt < 30_000) return;
+    runnersAt = Date.now();
+    await runnersReady;
+    const body = await north<{ access: string; signals: RadarSignal[] }>("/v1/radar?limit=50");
+    if (!body || body.access !== "live") return;
+    const now = Date.now();
+    const fresh = body.signals.filter((s) => !seenRunners.has(s.mint)).reverse();
+    if (!fresh.length) return;
+    for (const s of fresh) seenRunners.add(s.mint);
+    await opts.store.set("tg:radar:seen", [...seenRunners].slice(-500));
+    const subs = (await opts.store.get<number[]>("tg:radar")) ?? [];
+    const wide = new Set((await opts.store.get<number[]>("tg:radar:all")) ?? []);
+    for (const s of fresh) {
+      if (now - s.at > 15 * 60_000) continue;
+      for (const chat of subs) {
+        if (s.tier !== "strong" && !wide.has(chat)) continue;
+        if (!(await isHolderChat(chat))) continue;
+        const times = (sentTo.get(chat) ?? []).filter((t) => now - t < 3_600_000);
+        if (times.length >= RUNNER_PER_HOUR) continue;
+        times.push(now);
+        sentTo.set(chat, times);
+        const l = await chatLang(opts.store, chat);
+        await send(chat, inLang(l, () => runnerAlert(s)), [[{ text: T("X-ray it"), url: `${APP_URL}?mint=${s.mint}` }, { text: T("Radar"), url: `${SITE}/radar` }]]);
+      }
+    }
+  };
+
   void poll();
-  const timer = setInterval(() => void restored.then(alerts).then(flush).then(radarTick), 10_000);
+  const timer = setInterval(() => void restored.then(alerts).then(flush).then(radarTick).then(runnerTick), 10_000);
   timer.unref?.();
   return () => {
     stopped = true;
