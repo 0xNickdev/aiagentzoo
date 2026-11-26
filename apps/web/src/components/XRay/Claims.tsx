@@ -93,7 +93,7 @@ function Strip({ days, launch }: { days: number[]; launch: number }) {
   const total = days.reduce((a, b) => a + b, 0);
   const li = 29 - Math.floor((Date.now() - launch) / 86_400_000);
   return (
-    <figure className="x-strip" aria-label={t("{n} commits in the last 30 days", { n: total })}>
+    <figure className="x-gh" aria-label={t("{n} commits in the last 30 days", { n: total })}>
       <div>
         {days.map((n, i) => (
           <i key={i} title={`${day(Date.now() - (29 - i) * 86_400_000)}: ${n}`} style={n ? { opacity: 0.35 + (0.65 * n) / top } : undefined} className={n ? "on" : ""}>
@@ -103,9 +103,9 @@ function Strip({ days, launch }: { days: number[]; launch: number }) {
       </div>
       <figcaption>
         <span>{t("30 days ago")}</span>
-        <span>{total ? t("{n} commits in the last 30 days", { n: total }) : t("no commits in the last 30 days")}{li >= 0 && li < 30 ? t(", red dot: launch day") : ""}</span>
         <span>{t("today")}</span>
       </figcaption>
+      <p>{total ? t("{n} commits in the last 30 days", { n: total }) : t("no commits in the last 30 days")}{li >= 0 && li < 30 ? t(", red dot: launch day") : ""}</p>
     </figure>
   );
 }
