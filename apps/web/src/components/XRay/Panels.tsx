@@ -462,6 +462,27 @@ function Squares({ total, dumped, label }: { total: number; dumped: number; labe
   );
 }
 
+const TIE_WORD: Record<string, string> = { funder: "same funder", transfer: "SOL between launch wallets", snipers: "shared early snipers", print: "same private launch tool" };
+
+/** The dev's operator from the graph: how many other launch wallets are tied on chain, by what, and what they did. */
+function OperatorLine({ r }: { r: XRayReport }) {
+  const g = r.check.operatorGraph;
+  if (!g || g.creators < 2) return null;
+  const by = Object.keys(g.ties).filter((k) => TIE_WORD[k]).map((k) => t(TIE_WORD[k]!));
+  const acc = g.accounts[0]?.replace(/^x:/, "X ").replace(/^telegram:/, "t.me/").replace(/^x-community:/, "X community ");
+  const bad = g.dumped >= 3 && g.dumped / Math.max(1, g.launches) >= 0.5;
+  return (
+    <p className="x-note" style={{ marginTop: 8 }}>
+      <span className={bad ? "x-d" : ""}>{t("One operator with {n} other launch wallets", { n: g.creators - 1 })}</span>
+      {" · "}
+      {by.join(", ")}
+      {" · "}
+      {t("{d} of {l} launches dumped", { d: g.dumped, l: g.launches })}
+      {acc ? ` · ${t("same {a}", { a: acc })}` : ""}
+    </p>
+  );
+}
+
 export function DevPanel({ r, onPick, go, full }: Ctx & { full?: boolean }) {
   const rec = r.creatorRecord;
   const f = r.check.facts;
@@ -521,6 +542,7 @@ export function DevPanel({ r, onPick, go, full }: Ctx & { full?: boolean }) {
         </span>
       </div>
       {rec.timeline?.length ? <Timeline codes={rec.timeline} label={span48} /> : <Squares total={rec.launches48h} dumped={rec.dumped} label={span48} />}
+      <OperatorLine r={r} />
       {recent.length > 0 && (
         <>
           <div className="x-runs">

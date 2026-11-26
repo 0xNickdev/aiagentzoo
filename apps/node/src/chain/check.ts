@@ -1,6 +1,7 @@
 import type { Odds } from "./odds.ts";
 import { printWarning, type PrintRecord } from "./fingerprint.ts";
 import { operatorWarning, type OperatorRecord } from "./operators.ts";
+import { operatorGraphWarning, type OperatorSummary } from "./opgraph.ts";
 import { curveCapOf, CURVE_DEAD_SOL, POOL_DEAD_SOL } from "../agents/judgement.ts";
 import type { HolderReport, TokenRights } from "./holders.ts";
 import { handNote, handWarning, type HandReport } from "./hand.ts";
@@ -98,6 +99,8 @@ export interface TokenCheck {
   /** The launch transaction's tool print and what the other launches made with it did; pump.fun, LaunchLab, Meteora. */
   /** Wallets that signed a transaction with the dev, and what they launched and dumped in two days. Solana only. */
   operator?: { wallets: number; launches: number; settled: number; dumped: number } | null;
+  /** The operator graph's group for the dev: launch wallets tied on chain across launches, with their record. */
+  operatorGraph?: { id: string; creators: number; launches: number; dumped: number; accounts: string[]; ties: OperatorSummary["ties"] } | null;
   tool?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean; shape?: { key: string; launches: number; wallets: number; settled: number; dumped: number; common: boolean } } | null;
   facts: {
     ageMin: number;
@@ -178,6 +181,8 @@ export const WEIGHT = {
   toolPrint: 20,
   /** The dev co-signed with wallets that launched and dumped: near proof of one owner. */
   operator: 35,
+  /** The dev is tied on chain (funder, transfers, snipers, private tool) to launch wallets that dump. */
+  operatorGraph: 25,
   creatorSold: 40,
   creatorSelling: 15,
   dumper: 30,
@@ -326,7 +331,7 @@ export const PARTIAL_NOTE = "trades before we watched could not be read yet";
 export function checkToken(
   mint: string,
   found: CheckInput | null,
-  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; rights?: TokenRights | null; hand?: HandReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null } = {},
+  opts: { now?: number; stream?: TokenCheck["stream"]; holders?: HolderReport | null; rights?: TokenRights | null; hand?: HandReport | null; lineage?: LineageView | null; socials?: AccountRecord[]; chain?: Chain; tool?: PrintRecord | null; toolShape?: PrintRecord | null; operator?: OperatorRecord | null; graph?: OperatorSummary | null } = {},
 ): TokenCheck {
   const now = opts.now ?? Date.now();
   const stream = opts.stream ?? { live: true, lastEventSecAgo: null };
@@ -503,6 +508,9 @@ export function checkToken(
   // Wallets that signed one transaction with the dev share its keys' owner: their launches are the dev's record too.
   const op = operatorWarning(opts.operator ?? null);
   if (op) flag(op.avoid ? avoid : caution, op.text, WEIGHT.operator);
+  // Launch wallets tied on chain across launches: their record is this dev's. An account alone never ties them.
+  const og = operatorGraphWarning(opts.graph ?? null, c?.wallet);
+  if (og) flag(og.avoid ? avoid : caution, og.text, WEIGHT.operatorGraph);
 
   // One hand dressed as a crowd: the biggest buyers paid from one wallet, however far apart their buys were spaced.
   const hand = handWarning(opts.hand);
@@ -568,6 +576,7 @@ export function checkToken(
     notes,
     ...(partial ? { partial: true } : {}),
     ...(opts.operator ? { operator: { wallets: opts.operator.wallets, launches: opts.operator.launches, settled: opts.operator.settled, dumped: opts.operator.dumped } } : {}),
+    ...(opts.graph ? { operatorGraph: { id: opts.graph.id, creators: opts.graph.creators, launches: opts.graph.launches, dumped: opts.graph.dumped, accounts: opts.graph.accounts, ties: opts.graph.ties } } : {}),
     ...(opts.tool ? { tool: { ...brief(opts.tool), ...(opts.toolShape ? { shape: brief(opts.toolShape) } : {}) } } : {}),
     facts: {
       ageMin: Math.round(f.ageMin),

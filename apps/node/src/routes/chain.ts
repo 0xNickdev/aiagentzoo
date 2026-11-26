@@ -35,6 +35,15 @@ export async function chainReadRoutes(ctx: RouteContext, req: IncomingMessage, r
     const { members, root, ...counts } = record;
     return json(res, 200, { ...counts, members: members.slice(0, clampInt(url.searchParams.get("limit"), 50, 1, 500)), proof: tape.operators.proof(root, 5), joinedPairs: tape.operators.joined });
   }
+  // The operator graph: launch wallets tied on chain across launches, by any one of them.
+  const group = /^\/v1\/chain\/operators\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
+  if (req.method === "GET" && group) {
+    if (!ctx.opGraph) return json(res, 404, { error: "the operator graph runs on the node with the long memory" });
+    const s = ctx.opGraph.summary(group[1]!, { members: clampInt(url.searchParams.get("limit"), 50, 1, 500), near: 20 });
+    if (!s) return json(res, 404, { error: "no on-chain tie puts this wallet in a group with another launch wallet" });
+    res.setHeader("cache-control", "public, max-age=60");
+    return json(res, 200, { ...s, note: "joined only by on-chain ties (same funder, SOL between launch wallets, shared early snipers, a private launch tool); accounts are evidence, never a tie on their own" });
+  }
   const chainToken = ROUTE.chainToken.exec(path);
   if (req.method === "GET" && chainToken) {
     const a = norm(chainToken[1]!);

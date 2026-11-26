@@ -57,6 +57,8 @@ export interface Check {
   notes: string[];
   /** Wallets that signed a transaction together with the dev, and what they launched and dumped in two days. */
   operator?: { wallets: number; launches: number; settled: number; dumped: number } | null;
+  /** The operator graph: launch wallets tied to the dev on chain across launches (funder, transfers, snipers, private tool); accounts are evidence only. */
+  operatorGraph?: { id: string; creators: number; launches: number; dumped: number; accounts: string[]; ties: Partial<Record<"funder" | "transfer" | "snipers" | "print" | "account", number>> } | null;
   /** How the launch transaction was built, and what the other launches built the same way did (exact and by shape). */
   tool?: (ToolStat & { shape?: ToolStat }) | null;
   /** Whether the node's chain stream is live and how long ago it last heard the chain. */

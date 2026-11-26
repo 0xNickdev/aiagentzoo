@@ -32,7 +32,7 @@ export function recordNote(recordedAt: number, createdAt: number): string {
 const dayOf = (at: number) => `${new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`;
 
 export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
-  const { enclosure, history, x402, checkGate, holderGate, deepGate, holderDeepGate, keyGate, holding, preferHistory, kept, shills, withCabal, usage, cache } = ctx;
+  const { enclosure, history, opGraph, x402, checkGate, holderGate, deepGate, holderDeepGate, keyGate, holding, preferHistory, kept, shills, withCabal, usage, cache } = ctx;
   // The pre-trade check agents call before buying a pump.fun token: no model, answers in milliseconds.
   if (req.method === "GET" && path === "/v1/check/record") {
     if (tape.lastEventAt === 0) return json(res, 404, { error: "this node does not read the chain; use the north node" });
@@ -140,7 +140,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     // Holders that could not be ranked (USDC has too many accounts) still leave the mint's rights to read.
     const rights = deep && (found || past) && !holders ? await within(mintRights(mint)) : null;
     const linked = found || past ? socials.forMint(mint) : [];
-    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), hand: await handP, ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(found ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
+    const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), hand: await handP, ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(opGraph && (found || past) ? { graph: opGraph.summary((found ?? past)!.creator) } : {}), ...(found ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found) {
       const funder = lineage.funderOf(found.creator) ?? null;

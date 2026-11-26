@@ -14,6 +14,7 @@ import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { PoolMetaQueue } from "./chain/poolMeta.ts";
 import { Adopter, adoption, patient } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
+import { OperatorGraph, startOperatorGraph } from "./chain/opgraph.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
@@ -233,6 +234,16 @@ const radarV2 = config.role === "north" && history
     })
   : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
+// The operator graph: launch wallets tied on chain across launches, read from the long memory every five minutes.
+const opGraph = history
+  ? new OperatorGraph(history.db, {
+      printOf: (mint) => {
+        const r = tape.printOf(mint);
+        return r ? { key: r.key, wallets: r.wallets, common: r.common, creators: tape.printLaunches(r.key, 6).map((l) => l.creator) } : null;
+      },
+    })
+  : null;
+const stopOpGraph = opGraph ? startOperatorGraph(opGraph, { log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
 const mentions = history ? new Mentions(history.db) : null;
@@ -352,6 +363,7 @@ const server = createNodeServer({
   ...(history ? { history } : {}),
   ...(radar ? { radar } : {}),
   ...(cabals ? { cabals } : {}),
+  ...(opGraph ? { opGraph } : {}),
   ...(mentions ? { mentions } : {}),
   ...(config.role === "north" ? { sideWallets } : {}),
   buybacks: () => buybackView(enclosure.store, feeHot, feeTreasury || null, Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1)),
@@ -389,6 +401,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       try {
         stopHistory?.();
         stopCabals?.();
+        stopOpGraph?.();
         stopLabels?.();
         stopBuyback?.();
         history?.close();

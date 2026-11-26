@@ -16,6 +16,7 @@ import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, H
 import { isHolder } from "../holders.ts";
 import { type CreatorRecord, tape } from "../chain/pump.ts";
 import type { HistoryStore } from "../chain/history.ts";
+import type { OperatorGraph } from "../chain/opgraph.ts";
 import type { Radar } from "../chain/radar.ts";
 import type { GuestHouse } from "../guests.ts";
 import type { X402Lane } from "../x402.ts";
@@ -62,6 +63,8 @@ export interface ServerOptions {
   sideWallets?: SideWallets;
   /** Where tokens were seen on X, as the extension reports it. */
   mentions?: Mentions;
+  /** Launch wallets tied on chain across launches (funder, transfers, snipers, private tool), from the long memory. */
+  opGraph?: OperatorGraph;
   /** Pay-per-report over HTTP 402 in USDC on Solana; absent when x402 is off. */
   x402?: X402Lane | null;
 }
