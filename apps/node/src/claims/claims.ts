@@ -267,6 +267,17 @@ async function readGithub(link: { owner: string; repo: string | null }, foundIn:
   const ownerAt = u?.created_at ? Date.parse(u.created_at) : undefined;
   const forkOf = repo.parent?.full_name ?? repo.source?.full_name;
 
+  // A busy repository fills a page in a day or two: up to 5 pages are read so the older days are not left empty.
+  if (recent?.status === 200 && Array.isArray(recent.body) && recent.body.length === 100) {
+    const all = [...(recent.body as unknown[])];
+    for (let page = 2; page <= 5; page++) {
+      const more = await gh(`/repos/${full}/commits?per_page=100&page=${page}&since=${new Date(now - 30 * DAY).toISOString()}`);
+      if (more?.status !== 200 || !Array.isArray(more.body)) break;
+      all.push(...(more.body as unknown[]));
+      if (more.body.length < 100) break;
+    }
+    recent.body = all;
+  }
   const { days, lastCommitAt } = commitDays(recent, now);
   const last = lastCommitAt ?? (Number.isFinite(pushedAt) ? pushedAt : null);
   const activity: GithubClaim["activity"] = repo.archived || last === null || now - last > 180 * DAY ? "dormant" : now - last <= 7 * DAY ? "shipping" : now - last <= 30 * DAY ? "active" : "quiet";
