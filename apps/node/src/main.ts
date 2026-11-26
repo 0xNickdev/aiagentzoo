@@ -15,6 +15,8 @@ import { PoolMetaQueue } from "./chain/poolMeta.ts";
 import { Adopter, adoption, patient } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { OperatorGraph, startOperatorGraph } from "./chain/opgraph.ts";
+import { SmartWallets, startWalletLedger, WalletLedger } from "./chain/walletpnl.ts";
+import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
 import { labels } from "./chain/labels.ts";
@@ -250,6 +252,20 @@ const opGraph = history
     })
   : null;
 const stopOpGraph = opGraph ? startOperatorGraph(opGraph, { log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
+// Every trader's SOL in and out per coin, written in batches; once a day the wallets with the best realized SOL become the smart list.
+const walletLedger = history && process.env.ZOO_WALLET_PNL !== "off" ? new WalletLedger(history.db) : null;
+const smart = walletLedger ? new SmartWallets(join(config.dataDir, "smart-wallets.json")) : null;
+if (walletLedger) tape.onFill = (w, m, sol, isBuy, ts) => walletLedger.fill(w, m, sol, isBuy, ts);
+const stopWalletLedger = walletLedger && smart
+  ? startWalletLedger(walletLedger, smart, {
+      isOperator: (w) => opGraph?.idOf(w) != null,
+      clusterOf: (w) => {
+        // Wallets paid by one wallet are one hand: only the best of them is listed. Exchanges and launchers pay everyone.
+        const f = sideWallets.funderOf(w) ?? lineage.funderOf(w) ?? null;
+        return f && !exchangeOf(f) && !launcherOf(f) ? `funder:${f}` : null;
+      },
+    }, { log: (m) => console.log(`[${config.id}] ${m}`) })
+  : null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
 const mentions = history ? new Mentions(history.db) : null;
@@ -370,6 +386,7 @@ const server = createNodeServer({
   ...(radar ? { radar } : {}),
   ...(cabals ? { cabals } : {}),
   ...(opGraph ? { opGraph } : {}),
+  ...(smart ? { smart } : {}),
   ...(mentions ? { mentions } : {}),
   ...(config.role === "north" ? { sideWallets } : {}),
   buybacks: () => buybackView(enclosure.store, feeHot, feeTreasury || null, Number(process.env.ZOO_FEE_BUY_SHARE ?? 0.1)),
@@ -408,6 +425,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
         stopHistory?.();
         stopCabals?.();
         stopOpGraph?.();
+        stopWalletLedger?.();
         stopLabels?.();
         stopBuyback?.();
         history?.close();

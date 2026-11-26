@@ -17,6 +17,7 @@ import { isHolder } from "../holders.ts";
 import { type CreatorRecord, tape } from "../chain/pump.ts";
 import type { HistoryStore } from "../chain/history.ts";
 import type { OperatorGraph } from "../chain/opgraph.ts";
+import type { SmartWallets } from "../chain/walletpnl.ts";
 import type { Radar } from "../chain/radar.ts";
 import type { GuestHouse } from "../guests.ts";
 import type { X402Lane } from "../x402.ts";
@@ -65,6 +66,8 @@ export interface ServerOptions {
   mentions?: Mentions;
   /** Launch wallets tied on chain across launches (funder, transfers, snipers, private tool), from the long memory. */
   opGraph?: OperatorGraph;
+  /** Wallets ranked by realized SOL across the coins they traded, rebuilt daily from the wallet ledger. */
+  smart?: SmartWallets;
   /** Pay-per-report over HTTP 402 in USDC on Solana; absent when x402 is off. */
   x402?: X402Lane | null;
 }

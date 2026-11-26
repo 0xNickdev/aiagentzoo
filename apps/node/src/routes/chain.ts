@@ -35,6 +35,13 @@ export async function chainReadRoutes(ctx: RouteContext, req: IncomingMessage, r
     const { members, root, ...counts } = record;
     return json(res, 200, { ...counts, members: members.slice(0, clampInt(url.searchParams.get("limit"), 50, 1, 500)), proof: tape.operators.proof(root, 5), joinedPairs: tape.operators.joined });
   }
+  // Smart wallets: the best realized SOL over 90 days, recent coins weighing more, one wallet per funder, operators out.
+  if (req.method === "GET" && path === "/v1/chain/smart") {
+    const list = ctx.smart?.current;
+    if (!list) return json(res, 404, { error: "the smart wallets list is built once a day on the node with the long memory" });
+    res.setHeader("cache-control", "public, max-age=300");
+    return json(res, 200, { ...list, wallets: list.wallets.slice(0, clampInt(url.searchParams.get("limit"), 100, 1, 200)), note: "realized SOL on pump.fun curve and PumpSwap trades only: coins still held count their buys against what was sold so far; fees and other venues are not seen" });
+  }
   // The operator graph: launch wallets tied on chain across launches, by any one of them.
   const group = /^\/v1\/chain\/operators\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(path);
   if (req.method === "GET" && group) {

@@ -659,6 +659,8 @@ export class PumpTape {
 
   /** Called on every moment, launches included: the long-memory store listens here. Must stay cheap. */
   onMoment?: (e: PulseEvent) => void;
+  /** Every SOL-paired trade (curve and PumpSwap), for the per-wallet SOL ledger. Kept cheap: it runs on every trade. */
+  onFill?: (wallet: string, mint: string, sol: number, isBuy: boolean, ts: number) => void;
 
   private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string; creator: string }, text: string, tx?: string): void {
     if (this.quiet) return;
@@ -876,6 +878,7 @@ export class PumpTape {
       t.cfCurve = (t.cfCurve ?? 0) + (ev.creatorFee ?? ev.sol * CURVE_CREATOR_FEE);
     }
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
+    if (this.onFill && !t.quote && this.unit === "SOL") this.onFill(ev.user, t.mint, ev.sol, ev.isBuy, ev.ts || now);
     if (!t.quote) this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
     // Five minutes in, the early and churn numbers are written down once, for the check's record.
@@ -1122,6 +1125,7 @@ export class PumpTape {
     if (ev.creatorFee === undefined) t.cfEst = true;
     t.cfPool = (t.cfPool ?? 0) + (ev.creatorFee ?? ev.sol * POOL_CREATOR_FEE);
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
+    if (this.onFill && !t.quote && this.unit === "SOL") this.onFill(ev.user, t.mint, ev.sol, ev.isBuy, ev.ts || now);
     this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     // Trades on a side pool still count, but only the main pool says how much SOL is left.
     if (ev.pool === t.pool) {
