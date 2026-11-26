@@ -94,6 +94,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/radar",
+      "destination": "/index.html"
+    },
+    {
       "source": "/contests",
       "destination": "/index.html"
     },

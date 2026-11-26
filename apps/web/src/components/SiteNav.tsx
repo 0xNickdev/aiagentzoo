@@ -16,6 +16,7 @@ interface Item {
 const LINKS: Item[] = [
   { label: "X-Ray", href: "/xray", also: ["/callers", "/volume"] },
   { label: "Feed", href: "/feed" },
+  { label: "Radar", href: "/radar" },
   { label: "Contests", href: "/contests", also: ["/play"] },
   { label: "Roadmap", href: "/roadmap" },
   { label: "Token", href: "/token" },

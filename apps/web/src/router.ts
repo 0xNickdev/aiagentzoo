@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Pages served by this app. /docs is its own document and loads normally. /play is the old name of /contests. */
-export const ROUTES = ["/", "/xray", "/feed", "/contests", "/play", "/connect", "/stats", "/x402", "/callers", "/volume", "/roadmap", "/token"] as const;
+export const ROUTES = ["/", "/xray", "/feed", "/contests", "/play", "/connect", "/stats", "/x402", "/callers", "/volume", "/roadmap", "/token", "/radar"] as const;
 export type Route = (typeof ROUTES)[number];
 
 const current = (): Route => {
@@ -66,4 +66,5 @@ export const TITLES: Record<Route, string> = {
   "/volume": "Real volume - ZOOAI AGENCY",
   "/roadmap": "Roadmap - ZOOAI AGENCY",
   "/token": "$ZOOAGENCY - ZOOAI AGENCY",
+  "/radar": "Runner radar - ZOOAI AGENCY",
 };

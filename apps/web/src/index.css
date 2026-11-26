@@ -231,3 +231,13 @@ body {
 /* Rolling digits: each column slides to its new figure. */
 .roll-strip { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) { .roll-strip { transition: none; } }
+
+/* Runner radar: a new signal slides in from above; none of it when the reader asks for less motion. */
+@keyframes radar-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.radar-row { animation: radar-in 240ms cubic-bezier(0.2, 0, 0, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .radar-row { animation: none; }
+}

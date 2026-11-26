@@ -13,6 +13,7 @@ const COLUMNS: Array<{ title: string; links: Array<[string, string]> }> = [
       ["Telegram bot", BOT_URL],
       ["Caller Truth", "/callers"],
       ["Real volume", "/volume"],
+      ["Runner radar", "/radar"],
       ["Roadmap", "/roadmap"],
     ],
   },

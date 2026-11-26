@@ -212,6 +212,8 @@ const r3 = (v: number) => Math.round(v * 1000) / 1000;
 /** The live store: scores readings, keeps the last week of signals in memory, and writes every signal and outcome to a JSONL file. */
 export class Radar {
   private list: Signal[] = [];
+  /** Readings scored today (UTC), signal or not: the page says how many coins the radar looked at. */
+  scored = { day: "", n: 0 };
   private byMint = new Map<string, Signal>();
   private q: { token?: StatementSync; prior?: StatementSync; early?: StatementSync; peak?: StatementSync } = {};
 
@@ -279,6 +281,9 @@ export class Radar {
     if (!l) return null;
     const f = featuresOf(x, l);
     const j = judge(f, this.frozen);
+    const day = new Date(now).toISOString().slice(0, 10);
+    if (this.scored.day !== day) this.scored = { day, n: 0 };
+    this.scored.n++;
     if (!j.tier) return null;
     // Reasons come from the model that fired hardest over its own cut-off.
     const lead = [...j.models].sort((a, b) => j.scores[b] - this.frozen.models[b].top1 - (j.scores[a] - this.frozen.models[a].top1))[0]!;

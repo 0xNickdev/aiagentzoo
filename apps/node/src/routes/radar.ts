@@ -61,6 +61,7 @@ export async function radarRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     delayMin: Math.round(delay / 60_000),
     model: { frozenAt: FROZEN.frozenAt, tiers: { strong: "top 0.5% of the runner or graduation model", watch: "top 1% of either" } },
     stats: radar.stats(now),
+    today: { scored: radar.scored.day === new Date(now).toISOString().slice(0, 10) ? radar.scored.n : 0, signals: radar.signals(now).filter((s) => s.at >= Date.parse(new Date(now).toISOString().slice(0, 10))).length },
     signals,
   };
   res.setHeader("cache-control", "no-store");
