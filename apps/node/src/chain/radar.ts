@@ -1,0 +1,367 @@
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+
+/**
+ * The runner radar: the logistic models frozen on 21 Nov 2026 (the silent trial on the VPS, ~/runner-trial), scored
+ * live on each 5-minute reading the node writes to chain-marks.jsonl. Inputs, transforms and thresholds are exactly
+ * those of trial.js, so a coin the radar flags is a coin the public grading counts the same way.
+ */
+
+export interface RadarModel {
+  w: number[];
+  mu: number[];
+  sd: number[];
+  top1: number;
+  top05: number;
+  base: number;
+}
+export interface Frozen {
+  frozenAt: number;
+  smartWallets: number[];
+  models: Record<"RB" | "G" | "R3" | "R10", RadarModel>;
+}
+
+export const FROZEN: Frozen = JSON.parse(readFileSync(new URL("./radar-model.json", import.meta.url), "utf8")) as Frozen;
+const SMART = new Set(FROZEN.smartWallets);
+
+/** A 5-minute reading as marks.ts writes it (only the fields the models read). */
+export interface MarkRow {
+  mint: string;
+  min: number;
+  at: number;
+  createdAt: number;
+  graduated: boolean | null;
+  buyers: number | null;
+  buys: number | null;
+  sells: number | null;
+  curveSol: number | null;
+  solIn: number | null;
+  top5BuyingPct: number | null;
+  churnPct: number | null;
+  creatorSoldPct: number | null;
+  earlyHeldPct: number | null;
+  bundlersPeakPct: number | null;
+  bundledSol: number | null;
+}
+
+/** What the long memory adds: the creator's earlier launches and how many graduated, and the first-second wallet ids. */
+export interface Lookup {
+  prior: number;
+  priorG: number;
+  early: number[];
+}
+
+export interface Features {
+  buyers: number;
+  buys: number;
+  sells: number;
+  solIn: number;
+  c5: number;
+  top5: number;
+  churn: number;
+  devSold: number;
+  earlyHeld: number;
+  bundPeak: number;
+  bundSol: number;
+  prior: number;
+  priorG: number;
+  smart: number;
+  earlyN: number;
+}
+
+/** pump.fun's curve: the cap in SOL from the SOL in it (30 SOL virtual at the start). Same as trial.js. */
+export const curveCap = (s: number | null) => (30 + (s || 0)) ** 2 / 32.19;
+
+// trial.js does arithmetic on the raw JSON values, where a null counts as 0; the casts keep that, on purpose.
+const n = (v: number | null) => v as number;
+
+export function featuresOf(x: MarkRow, l: Lookup): Features {
+  return {
+    buyers: n(x.buyers),
+    buys: n(x.buys),
+    sells: n(x.sells),
+    solIn: n(x.solIn),
+    c5: curveCap(x.curveSol),
+    top5: n(x.top5BuyingPct),
+    churn: n(x.churnPct),
+    devSold: n(x.creatorSoldPct),
+    earlyHeld: n(x.earlyHeldPct),
+    bundPeak: n(x.bundlersPeakPct),
+    bundSol: n(x.bundledSol),
+    prior: l.prior,
+    priorG: l.priorG,
+    smart: l.early.filter((w) => SMART.has(w)).length,
+    earlyN: l.early.length,
+  };
+}
+
+/** The design row, transform for transform as in trial.js. */
+export const fx = (f: Features) => [
+  1,
+  Math.log1p(f.buyers),
+  Math.log1p(f.buys),
+  Math.log1p(f.sells),
+  Math.log1p(f.solIn),
+  Math.log(f.c5),
+  f.top5 / 100,
+  f.churn / 100,
+  f.devSold / 100,
+  f.earlyHeld / 100,
+  f.bundPeak / 100,
+  Math.log1p(f.bundSol),
+  Math.log1p(f.prior),
+  Math.min(f.priorG, 3),
+  f.prior === 0 ? 1 : 0,
+  Math.min(f.smart, 5),
+  Math.log1p(f.earlyN),
+];
+
+/** Each term's part in the score: weight times the standardised value (the intercept first). */
+export const contributions = (m: RadarModel, f: Features) => fx(f).map((v, j) => (j ? (v - m.mu[j]!) / m.sd[j]! : 1) * m.w[j]!);
+export const scoreOf = (m: RadarModel, f: Features) => contributions(m, f).reduce((a, v) => a + v, 0);
+
+const pct = (v: number) => `${Math.round(v)}%`;
+const sol = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toFixed(1));
+
+/** A term in plain words, read as it pushed the score up: `high` when the value sat above the average launch. */
+function phrase(j: number, f: Features, high: boolean): string | null {
+  switch (j) {
+    case 1: return high ? `${f.buyers} buyers in 5 minutes` : `${f.buys} buys from just ${f.buyers} buyers`;
+    case 2: return high ? `${f.buys} buys in 5 minutes` : `${f.buys} buys in 5 minutes, a quiet start`;
+    case 3: return high ? `${f.sells} sells, plenty of trading` : `only ${f.sells} sells so far`;
+    case 4: return `${sol(f.solIn)} SOL in`;
+    case 5: return `${sol(f.c5)} SOL cap at 5 minutes`;
+    case 6: return high ? `top 5 buyers took ${pct(f.top5)}` : `top 5 buyers took only ${pct(f.top5)}`;
+    case 7: return high ? `${pct(f.churn)} of buyers already out` : `few buyers out yet (${pct(f.churn)})`;
+    case 8: return high ? `dev sold ${pct(f.devSold)}` : f.devSold <= 0 ? "dev has not sold" : `dev sold only ${pct(f.devSold)}`;
+    case 9: return high ? `early wallets still hold ${pct(f.earlyHeld)}` : f.earlyHeld <= 0 ? "early wallets hold nothing" : `early wallets hold only ${pct(f.earlyHeld)}`;
+    case 10: return f.bundPeak <= 0 ? "no bundles holding" : high ? `bundles peaked at ${pct(f.bundPeak)}` : `bundles peaked at only ${pct(f.bundPeak)}`;
+    case 11: return f.bundSol <= 0 ? "no SOL bundled at launch" : `${sol(f.bundSol)} SOL bundled at launch`;
+    case 12: return f.prior === 0 ? "the dev's first launch" : `the dev launched ${f.prior} coins before`;
+    case 13: return f.priorG > 0 ? `the dev graduated ${f.priorG} before` : "the dev never graduated a coin";
+    case 14: return f.prior === 0 ? "the dev's first launch" : null;
+    case 15: return f.smart > 0 ? `${f.smart} early wallet${f.smart === 1 ? "" : "s"} with a runner record` : null;
+    case 16: return high ? `${f.earlyN} first-second wallets` : `only ${f.earlyN} first-second wallets`;
+    default: return null;
+  }
+}
+
+/** The three terms that lifted the score most, in words; duplicates (first launch twice) said once. */
+export function reasonsOf(m: RadarModel, f: Features, k = 3): string[] {
+  const x = fx(f);
+  const parts = contributions(m, f).map((c, j) => ({ c, j })).filter((p) => p.j > 0 && p.c > 0).sort((a, b) => b.c - a.c);
+  const out: string[] = [];
+  for (const { j } of parts) {
+    const s = phrase(j, f, x[j]! > m.mu[j]!);
+    if (s && !out.includes(s)) out.push(s);
+    if (out.length >= k) break;
+  }
+  return out;
+}
+
+export type Tier = "strong" | "watch";
+export interface Scored {
+  scores: { RB: number; G: number };
+  tier: Tier | null;
+  models: Array<"RB" | "G">;
+}
+
+/** RB and G against their frozen cut-offs: top 0.5% of either is strong, top 1% of either a watch. */
+export function judge(f: Features, frozen: Frozen = FROZEN): Scored {
+  const scores = { RB: scoreOf(frozen.models.RB, f), G: scoreOf(frozen.models.G, f) };
+  const strong = (["RB", "G"] as const).filter((k) => scores[k] >= frozen.models[k].top05);
+  const watch = (["RB", "G"] as const).filter((k) => scores[k] >= frozen.models[k].top1);
+  if (strong.length) return { scores, tier: "strong", models: strong };
+  if (watch.length) return { scores, tier: "watch", models: watch };
+  return { scores, tier: null, models: [] };
+}
+
+/* ----- the live radar ----- */
+
+export interface Outcome {
+  /** The highest cap seen since the signal, in SOL, and that over the cap at the signal. */
+  peakCap: number;
+  peakX: number;
+  graduated: boolean;
+  checkedAt: number;
+}
+
+export interface Signal {
+  mint: string;
+  symbol: string;
+  at: number;
+  createdAt: number;
+  capAtSignal: number;
+  tier: Tier;
+  models: Array<"RB" | "G">;
+  scores: { RB: number; G: number };
+  reasons: string[];
+  outcome?: Outcome;
+}
+
+const DAY = 24 * 3_600_000;
+const KEEP_MS = 7 * DAY;
+/** A signal is counted in the record once it is this old: a day is long enough for a pump.fun coin to have run or died. */
+export const SETTLED_MS = DAY;
+/** What a caller without the holder pass sees: signals at least this old. */
+export const PUBLIC_DELAY_MS = 60 * 60_000;
+
+const r1 = (v: number) => Math.round(v * 10) / 10;
+const r3 = (v: number) => Math.round(v * 1000) / 1000;
+
+/** The live store: scores readings, keeps the last week of signals in memory, and writes every signal and outcome to a JSONL file. */
+export class Radar {
+  private list: Signal[] = [];
+  private byMint = new Map<string, Signal>();
+  private q: { token?: StatementSync; prior?: StatementSync; early?: StatementSync; peak?: StatementSync } = {};
+
+  private readonly file: string | null;
+  private readonly db: DatabaseSync | null;
+  private readonly frozen: Frozen;
+
+  constructor(file: string | null, db: DatabaseSync | null, frozen: Frozen = FROZEN) {
+    this.file = file;
+    this.db = db;
+    this.frozen = frozen;
+  }
+
+  /** Reads the file back: signal lines, then outcome lines that update them. Only the last week stays in memory. */
+  load(now = Date.now()): number {
+    if (!this.file || !existsSync(this.file)) return 0;
+    for (const line of readFileSync(this.file, "utf8").split("\n")) {
+      if (!line) continue;
+      let x: (Signal & { kind?: undefined }) | ({ kind: "outcome"; mint: string } & Outcome);
+      try {
+        x = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (x.kind === "outcome") {
+        const s = this.byMint.get(x.mint);
+        if (s) s.outcome = { peakCap: x.peakCap, peakX: x.peakX, graduated: x.graduated, checkedAt: x.checkedAt };
+      } else if (now - x.at <= KEEP_MS && !this.byMint.has(x.mint)) {
+        this.list.push(x);
+        this.byMint.set(x.mint, x);
+      }
+    }
+    this.list.sort((a, b) => b.at - a.at);
+    return this.list.length;
+  }
+
+  private stmts() {
+    if (!this.db) return null;
+    const p = (sql: string) => this.db!.prepare(sql);
+    this.q.token ??= p("select id,creator_id,created_at from tokens where mint=?");
+    this.q.prior ??= p("select count(*) n, count(graduated_at) g from tokens where creator_id=? and created_at<?");
+    this.q.early ??= p("select wallet_id w from wallet_tokens where token_id=? and role=1");
+    this.q.peak ??= p("select cap_peak, cap_peak_at, graduated_at from tokens where mint=?");
+    return this.q as Required<typeof this.q>;
+  }
+
+  /** The long-memory half of the inputs, read the same way as trial.js; null when the store never kept the token. */
+  lookup(mint: string): Lookup | null {
+    const s = this.stmts();
+    if (!s) return null;
+    const t = s.token.get(mint) as { id: number; creator_id: number; created_at: number } | undefined;
+    if (!t) return null;
+    const p = s.prior.get(t.creator_id, t.created_at) as { n: number; g: number };
+    const early = (s.early.all(t.id) as Array<{ w: number }>).map((o) => Number(o.w));
+    return { prior: Number(p.n), priorG: Number(p.g), early };
+  }
+
+  /**
+   * One 5-minute reading. Coins the trial does not grade (graduated already, adopted, mayhem, non-SOL) never signal:
+   * the caller passes `skip` for what the mark line does not say.
+   */
+  consider(x: MarkRow, info: { symbol: string; skip?: boolean }, now = Date.now()): Signal | null {
+    if (x.min !== 5 || x.graduated || info.skip || this.byMint.has(x.mint)) return null;
+    const l = this.lookup(x.mint);
+    if (!l) return null;
+    const f = featuresOf(x, l);
+    const j = judge(f, this.frozen);
+    if (!j.tier) return null;
+    // Reasons come from the model that fired hardest over its own cut-off.
+    const lead = [...j.models].sort((a, b) => j.scores[b] - this.frozen.models[b].top1 - (j.scores[a] - this.frozen.models[a].top1))[0]!;
+    const s: Signal = {
+      mint: x.mint,
+      symbol: info.symbol,
+      at: x.at ?? now,
+      createdAt: x.createdAt,
+      capAtSignal: r1(f.c5),
+      tier: j.tier,
+      models: j.models,
+      scores: { RB: r3(j.scores.RB), G: r3(j.scores.G) },
+      reasons: reasonsOf(this.frozen.models[lead], f),
+    };
+    this.list.unshift(s);
+    this.byMint.set(s.mint, s);
+    this.append(s);
+    return s;
+  }
+
+  private append(line: object) {
+    if (!this.file) return;
+    try {
+      appendFileSync(this.file, `${JSON.stringify(line)}\n`);
+    } catch {
+      /* the signal is still served from memory */
+    }
+  }
+
+  /**
+   * Fills in what came after: the highest cap seen since the signal (the tape's current cap, sampled every call,
+   * and the long memory's peak when it came after the signal) and whether it graduated. Old signals leave memory.
+   * An outcome line is written when it changes, so a restart keeps the record.
+   */
+  refresh(capNow: (mint: string) => { cap: number | null; graduated: boolean } | null, now = Date.now()): void {
+    this.list = this.list.filter((s) => {
+      if (now - s.at <= KEEP_MS) return true;
+      this.byMint.delete(s.mint);
+      return false;
+    });
+    const s = this.stmts();
+    for (const sig of this.list) {
+      const o = sig.outcome ?? { peakCap: sig.capAtSignal, peakX: 1, graduated: false, checkedAt: 0 };
+      // A settled signal two days on is no longer moving enough to read every minute.
+      if (now - sig.at > 2 * DAY && sig.outcome && now - o.checkedAt < 3_600_000) continue;
+      let peak = o.peakCap;
+      let graduated = o.graduated;
+      const live = capNow(sig.mint);
+      if (live?.cap != null && live.cap > peak) peak = live.cap;
+      if (live?.graduated) graduated = true;
+      const h = s?.peak.get(sig.mint) as { cap_peak: number | null; cap_peak_at: number | null; graduated_at: number | null } | undefined;
+      if (h?.cap_peak != null && h.cap_peak_at != null && h.cap_peak_at > sig.at && h.cap_peak > peak) peak = h.cap_peak;
+      if (h?.graduated_at != null && h.graduated_at > sig.at) graduated = true;
+      const next: Outcome = { peakCap: r1(peak), peakX: r1(peak / Math.max(sig.capAtSignal, 1e-9)), graduated, checkedAt: now };
+      const changed = !sig.outcome || next.peakCap !== o.peakCap || next.graduated !== o.graduated;
+      sig.outcome = next;
+      if (changed) this.append({ kind: "outcome", mint: sig.mint, ...next });
+    }
+  }
+
+  get size() {
+    return this.list.length;
+  }
+
+  /** Signals newest first, optionally only those at least `delayMs` old. */
+  signals(now = Date.now(), delayMs = 0): Signal[] {
+    return this.list.filter((s) => now - s.at >= delayMs);
+  }
+
+  /** The record of settled signals (a day old or more): how many ran 2x and 5x past their cap at the signal, graduated, and the median peak. */
+  stats(now = Date.now()) {
+    const done = this.list.filter((s) => now - s.at >= SETTLED_MS && s.outcome);
+    const by = (tier?: Tier) => {
+      const xs = done.filter((s) => !tier || s.tier === tier);
+      const peaks = xs.map((s) => s.outcome!.peakX).sort((a, b) => a - b);
+      return {
+        n: xs.length,
+        x2: xs.filter((s) => s.outcome!.peakX >= 2).length,
+        x5: xs.filter((s) => s.outcome!.peakX >= 5).length,
+        graduated: xs.filter((s) => s.outcome!.graduated).length,
+        medianPeakX: peaks.length ? peaks[Math.floor(peaks.length / 2)]! : null,
+      };
+    };
+    return { settledAfterHours: SETTLED_MS / 3_600_000, days: KEEP_MS / DAY, all: by(), strong: by("strong"), watch: by("watch") };
+  }
+}

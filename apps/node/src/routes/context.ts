@@ -16,6 +16,7 @@ import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, H
 import { isHolder } from "../holders.ts";
 import { type CreatorRecord, tape } from "../chain/pump.ts";
 import type { HistoryStore } from "../chain/history.ts";
+import type { Radar } from "../chain/radar.ts";
 import type { GuestHouse } from "../guests.ts";
 import type { X402Lane } from "../x402.ts";
 
@@ -53,6 +54,8 @@ export interface ServerOptions {
   telegram?: boolean;
   /** The chain's long memory on the north node: tokens and wallets for 90 days, after the tape forgets them. */
   history?: HistoryStore;
+  /** The runner radar on the north node: live signals from the frozen models, for holders. */
+  radar?: Radar;
   /** Cabals read from that memory: wallets that launch, snipe and fund together. */
   cabals?: CabalIndex;
   /** Who funded the first-second wallets, traced in the background: a KOL's side wallets show. */

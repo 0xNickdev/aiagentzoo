@@ -12,6 +12,7 @@ import { walletRoutes } from "./routes/wallets.ts";
 import { callRoutes } from "./routes/calls.ts";
 import { poolRoutes } from "./routes/pools.ts";
 import { claimsRoutes } from "./routes/claims.ts";
+import { radarRoutes } from "./routes/radar.ts";
 import { tgRoutes } from "./routes/tg.ts";
 import { guestWardenRoutes, wardenRoutes } from "./routes/warden.ts";
 
@@ -26,6 +27,7 @@ const ROUTES: Route[] = [
   callRoutes,
   poolRoutes,
   claimsRoutes,
+  radarRoutes,
   nodeRoutes,
   boardRoutes,
   agentRoutes,

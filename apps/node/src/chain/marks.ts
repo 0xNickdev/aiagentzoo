@@ -1,6 +1,7 @@
 import { appendFileSync, renameSync, statSync } from "node:fs";
 import { checkToken } from "./check.ts";
 import { tape } from "./pump.ts";
+import type { MarkRow } from "./radar.ts";
 
 /** A coin with fewer buyers than this at the mark is not written down: nobody was looking at it. */
 const MIN_BUYERS = 10;
@@ -13,7 +14,7 @@ const MAX_BYTES = 400 * 1024 * 1024;
  * These lines can: one JSON line per reading, to be set against where the coin stood hours later. The verdict is the
  * one the live feed shows (chain facts only, without holders, funders or socials).
  */
-export function writeMarks(file: string, now = Date.now()): number {
+export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow, info: { symbol: string; skip: boolean }) => void): number {
   const stream = { live: tape.live(now), lastEventSecAgo: Math.round((now - tape.lastEventAt) / 1000) };
   // A reading taken while the stream is down would describe the outage, not the coin.
   if (!stream.live) return 0;
@@ -24,7 +25,7 @@ export function writeMarks(file: string, now = Date.now()): number {
     if (!t || t.facts.buyers < MIN_BUYERS) continue;
     const c = checkToken(mint, t, { now, stream });
     const f = c.facts;
-    lines += `${JSON.stringify({
+    const row = {
       mint,
       min,
       at: now,
@@ -47,7 +48,15 @@ export function writeMarks(file: string, now = Date.now()): number {
       earlyHeldPct: f?.earlyHeldPct ?? null,
       churnPct: f?.churnPct ?? null,
       creatorFeesSol: f?.creatorFees?.total ?? null,
-    })}\n`;
+    };
+    const line = JSON.stringify(row);
+    lines += `${line}\n`;
+    // The runner radar reads the same line the trial grades (parsed back, as the trial reads it); a failure there never costs the reading.
+    try {
+      onRow?.(JSON.parse(line) as MarkRow, { symbol: t.symbol, skip: Boolean(t.facts.mayhem || t.facts.quote || t.facts.venue) });
+    } catch {
+      /* the mark stands */
+    }
     n++;
   }
   if (lines) {

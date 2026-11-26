@@ -22,6 +22,7 @@ import { Mentions } from "./chain/mentions.ts";
 import { lineage } from "./chain/lineage.ts";
 import { feedBody } from "./chain/feed.ts";
 import { writeMarks } from "./chain/marks.ts";
+import { curveCap, Radar } from "./chain/radar.ts";
 import { startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
@@ -181,7 +182,7 @@ if (config.role === "north") {
   // How each launch stood five and twenty minutes in, and the verdict it had then: kept to test rules against later.
   setInterval(() => {
     try {
-      writeMarks(join(config.dataDir, "chain-marks.jsonl"));
+      writeMarks(join(config.dataDir, "chain-marks.jsonl"), Date.now(), (row, info) => void radar?.consider(row, info));
     } catch (error) {
       console.log(`[${config.id}] marks not written: ${(error as Error).message}`);
     }
@@ -197,6 +198,22 @@ if (config.role === "north") {
 }
 // The long memory: what the X-Ray needs of every token for 90 days, after the tape forgets it. ZOO_HISTORY=off skips it.
 const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? new HistoryStore(join(config.dataDir, "history.db")) : null;
+// The runner radar: the models frozen on 21 Nov scored on every 5-minute reading; signals kept in radar.jsonl.
+const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db) : null;
+if (radar) {
+  console.log(`[${config.id}] radar restored: ${radar.load()} signals`);
+  setInterval(() => {
+    try {
+      radar.refresh((mint) => {
+        const f = tape.facts(mint);
+        if (!f) return null;
+        return { cap: f.graduated ? tape.capNow(mint) : curveCap(f.curveSol), graduated: Boolean(f.graduated) };
+      });
+    } catch (error) {
+      console.log(`[${config.id}] radar not refreshed: ${(error as Error).message}`);
+    }
+  }, 60_000).unref();
+}
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
@@ -315,6 +332,7 @@ const server = createNodeServer({
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), oddsHistory: oddsRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), contest: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
+  ...(radar ? { radar } : {}),
   ...(cabals ? { cabals } : {}),
   ...(mentions ? { mentions } : {}),
   ...(config.role === "north" ? { sideWallets } : {}),
