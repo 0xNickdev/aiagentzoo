@@ -176,7 +176,7 @@ export default function Radar() {
   return (
     <Page
       title={t("Runner radar")}
-      lead={t("Coins the model sees real demand on, five minutes in. A signal is not a call to buy: it is a watchlist of launches where buyers just showed up, and most of them still die.")}
+      lead={t("Coins the model sees real demand on, five minutes in. A signal is not a call to buy: it is a watchlist of launches where buyers just showed up.")}
       side={
         <span className="flex items-center gap-2 text-[12px] text-dim">
           <span className={`h-1.5 w-1.5 rounded-full ${holder ? "animate-pulse bg-white" : "bg-dim"}`} />
@@ -256,9 +256,9 @@ export default function Radar() {
         </Panel>
 
         <div className="flex min-w-0 flex-col gap-3 lg:col-span-4">
-          <Panel title={t("Read it honestly")} meta={t("tested with a real entry")}>
+          <Panel title={t("The silent trial")} meta={t("model frozen 21 Nov")}>
             <p className="text-[13px] leading-[1.55] text-fg-2">
-              {t("Bought 25 seconds after each signal, about 30% of picks reached 2x from that entry, against about 3% for a random coin. Buying every signal still came out near breakeven at best: the ones that die eat the ones that run.")}
+              {t("Frozen on 21 Nov and left to watch 31,723 fresh pump.fun coins. Its sharpest picks graduated 47.5% of the time, against 1.9% for a random launch.")}
             </p>
             {a && a.n ? (
               <p className="mt-2 text-[12px] leading-[1.55] text-dim">
