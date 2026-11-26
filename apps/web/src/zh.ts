@@ -11,7 +11,7 @@ export const ZH: Record<string, string> = {
   "Read it honestly": "老实说",
   "The silent trial": "静默测试",
   "model frozen 21 Nov": "模型于 11 月 21 日冻结",
-  "Frozen on 21 Nov and left to watch 31,723 fresh pump.fun coins. Its sharpest picks graduated 47.5% of the time, against 1.9% for a random launch.": "11 月 21 日冻结后，静静观察了 31,723 个新的 pump.fun 币。它最强的信号有 47.5% 毕业，随机发行只有 1.9%。",
+  "Frozen on 21 Nov and left to watch 38,976 fresh pump.fun coins. Its sharpest picks graduated 46% of the time, against 1.3% for a random launch.": "11 月 21 日冻结后，静静观察了 38,976 个新的 pump.fun 币。它最强的信号有 46% 毕业，随机发行只有 1.3%。",
   "Coins the model sees real demand on, five minutes in. A signal is not a call to buy: it is a watchlist of launches where buyers just showed up.": "模型在第五分钟看到真实需求的币。信号不是买入建议：它是一份刚有买家进场的观察名单。",
   "signals today": "今日信号",
   "Retry": "重试",
