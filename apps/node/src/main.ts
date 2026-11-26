@@ -179,14 +179,14 @@ if (config.role === "north") {
       console.log(`[${config.id}] feed not built: ${(error as Error).message}`);
     }
   }, 15_000).unref();
-  // How each launch stood five and twenty minutes in, and the verdict it had then: kept to test rules against later.
+  // How each launch stood one, two, three, five and twenty minutes in (every 10 s, so the early ones land on time), and the verdict it had then: kept to test rules against later.
   setInterval(() => {
     try {
       writeMarks(join(config.dataDir, "chain-marks.jsonl"), Date.now(), (row, info) => void radar?.consider(row, info));
     } catch (error) {
       console.log(`[${config.id}] marks not written: ${(error as Error).message}`);
     }
-  }, 30_000).unref();
+  }, 10_000).unref();
   setInterval(() => {
     try {
       writeFileSync(`${momentsFile}.tmp`, tape.dump());

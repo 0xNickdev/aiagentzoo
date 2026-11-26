@@ -310,8 +310,11 @@ interface Tracked {
   bundledSol?: number;
   bundleHeld?: number;
   bundlePeak?: number;
-  /** Which timed readings were taken of it: 1 for five minutes in, 2 for twenty. */
+  /** Which timed readings were taken of it: 1 for five minutes in, 2 for twenty, 4/8/16 for one, two, three. */
   marked?: number;
+  /** The largest single curve buy, and how many curve buys were under TINY_BUY_SOL: the shape the timed readings keep. */
+  maxBuy?: number;
+  tinyBuys?: number;
   /** Creator fees its trades paid, in SOL: on the curve and in the PumpSwap pool, from pump.fun's events. */
   cfCurve?: number;
   cfPool?: number;
@@ -384,8 +387,13 @@ const DRAIN_SHARE = 0.2;
 const DRAIN_RECOVERED = 0.5;
 /** A single buy this big stands out on a fresh pump.fun token. */
 const WHALE_SOL = 10;
+/** The timed readings: minutes in, and the bit each sets in `marked`. */
+export type MarkMin = 1 | 2 | 3 | 5 | 20;
+const MARK_BITS: ReadonlyArray<readonly [MarkMin, number]> = [[1, 4], [2, 8], [3, 16], [5, 1], [20, 2]];
 /** Real SOL in a pump.fun curve near its end (it completes at about 85): a pool opened past it is the migration. */
 const GRAD_CURVE_SOL = 80;
+/** A curve buy under this is dust: bots and volume makers, counted for the timed readings. */
+const TINY_BUY_SOL = 0.05;
 
 const KEEP_MS = 48 * 3_600_000;
 /**
@@ -904,6 +912,10 @@ export class PumpTape {
         if (t.devFirstSellAt !== undefined) t.devRebuy = true;
       } else if (t.createSlot !== null && slot !== undefined && slot - t.createSlot <= BUNDLE_SLOTS) {
         t.launchBuys.set(ev.user, (t.launchBuys.get(ev.user) ?? 0) + ev.tokens);
+      }
+      if (!t.quote) {
+        if (ev.sol > (t.maxBuy ?? 0)) t.maxBuy = ev.sol;
+        if (ev.sol < TINY_BUY_SOL) t.tinyBuys = (t.tinyBuys ?? 0) + 1;
       }
       // Paired with another token, the amount is in that token, not SOL: no whale call on it.
       if (!t.quote && ev.sol >= WHALE_SOL) this.emit(now, "whale", t, `+${ev.sol.toFixed(1)} ${this.unit} buy`, tx);
@@ -2018,20 +2030,30 @@ export class PumpTape {
    * Launches that reached five or twenty minutes old since the last call, each handed out once. A reading is taken
    * within two minutes of the mark or not at all: a late one would not say how the coin stood then.
    */
-  dueMarks(now = Date.now()): Array<{ mint: string; min: 5 | 20 }> {
-    const out: Array<{ mint: string; min: 5 | 20 }> = [];
+  dueMarks(now = Date.now()): Array<{ mint: string; min: MarkMin }> {
+    const out: Array<{ mint: string; min: MarkMin }> = [];
     for (const mint of this.recent) {
       const t = this.tokens.get(mint);
       if (!t || t.venue || t.quote || t.adopted) continue;
       const age = now - t.createdAt;
       if (age > 22 * 60_000) break;
-      for (const [min, bit] of [[5, 1], [20, 2]] as const) {
-        if ((t.marked ?? 0) & bit || age < min * 60_000 || age >= (min + 2) * 60_000) continue;
+      // Bits 1 and 2 stay what they were (five and twenty minutes), so a coin marked before a deploy is not marked again.
+      for (const [min, bit] of MARK_BITS) {
+        // A reading late by more than 30 s says nothing of the first minutes; five and twenty keep their two minutes.
+        const late = min <= 3 ? 30_000 : 2 * 60_000;
+        if ((t.marked ?? 0) & bit || age < min * 60_000 || age >= min * 60_000 + late) continue;
         t.marked = (t.marked ?? 0) | bit;
         out.push({ mint, min });
       }
     }
     return out;
+  }
+
+  /** The shape of a coin's curve buys so far: its largest single buy and the share of buys under 0.05 SOL. */
+  buyShape(mint: string): { maxBuySol: number | null; tinyBuyShare: number | null } {
+    const t = this.tokens.get(mint);
+    if (!t || t.quote || !t.buys) return { maxBuySol: null, tinyBuyShare: null };
+    return { maxBuySol: Math.round((t.maxBuy ?? 0) * 1000) / 1000, tinyBuyShare: Math.round(((t.tinyBuys ?? 0) / t.buys) * 1000) / 1000 };
   }
 
   token(mint: string, now = Date.now()) {

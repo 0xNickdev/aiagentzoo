@@ -592,6 +592,17 @@ test("the pump.fun tape decodes launches and trades from logs and spots a creato
   assert.deepEqual(tape.dueMarks(now + 12 * 60_000), []);
   assert.deepEqual(tape.dueMarks(now + 21 * 60_000), [{ mint: MINT, min: 20 }]);
   assert.deepEqual(tape.dueMarks(now + 21 * 60_000 + 30_000), []);
+  // One, two and three minutes in: handed out within 30 s of the minute, never later, each once.
+  const early = new PumpTape();
+  for (const e of events) early.apply(e, now);
+  assert.deepEqual(early.dueMarks(now + 60_000 + 10_000), [{ mint: MINT, min: 1 }]);
+  assert.deepEqual(early.dueMarks(now + 60_000 + 20_000), []);
+  assert.deepEqual(early.dueMarks(now + 2 * 60_000 + 40_000), []);
+  assert.deepEqual(early.dueMarks(now + 3 * 60_000 + 29_000), [{ mint: MINT, min: 3 }]);
+  assert.deepEqual(early.dueMarks(now + 5 * 60_000), [{ mint: MINT, min: 5 }]);
+  const shape = early.buyShape(MINT);
+  assert.ok(shape.maxBuySol !== null && shape.maxBuySol > 0);
+  assert.ok(shape.tinyBuyShare !== null && shape.tinyBuyShare >= 0 && shape.tinyBuyShare <= 1);
   // A node that was down through the mark takes no reading of it afterwards.
   const late = new PumpTape();
   for (const e of events) late.apply(e, now);

@@ -3,13 +3,14 @@ import { checkToken } from "./check.ts";
 import { tape } from "./pump.ts";
 import type { MarkRow } from "./radar.ts";
 
-/** A coin with fewer buyers than this at the mark is not written down: nobody was looking at it. */
+/** A coin with fewer buyers than this at the mark is not written down: nobody was looking at it. One to three minutes in, 5. */
 const MIN_BUYERS = 10;
+const MIN_BUYERS_EARLY = 5;
 /** The readings file is turned over at this size, so it never fills the disk. */
-const MAX_BYTES = 400 * 1024 * 1024;
+const MAX_BYTES = 1200 * 1024 * 1024;
 
 /**
- * Timed readings: how a launch stood five and twenty minutes in, and what the check said of it then. The tape keeps
+ * Timed readings: how a launch stood one, two, three, five and twenty minutes in, and what the check said of it then. The tape keeps
  * only where a coin ended, and by then everyone has sold, so a rule like "the bundle has left" cannot be tested on it.
  * These lines can: one JSON line per reading, to be set against where the coin stood hours later. The verdict is the
  * one the live feed shows (chain facts only, without holders, funders or socials).
@@ -22,7 +23,7 @@ export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow
   let n = 0;
   for (const { mint, min } of tape.dueMarks(now)) {
     const t = tape.token(mint, now);
-    if (!t || t.facts.buyers < MIN_BUYERS) continue;
+    if (!t || t.facts.buyers < (min <= 3 ? MIN_BUYERS_EARLY : MIN_BUYERS)) continue;
     const c = checkToken(mint, t, { now, stream });
     const f = c.facts;
     const row = {
@@ -48,6 +49,9 @@ export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow
       earlyHeldPct: f?.earlyHeldPct ?? null,
       churnPct: f?.churnPct ?? null,
       creatorFeesSol: f?.creatorFees?.total ?? null,
+      // Added 26 Nov, at the end so older readers see the same line: SOL sold back, the largest single buy, the dust share.
+      solOut: t.facts.solOut ?? null,
+      ...tape.buyShape(mint),
     };
     const line = JSON.stringify(row);
     lines += `${line}\n`;
@@ -60,7 +64,7 @@ export function writeMarks(file: string, now = Date.now(), onRow?: (row: MarkRow
     n++;
   }
   if (lines) {
-    // About 16 MB a day: past 400 MB the file is set aside as .old (the one before it is dropped) and a new one begins.
+    // About 40 MB a day with the early readings: past 1.2 GB the file is set aside as .old (the one before it is dropped) and a new one begins.
     try {
       if (statSync(file).size > MAX_BYTES) renameSync(file, `${file}.old`);
     } catch {
