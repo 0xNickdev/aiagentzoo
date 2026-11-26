@@ -16,7 +16,7 @@ export interface StreamOptions {
 }
 
 /** Where the stream's events go: the tape, or the relay's buffer. */
-export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"]; raydiumPools?: PumpTape["raydiumPools"] };
+export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"]; raydiumPools?: PumpTape["raydiumPools"]; followRaydium?: (pool: string, now: number) => void };
 
 /** Raydium pools opened by a launch the stream saw, kept as long as the tape keeps a token, and no more than this many. */
 const RAYDIUM_KEEP_MS = 48 * 3_600_000;
@@ -81,6 +81,8 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
   const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
 
   const { wanted: raydiumWanted, follow: followPool } = raydiumFollower(t);
+  // A coin read from the chain on demand (launched before the stream watched) has its pool followed from then on.
+  t.followRaydium = followPool;
 
   const onData = (update: StreamUpdate) => {
     const logs = update.transaction?.transaction?.meta?.logMessages;
@@ -240,6 +242,12 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
   let ctl: AbortController | null = null;
   let after = 0;
   let epoch = "";
+  /** The relay reads the stream, so a pool north starts following on its own is followed there. */
+  const tellRelay = async (pools: string[]) => {
+    if (!pools.length) return;
+    await fetch(`${url}/follow`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ pools }), signal: AbortSignal.timeout(8_000) }).catch(() => null);
+  };
+  t.followRaydium = (pool) => void tellRelay([pool]);
   const run = async () => {
     let delay = 1_000;
     while (!stopped) {
@@ -261,7 +269,12 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
             if (!line) continue;
             const msg = JSON.parse(line) as [number, PumpEvent, string | null, number | null] | { hello: string };
             if (!Array.isArray(msg)) {
-              if (msg.hello !== epoch) ((epoch = msg.hello), (after = 0));
+              if (msg.hello !== epoch) {
+                epoch = msg.hello;
+                after = 0;
+                // A relay that started over follows only the pools it saw open: it is told again of the tape's own.
+                void tellRelay(t.raydiumPools().map((p) => p.pool));
+              }
               continue;
             }
             const [seq, ev, tx, slot] = msg;

@@ -14,6 +14,8 @@ export interface PoolMeta {
   symbol?: string;
   /** Whole tokens, as the trades count them. */
   supply?: number;
+  /** When the mint was made, when its whole history fits in a few pages of signatures. */
+  mintCreatedAt?: number;
 }
 
 type Rpc = <T>(method: string, params: unknown[]) => Promise<T | null>;
@@ -85,6 +87,31 @@ export async function readPoolMeta(mint: string, rpc: Rpc): Promise<PoolMeta> {
   return out;
 }
 
+type Sig = { signature: string; blockTime?: number | null; err?: unknown; slot?: number };
+
+/**
+ * When an address first appeared on chain: its signatures paged back, newest first, up to `pages` pages of 1,000.
+ * Null when the history is longer than that (too busy to page cheaply) or could not be read. Never throws.
+ */
+export async function firstSeen(address: string, rpc: Rpc, pages = 1): Promise<{ at: number; signature: string } | null> {
+  let before: string | undefined;
+  for (let i = 0; i < pages; i++) {
+    let sigs: Sig[] | null = null;
+    try {
+      sigs = await rpc<Sig[]>("getSignaturesForAddress", [address, { limit: 1000, ...(before ? { before } : {}) }]);
+    } catch {
+      return null;
+    }
+    if (!Array.isArray(sigs)) return null;
+    if (sigs.length < 1000) {
+      const oldest = sigs[sigs.length - 1];
+      return oldest?.blockTime ? { at: oldest.blockTime * 1000, signature: oldest.signature } : null;
+    }
+    before = sigs[sigs.length - 1]!.signature;
+  }
+  return null;
+}
+
 /**
  * Mints waiting for their reads, one at a time with a gap between. A full queue drops new mints rather than grow:
  * a missing name is not worth falling behind for.
@@ -120,7 +147,10 @@ export class PoolMetaQueue {
         const mint = this.queue.shift()!;
         try {
           const meta = await readPoolMeta(mint, this.rpc);
-          if (meta.name || meta.symbol || meta.supply) this.fill(mint, meta);
+          // A new mint has few signatures: one page says whether it was made long before its pool opened.
+          const born = await firstSeen(mint, this.rpc, 1).catch(() => null);
+          if (born) meta.mintCreatedAt = born.at;
+          if (meta.name || meta.symbol || meta.supply || meta.mintCreatedAt) this.fill(mint, meta);
         } catch {
           /* silent */
         }

@@ -12,6 +12,7 @@ import { createNodeServer } from "./server.ts";
 import { allTools, chainClean } from "./sources.ts";
 import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { PoolMetaQueue } from "./chain/poolMeta.ts";
+import { Adopter, adoption } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
@@ -140,6 +141,8 @@ if (config.role === "north") {
   // A coin launched straight into a Raydium pool comes with no name, symbol or supply: read from the chain afterwards.
   const poolMeta = new PoolMetaQueue((method, params) => rpcRead(method, params), (mint, meta) => void tape.fillMeta(mint, meta));
   tape.onPoolLaunch = (mint) => poolMeta.add(mint);
+  // A coin asked about that launched before the stream watched: read from the chain once, then followed live.
+  adoption.current = new Adopter(tape, { rpc: (method, params) => rpcRead(method, params), log: (m) => console.log(`[${config.id}] ${m}`) });
   if (existsSync(lineageFile)) console.log(`[${config.id}] lineage restored: ${lineage.load(readFileSync(lineageFile, "utf8"))} creators`);
   if (existsSync(sideFile)) console.log(`[${config.id}] side wallets restored: ${sideWallets.load(readFileSync(sideFile, "utf8"))} wallets`);
   // Every launch's first-second and launch-block wallets, traced to their funder a minute and a half in.

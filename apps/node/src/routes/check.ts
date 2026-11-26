@@ -14,6 +14,7 @@ import { oddsOf } from "../chain/odds.ts";
 import { FREE_DEEP_PER_MIN, FREE_PER_MIN, HOLDER_DEEP_PER_MIN, HOLDER_PER_MIN, issueKey, keyFrom, walletOfKey } from "../chain/keys.ts";
 import { HOLDER_MIN, isHolder, TOKEN_MINT } from "../holders.ts";
 import { tape } from "../chain/pump.ts";
+import { adoption } from "../chain/adopt.ts";
 import { ROUTE, norm, fromPeer, clientIp, readJson, json } from "./http.ts";
 import type { RouteContext } from "./context.ts";
 
@@ -25,6 +26,9 @@ export function recordNote(recordedAt: number, createdAt: number): string {
   const after = h < 48 ? `${Math.max(1, Math.round(h))} h` : `${Math.round(h / 24)} days`;
   return `trades here stop at our record of ${day}, ${after} after launch: anything later is not in this check`;
 }
+
+/** A moment as the notes say it: day, month, hour and minute in UTC. */
+const dayOf = (at: number) => `${new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`;
 
 export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
   const { enclosure, history, x402, checkGate, holderGate, deepGate, holderDeepGate, keyGate, holding, preferHistory, kept, shills, withCabal, usage, cache } = ctx;
@@ -91,6 +95,20 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     let found = tape.token(mint);
     // Older than the tape: the long memory has what it saw of the token, as it stood when last written.
     const past = !found && history ? history.report(mint) : null;
+    // Launched before the stream watched: read from the chain now and followed from here on, unless the long memory or the PumpSwap pools already have it.
+    if (!found && !past && adoption.current && !pools()?.ofMint(mint)) {
+      const s = await adoption.current.ensure(mint, deep ? 6_000 : 2_500);
+      if (s.state === "tracked") found = tape.token(mint);
+      else if (s.state === "reading" || s.state === "busy") {
+        const etaSec = s.state === "reading" ? s.etaSec : 30;
+        res.setHeader("cache-control", "no-store");
+        res.setHeader("retry-after", String(Math.min(30, Math.max(2, etaSec))));
+        const note = s.state === "reading" ? `reading this coin from the chain, about ${etaSec} s` : "the chain reader is busy with other coins, try again in about 30 s";
+        return json(res, 202, { mint, chain, reading: true, etaSec, note, stream, access: tier });
+      }
+    }
+    const birth = found ? tape.birthOf(mint) : null;
+    const born = birth && (birth.adopted || birth.mintCreatedAt) ? { birth } : {};
     const within = <T>(p: Promise<T>, ms = 4_000) => Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
     // Who holds it now and who paid for the creator cost RPC calls: holders only on request, never longer than four seconds.
     const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
@@ -129,6 +147,8 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
         if (runs) check.notes.unshift(runs);
       }
     }
+    if (birth?.mintCreatedAt) check.notes.unshift(`coin created ${dayOf(birth.mintCreatedAt)}, pool opened ${dayOf(birth.poolOpenedAt)}`);
+    if (birth?.adopted && birth.adoptedAt) check.notes.unshift(`launched before we watched: read live since ${dayOf(birth.adoptedAt)}, trades before that are the last ones read back from the chain`);
     res.setHeader("cache-control", "no-store");
     const memory = past ? { fromHistory: true, historySince: history!.since(), recordedAt: past.recordedAt } : {};
     if (past) check.notes.unshift(recordNote(past.recordedAt, past.createdAt));
@@ -179,7 +199,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
         });
       }
     }
-    if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, access: tier });
+    if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, ...born, access: tier });
     if (past) {
       const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
       return json(res, 200, {
@@ -201,7 +221,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       });
     }
     if (!found) {
-      const where = "pump.fun, LaunchLab, Meteora";
+      const where = "pump.fun, LaunchLab, Meteora, Raydium";
       return json(res, 404, { error: history ? `not a launch the stream saw (${where})` : `not a launch the stream saw in the last two days (${where})`, check });
     }
     const bundle = found.bundle.length >= 2 ? await within(traceFunders(found.mint, found.bundle.map((b) => b.wallet))) : null;
@@ -221,6 +241,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
       bundle: { wallets: withCabal(tagAll(found.bundle, kept)), funding: bundle },
       socials: linked,
       ticker: history ? history.ticker(found.symbol, mint) : null,
+      ...born,
       access: tier,
     });
   }

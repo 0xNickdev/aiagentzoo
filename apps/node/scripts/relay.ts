@@ -57,6 +57,34 @@ createServer((req, res) => {
     res.end(JSON.stringify({ live: sink.connected && Date.now() - lastAt < 60_000, seq, lastEventSecAgo: Math.round((Date.now() - lastAt) / 1000), readers: clients.size }));
     return;
   }
+  // North asks the relay to follow a Raydium pool it started tracking on its own (a coin read on demand).
+  if (url.pathname === "/follow" && req.method === "POST") {
+    if (req.headers.authorization !== `Bearer ${TOKEN}`) {
+      res.writeHead(401).end();
+      return;
+    }
+    let body = "";
+    req.on("data", (c: Buffer) => {
+      body += c;
+      if (body.length > 1 << 20) req.destroy();
+    });
+    req.on("end", () => {
+      let n = 0;
+      try {
+        const pools = (JSON.parse(body) as { pools?: unknown }).pools;
+        for (const p of Array.isArray(pools) ? pools.slice(0, 20_000) : []) {
+          if (typeof p !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) continue;
+          sink.followRaydium?.(p, Date.now());
+          n += 1;
+        }
+      } catch {
+        /* nothing followed */
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ followed: n }));
+    });
+    return;
+  }
   if (url.pathname !== "/events") {
     res.writeHead(404).end();
     return;

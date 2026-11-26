@@ -167,6 +167,11 @@ interface Tracked {
   rayPool?: string;
   /** Where its metadata lives. */
   uri?: string;
+  /** Launched before the stream watched: read from the chain on demand, live from adoptedAt on. Never marked or graded. */
+  adopted?: boolean;
+  adoptedAt?: number;
+  /** When the mint itself was made, when that is well before its pool opened (createdAt is the pool's opening then). */
+  mintCreatedAt?: number;
   /** The keys of its launch transaction's tool print: the exact build and its shape. */
   print?: string;
   shape?: string;
@@ -389,20 +394,123 @@ export class PumpTape {
   /** Called on a launch straight into a Raydium pool, whose name, symbol and supply are read from the chain afterwards. */
   onPoolLaunch?: (mint: string) => void;
 
+  /** Called when a Raydium launch's name or symbol arrives after its launch moment went out with "?". */
+  onMetaFilled?: (mint: string, symbol: string) => void;
+
   /** What the chain said of a Raydium launch after the fact: a name and symbol where it had none, its real supply. */
-  fillMeta(mint: string, meta: { name?: string; symbol?: string; supply?: number }): boolean {
+  fillMeta(mint: string, meta: { name?: string; symbol?: string; supply?: number; mintCreatedAt?: number }): boolean {
     const t = this.tokens.get(mint);
     if (!t) return false;
     if (meta.name && !t.name) t.name = meta.name;
+    const gotSymbol = Boolean(meta.symbol && !t.symbol);
     if (meta.symbol && !t.symbol) t.symbol = meta.symbol;
     if (meta.supply && meta.supply > 0) t.supply = meta.supply;
+    // Older than its pool by more than a minute: the coin was made first and the pool opened on it later.
+    if (meta.mintCreatedAt && meta.mintCreatedAt < t.createdAt - 60_000) t.mintCreatedAt = meta.mintCreatedAt;
+    if (gotSymbol) {
+      // The launch moment already went out with "?": it takes the symbol, so the feed and the record do not keep the "?".
+      const symbol = t.symbol.replace(/\s+/g, " ").trim().slice(0, 16) || "?";
+      for (const list of [this.pulse, this.moments]) for (const e of list) if (e.mint === mint && e.symbol === "?") e.symbol = symbol;
+      this.onMetaFilled?.(mint, symbol);
+    }
     return true;
+  }
+
+  /** Set by the stream: follow this Raydium pool's trades from now on. */
+  followRaydium?: (pool: string, now: number) => void;
+
+  /** While set, trades are applied without moments or the live counters: a backfill of the past is not news. */
+  private quiet = false;
+
+  /**
+   * A coin launched before the stream watched, read from the chain on demand: it goes on the tape from now, its pool is
+   * followed, and the recent trades read back from the chain are applied quietly, oldest first. Not in the feed, the
+   * launches list, the timed readings or the odds: none of those can judge a coin whose launch nobody here saw.
+   */
+  adoptToken(a: { mint: string; venue: Venue; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
+    if (this.tokens.has(a.mint)) return false;
+    this.tokens.set(a.mint, {
+      mint: a.mint,
+      quote: null,
+      venue: a.venue,
+      ...(a.supply ? { supply: a.supply } : {}),
+      rayPool: a.pool,
+      adopted: true,
+      adoptedAt: now,
+      ...(a.mintCreatedAt && a.mintCreatedAt < a.createdAt - 60_000 ? { mintCreatedAt: a.mintCreatedAt } : {}),
+      name: a.name ?? "",
+      symbol: a.symbol ?? "",
+      creator: a.creator,
+      createdAt: a.createdAt,
+      buys: 0,
+      sells: 0,
+      buyers: new Map(),
+      trades15m: 0,
+      solIn: 0,
+      solOut: 0,
+      curveSol: null,
+      devBought: 0,
+      devSold: 0,
+      devIn: 0,
+      devOut: 0,
+      capPeak: 0,
+      graduated: false,
+      dumped: false,
+      dumpedAt: null,
+      createSlot: null,
+      launchBuys: new Map(),
+      pool: null,
+      poolSol: null,
+      poolPeak: null,
+      drained: false,
+      ammBuys: 0,
+      ammSells: 0,
+      ammSolIn: 0,
+      ammSolOut: 0,
+    });
+    if (a.creator) {
+      const mine = this.byCreator.get(a.creator) ?? [];
+      mine.push(a.mint);
+      this.byCreator.set(a.creator, mine);
+    }
+    this.followRaydium?.(a.pool, now);
+    if (a.trades?.length) this.backfill(a.mint, a.trades, now);
+    return true;
+  }
+
+  /** Past trades of a coin applied without moments, counters or the stream's heartbeat moving. */
+  backfill(mint: string, trades: Array<{ ev: PumpEvent; tx?: string; slot?: number }>, now = Date.now()): number {
+    if (!this.tokens.has(mint)) return 0;
+    const heard = this.lastEventAt;
+    const seen = this.seen.trades;
+    this.quiet = true;
+    let n = 0;
+    try {
+      const tsOf = (e: PumpEvent) => (e.kind === "trade" ? e.ts : 0);
+      for (const { ev, tx, slot } of [...trades].sort((x, y) => tsOf(x.ev) - tsOf(y.ev))) {
+        if (ev.kind !== "trade" || ev.mint !== mint) continue;
+        this.apply(ev, now, tx, slot);
+        n += 1;
+      }
+    } finally {
+      this.quiet = false;
+      this.lastEventAt = heard;
+      this.seen.trades = seen;
+    }
+    return n;
+  }
+
+  /** When a coin was born and when its pool opened, and whether it was adopted (read since adoptedAt). */
+  birthOf(mint: string): { poolOpenedAt: number; mintCreatedAt: number | null; adopted: boolean; adoptedAt: number | null } | null {
+    const t = this.tokens.get(mint);
+    if (!t) return null;
+    return { poolOpenedAt: t.createdAt, mintCreatedAt: t.mintCreatedAt ?? null, adopted: Boolean(t.adopted), adoptedAt: t.adoptedAt ?? null };
   }
 
   /** The Raydium pools of launches the tape keeps from the last 48 hours, oldest first, for the stream to follow again after a restart. */
   raydiumPools(now = Date.now()): Array<{ pool: string; venue: Venue; createdAt: number }> {
     const out: Array<{ pool: string; venue: Venue; createdAt: number }> = [];
-    for (const t of this.tokens.values()) if (t.rayPool && t.venue && now - t.createdAt <= 48 * 3_600_000) out.push({ pool: t.rayPool, venue: t.venue, createdAt: t.createdAt });
+    for (const t of this.tokens.values()) if (t.rayPool && t.venue && now - (t.adoptedAt ?? t.createdAt) <= 48 * 3_600_000) out.push({ pool: t.rayPool, venue: t.venue, createdAt: t.adoptedAt ?? t.createdAt });
     return out.sort((a, b) => a.createdAt - b.createdAt);
   }
 
@@ -410,6 +518,7 @@ export class PumpTape {
   onMoment?: (e: PulseEvent) => void;
 
   private emit(at: number, kind: PulseEvent["kind"], t: { mint: string; symbol: string; creator: string }, text: string, tx?: string): void {
+    if (this.quiet) return;
     const symbol = t.symbol.replace(/\s+/g, " ").trim().slice(0, 16) || "?";
     const e: PulseEvent = { seq: ++this.pulseSeq, at, kind, mint: t.mint, symbol, text, creator: t.creator, ...(tx ? { tx } : {}) };
     this.pulse.push(e);
@@ -611,7 +720,7 @@ export class PumpTape {
       return;
     }
     this.seen.trades += 1;
-    this.count(now, "trades");
+    if (!this.quiet) this.count(now, "trades");
     this.noteBundle(t, ev.user, ev.tokens, ev.sol, ev.isBuy, slot);
     if (!t.quote) this.noteCap(t, ev.sol, ev.tokens, ev.ts);
     if (ev.ts - t.createdAt <= 15 * 60_000) t.trades15m += 1;
@@ -945,7 +1054,7 @@ export class PumpTape {
       this.bundleSince = saved.bundleSince ?? now;
       this.feedSince = saved.feedSince ?? now;
       for (const s of saved.tokens ?? []) {
-        if (!s?.mint || (now - s.createdAt > KEEP_MS && !this.pinned.has(s.mint)) || this.tokens.has(s.mint)) continue;
+        if (!s?.mint || (now - (s.adoptedAt ?? s.createdAt) > KEEP_MS && !this.pinned.has(s.mint)) || this.tokens.has(s.mint)) continue;
         // Fields added after a snapshot was written start empty.
         const t: Tracked = {
           ...s,
@@ -1030,7 +1139,7 @@ export class PumpTape {
   }
 
   prune(now = Date.now()): void {
-    for (const [mint, t] of this.tokens) if (now - t.createdAt > KEEP_MS && !this.pinned.has(mint)) this.tokens.delete(mint);
+    for (const [mint, t] of this.tokens) if (now - (t.adoptedAt ?? t.createdAt) > KEEP_MS && !this.pinned.has(mint)) this.tokens.delete(mint);
     for (const [pool, mint] of this.pools) if (!this.tokens.has(mint)) this.pools.delete(pool);
     for (const [creator, mints] of this.byCreator) {
       const kept = mints.filter((m) => this.tokens.has(m));
@@ -1220,7 +1329,7 @@ export class PumpTape {
    */
   oddsInputs(mint: string, outside: { social: boolean; funderExchange: boolean; funderMany: boolean }, now = Date.now()): { inputs: OddsInputs; at: "5min" | "early"; peak: { sol: number; afterMin: number } | null; ageMin: number } | null {
     const t = this.tokens.get(mint);
-    if (!t || t.quote || t.venue) return null;
+    if (!t || t.quote || t.venue || t.adopted) return null;
     const at = Math.min(now, t.createdAt + 5 * 60_000);
     const supply = supplyOf(t);
     const prior = (this.byCreator.get(t.creator) ?? []).map((m) => this.tokens.get(m)).filter((o): o is Tracked => !!o && o.mint !== mint && o.createdAt < at);
@@ -1747,7 +1856,7 @@ export class PumpTape {
     const out: Array<{ mint: string; min: 5 | 20 }> = [];
     for (const mint of this.recent) {
       const t = this.tokens.get(mint);
-      if (!t || t.venue || t.quote) continue;
+      if (!t || t.venue || t.quote || t.adopted) continue;
       const age = now - t.createdAt;
       if (age > 22 * 60_000) break;
       for (const [min, bit] of [[5, 1], [20, 2]] as const) {

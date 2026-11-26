@@ -2213,3 +2213,146 @@ test("an established coin: weeks old, graduated, a live pool - bundles and churn
   assert.ok(old({ ageMin: 2 * 1_440 }).reasons.some((r: string) => /bundles/.test(r)));
   assert.ok(old({ poolSol: 40 }).reasons.some((r: string) => /selling back/.test(r)));
 });
+
+test("a Raydium coin launched before the stream watched is read from the chain on demand, then followed quietly", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { Adopter, findPool } = await import("../src/chain/adopt.ts");
+  const { RAYDIUM_AMM_PROGRAM } = await import("../src/chain/launchpads.ts");
+  const { metadataAddress } = await import("../src/chain/poolMeta.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const fixtures = JSON.parse(readFileSync(new URL("./fixtures/raydium.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
+  const byWhat = (w: string) => fixtures.find((f) => f.what === w)!.tx;
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  const pool = "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v";
+  const sigOf: Record<string, string> = { "amm:create": "S-create", "amm:buy": "S-buy", "amm:arb": "S-arb", "amm:sell": "S-sell" };
+  const txBySig = new Map(Object.entries(sigOf).map(([w, s]) => [s, byWhat(w)]));
+  const str = (x: string, pad: number) => {
+    const b = Buffer.alloc(4 + pad);
+    b.writeUInt32LE(pad);
+    b.write(x, 4);
+    return b;
+  };
+  const metaAccount = Buffer.concat([Buffer.from([4]), Buffer.alloc(64), str("Santa", 32), str("SANTA", 10)]).toString("base64");
+  const calls: string[] = [];
+  const rpc = async <T,>(method: string, params: unknown[]): Promise<T | null> => {
+    const a = params[0] as string;
+    calls.push(`${method}:${a}`);
+    if (method === "getAccountInfo" && a === pool) return { value: { owner: RAYDIUM_AMM_PROGRAM } } as T;
+    if (method === "getAccountInfo" && a === mint) return { value: { data: { parsed: { info: { supply: "1000000000000000", decimals: 6 } } } } } as T;
+    if (method === "getAccountInfo" && a === metadataAddress(mint)) return { value: { data: [metaAccount, "base64"] } } as T;
+    if (method === "getSignaturesForAddress" && a === pool)
+      return [
+        { signature: "S-sell", blockTime: byWhat("amm:sell").blockTime },
+        { signature: "S-bad", blockTime: byWhat("amm:sell").blockTime, err: { x: 1 } },
+        { signature: "S-buy", blockTime: byWhat("amm:buy").blockTime },
+        { signature: "S-arb", blockTime: byWhat("amm:arb").blockTime },
+        { signature: "S-create", blockTime: byWhat("amm:create").blockTime },
+      ] as T;
+    // The mint is older than its pool by a day.
+    if (method === "getSignaturesForAddress" && a === mint) return [{ signature: "M-first", blockTime: byWhat("amm:create").blockTime - 86_400 }] as T;
+    if (method === "getTransaction") return (txBySig.get(a) ?? null) as T;
+    return null;
+  };
+  const dex = (async (u: string) => {
+    calls.push(`dex:${u}`);
+    return new Response(JSON.stringify([
+      { chainId: "solana", dexId: "pumpswap", pairAddress: "X".padEnd(44, "x"), quoteToken: { address: "So11111111111111111111111111111111111111112" }, liquidity: { usd: 9e9 } },
+      { chainId: "solana", dexId: "raydium", pairAddress: pool, pairCreatedAt: 1, baseToken: { address: mint }, quoteToken: { address: "So11111111111111111111111111111111111111112" }, liquidity: { usd: 50_000 } },
+    ]));
+  }) as typeof fetch;
+
+  assert.deepEqual(await findPool(mint, rpc, dex), { pool, venue: "raydium", listedAt: 1 });
+
+  const tape = new PumpTape();
+  tape.connected = true;
+  const heard = Date.now() - 1_000;
+  tape.lastEventAt = heard;
+  const followed: string[] = [];
+  tape.followRaydium = (p) => void followed.push(p);
+  const adopter = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0 });
+  const first = adopter.request(mint);
+  assert.equal(first.state, "reading");
+  // A second ask while it reads starts nothing new.
+  assert.equal(adopter.request(mint).state, "reading");
+  const done = await adopter.ensure(mint, 5_000);
+  assert.equal(done.state, "tracked");
+  assert.deepEqual(followed, [pool]);
+
+  const t = tape.token(mint)!;
+  assert.equal(t.symbol, "SANTA");
+  assert.equal(t.creator, "HTzhUPE8jXxLgugWkK8RACVihaRjizmSHcQkG3yTHaXP");
+  assert.equal(t.createdAt, byWhat("amm:create").blockTime * 1000);
+  const birth = tape.birthOf(mint)!;
+  assert.equal(birth.adopted, true);
+  assert.equal(birth.mintCreatedAt, (byWhat("amm:create").blockTime - 86_400) * 1000);
+  assert.equal(birth.poolOpenedAt, byWhat("amm:create").blockTime * 1000);
+  // Three swaps read back: two buyers and a seller; the failed one skipped.
+  assert.equal(t.facts.buys, 2);
+  assert.equal(t.facts.sells, 1);
+  assert.equal(t.facts.venue, "raydium");
+  // The backfill is not news: no whale moment, the stream's heartbeat and counters untouched.
+  assert.equal(tape.lastEventAt, heard);
+  assert.equal(tape.status().seen.trades, 0);
+  assert.ok(!(tape as any).pulse.some((e: any) => e.mint === mint));
+  // Not in the launches, the feed's recent list, the timed readings or the odds.
+  assert.equal(tape.launches(10).length, 0);
+  assert.equal(tape.dueMarks(Date.now() + 6 * 60_000).length, 0);
+  assert.equal(tape.oddsInputs(mint, { social: false, funderExchange: false, funderMany: false }), null);
+  // Kept two days from when it was adopted, not from its old pool's opening.
+  tape.prune(Date.now() + 3_600_000);
+  assert.ok(tape.has(mint));
+  tape.prune(Date.now() + 49 * 3_600_000);
+  assert.ok(!tape.has(mint));
+
+  // A live trade after adoption counts like any other.
+  const tape2 = new PumpTape();
+  const a2 = new Adopter(tape2, { rpc, fetchFn: dex, gapMs: 0, backfill: 0 });
+  assert.equal((await a2.ensure(mint, 5_000)).state, "tracked");
+  tape2.apply({ kind: "trade", venue: "raydium", mint, user: "B".padEnd(44, "b"), isBuy: true, sol: 1, tokens: 1_000, ts: Date.now(), curveSol: null }, Date.now());
+  assert.equal(tape2.token(mint)!.facts.buys, 1);
+});
+
+test("adoption: a coin with no Raydium pool is a miss kept ten minutes, and a full queue says come back", async () => {
+  const { Adopter } = await import("../src/chain/adopt.ts");
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  let asked = 0;
+  const rpc = async <T,>(): Promise<T | null> => {
+    asked += 1;
+    return null;
+  };
+  const dex = (async () => new Response("[]")) as typeof fetch;
+  const tape = new PumpTape();
+  const a = new Adopter(tape, { rpc, fetchFn: dex, gapMs: 0, maxQueue: 1 });
+  const mint = "A".padEnd(44, "a");
+  assert.equal((await a.ensure(mint, 5_000)).state, "missed");
+  const before = asked;
+  assert.equal(a.request(mint).state, "missed");
+  assert.equal(asked, before);
+  assert.equal(a.request(mint, Date.now() + 11 * 60_000).state, "reading");
+
+  // One being read, one waiting, the next is turned away.
+  const slow = new Adopter(new PumpTape(), { rpc: async () => new Promise((r) => setTimeout(() => r(null), 50)), fetchFn: dex, gapMs: 0, maxQueue: 1 });
+  assert.equal(slow.request("B".padEnd(44, "b")).state, "reading");
+  assert.equal(slow.request("C".padEnd(44, "c")).state, "reading");
+  assert.equal(slow.request("D".padEnd(44, "d")).state, "busy");
+});
+
+test("a Raydium launch's '?' symbol is replaced in the moments once its name arrives, and an older mint keeps both times", async () => {
+  const { PumpTape } = await import("../src/chain/pump.ts");
+  const tape = new PumpTape();
+  const now = Date.now();
+  const mint = "CcpN5RXTEjbRqbtuHoxyiMZorzsghbfpeyYQjSvTgS27";
+  tape.apply({ kind: "create", venue: "raydium", name: "", symbol: "", mint, creator: "C".padEnd(44, "c"), ts: now - 60_000, pool: "4P4WjRDEihtBCa4M1Fnrvf1f9JuLspqzo1smCR1Mnr7v" }, now);
+  assert.equal((tape as any).pulse.find((e: any) => e.mint === mint).symbol, "?");
+  let told = "";
+  tape.onMetaFilled = (_m, s) => void (told = s);
+  tape.fillMeta(mint, { symbol: "SANTA", name: "Santa", mintCreatedAt: now - 3 * 86_400_000 });
+  assert.equal((tape as any).pulse.find((e: any) => e.mint === mint).symbol, "SANTA");
+  assert.equal(told, "SANTA");
+  assert.deepEqual(tape.birthOf(mint), { poolOpenedAt: now - 60_000, mintCreatedAt: now - 3 * 86_400_000, adopted: false, adoptedAt: null });
+  // A mint made in the same minute as its pool is just the launch.
+  const tape2 = new PumpTape();
+  tape2.apply({ kind: "create", venue: "cpmm", name: "", symbol: "", mint, creator: "C".padEnd(44, "c"), ts: now - 60_000, pool: "GdTEWLhzhmNJnY8wR2MGNBRSZ2oz94qzYNEq3VVKmRED" }, now);
+  tape2.fillMeta(mint, { mintCreatedAt: now - 70_000 });
+  assert.equal(tape2.birthOf(mint)!.mintCreatedAt, null);
+});

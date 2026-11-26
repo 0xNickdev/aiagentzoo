@@ -540,6 +540,11 @@ export function startTelegram(opts: TelegramOptions): () => void {
         return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium)."));
       }
       if (r.status === 429) return void send(chat, T("Too many x-rays right now. Try again in a minute."));
+      // Launched before the stream watched: north is reading it from the chain now.
+      if (r.status === 202) {
+        const w = (await r.json().catch(() => ({}))) as { etaSec?: number };
+        return void send(chat, T("Reading this coin from the chain, about {n} s. Ask again then: from now on it is followed live.", { n: String(Math.max(2, Math.min(60, w.etaSec ?? 20))) }));
+      }
       if (!r.ok) throw new Error(String(r.status));
       const x = (await r.json()) as XRayReply;
       const claims = await Promise.race([claimsP, new Promise<null>((done) => setTimeout(() => done(null), 4_000))]);
@@ -682,7 +687,8 @@ export function startTelegram(opts: TelegramOptions): () => void {
       const line = r.recent[0] ? launchLine(r.recent[0]) : "";
       return void send(chat, [`<b>${T("Dev {w}", { w: short(r.wallet) })}</b> · ${creatorLine(r)}`, line ? `${T("last:")} $${esc(r.recent[0]!.symbol)} · ${line}` : ""].filter(Boolean).join("\n"), full(`d-${address}`), reply);
     }
-    const x = await north<XRayReply>(`/v1/xray/${address}`);
+    const x = await north<XRayReply & { reading?: boolean; etaSec?: number }>(`/v1/xray/${address}`);
+    if (x?.reading) return void send(chat, T("Reading this coin from the chain, about {n} s. Ask again then: from now on it is followed live.", { n: String(Math.max(2, Math.min(60, x.etaSec ?? 20))) }), undefined, reply);
     if (!x) return void send(chat, T("Not a launch the stream saw in the last two days (pump.fun, LaunchLab, Meteora, Raydium)."), undefined, reply);
     const c = x.check;
     const icon = c.verdict === "avoid" ? "🔴" : c.verdict === "pass" ? "🟢" : "⚪️";
