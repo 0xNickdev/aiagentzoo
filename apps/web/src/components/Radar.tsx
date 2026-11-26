@@ -5,6 +5,8 @@ import { t } from "../i18n";
 import { BOT_URL } from "../links";
 import { nodeOf, shortAddress, useGuardian } from "../zoo";
 import RadarDisc from "./RadarDisc";
+import RadarSoon from "./RadarSoon";
+import { radarOpen } from "../radarRelease";
 import { Btn, Page, Panel } from "./site/Panel";
 
 const NORTH = NODE_URLS.find((u) => u.includes("north")) ?? NODE_URLS[0] ?? "";
@@ -113,7 +115,7 @@ function useWidth<T extends HTMLElement>() {
 }
 
 /** The runner radar: coins the frozen models see real demand on at minute five; live for holders, an hour late for everyone else. */
-export default function Radar() {
+export function RadarLive() {
   const { session, signIn, busy, error: signError } = useGuardian();
   const [data, setData] = useState<RadarBody | null>(null);
   const [failed, setFailed] = useState(false);
@@ -456,4 +458,10 @@ function PastCard({ s }: { s: Signal }) {
       </div>
     </div>
   );
+}
+
+/** Until the release moment the page is a countdown; it opens by itself when the clock runs out. */
+export default function Radar() {
+  const [open, setOpen] = useState(radarOpen);
+  return open ? <RadarLive /> : <RadarSoon onOpen={() => setOpen(true)} />;
 }

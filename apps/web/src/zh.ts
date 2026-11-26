@@ -1,5 +1,9 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "soon": "即将",
+  "Opens to holders of 500,000 $ZOOAGENCY in": "持有 500,000 $ZOOAGENCY 即可使用，倒计时",
+  "Frozen on 21 Nov, graded in public: its sharpest picks graduated 46% of the time, against 1.3% for a random launch.": "11 月 21 日冻结，公开评分：它最强的信号有 46% 毕业，随机发行只有 1.3%。",
+  "Signals at minute five, live in the site and in Telegram.": "第五分钟发出信号，网站和 Telegram 实时推送。",
   "Live record, last {d} days: {n} settled signals; {x2} moved 2x past their cap at the signal and {g} graduated. A peak is the highest cap after the signal, not a price anyone sold at.": "实时战绩，近 {d} 天：已结算信号 {n} 个；{x2} 个涨到信号时市值的 2 倍以上，{g} 个毕业。最高点是信号之后到过的最高市值，不是有人卖在那里的价格。",
   "Cap now, move": "当前市值、涨跌",
   "Coin and why": "币和原因",

@@ -2,6 +2,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DOCS_URL, EXTENSION_URL } from "../links";
 import { useRoute } from "../router";
+import { RADAR_RELEASE_AT } from "../radarRelease";
 import { LangSwitch, t as tr } from "../i18n";
 import { TokenCard, TokenChip } from "./site/ZooToken";
 
@@ -10,13 +11,15 @@ interface Item {
   href: string;
   /** Pages that light this item up besides its own. */
   also?: string[];
+  /** Shown until this moment as a small "soon" tag. */
+  soonUntil?: number;
 }
 
 /** What a trader comes for, in the order they use it. */
 const LINKS: Item[] = [
   { label: "X-Ray", href: "/xray", also: ["/callers", "/volume"] },
   { label: "Feed", href: "/feed" },
-  { label: "Radar", href: "/radar" },
+  { label: "Radar", href: "/radar", soonUntil: RADAR_RELEASE_AT },
   { label: "Contests", href: "/contests", also: ["/play"] },
   { label: "Roadmap", href: "/roadmap" },
   { label: "Token", href: "/token" },
@@ -71,6 +74,7 @@ export default function SiteNav({ active }: { active?: string }) {
               className={`flex h-8 items-center whitespace-nowrap rounded-[7px] px-3 text-[13px] transition-colors ${on(l) ? "bg-night-raised text-white" : "text-dim hover:bg-night-surface hover:text-fg-2"}`}
             >
               {tr(l.label)}
+              {l.soonUntil && Date.now() < l.soonUntil && <span className="ml-1.5 rounded-[4px] border border-line-2 px-1 text-[10px] leading-[14px] text-dim">{tr("soon")}</span>}
               {external(l.href) && <span className="ml-1 text-faint">↗</span>}
             </a>
           ))}
@@ -103,7 +107,9 @@ export default function SiteNav({ active }: { active?: string }) {
                 aria-current={on(l) ? "page" : undefined}
                 className={`flex h-11 items-center justify-between border-b border-line text-[15px] ${on(l) ? "text-white" : "text-fg-2"}`}
               >
-                {tr(l.label)}
+                <span>{tr(l.label)}
+                {l.soonUntil && Date.now() < l.soonUntil && <span className="ml-2 rounded-[4px] border border-line-2 px-1 text-[10px] leading-[14px] text-dim">{tr("soon")}</span>}
+                </span>
                 {external(l.href) && <span className="text-faint">↗</span>}
               </a>
             ))}

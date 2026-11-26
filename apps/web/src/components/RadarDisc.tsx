@@ -9,7 +9,7 @@ export interface Blip {
 
 /** 4x4 Bayer matrix, thresholds 0..15. */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-const SWEEP_MS = 6_000;
+const SWEEP_DEFAULT = 6_000;
 const DECAY_MS = 650;
 /** The disc's edge is this old: a signal two hours old sits on the rim. */
 const SPAN_MS = 2 * 3_600_000;
@@ -25,7 +25,8 @@ const angleOf = (mint: string) => {
  * seconds; what it passes resolves finer, then coarsens again. Each live signal is a blip: nearer the centre the
  * fresher it is, strong a solid square, watch an outline. Still when the reader asks for less motion.
  */
-export default function RadarDisc({ blips, active, onActive }: { blips: Blip[]; active: string | null; onActive: (mint: string | null) => void }) {
+export default function RadarDisc({ blips, active, onActive, className = "aspect-square w-full max-w-[320px] text-white", sweepMs }: { blips: Blip[]; active: string | null; onActive: (mint: string | null) => void; className?: string; sweepMs?: number }) {
+  const SWEEP_MS = sweepMs ?? SWEEP_DEFAULT;
   const ref = useRef<HTMLCanvasElement>(null);
   const state = useRef({ blips, active });
   state.current = { blips, active };
@@ -111,5 +112,5 @@ export default function RadarDisc({ blips, active, onActive }: { blips: Blip[]; 
     onActive(best);
   };
 
-  return <canvas ref={ref} onPointerMove={hit} onPointerLeave={() => onActive(null)} role="img" aria-label={`${blips.length} live signals on the radar`} className="aspect-square w-full max-w-[320px] text-white" />;
+  return <canvas ref={ref} onPointerMove={hit} onPointerLeave={() => onActive(null)} role="img" aria-label={`${blips.length} live signals on the radar`} className={className} />;
 }
