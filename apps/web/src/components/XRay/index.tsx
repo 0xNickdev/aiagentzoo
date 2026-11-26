@@ -56,6 +56,28 @@ export default function XRay() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [report]);
+  // Live: buys, sells, buyers and the dev's selling move with every trade the node reads. The plain check (no RPC, its
+  // own generous limit) is read every 5 s while the tab is visible and its chain facts replace the report's; the
+  // verdict and the deep reads stay as the x-ray gave them.
+  const liveMint = report && !report.outsideStream && !report.fromHistory && !report.pool ? report.mint : null;
+  useEffect(() => {
+    if (!liveMint) return;
+    let gone = false;
+    const tick = async () => {
+      if (document.visibilityState !== "visible") return;
+      const r = await fetch(`${NORTH}/v1/check/${liveMint}`).catch(() => null);
+      if (gone || !r || r.status !== 200) return;
+      const b = (await r.json().catch(() => null)) as { facts?: XRayReport["check"]["facts"]; stream?: XRayReport["check"]["stream"]; birth?: XRayReport["birth"] } | null;
+      if (gone || !b?.facts) return;
+      setReport((cur) => (cur && cur.mint === liveMint ? { ...cur, check: { ...cur.check, facts: b.facts!, stream: b.stream ?? cur.check.stream }, ...(b.birth ? { birth: b.birth } : {}) } : cur));
+      setReadAt(Date.now());
+    };
+    const id = setInterval(() => void tick(), 5_000);
+    return () => {
+      gone = true;
+      clearInterval(id);
+    };
+  }, [liveMint]);
   // ⌘K / Ctrl+K puts the cursor in the search.
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -106,6 +128,17 @@ export default function XRay() {
       const body = (await r.json().catch(() => ({}))) as XRayReport & { error?: string; chain?: string };
       if (stale()) return;
       rememberChains(body);
+      // Launched before the stream watched: the node is reading it from the chain now, and opens it when done.
+      if (r.status === 202) {
+        const eta = Math.max(2, Math.min(30, Number((body as { etaSec?: number }).etaSec) || 10));
+        setReport(null);
+        setRetry(mint);
+        setError(t("Reading this coin from the chain, about {n} s. It opens here when done, and is followed live from then on.", { n: eta }));
+        window.setTimeout(() => {
+          if (!stale()) void run(mint, true);
+        }, eta * 1000);
+        return;
+      }
       if (r.ok && !body.check) {
         setRetry(mint);
         setError(t("The chain reader did not answer. Try again in a minute."));
@@ -428,7 +461,9 @@ function Skeleton() {
 function HowWeKnow({ r }: { r: XRayReport }) {
   const evm = chainOf(r.mint) !== "solana";
   const venue = r.pool ? "PumpSwap" : venueLabel(r.check.facts);
-  const text = r.pool
+  const text = r.birth?.adopted
+    ? t("How we know: this coin launched before our stream watched. When it was first asked about, its pool, who opened it and its latest trades were read from the chain; every trade since is read live as it happens.")
+    : r.pool
     ? t("How we know: this token trades in a pool opened straight on PumpSwap, which the launchpad stream does not read. Who opened the pool, the SOL that went in and came out, and a draw of its trades are read from the pool's own transactions.")
     : r.outsideStream
       ? t("How we know: who holds it now is read from the chain at check time; the dev's record is what the stream kept of their earlier launches. What happened when this coin launched was before our two-day window.")

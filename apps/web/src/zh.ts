@@ -2171,4 +2171,9 @@ export const ZH: Record<string, string> = {
   "{n} commits in the last 30 days": "近 30 天 {n} 次提交",
   "no commits in the last 30 days": "近 30 天没有提交",
   ", red dot: launch day": "，红点：发币日",
+  "Reading this coin from the chain, about {n} s. It opens here when done, and is followed live from then on.": "正在从链上读取这个币，大约 {n} 秒。读完会在这里打开，之后实时跟踪。",
+  "Launched before we watched, reading live since {at}.": "这个币在我们开始监听之前就已上线，从 {at} 起实时读取。",
+  "Coin created {c}, pool opened {p}.": "币创建于 {c}，池子开于 {p}。",
+  "Pool opened {p}.": "池子开于 {p}。",
+  "How we know: this coin launched before our stream watched. When it was first asked about, its pool, who opened it and its latest trades were read from the chain; every trade since is read live as it happens.": "数据来源：这个币在我们开始监听之前就已上线。第一次有人查询时，我们从链上读取了它的池子、开池的人和最近的交易；之后的每一笔交易都实时读取。",
 };

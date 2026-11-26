@@ -86,6 +86,7 @@ export function VerdictPanel({ r, market }: Ctx) {
           </span>
         )}
       </div>
+      <BirthNote r={r} />
       <div className="x-vword">
         <h1 data-x="vword" className={vw.long ? "x-long" : ""} style={{ color: tone.color }}>
           {t(vw.w)}
@@ -1034,3 +1035,17 @@ export function TokenPanel() {
   );
 }
 
+
+const whenOf = (at: number) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
+
+/** A coin read from the chain on demand, or one whose mint is older than its pool: both times, said plainly. */
+function BirthNote({ r }: { r: XRayReport }) {
+  const b = r.birth;
+  if (!b) return null;
+  return (
+    <p className="x-note" style={{ margin: "6px 0 0" }}>
+      {b.adopted && b.adoptedAt ? t("Launched before we watched, reading live since {at}.", { at: whenOf(b.adoptedAt) }) + " " : ""}
+      {b.mintCreatedAt ? t("Coin created {c}, pool opened {p}.", { c: whenOf(b.mintCreatedAt), p: whenOf(b.poolOpenedAt) }) : b.adopted ? t("Pool opened {p}.", { p: whenOf(b.poolOpenedAt) }) : ""}
+    </p>
+  );
+}

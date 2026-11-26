@@ -130,6 +130,8 @@ export interface XRayReport {
   pool?: { pool: string; solIn: number; trades: number; sample: { n: number; passes: number }; taken: { sol: number; at: number } | null; creatorPools: number; creatorTaken: number };
   /** Read from the long memory, as it stood when last written, not from the live tape. */
   fromHistory?: boolean;
+  /** When the coin was made and its pool opened, and whether it was read from the chain on demand (launched before the stream watched). */
+  birth?: { poolOpenedAt: number; mintCreatedAt: number | null; adopted: boolean; adoptedAt: number | null };
   devHistory?: { launches: number; dumped: number } | null;
   /** Posts on X naming the token, oldest first, as the extension saw them. */
   mentions?: Array<{ handle: string; url: string; postAt: number }>;
