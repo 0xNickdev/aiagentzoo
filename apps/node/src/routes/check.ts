@@ -208,7 +208,9 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
         });
       }
     }
-    if (checkOf) return json(res, 200, { ...check, ...(image ? { image } : {}), ...memory, ...born, access: tier });
+    // The launch time beside the facts, so the dev's sell seconds read as clock times (the marsh compares them with posts).
+    const launchedAt = found?.createdAt ?? past?.createdAt;
+    if (checkOf) return json(res, 200, { ...check, ...(launchedAt ? { createdAt: launchedAt } : {}), ...(image ? { image } : {}), ...memory, ...born, access: tier });
     if (past) {
       const bundle = past.bundle.length >= 2 ? await within(traceFunders(mint, past.bundle.map((b) => b.wallet))) : null;
       return json(res, 200, {

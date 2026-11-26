@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { type Page, safeFetch } from "./safeFetch.ts";
 import { CURVE_ALIVE_SOL } from "../agents/judgement.ts";
 import { solUsd } from "../chain/price.ts";
-import { type TelegramClaim, telegramClaim, telegramName, type Tie, type XBook, xBook, type XClaim, xClaimOf } from "./social.ts";
+import { type DevSells, type TelegramClaim, telegramClaim, telegramName, type Tie, type XBook, xBook, type XClaim, xClaimOf } from "./social.ts";
 
 /**
  * What a token says about itself, checked: the GitHub it links to (does it exist, is it its own, does it point back)
@@ -71,6 +71,8 @@ export interface Deps {
   now: () => number;
   lineUsd: () => number | null;
   book: XBook;
+  /** How the dev sold, read from north's check; absent in tests that do not need it. */
+  devSells?: (mint: string) => Promise<DevSells | null>;
 }
 
 const RESERVED = new Set(["about", "apps", "blog", "collections", "contact", "customer-stories", "enterprise", "explore", "events", "features", "join", "login", "marketplace", "new", "notifications", "orgs", "pricing", "pulls", "readme", "search", "security", "settings", "signup", "site", "sponsors", "team", "topics", "trending"]);
@@ -422,7 +424,29 @@ const json: Json = async (url, headers = {}) => {
   }
 };
 
-const REAL: Deps = { json, page: safeFetch, metadata: metadataOf, now: () => Date.now(), book: xBook, lineUsd: () => { const p = solUsd(); return p === null ? null : p * CURVE_ALIVE_SOL; } };
+/** North, where the chain is read: the marsh asks it how the dev sold, as a sibling node. */
+const NORTH_URL = (() => {
+  try {
+    const north = process.env.ZOO_NODE_NORTH ?? "north.zoo";
+    return (JSON.parse(process.env.ZOO_PEERS ?? "[]") as Array<{ id?: string; url?: string }>).find((p) => p.id === north)?.url ?? null;
+  } catch {
+    return null;
+  }
+})();
+
+/** The dev's selling from north's /v1/check: launch time, share sold, first and main sale. Null when north does not know. */
+export async function devSellsFrom(base: string | null, mint: string, f: typeof fetch = fetch): Promise<DevSells | null> {
+  if (!base) return null;
+  const r = await f(`${base.replace(/\/$/, "")}/v1/check/${mint}`, { signal: AbortSignal.timeout(6_000) }).catch(() => null);
+  if (!r || r.status !== 200) return null;
+  const b = (await r.json().catch(() => null)) as { createdAt?: unknown; facts?: { creatorSoldPct?: unknown; devSell?: { firstSec?: unknown; mainSec?: unknown } } | null } | null;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const createdAt = num(b?.createdAt);
+  if (!b || createdAt === null || !b.facts) return null;
+  return { createdAt, soldPct: num(b.facts.creatorSoldPct), firstSec: num(b.facts.devSell?.firstSec), mainSec: num(b.facts.devSell?.mainSec) };
+}
+
+const REAL: Deps = { json, page: safeFetch, metadata: metadataOf, now: () => Date.now(), book: xBook, lineUsd: () => { const p = solUsd(); return p === null ? null : p * CURVE_ALIVE_SOL; }, devSells: (mint) => devSellsFrom(NORTH_URL, mint) };
 
 const FRESH_MS = 20 * 60_000;
 /** An answer with a hole in it (GitHub's limit, a gateway asleep) is asked again soon. */

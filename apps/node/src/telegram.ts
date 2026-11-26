@@ -384,6 +384,9 @@ export function claimsLines(c: Claims | null, createdAt?: number | null): string
     const n = tg.members !== undefined ? ` · ${T("{n} members", { n: tg.members.toLocaleString("en-US") })}` : "";
     out.push(`<b>Telegram:</b> ${esc(tg.name)}${n} · ${tg.status === "group" ? T("a group, its posts are not public") : tg.tie === "oneway" ? T("does not name it in the posts we read") : tied(tg.tie)}`);
     if ((tg.contracts ?? 0) >= 3) out.push(`   ⚠️ ${tg.under !== undefined ? T("{n} other contracts in its last {p} posts, {u} under ${l} or not trading", { n: tg.contracts!, p: tg.posts ?? 0, u: tg.under, l: (tg.lineUsd ?? 0).toLocaleString("en-US") }) : T("{n} other contracts in its last {p} posts", { n: tg.contracts!, p: tg.posts ?? 0 })}`);
+    // Said the dev is holding after the dev wallet sold: both times, as read.
+    const lie = tg.heldClaims?.find((h) => h.afterSell);
+    if (lie) out.push(`   ⚠️ ${T("posted \"{s}\" at {a} UTC; the dev wallet sold {p}% at {b} UTC", { s: esc(lie.said), a: new Date(lie.at).toISOString().slice(11, 16), p: lie.soldPct, b: new Date(lie.soldAt).toISOString().slice(11, 16) })}`);
   } else if (tg?.status === "broken") out.push(`<b>Telegram:</b> ${T("no public channel or group at that link")}`);
   const d = c.dex;
   if (d.paid) {

@@ -202,3 +202,42 @@ test("commit days put each commit on its UTC day, today last, and say how recent
   assert.deepEqual(commitDays({ status: 409, body: null }, now).days, Array(30).fill(0));
   assert.deepEqual(commitDays(null, now), {});
 });
+
+test("post vs chain: a channel saying the dev is holding after the dev wallet sold is reported with both times", async () => {
+  const { heldVsSold, holdingSaid } = await import("../src/claims/social.ts");
+  const { devSellsFrom } = await import("../src/claims/claims.ts");
+  for (const s of ["Dev is holding, relax", "we're still holding", "dev won't sell", "NOT SELLING a single token", "LP locked for a year", "never selling"]) assert.ok(holdingSaid(s), s);
+  for (const s of ["buy now", "holders are up 3x", "sell the news", "unlocking soon"]) assert.equal(holdingSaid(s), null, s);
+  const launch = Date.UTC(2026, 10, 26, 13, 40);
+  const sells = { createdAt: launch, soldPct: 80, firstSec: 600, mainSec: 900 }; // sold past half at 13:55
+  const posts = [
+    { at: Date.UTC(2026, 10, 26, 13, 45), text: "dev won't sell, we are here for the long run" },
+    { at: Date.UTC(2026, 10, 26, 14, 2), text: "Relax, dev is holding 💎" },
+    { at: Date.UTC(2026, 10, 26, 14, 5), text: "new meme incoming" },
+    { at: Date.UTC(2026, 10, 25, 9, 0), text: "dev holding" }, // before launch: another coin
+  ];
+  const r = heldVsSold(posts, sells);
+  assert.equal(r.claims.length, 2);
+  assert.deepEqual(r.claims.map((c) => c.afterSell), [true, false]);
+  assert.equal(r.flags[0], "the channel posted 'Relax, dev is holding 💎' at 14:02 UTC; the dev wallet sold 80% at 13:55 UTC");
+  // A dev who has not sold: nothing to say.
+  assert.deepEqual(heldVsSold(posts, { ...sells, soldPct: 0 }), { claims: [], flags: [] });
+  assert.deepEqual(heldVsSold(posts, null), { claims: [], flags: [] });
+
+  // The marsh reads the sells from north's check.
+  const north = (async () => Response.json({ createdAt: launch, facts: { creatorSoldPct: 80, devSell: { firstSec: 600, mainSec: 900 } } })) as unknown as typeof fetch;
+  assert.deepEqual(await devSellsFrom("http://north", MINT, north), sells);
+  assert.equal(await devSellsFrom(null, MINT, north), null);
+
+  // Wired through the channel read.
+  const post = (at: number, m: string) => `<div class="tgme_widget_message_wrap x"><div class="tgme_widget_message_text js-message_text">${m}</div><time datetime="${new Date(at).toISOString()}"></time></div>`;
+  const c = await telegramClaim("tok", MINT, () => "oneway" as const, {
+    now: () => NOW,
+    lineUsd: () => null,
+    page: async (u: string) => ({ status: 200, url: u, body: u.includes("/s/") ? post(posts[1]!.at, posts[1]!.text) : '<div class="tgme_page_extra">50 subscribers</div><a href="/s/tok">' }),
+    json: async () => null,
+    devSells: async () => sells,
+  });
+  assert.equal(c.heldClaims?.[0]?.afterSell, true);
+  assert.match(c.flags.join(" "), /posted 'Relax, dev is holding 💎' at 14:02 UTC; the dev wallet sold 80% at 13:55 UTC/);
+});

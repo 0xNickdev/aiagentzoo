@@ -35,7 +35,32 @@ export interface TelegramClaim {
   contracts?: number;
   under?: number;
   lineUsd?: number;
+  /**
+   * Posts saying the dev is holding, will not sell, or that supply or liquidity is locked, while the dev wallet sold:
+   * each with its time, and whether it went up after the sell (that one is the lie; before it, it was only overtaken).
+   */
+  heldClaims?: HeldClaim[];
   flags: string[];
+}
+
+export interface HeldClaim {
+  /** When the channel posted it, ms. */
+  at: number;
+  /** The words that said it, as posted (cut short). */
+  said: string;
+  /** When the dev wallet sold: past half of the bag when it did, otherwise its first sale; ms. */
+  soldAt: number;
+  /** Share of the bag the dev wallet has sold by now, 0..100. */
+  soldPct: number;
+  afterSell: boolean;
+}
+
+/** What north says of the dev's selling: launch time, share sold, and the first and main sale in seconds after launch. */
+export interface DevSells {
+  createdAt: number;
+  soldPct: number | null;
+  firstSec: number | null;
+  mainSec: number | null;
 }
 
 const DAY = 86_400_000;
@@ -161,6 +186,44 @@ export function contractsIn(text: string): string[] {
   return [...new Set(text.match(/(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{28,40}pump(?![1-9A-HJ-NP-Za-km-z])/g) ?? [])];
 }
 
+/**
+ * A post telling holders the dev keeps their bag: "holding", "not selling", "dev won't sell", "never selling",
+ * "LP locked", "supply burned". Read in English only.
+ */
+const HOLD_WORDS = /\b(?:(?:dev|devs|team|we|i)(?:'?s|'?re| is| are| am|'m)?\s+(?:still\s+)?holding|holding\s+(?:strong|forever|long|my bag|our bag|the bag)|(?:not|never|no|won'?t|will not|wont|isn'?t|is not|aren'?t|are not)\s+(?:be\s+)?sell(?:ing|s)?|no\s+dev\s+sell(?:ing|s)?|(?:lp|liquidity|supply|tokens?|bag|dev wallet)\s+(?:is\s+|are\s+|has been\s+|have been\s+)?(?:locked|burn(?:ed|t))|locked\s+(?:lp|liquidity|supply))\b/i;
+
+/** The first claim of holding in a post, with a few words around it; null when it has none. */
+export function holdingSaid(text: string): string | null {
+  const m = HOLD_WORDS.exec(text);
+  if (!m) return null;
+  const from = Math.max(0, m.index - 30);
+  const to = Math.min(text.length, m.index + m[0].length + 30);
+  return `${from > 0 ? "…" : ""}${text.slice(from, to).replace(/\s+/g, " ").trim()}${to < text.length ? "…" : ""}`;
+}
+
+const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
+const dayHhmm = (ms: number, other: number) => (new Date(ms).toISOString().slice(0, 10) === new Date(other).toISOString().slice(0, 10) ? hhmm(ms) : `${new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} ${hhmm(ms)}`);
+
+/**
+ * The channel's posts against the dev wallet's sales: every post since launch that says the dev is holding while the
+ * dev wallet sold, the ones after the sale first. Nothing when the dev has not sold.
+ */
+export function heldVsSold(posts: Array<{ at: number; text: string }>, sells: DevSells | null): { claims: HeldClaim[]; flags: string[] } {
+  if (!sells || !sells.soldPct || sells.soldPct <= 0) return { claims: [], flags: [] };
+  const sec = sells.mainSec ?? sells.firstSec;
+  if (sec === null) return { claims: [], flags: [] };
+  const soldAt = sells.createdAt + sec * 1000;
+  const claims = posts
+    .filter((p) => p.at >= sells.createdAt)
+    .map((p) => ({ p, said: holdingSaid(p.text) }))
+    .filter((x): x is { p: { at: number; text: string }; said: string } => x.said !== null)
+    .map(({ p, said }) => ({ at: p.at, said, soldAt, soldPct: Math.round(sells.soldPct!), afterSell: p.at > soldAt }))
+    .sort((a, b) => Number(b.afterSell) - Number(a.afterSell) || b.at - a.at)
+    .slice(0, 3);
+  const flags = claims.filter((c) => c.afterSell).slice(0, 1).map((c) => `the channel posted '${c.said}' at ${dayHhmm(c.at, c.soldAt)} UTC; the dev wallet sold ${c.soldPct}% at ${dayHhmm(c.soldAt, c.at)} UTC`);
+  return { claims, flags };
+}
+
 const PAGES = 5;
 const MAX_CONTRACTS = 60;
 
@@ -170,6 +233,8 @@ export interface SocialDeps {
   now: () => number;
   /** The zoo's "alive" line in dollars at today's price; null when the price is unknown. */
   lineUsd: () => number | null;
+  /** How the dev sold, from north's check; absent or null when north is not reachable. */
+  devSells?: (mint: string) => Promise<DevSells | null>;
 }
 
 export async function telegramClaim(name: string | null, mint: string, tie: (words: string) => Tie, d: SocialDeps): Promise<TelegramClaim> {
@@ -196,7 +261,8 @@ export async function telegramClaim(name: string | null, mint: string, tie: (wor
   const line = d.lineUsd();
   let under: number | undefined;
   if (others.length && line !== null) under = await underLine(others, line, d);
-  const flags: string[] = [];
+  const held = posts.some((p) => holdingSaid(p.text)) && d.devSells ? heldVsSold(posts, await d.devSells(mint).catch(() => null)) : { claims: [], flags: [] };
+  const flags: string[] = [...held.flags];
   if (others.length >= 3) flags.push(under !== undefined ? `the channel posted ${others.length} other contracts in the posts we read; ${under} of them trade under the line or nowhere now` : `the channel posted ${others.length} other contracts in the posts we read`);
   return {
     ...base,
@@ -206,6 +272,7 @@ export async function telegramClaim(name: string | null, mint: string, tie: (wor
     ...(posts.length ? { since: Math.min(...posts.map((p) => p.at)) } : {}),
     contracts: others.length,
     ...(under !== undefined ? { under, lineUsd: Math.round(line!) } : {}),
+    ...(held.claims.length ? { heldClaims: held.claims } : {}),
     flags,
   };
 }

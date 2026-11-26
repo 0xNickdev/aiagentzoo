@@ -25,7 +25,7 @@ interface Claims {
     flags: string[];
   };
   account?: { status: "none" | "unread" | "mutual" | "related" | "oneway"; handle?: string; followers?: number; joinedAt?: number; was?: string[]; flags: string[] };
-  telegram?: { status: "none" | "unread" | "broken" | "group" | "channel"; name?: string; members?: number; tie?: "mutual" | "related" | "oneway"; posts?: number; since?: number; contracts?: number; under?: number; lineUsd?: number; flags: string[] };
+  telegram?: { status: "none" | "unread" | "broken" | "group" | "channel"; name?: string; members?: number; tie?: "mutual" | "related" | "oneway"; posts?: number; since?: number; contracts?: number; under?: number; lineUsd?: number; heldClaims?: Array<{ at: number; said: string; soldAt: number; soldPct: number; afterSell: boolean }>; flags: string[] };
   dex: { paid: boolean | null; paidAt?: number; takeover?: boolean; pending?: boolean; boosts?: number };
 }
 
@@ -212,6 +212,13 @@ const WORD: Record<Claims["github"]["status"], [string, "d" | "up" | "w" | ""]> 
 };
 
 /** The GitHub a token links to, checked both ways, and whether its DexScreener profile was paid for. */
+/** A time in UTC, with the day when the other time is on another day. */
+const clock = (ms: number, other: number) => {
+  const d = (x: number) => new Date(x).toISOString().slice(0, 10);
+  const hm = `${new Date(ms).toISOString().slice(11, 16)} UTC`;
+  return d(ms) === d(other) ? hm : `${new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} ${hm}`;
+};
+
 export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: string }) {
   const c = useClaims(r.mint);
   if (c === "down") {
@@ -288,10 +295,15 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
               tg?.name ? [t("Telegram link"), <a key="t" className="x-link" href={`https://t.me/${tg.name}`} target="_blank" rel="noopener noreferrer nofollow">t.me/{tg.name} ↗</a>] : null,
               tg?.members !== undefined ? [t("Members"), num(tg.members)] : null,
               tg?.posts ? [t("Posts read"), tg.since ? t("{n}, back to {d}", { n: tg.posts, d: day(tg.since) }) : num(tg.posts)] : null,
+              ...(tg?.heldClaims ?? []).map((h): [string, string, "d" | ""] => [
+                h.afterSell ? t("Said holding after the sell") : t("Said holding"),
+                t("'{s}' at {a}; the dev wallet sold {p}% at {b}", { s: h.said, a: clock(h.at, h.soldAt), p: h.soldPct, b: clock(h.soldAt, h.at) }),
+                h.afterSell ? "d" : "",
+              ]),
               tg?.contracts ? [t("Other contracts posted"), tg.under !== undefined && tg.lineUsd ? t("{n}, {u} under {l} or not trading", { n: tg.contracts, u: tg.under, l: `$${num(tg.lineUsd)}` }) : num(tg.contracts), tg.contracts >= 3 && (tg.under ?? 0) / tg.contracts >= 0.8 ? "d" : ""] : null,
             ]}
           />
-          {fl(tg?.flags ?? [])}
+          {fl((tg?.flags ?? []).filter((f) => !f.startsWith("the channel posted '")))}
           <h4 className="x-lnh2">{t("DexScreener profile")}<b>{paid}</b></h4>
           <Kv
             flush

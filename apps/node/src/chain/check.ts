@@ -108,6 +108,8 @@ export interface TokenCheck {
     poolBuys?: number;
     poolSells?: number;
     creatorSoldPct: number | null;
+    /** How the dev sold, seconds after launch: first sale and the sale that took them past half (ChainFacts.devSell). */
+    devSell?: ChainFacts["devSell"];
     creatorLaunches24h: number;
     creatorDumped48h: number | null;
     creatorMedianDumpMin: number | null;
@@ -576,6 +578,7 @@ export function checkToken(
       poolSells: f.ammSells ?? 0,
       ...(f.dex ? { dex: f.dex } : {}),
       creatorSoldPct: pct(f.creatorSold === null ? null : Math.min(1, f.creatorSold)),
+      ...(f.devSell ? { devSell: f.devSell } : {}),
       creatorLaunches24h: f.creatorLaunches24h,
       creatorDumped48h: c ? c.dumped : null,
       creatorMedianDumpMin: c ? c.medianDumpMin : null,
