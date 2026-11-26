@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { commitCount, dexOf, githubLinks, readClaims, tiesOf, uriOfMetaplex, xHandle, type Deps } from "../src/claims/claims.ts";
+import { commitCount, commitDays, dexOf, githubLinks, readClaims, tiesOf, uriOfMetaplex, xHandle, type Deps } from "../src/claims/claims.ts";
 import { contractsIn, telegramCard, telegramClaim, telegramName, telegramPosts, XBook, xClaimOf } from "../src/claims/social.ts";
 import { publicAddress, safeFetch, safeUrl } from "../src/claims/safeFetch.ts";
 
@@ -188,4 +188,17 @@ test("X's mirror is asked again when it says a living account is gone", async ()
   await readX("flaky", { json, now: () => NOW });
   assert.equal(n, 3);
   assert.equal(await readX("gone", { json: async () => ({ status: 404, body: null, link: null }), now: () => NOW }), null);
+});
+
+test("commit days put each commit on its UTC day, today last, and say how recent the work is", () => {
+  const now = Date.parse("2026-11-26T12:00:00Z");
+  const at = (d: string) => ({ commit: { committer: { date: d } } });
+  const r = commitDays({ status: 200, body: [at("2026-11-26T01:00:00Z"), at("2026-11-26T02:00:00Z"), at("2026-11-20T23:59:00Z"), at("2026-10-01T00:00:00Z"), at("bad")] }, now);
+  assert.equal(r.days!.length, 30);
+  assert.equal(r.days![29], 2);
+  assert.equal(r.days![23], 1);
+  assert.equal(r.days!.reduce((a, b) => a + b, 0), 3);
+  assert.equal(r.lastCommitAt, Date.parse("2026-11-26T02:00:00Z"));
+  assert.deepEqual(commitDays({ status: 409, body: null }, now).days, Array(30).fill(0));
+  assert.deepEqual(commitDays(null, now), {});
 });

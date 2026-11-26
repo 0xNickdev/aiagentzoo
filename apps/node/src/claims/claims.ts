@@ -23,6 +23,11 @@ export interface GithubClaim {
   createdAt?: number;
   pushedAt?: number;
   commits?: number;
+  /** Commits on each of the last 30 days, oldest first, the last one today (UTC); 100 a page at most. */
+  days?: number[];
+  /** shipping: a commit in the last 7 days. active: in 30. quiet: in 180. dormant: older, or archived. */
+  activity?: "shipping" | "active" | "quiet" | "dormant";
+  lastCommitAt?: number;
   stars?: number;
   language?: string | null;
   fork?: boolean;
@@ -236,8 +241,9 @@ async function readGithub(link: { owner: string; repo: string | null }, foundIn:
     repo = list.find((x) => tiesOf(`${x.description ?? ""}\n${x.homepage ?? ""}`, token).length) ?? list.find((x) => !x.fork) ?? list[0]!;
   }
   const full = repo.full_name;
-  const [commits, owner, readme] = await Promise.all([
+  const [commits, recent, owner, readme] = await Promise.all([
     gh(`/repos/${full}/commits?per_page=1`),
+    gh(`/repos/${full}/commits?per_page=100&since=${new Date(now - 30 * DAY).toISOString()}`),
     gh(`/users/${repo.owner.login}`),
     // Read from the raw host, which does not count against the API's hourly limit.
     d.page(`https://raw.githubusercontent.com/${full}/HEAD/README.md`, { maxBytes: 200_000, timeoutMs: 5_000 }),
@@ -251,6 +257,9 @@ async function readGithub(link: { owner: string; repo: string | null }, foundIn:
   const ownerAt = u?.created_at ? Date.parse(u.created_at) : undefined;
   const forkOf = repo.parent?.full_name ?? repo.source?.full_name;
 
+  const { days, lastCommitAt } = commitDays(recent, now);
+  const last = lastCommitAt ?? (Number.isFinite(pushedAt) ? pushedAt : null);
+  const activity: GithubClaim["activity"] = repo.archived || last === null || now - last > 180 * DAY ? "dormant" : now - last <= 7 * DAY ? "shipping" : now - last <= 30 * DAY ? "active" : "quiet";
   const named = ties.includes("mint") || (ties.includes("website") && token.siteNamesMint);
   const flags: string[] = [];
   if (ties.length && !named) flags.push("it goes with the site or X account this token links to, but neither names this token's address: it may be someone else's project");
@@ -272,6 +281,9 @@ async function readGithub(link: { owner: string; repo: string | null }, foundIn:
     createdAt,
     pushedAt,
     ...(count !== null ? { commits: count } : {}),
+    ...(days ? { days } : {}),
+    activity,
+    ...(lastCommitAt ? { lastCommitAt } : {}),
     stars: repo.stargazers_count,
     language: repo.language,
     fork: repo.fork,
@@ -302,6 +314,22 @@ export async function readX(handle: string, d: Pick<Deps, "json" | "now">): Prom
 }
 
 const age = (ms: number) => (ms < 2 * DAY ? `${Math.max(1, Math.round(ms / 3_600_000))} h` : `${Math.round(ms / DAY)} days`);
+
+/** Commits per UTC day over the last 30 days, oldest first; undefined when GitHub did not answer. */
+export function commitDays(r: { status: number; body: unknown } | null, now: number): { days?: number[]; lastCommitAt?: number } {
+  if (!r || (r.status !== 200 && r.status !== 409) || (r.status === 200 && !Array.isArray(r.body))) return {};
+  const days = Array<number>(30).fill(0);
+  const today = Math.floor(now / DAY);
+  let lastCommitAt: number | undefined;
+  for (const c of r.status === 200 ? (r.body as Array<{ commit?: { committer?: { date?: string }; author?: { date?: string } } }>) : []) {
+    const at = Date.parse(c.commit?.committer?.date ?? c.commit?.author?.date ?? "");
+    if (!Number.isFinite(at) || at > now) continue;
+    const i = 29 - (today - Math.floor(at / DAY));
+    if (i >= 0 && i < 30) days[i]! += 1;
+    lastCommitAt = Math.max(lastCommitAt ?? 0, at);
+  }
+  return { days, ...(lastCommitAt ? { lastCommitAt } : {}) };
+}
 
 /** The number of commits, read from the last page number; null when GitHub did not say. */
 export function commitCount(r: { status: number; body: unknown; link: string | null } | null): number | null {

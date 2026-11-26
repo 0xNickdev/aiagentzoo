@@ -16,6 +16,9 @@ interface Claims {
     createdAt?: number;
     pushedAt?: number;
     commits?: number;
+    days?: number[];
+    activity?: "shipping" | "active" | "quiet" | "dormant";
+    lastCommitAt?: number;
     stars?: number;
     language?: string | null;
     flags: string[];
@@ -72,6 +75,41 @@ function flagText(s: string): string {
   return t(s);
 }
 
+const ACT: Record<NonNullable<Claims["github"]["activity"]>, [string, "d" | "up" | "w" | ""]> = {
+  shipping: ["shipping", "up"],
+  active: ["active", ""],
+  quiet: ["quiet", "w"],
+  dormant: ["dormant", "d"],
+};
+
+const ago = (ms: number) => {
+  const h = (Date.now() - ms) / 3_600_000;
+  return h < 1 ? t("within the hour") : h < 48 ? t("{n} h ago", { n: Math.round(h) }) : t("{n} days ago", { n: Math.round(h / 24) });
+};
+
+/** Thirty days of commits, a square a day, today on the right; the token's launch day is marked under its square. */
+function Strip({ days, launch }: { days: number[]; launch: number }) {
+  const top = Math.max(1, ...days);
+  const total = days.reduce((a, b) => a + b, 0);
+  const li = 29 - Math.floor((Date.now() - launch) / 86_400_000);
+  return (
+    <figure className="x-strip" aria-label={t("{n} commits in the last 30 days", { n: total })}>
+      <div>
+        {days.map((n, i) => (
+          <i key={i} title={`${day(Date.now() - (29 - i) * 86_400_000)}: ${n}`} style={n ? { opacity: 0.35 + (0.65 * n) / top } : undefined} className={n ? "on" : ""}>
+            {i === li && <s />}
+          </i>
+        ))}
+      </div>
+      <figcaption>
+        <span>{t("30 days ago")}</span>
+        <span>{total ? t("{n} commits in the last 30 days", { n: total }) : t("no commits in the last 30 days")}{li >= 0 && li < 30 ? t(", red dot: launch day") : ""}</span>
+        <span>{t("today")}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 const WORD: Record<Claims["github"]["status"], [string, "d" | "up" | "w" | ""]> = {
   mutual: ["names this token back", "up"],
   related: ["matches its links, but never names this token", "w"],
@@ -99,9 +137,7 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
     );
   }
   const g = c.github;
-  // The rename and the contract count have rows of their own.
-  const points = [...g.flags, ...(c.account?.flags ?? []).filter((f) => !f.includes(" before"))];
-  const d = c.dex;
+    const d = c.dex;
   const [word, tone] = g.status === "none" && !c.metadataRead ? (["the token's metadata could not be read", ""] as const) : WORD[g.status];
   const from = g.foundIn === "metadata" ? t("in the token's metadata") : g.foundIn === "dexscreener" ? t("on its DexScreener page") : t("on its website");
   const a = c.account;
@@ -110,41 +146,68 @@ export function ClaimsPanel({ r, span = "x-s4" }: Pick<Ctx, "r"> & { span?: stri
   const tgWord: [string, "d" | "up" | "w" | ""] = !tg || tg.status === "none" ? ["no link found", ""] : tg.status === "unread" ? ["Telegram did not answer", ""] : tg.status === "broken" ? ["no public channel or group at that link", ""] : tg.status === "group" ? ["a group, its posts are not public", ""] : tg.tie === "mutual" || tg.tie === "related" ? WORD[tg.tie] : ["does not name it in the posts we read", "w"];
   const num = (n: number) => n.toLocaleString("en-US");
   const paid = d.paid === null ? t("DexScreener did not answer") : d.paid ? (d.paidAt && d.paidAt >= r.createdAt ? t("paid, {t}", { t: after(r.createdAt, d.paidAt) }) : t("paid")) : d.pending ? t("payment in review") : t("not paid");
+  const fl = (list: string[]) =>
+    list.length > 0 && (
+      <ul className="x-lnf">
+        {list.slice(0, 4).map((f) => (
+          <li key={f}>{flagText(f)}</li>
+        ))}
+      </ul>
+    );
+  const act = g.activity ? ACT[g.activity] : null;
+  const since = g.lastCommitAt ?? g.pushedAt;
   return (
-    <Pn span={span} title={t("Links, checked")} meta={t("what it links to, checked")} className={span === "x-s12" ? "x-two" : ""}>
-      <Kv
-        flush
-        rows={[
-          ["GitHub", t(word), tone],
-          g.repo || g.url ? [t("Repository"), <a key="r" className="x-link" href={g.repo ? `https://github.com/${g.repo}` : g.url} target="_blank" rel="noopener noreferrer nofollow">{g.repo ?? g.url!.replace("https://github.com/", "")} ↗</a>] : null,
-          g.url && g.foundIn ? [t("Link found"), from] : null,
-          g.commits !== undefined ? [t("Commits"), g.commits.toLocaleString("en-US")] : null,
-          g.createdAt ? [t("Repository created"), day(g.createdAt)] : null,
-          g.pushedAt ? [t("Last push"), day(g.pushedAt)] : null,
-          g.language ? [t("Main language"), g.language] : null,
-          ["X", t(x[0]), x[1]],
-          a?.handle ? [t("X account"), <a key="x" className="x-link" href={`https://x.com/${a.handle}`} target="_blank" rel="noopener noreferrer nofollow">@{a.handle} ↗</a>] : null,
-          a?.followers !== undefined ? [t("Followers"), num(a.followers)] : null,
-          a?.joinedAt ? [t("On X since"), day(a.joinedAt)] : null,
-          a?.was?.length ? [t("Handle before"), a.was.map((h) => `@${h}`).join(", "), "w"] : null,
-          ["Telegram", t(tgWord[0]), tgWord[1]],
-          tg?.name ? [t("Telegram link"), <a key="t" className="x-link" href={`https://t.me/${tg.name}`} target="_blank" rel="noopener noreferrer nofollow">t.me/{tg.name} ↗</a>] : null,
-          tg?.members !== undefined ? [t("Members"), num(tg.members)] : null,
-          tg?.posts ? [t("Posts read"), tg.since ? t("{n}, back to {d}", { n: tg.posts, d: day(tg.since) }) : num(tg.posts)] : null,
-          tg?.contracts ? [t("Other contracts posted"), tg.under !== undefined && tg.lineUsd ? t("{n}, {u} under {l} or not trading", { n: tg.contracts, u: tg.under, l: `$${num(tg.lineUsd)}` }) : num(tg.contracts), tg.contracts >= 3 && (tg.under ?? 0) / tg.contracts >= 0.8 ? "d" : ""] : null,
-          [t("DexScreener profile"), paid],
-          d.takeover ? [t("Community takeover"), t("approved")] : null,
-          d.boosts ? [t("DexScreener boosts"), d.boosts] : null,
-        ]}
-      />
-      {points.length > 0 && (
-        <ul className="x-fine" style={{ display: "grid", gap: 4, marginTop: 10 }}>
-          {points.slice(0, 5).map((f) => (
-            <li key={f}>{flagText(f)}</li>
-          ))}
-        </ul>
-      )}
-      <p className="x-fine" style={{ marginTop: 10 }}>{t("Anyone can link any account: it counts as the token's only when it names the contract back. A paid profile is an ad, not a check.")}</p>
+    <Pn span={span} title={t("Links, checked")} meta={t("what it links to, checked")}>
+      <div className="x-links">
+        <section>
+          <h4>GitHub<b className={tone ? `x-${tone}` : ""}>{t(word)}</b></h4>
+          {g.days && <Strip days={g.days} launch={r.createdAt} />}
+          <Kv
+            flush
+            rows={[
+              act ? [t("Activity"), since ? t("{a}, last commit {d}", { a: t(act[0]), d: ago(since) }) : t(act[0]), act[1]] : null,
+              g.repo || g.url ? [t("Repository"), <a key="r" className="x-link" href={g.repo ? `https://github.com/${g.repo}` : g.url} target="_blank" rel="noopener noreferrer nofollow">{g.repo ?? g.url!.replace("https://github.com/", "")} ↗</a>] : null,
+              g.url && g.foundIn ? [t("Link found"), from] : null,
+              g.commits !== undefined ? [t("Commits"), g.commits.toLocaleString("en-US")] : null,
+              g.createdAt ? [t("Repository created"), day(g.createdAt)] : null,
+              g.language ? [t("Main language"), g.language] : null,
+            ]}
+          />
+          {fl(g.flags)}
+        </section>
+        <section>
+          <h4>X<b className={x[1] ? `x-${x[1]}` : ""}>{t(x[0])}</b></h4>
+          <Kv
+            flush
+            rows={[
+              a?.handle ? [t("X account"), <a key="x" className="x-link" href={`https://x.com/${a.handle}`} target="_blank" rel="noopener noreferrer nofollow">@{a.handle} ↗</a>] : null,
+              a?.followers !== undefined ? [t("Followers"), num(a.followers)] : null,
+              a?.joinedAt ? [t("On X since"), day(a.joinedAt)] : null,
+              a?.was?.length ? [t("Handle before"), a.was.map((h) => `@${h}`).join(", "), "w"] : null,
+            ]}
+          />
+          {fl((a?.flags ?? []).filter((f) => !f.includes(" before")))}
+        </section>
+        <section>
+          <h4>Telegram<b className={tgWord[1] ? `x-${tgWord[1]}` : ""}>{t(tgWord[0])}</b></h4>
+          <Kv
+            flush
+            rows={[
+              tg?.name ? [t("Telegram link"), <a key="t" className="x-link" href={`https://t.me/${tg.name}`} target="_blank" rel="noopener noreferrer nofollow">t.me/{tg.name} ↗</a>] : null,
+              tg?.members !== undefined ? [t("Members"), num(tg.members)] : null,
+              tg?.posts ? [t("Posts read"), tg.since ? t("{n}, back to {d}", { n: tg.posts, d: day(tg.since) }) : num(tg.posts)] : null,
+              tg?.contracts ? [t("Other contracts posted"), tg.under !== undefined && tg.lineUsd ? t("{n}, {u} under {l} or not trading", { n: tg.contracts, u: tg.under, l: `$${num(tg.lineUsd)}` }) : num(tg.contracts), tg.contracts >= 3 && (tg.under ?? 0) / tg.contracts >= 0.8 ? "d" : ""] : null,
+            ]}
+          />
+          {fl(tg?.flags ?? [])}
+          <h4 className="x-lnh2">{t("DexScreener profile")}<b>{paid}</b></h4>
+          <Kv
+            flush
+            rows={[d.takeover ? [t("Community takeover"), t("approved")] : null, d.boosts ? [t("DexScreener boosts"), d.boosts] : null]}
+          />
+        </section>
+      </div>
+      <p className="x-fine" style={{ marginTop: 14 }}>{t("Anyone can link any account: it counts as the token's only when it names the contract back. A paid profile is an ad, not a check.")}</p>
     </Pn>
   );
 }
