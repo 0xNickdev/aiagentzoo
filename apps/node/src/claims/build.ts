@@ -420,7 +420,7 @@ export function modelFromEnv(env = process.env, f: typeof fetch = fetch): BuildD
     const r = await f("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model, max_tokens: 2_000, temperature: 0, system, messages: [{ role: "user", content: user }] }),
+      body: JSON.stringify({ model, max_tokens: 2_000, system, messages: [{ role: "user", content: user }] }),
       signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
     if (!r.ok) throw new Error(`model answered ${r.status}`);
