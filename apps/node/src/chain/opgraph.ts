@@ -408,7 +408,7 @@ export function operatorGraphWarning(s: OperatorSummary | null | undefined, crea
 }
 
 /** Runs the graph every few minutes in the background, and prunes it daily. */
-export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, catchUpMs = 3_000, log = (_m: string) => {} } = {}): () => void {
+export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, catchUpMs = 20_000, log = (_m: string) => {} } = {}): () => void {
   // Tables built under older tie rules: start over from history; the groups say nothing until it catches up.
   try {
     if (g.outdated()) {
@@ -422,9 +422,12 @@ export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, cat
   const run = () => {
     try {
       // A big backlog (a rebuild, or a first run on a full store) is worked through a batch at a time, never in one block.
-      const r = g.update();
-      if (g.rebuilding()) {
-        if (r.tokens < OPGRAPH.perRun) {
+      // A rebuild reads small batches far apart so the node keeps answering while it catches up.
+      const rebuilding = g.rebuilding();
+      const limit = rebuilding ? 1_000 : OPGRAPH.perRun;
+      const r = g.update(Date.now(), limit);
+      if (rebuilding) {
+        if (r.tokens < limit) {
           g.rebuilt();
           log("operator graph: rebuild done");
         } else {
