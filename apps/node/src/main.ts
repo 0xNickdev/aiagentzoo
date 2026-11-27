@@ -243,7 +243,7 @@ const radarV2 = config.role === "north" && history
   : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
 // The operator graph: launch wallets tied on chain across launches, read from the long memory every five minutes.
-const opGraph = history
+const opGraph = history && process.env.ZOO_OPGRAPH !== "off"
   ? new OperatorGraph(history.db, {
       printOf: (mint) => {
         const r = tape.printOf(mint);
