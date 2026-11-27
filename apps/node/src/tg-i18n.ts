@@ -28,6 +28,9 @@ export async function chatLang(store: StateStore, chat: number, clientLanguage?:
 
 export const setChatLang = (store: StateStore, chat: number, lang: BotLang) => store.set(`tg:lang:${chat}`, lang);
 
+/** The operator graph's tie words (apps/node/src/chain/opgraph.ts TIE_TEXT). */
+const TIE_ZH: Record<string, string> = { "same funder": "同一个资助者", "SOL from another launch wallet": "来自其他发币钱包的 SOL", "the same early snipers": "同一批早期狙击手", "the same private launch tool": "同一个私有发币工具", "the same account": "同一个账号" };
+
 /** The chain's own phrases, written by the nodes in English. */
 const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^creator sold (\d+)% after (\d+)(s| min| h)$/, (m) => `开发者 ${m[2]}${m[3] === "s" ? " 秒" : m[3] === " h" ? " 小时" : " 分钟"}后卖出 ${m[1]}%`],
@@ -116,6 +119,45 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^who funded the creator is not traced yet: it is queued$/, () => "还没追踪到谁给开发者打的钱：已排队"],
   [/^holders could not be read from (Solana|BNB Chain) right now$/, (m) => `暂时无法从 ${m[1]} 读取持币者`],
   [/^the chain stream is down right now: .*$/, () => "链上数据流暂时中断：结果可能不是最新的"],
+  // Operator graph, early callers, borrowed accounts and the channel's posts against the chain (nodes, Nov 2026).
+  [/^this dev shares (.+?) as (\d+) other launch wallets? whose (\d+) launches dumped (\d+) times(?:; same (.+))?$/, (m) => `这个开发者与另外 ${m[2]} 个发币钱包有${m[1]!.split(" and ").map((k) => TIE_ZH[k] ?? k).join("和")}，这些钱包的 ${m[3]} 次发币砸了 ${m[4]} 次${m[5] ? `；同一个 ${m[5]}` : ""}`],
+  [/^called early by (\S+)(?: and (\d+) more good callers?)?, (?:in the first minute|(\d+) min after launch) \(record: (\d+) of (\d+) calls ended up, (\d+) dead(?:, median ([\d.]+)x)?\)$/, (m) => `${m[1]} ${m[2] ? `和另外 ${m[2]} 个靠谱叫单者` : ""}${m[3] ? `在发币 ${m[3]} 分钟后` : "在第一分钟"}就喊了（战绩：${m[5]} 次喊单 ${m[4]} 次上涨，${m[6]} 次归零${m[7] ? `，中位 ${m[7]}x` : ""}）`],
+  [/^this (X account|X community|Telegram group) \((.+)\) appears on (\d+) launches by (\d+) different devs; it is likely borrowed$/, (m) => `这个${m[1] === "Telegram group" ? " Telegram 群" : m[1] === "X community" ? " X 社区" : " X 账号"}（${m[2]}）出现在 ${m[4]} 个不同开发者的 ${m[3]} 次发币上：多半是借用的`],
+  [/^the (X account|X community|Telegram group) this token links to \((.+)\) is also on (\d+) other launch(?:es)? from the last (\d+) days; their dev sold within 5 minutes on (\d+)$/, (m) => `这个币关联的${m[1] === "Telegram group" ? " Telegram 群" : m[1] === "X community" ? " X 社区" : " X 账号"}（${m[2]}）在过去 ${m[4]} 天还出现在另外 ${m[3]} 个币上，其中 ${m[5]} 个的开发者 5 分钟内就卖了`],
+  [/^the channel posted '(.+)' at (.+?) UTC; the dev wallet sold (\d+)% at (.+?) UTC$/, (m) => `频道在 ${m[2]} UTC 发了"${m[1]}"；开发者钱包在 ${m[4]} UTC 卖出了 ${m[3]}%`],
+  [/^the channel posted (\d+) other contracts in the posts we read(?:; (\d+) of them trade under the line or nowhere now)?$/, (m) => `在我们读到的帖子里，频道还发过 ${m[1]} 个其他合约${m[2] ? `；其中 ${m[2]} 个现在低于基准线或已不在交易` : ""}`],
+  [/^trades before we watched could not be read yet$/, () => "我们开始读取之前的交易暂时还读不到"],
+  // The radar's reasons (apps/node/src/chain/radar.ts termText).
+  [/^(\d+) buyers in 5 minutes$/, (m) => `5 分钟内 ${m[1]} 个买家`],
+  [/^(\d+) buys from just (\d+) buyers$/, (m) => `只有 ${m[2]} 个买家，买了 ${m[1]} 笔`],
+  [/^(\d+) buys in 5 minutes$/, (m) => `5 分钟内 ${m[1]} 笔买入`],
+  [/^(\d+) buys in 5 minutes, a quiet start$/, (m) => `5 分钟内 ${m[1]} 笔买入，开局安静`],
+  [/^(\d+) sells, plenty of trading$/, (m) => `${m[1]} 笔卖出，交易活跃`],
+  [/^only (\d+) sells so far$/, (m) => `目前只有 ${m[1]} 笔卖出`],
+  [/^([\d.]+) SOL in$/, (m) => `流入 ${m[1]} SOL`],
+  [/^([\d.]+) SOL cap at 5 minutes$/, (m) => `第 5 分钟市值 ${m[1]} SOL`],
+  [/^top 5 buyers took (\d+)%$/, (m) => `前五买家拿走 ${m[1]}%`],
+  [/^top 5 buyers took only (\d+)%$/, (m) => `前五买家只拿走 ${m[1]}%`],
+  [/^(\d+)% of buyers already out$/, (m) => `${m[1]}% 的买家已离场`],
+  [/^few buyers out yet \((\d+)%\)$/, (m) => `离场的买家还很少（${m[1]}%）`],
+  [/^dev sold (\d+)%$/, (m) => `开发者卖了 ${m[1]}%`],
+  [/^dev has not sold$/, () => "开发者还没卖"],
+  [/^dev sold only (\d+)%$/, (m) => `开发者只卖了 ${m[1]}%`],
+  [/^early wallets still hold (\d+)%$/, (m) => `早期钱包仍持有 ${m[1]}%`],
+  [/^early wallets hold nothing$/, () => "早期钱包已不持有"],
+  [/^early wallets hold only (\d+)%$/, (m) => `早期钱包只持有 ${m[1]}%`],
+  [/^no bundles holding$/, () => "没有捆绑持仓"],
+  [/^bundles peaked at (\d+)%$/, (m) => `捆绑峰值 ${m[1]}%`],
+  [/^bundles peaked at only (\d+)%$/, (m) => `捆绑峰值只有 ${m[1]}%`],
+  [/^no SOL bundled at launch$/, () => "开盘没有捆绑 SOL"],
+  [/^([\d.]+) SOL bundled at launch$/, (m) => `开盘捆绑 ${m[1]} SOL`],
+  [/^the dev's first launch$/, () => "开发者第一次发币"],
+  [/^the dev launched (\d+) coins before$/, (m) => `开发者之前发过 ${m[1]} 个币`],
+  [/^the dev graduated (\d+) before$/, (m) => `开发者之前有 ${m[1]} 个币毕业`],
+  [/^the dev never graduated a coin$/, () => "开发者从没有币毕业过"],
+  [/^(\d+) early wallets? with a runner record$/, (m) => `${m[1]} 个早期钱包有拉盘战绩`],
+  [/^(\d+) first-second wallets$/, (m) => `首秒钱包 ${m[1]} 个`],
+  [/^only (\d+) first-second wallets$/, (m) => `首秒钱包只有 ${m[1]} 个`],
 ];
 
 export function TC(text: string): string {

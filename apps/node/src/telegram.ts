@@ -101,7 +101,7 @@ export function runnerAlert(s: RadarSignal): string {
   return [
     `<b>${T(s.tier === "strong" ? "Runner radar · strong" : "Runner radar · watch")}</b> · <b>$${esc(s.symbol)}</b>`,
     T("{c} SOL cap at the signal", { c: s.capAtSignal }),
-    ...s.reasons.slice(0, 3).map((r) => `• ${esc(r)}`),
+    ...s.reasons.slice(0, 3).map((r) => `• ${esc(TC(r))}`),
     `<code>${s.mint}</code>`,
     T("<i>Not a call to buy. Most coins still die.</i>"),
   ].join("\n");

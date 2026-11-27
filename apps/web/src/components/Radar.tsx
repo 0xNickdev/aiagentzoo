@@ -1,7 +1,7 @@
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
-import { t } from "../i18n";
+import { t, tChain } from "../i18n";
 import { BOT_URL } from "../links";
 import { nodeOf, shortAddress, useGuardian } from "../zoo";
 import RadarDisc from "./RadarDisc";
@@ -384,7 +384,7 @@ function Line({ s }: { s: Signal }) {
         </a>
         <ul className="mt-1 flex flex-col gap-0.5 text-fg-2">
           {s.reasons.map((r) => (
-            <li key={r}>{t(r)}</li>
+            <li key={r}>{tChain(r)}</li>
           ))}
         </ul>
       </div>
@@ -415,7 +415,7 @@ function Card({ s }: { s: Signal }) {
       </div>
       <ul className="flex flex-col gap-0.5 text-fg-2">
         {s.reasons.map((r) => (
-          <li key={r}>{t(r)}</li>
+          <li key={r}>{tChain(r)}</li>
         ))}
       </ul>
       <div className="flex items-center gap-4">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { chainOf } from "../../chain";
-import { t } from "../../i18n";
+import { t, tChain } from "../../i18n";
 import { NODE_URLS } from "../../sim/live";
 import { useGuardian } from "../../zoo";
 import { Kv, Pn, type Ctx } from "./ui";
@@ -164,7 +164,8 @@ function flagText(s: string): string {
   if (xage) return xage[2] === "h" ? t("the X account is {n} h old", { n: xage[1]! }) : t("the X account is {n} days old", { n: xage[1]! });
   const fork = /^it is a fork of (.+)$/.exec(s);
   if (fork && fork[1] !== "another project") return t("it is a fork of {r}", { r: fork[1]! });
-  return t(s);
+  const z = t(s);
+  return z === s ? tChain(s) : z;
 }
 
 const ACT: Record<NonNullable<Claims["github"]["activity"]>, [string, "d" | "up" | "w" | ""]> = {
