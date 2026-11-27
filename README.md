@@ -7,18 +7,38 @@
 
 # ZOOAI AGENCY
 
-**Onchain due diligence for Solana launches. See who is behind a coin before you buy it.**
+**See who you are buying from. Live on-chain x-ray for Solana launches.**
 
+[![Winner](https://img.shields.io/badge/Winner-Best%20Consumer%20App%20%C2%B7%20Encode%20x%20Solana%20Hackathon%202026-d4af37?labelColor=000000&logo=solana&logoColor=d4af37)](#recognition)
+[![Encode x Solana](https://img.shields.io/badge/Encode%20x%20Solana-Accelerator-000000?logo=solana&logoColor=white)](#recognition)
+[![Website](https://img.shields.io/badge/website-zooaiagency.com-000000)](https://zooaiagency.com)
+[![X](https://img.shields.io/badge/X-%40ZOOClawAgency-000000?logo=x&logoColor=white)](https://x.com/zooclawagency)
+[![Telegram bot](https://img.shields.io/badge/Telegram-%40zooaiagency__bot-000000?logo=telegram&logoColor=white)](https://t.me/zooaiagency_bot)
+[![Chrome extension](https://img.shields.io/badge/Chrome-extension-000000?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl)
+[![License: MIT](https://img.shields.io/badge/license-MIT-000000.svg)](LICENSE)
+[![$ZOOAGENCY](https://img.shields.io/badge/%24ZOOAGENCY-2dZn4n...EoS6B-000000?logo=solana&logoColor=white)](https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B)
 [![CI](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-0b0f0d.svg)](LICENSE)
-[![X](https://img.shields.io/badge/X-%40zooclawagency-0b0f0d?logo=x&logoColor=white)](https://x.com/zooclawagency)
-[![Solana](https://img.shields.io/badge/chain-Solana-0b0f0d.svg)](https://solana.com)
 
-[**X-Ray**](https://zooaiagency.com/xray) · [**Chrome extension**](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl) · [**Telegram bot**](https://t.me/zooaiagency_bot) · [**API for agents**](https://zooaiagency.com/skill.md) · [**Roadmap**](https://zooaiagency.com/roadmap) · [**$ZOOAGENCY**](https://zooaiagency.com/token)
+[**X-Ray**](https://zooaiagency.com/xray) · [**Live feed**](https://zooaiagency.com/feed) · [**Runner radar**](https://zooaiagency.com/radar) · [**Chrome extension**](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl) · [**Telegram bot**](https://t.me/zooaiagency_bot) · [**API for agents**](https://zooaiagency.com/skill.md) · [**Roadmap**](https://zooaiagency.com/roadmap) · [**$ZOOAGENCY**](https://zooaiagency.com/token)
 
 </div>
 
-> **Best Consumer App on Solana, Solana Hackathon 2026** (Encode Club). Final eight, and a place in the Encode Club x Solana accelerator from 7 December. The day after the final we cut everything that was not the x-ray: what was built, what was cut and why is on the [roadmap](https://zooaiagency.com/roadmap), each line with its commit.
+## Recognition
+
+<p align="center"><img src="apps/web/public/hackathon-winner.png" alt="Winner certificate, Encode Club x Solana Hackathon 2026" width="720" /></p>
+
+ZOOAI won **Best Consumer App on Solana** at the Encode Club x Solana Hackathon 2026 (12 October - 16 November 2026), one of the final 8.
+The prize is a place in the **Encode Club x Solana accelerator**. The day after the final we cut everything that was not the x-ray: what was built, what was cut and why is on the [roadmap](https://zooaiagency.com/roadmap), each line with its commit.
+
+## Official token
+
+**$ZOOAGENCY** is live and trading on Solana, launched via [ClawPump](https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B).
+
+```
+2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B
+```
+
+[Solscan](https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B) · [Buy on ClawPump](https://clawpump.tech/tokens/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B) · [DexScreener](https://dexscreener.com/solana/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B) · [what the token does](https://zooaiagency.com/token)
 
 ## What it is
 
@@ -181,7 +201,13 @@ For agents: [skill.md](https://zooaiagency.com/skill.md).
 
 ## Roadmap
 
-Live at [zooaiagency.com/roadmap](https://zooaiagency.com/roadmap): every build shipped with the commit that shipped it, everything cut with the reason, what is running now (the runner radar trial) and what is next (the accelerator from 7 December, then Pro).
+Live at [zooaiagency.com/roadmap](https://zooaiagency.com/roadmap): every build shipped with the commit that shipped it, everything cut with the reason, what is running now and what is next.
+
+| | |
+|---|---|
+| Done | X-Ray, check and odds; live feed; Telegram bot; Chrome extension; free API and x402 pay-per-check; claims and build check; $ZOOAGENCY token launch via ClawPump; Best Consumer App win |
+| Running | runner radar (signals at minute five, graded in public) |
+| Next | the Encode Club x Solana accelerator, then Pro |
 
 ## Token
 
@@ -195,6 +221,10 @@ Two separate money flows touch the token:
 | Swap fee | the 1% fee in SOL on swaps made through our X-Ray swap | every six hours a tenth buys $ZOOAGENCY into the treasury (not burned), the rest goes to the treasury as SOL; every run is listed at [canyon.zooaiagency.com/v1/buybacks](https://canyon.zooaiagency.com/v1/buybacks) ([`buyback.ts`](apps/node/src/buyback.ts)) |
 
 Holding 500,000+ $ZOOAGENCY: the weekly contest, Telegram alerts 10 minutes first, radar pings in the bot, and a key with ten times the API limits (1,200 checks and 300 x-rays a minute). When Pro opens it can be paid in USDC or in $ZOOAGENCY at 25% off; every $ZOOAGENCY paid is burned and a growing cut of the USDC buys back and burns. All of it on one page: [zooaiagency.com/token](https://zooaiagency.com/token).
+
+## Disclaimer
+
+Verdicts, odds, radar signals and wallet labels are automated reads of public Solana chain data. They are not investment advice and not a call to buy or sell any token. Do your own research; a clean read does not mean a coin is safe.
 
 ## Contributing
 
