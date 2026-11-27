@@ -4,9 +4,11 @@ import { RADAR_RELEASE_AT } from "../radarRelease";
 import RadarDisc from "./RadarDisc";
 import VaporCountdown from "./VaporCountdown";
 import { Btn } from "./site/Panel";
+import { TopRunners, useRadarRecord } from "./TrackRecord";
 
 /** The radar before it opens: the disc sweeping behind a particle countdown. */
 export default function RadarSoon({ onOpen }: { onOpen: () => void }) {
+  const record = useRadarRecord();
   return (
     <section className="relative flex min-h-[calc(100svh-60px)] flex-col items-center justify-center overflow-hidden px-4 py-12 text-center sm:px-5">
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.22]" aria-hidden>
@@ -18,6 +20,7 @@ export default function RadarSoon({ onOpen }: { onOpen: () => void }) {
         <div className="mb-10 mt-[120px] flex w-full justify-center">
           <VaporCountdown targetDate={RADAR_RELEASE_AT} labels={[t("hours"), t("minutes"), t("seconds")]} onZero={onOpen} />
         </div>
+        <TopRunners rec={record} />
         <p className="max-w-[60ch] text-[13.5px] leading-[1.55] text-fg-2 sm:text-[15px]">
           {t("Tested blind on 38,976 launches since 21 Nov: its top signals graduated 46% of the time, against 1.3% for a random launch.")}
         </p>

@@ -6,6 +6,7 @@ import { BOT_URL } from "../links";
 import { nodeOf, shortAddress, useGuardian } from "../zoo";
 import RadarDisc from "./RadarDisc";
 import RadarSoon from "./RadarSoon";
+import { TrackRecord, useRadarRecord } from "./TrackRecord";
 import { radarOpen } from "../radarRelease";
 import { Btn, Page, Panel } from "./site/Panel";
 
@@ -126,6 +127,7 @@ export function RadarLive() {
   const [said, setSaid] = useState("");
   const [boxRef, width] = useWidth<HTMLDivElement>();
   const seen = useRef<Set<string> | null>(null);
+  const record = useRadarRecord();
 
   useEffect(() => {
     let live = true;
@@ -296,6 +298,8 @@ export function RadarLive() {
             {note && <p className="mt-2 text-[12px] text-danger">{note}</p>}
           </Panel>
         </div>
+
+        <TrackRecord rec={record} />
 
         <Panel title={t("History")} meta={t("how each coin moved after its signal")} className="lg:col-span-12" bodyClass="p-0">
           {data && !past.length ? (

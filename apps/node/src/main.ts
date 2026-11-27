@@ -29,6 +29,7 @@ import { writeMarks } from "./chain/marks.ts";
 import { markField } from "./chain/earlycalls.ts";
 import { curveCap, Radar } from "./chain/radar.ts";
 import { RadarV2, type V2Row } from "./chain/radar-v2.ts";
+import type { RadarRecord } from "./chain/radar-record.ts";
 import { earlyCallsAt, startCallers } from "./routes/calls.ts";
 import { startPools } from "./routes/pools.ts";
 import { socials } from "./chain/socials.ts";
@@ -252,10 +253,21 @@ const opGraph = history && opGraphOn ? new OperatorGraph(history.db) : null;
 const walletLedger = walletPnlOn ? new WalletLedger(null) : null;
 const smart = walletLedger ? new SmartWallets(join(config.dataDir, "smart-wallets.json")) : null;
 if (walletLedger) tape.onFill = (w, m, sol, isBuy, ts) => walletLedger.fill(w, m, sol, isBuy, ts);
-const background = history && (opGraphOn || walletPnlOn)
+// The radar's track record is built in the same worker, hourly, from the marks file and radar.jsonl.
+let radarRecord: RadarRecord | null = null;
+const background = history && (opGraphOn || walletPnlOn || radar)
   ? startBackground(
-      { dbPath: join(config.dataDir, "history.db"), opgraph: opGraphOn, pnl: walletPnlOn, smartFile: join(config.dataDir, "smart-wallets.json") },
       {
+        dbPath: join(config.dataDir, "history.db"),
+        opgraph: opGraphOn,
+        pnl: walletPnlOn,
+        smartFile: join(config.dataDir, "smart-wallets.json"),
+        ...(radar ? { record: { marksFile: join(config.dataDir, "chain-marks.jsonl"), radarFile: join(config.dataDir, "radar.jsonl") } } : {}),
+      },
+      {
+        onMessage: (m) => {
+          if (m.t === "record") radarRecord = m.record;
+        },
         ledger: walletLedger,
         smart,
         // Wallets paid by one wallet are one hand: only the best of them is listed. Exchanges and launchers pay everyone.
@@ -385,7 +397,7 @@ const server = createNodeServer({
   ...(config.role === "canyon" ? { stats: canyonStats(enclosure, config.briefAt, guests), board: leaderboard(enclosure, config.briefAt), oddsHistory: oddsRecord(enclosure, config.briefAt), weekly: agentOfWeek(enclosure, config.briefAt), contest: { briefAt: config.briefAt } } : {}),
   ...(config.role === "north" ? { watchlist: { perGuardian: 3, maxGuardians: 500, perHolder: 10 } } : {}),
   ...(history ? { history } : {}),
-  ...(radar ? { radar } : {}),
+  ...(radar ? { radar, radarRecord: () => radarRecord } : {}),
   ...(cabals ? { cabals } : {}),
   ...(opGraph ? { opGraph } : {}),
   ...(smart ? { smart } : {}),

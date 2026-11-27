@@ -42,6 +42,14 @@ function guardianHeader(req: IncomingMessage): GuardianSession | undefined {
  * what came of it. `delay` (minutes) asks for an older cut; it can only add to the public hour, never take from it.
  */
 export async function radarRoutes(ctx: RouteContext, req: IncomingMessage, res: ServerResponse, url: URL, path: string): Promise<boolean> {
+  // The track record is history, not live signals: public, built hourly in the background worker.
+  if (path === "/v1/radar/record" && req.method === "GET") {
+    if (!ctx.radar) return json(res, 404, { error: "this node does not run the radar; use the north node" });
+    const record = ctx.radarRecord?.() ?? null;
+    if (!record) return json(res, 503, { error: "the record is still being built, try again in a minute" });
+    res.setHeader("cache-control", "public, max-age=300");
+    return json(res, 200, record);
+  }
   if (path !== "/v1/radar" || (req.method !== "GET" && req.method !== "POST")) return false;
   const radar = ctx.radar;
   if (!radar) return json(res, 404, { error: "this node does not run the radar; use the north node" });

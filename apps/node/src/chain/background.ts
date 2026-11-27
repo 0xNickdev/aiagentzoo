@@ -1,4 +1,5 @@
 import { Worker } from "node:worker_threads";
+import type { RadarRecord } from "./radar-record.ts";
 import { PNL, type SmartWallets, WalletLedger } from "./walletpnl.ts";
 
 /**
@@ -25,6 +26,8 @@ export interface BgOptions {
   graphFirstMs?: number;
   graphEveryMs?: number;
   scoreFirstMs?: number;
+  /** The radar track record: built from these files a minute after start and every hour. */
+  record?: { marksFile: string; radarFile: string; firstMs?: number; everyMs?: number };
 }
 
 export type BgIn =
@@ -40,6 +43,7 @@ export type BgOut =
   | { t: "log"; m: string }
   | { t: "rebuilt"; tokens: number }
   | { t: "smart"; wallets: number }
+  | { t: "record"; record: RadarRecord }
   | { t: "clusters?"; id: number; wallets: string[] }
   | { t: "stopped" };
 

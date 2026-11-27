@@ -7,6 +7,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parentPort, workerData } from "node:worker_threads";
+import { RecordBuilder } from "./radar-record.ts";
 import { OPGRAPH, OperatorGraph } from "./opgraph.ts";
 import { type PnlRows, SmartWallets, WalletLedger } from "./walletpnl.ts";
 import type { BgIn, BgOut, BgOptions, PrintTie } from "./background.ts";
@@ -152,7 +153,7 @@ port.on("message", (m: BgIn) => {
     case "stop":
       stopped = true;
       void (async () => {
-        while (writing || graphBusy) await sleep(10);
+        while (writing || graphBusy || recording) await sleep(10);
         try {
           db.close();
         } catch {
@@ -183,6 +184,30 @@ if (graph) {
       log(`operator graph not pruned: ${(error as Error).message}`);
     }
   }, 24 * 3_600_000);
+}
+// The radar track record: read-only, the marks file read on from where it stopped, a pause between chunks.
+const record = o.record ? new RecordBuilder(db, o.record.marksFile, o.record.radarFile) : null;
+let recording = false;
+async function buildRecord(): Promise<void> {
+  if (!record || recording || stopped) return;
+  recording = true;
+  try {
+    const t0 = Date.now();
+    const r = await record.update(Date.now(), async () => {
+      if (stopped) throw new Error("stopping");
+      await sleep(pauseMs);
+    });
+    post({ t: "record", record: r });
+    log(`radar record: ${r.picks.n} graded picks, ${r.top.length} runners 3x or more (${Date.now() - t0} ms)`);
+  } catch (error) {
+    log(`radar record not built: ${(error as Error).message}`);
+  } finally {
+    recording = false;
+  }
+}
+if (record) {
+  setTimeout(() => void buildRecord(), o.record!.firstMs ?? 60_000);
+  setInterval(() => void buildRecord(), o.record!.everyMs ?? 3_600_000);
 }
 if (ledger && smart) {
   setTimeout(() => void score(), o.scoreFirstMs ?? 60 * 60_000);

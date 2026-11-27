@@ -19,6 +19,7 @@ import type { HistoryStore } from "../chain/history.ts";
 import type { OperatorGraph } from "../chain/opgraph.ts";
 import type { SmartWallets } from "../chain/walletpnl.ts";
 import type { Radar } from "../chain/radar.ts";
+import type { RadarRecord } from "../chain/radar-record.ts";
 import type { GuestHouse } from "../guests.ts";
 import type { X402Lane } from "../x402.ts";
 
@@ -58,6 +59,8 @@ export interface ServerOptions {
   history?: HistoryStore;
   /** The runner radar on the north node: live signals from the frozen models, for holders. */
   radar?: Radar;
+  /** The radar track record from the background worker; null until the first build. */
+  radarRecord?: () => RadarRecord | null;
   /** Cabals read from that memory: wallets that launch, snipe and fund together. */
   cabals?: CabalIndex;
   /** Who funded the first-second wallets, traced in the background: a KOL's side wallets show. */
