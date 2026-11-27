@@ -53,7 +53,12 @@ Thousands of coins launch on pump.fun every hour and almost all of them are dead
 - **The operator**: wallets that signed one transaction together share an owner, read from the transaction's own signatures ([`operators.ts`](apps/node/src/chain/operators.ts)).
 - **The odds**: the chance the coin climbs past 85 SOL market cap after minute five and the chance the dev dumps later, from two models fitted on pump.fun launches; AUC 0.89 on launches they never saw.
 - **Token rights**: who can still mint, freeze, move or pause it.
-- **A swap**: buy or sell right there through Jupiter, signed in your own wallet, nothing custodied.
+- **A swap**: buy or sell right there through Jupiter, signed in your own wallet, nothing custodied. No SOL in the wallet? Fund the buy from another chain through Aurora Intents.
+- **How the dev sold**: not just "sold", but when, how much they kept and whether they took back only what they put in, read against 23,184 launches ([`check.ts`](apps/node/src/chain/check.ts)).
+- **One operator, many wallets**: launch wallets tied by the same funder, SOL sent between them, shared snipers or a private tool print are read as one operator with one dump record ([`opgraph.ts`](apps/node/src/chain/opgraph.ts)).
+- **The links**: the X account, Telegram channel, site and GitHub a coin points to, whether they name it back, how active the repo is, and on demand an AI read of whether the code does what the coin claims ([`claims`](apps/node/src/claims)).
+- **Creator fees** paid on the coin, and **early calls** by callers with a good record.
+- **Coins launched before we watched**: paste any Raydium, PumpSwap, pump.fun, LaunchLab or Meteora coin and the node reads it from the chain, then follows it live ([`adopt.ts`](apps/node/src/chain/adopt.ts)).
 
 The verdict judges a coin as it is now: a bundle counts while it holds the coin, an established coin with a live pool is read as a market rather than a launch, and with a crowd of buyers in, what most launches look like warns instead of deciding. The rules, with the data behind each: [`check.ts`](apps/node/src/chain/check.ts), [skill.md](https://zooaiagency.com/skill.md).
 
@@ -63,7 +68,7 @@ The same check runs in the Telegram bot [@zooaiagency_bot](https://t.me/zooaiage
 
 ```mermaid
 flowchart LR
-  G["Yellowstone gRPC<br/>pump.fun · PumpSwap · LaunchLab · Meteora"] --> T["the tape<br/>every launch and trade, 48 h"]
+  G["Yellowstone gRPC<br/>pump.fun · PumpSwap · LaunchLab · Meteora · Raydium"] --> T["the tape<br/>every launch and trade, 48 h"]
   T --> H["history.db<br/>tokens 90 d · wallets 360 d"]
   R["Solana RPC (Helius)<br/>holders · funders · transfers out"] --> X
   T --> X["X-Ray · check · odds"]
@@ -74,10 +79,11 @@ flowchart LR
   P --> A["trading agents"]
 ```
 
-- **We read the chain ourselves.** A Yellowstone gRPC stream ([`apps/node/src/chain/pump.ts`](apps/node/src/chain/pump.ts), [`launchpads.ts`](apps/node/src/chain/launchpads.ts)) decodes the Anchor events of every pump.fun, PumpSwap, Raydium LaunchLab and Meteora transaction as it lands, about 5,000 trades a minute; 622,000 launches and 159 million trades read so far. No third-party analytics API sits in the loop.
+- **We read the chain ourselves.** A Yellowstone gRPC stream ([`apps/node/src/chain/pump.ts`](apps/node/src/chain/pump.ts), [`launchpads.ts`](apps/node/src/chain/launchpads.ts)) decodes every pump.fun, PumpSwap, Raydium LaunchLab, Meteora and Raydium AMM v4 / CPMM transaction as it lands, about 5,000 trades a minute; over 1.9 million launches and 475 million trades read so far. No third-party analytics API sits in the loop.
 - **Memory.** Every launch stays on the tape for 48 hours; [`history.ts`](apps/node/src/chain/history.ts) keeps what the X-Ray needs for 90 days and each wallet's roles for 360, so a dev cannot start over clean.
 - **RPC reads.** Holders, the dev's funder ([`funders.ts`](apps/node/src/chain/funders.ts)) and the SOL that left the dev's wallets after a dump ([`outflows.ts`](apps/node/src/chain/outflows.ts)) are read from Solana RPC on demand.
 - **Odds.** [`odds.ts`](apps/node/src/chain/odds.ts) applies two logistic models to what the tape saw in a launch's first five minutes.
+- **Runner radar.** [`radar.ts`](apps/node/src/chain/radar.ts) scores every launch at minute five with models frozen on 21 Nov 2026. Tested blind on 38,976 launches, its top signals graduated 46% of the time against 1.3% for a random launch. Live for holders at [zooaiagency.com/radar](https://zooaiagency.com/radar) and in the bot.
 - **Settlement on Solana.** The swap ([`apps/web/src/components/Swap.tsx`](apps/web/src/components/Swap.tsx)) builds a Jupiter route and the user signs it in their own wallet (Phantom, Solflare, Backpack and any Wallet Standard wallet). A 1% fee in SOL goes to a fee wallet; every six hours a tenth of it buys $ZOOAGENCY back on-chain and the rest goes to the treasury ([`buyback.ts`](apps/node/src/buyback.ts)).
 
 ## x402: agents pay per check
@@ -156,7 +162,7 @@ npm run dev -w @aiagentzoo/node
 VITE_ZOO_NODES=http://localhost:8781,http://localhost:8782,http://localhost:8783 npm run dev -w @aiagentzoo/web
 ```
 
-**To read Solana live** (the X-Ray, the check, the odds), the north node needs a Yellowstone gRPC endpoint and a Solana RPC. Copy `apps/node/.env.example` to `.env` and set `SHYFT_GRPC_URL` and `SHYFT_GRPC_TOKEN` (or `ZOO_RELAY_URL` for a relay you run) and `SOLANA_RPC_URL` (Helius recommended: the transfer trace uses its enhanced API). Then open `http://localhost:5173/xray` and paste any pump.fun token launched after the node started.
+**To read Solana live** (the X-Ray, the check, the odds), the north node needs a Yellowstone gRPC endpoint and a Solana RPC. Copy `apps/node/.env.example` to `.env` and set `SHYFT_GRPC_URL` and `SHYFT_GRPC_TOKEN` (or `ZOO_RELAY_URL` for a relay you run) and `SOLANA_RPC_URL` (Helius recommended: the transfer trace uses its enhanced API). Then open `http://localhost:5173/xray` and paste any token: coins launched before the node started are read back from the chain.
 
 For the in-page swap the site reads `VITE_SOLANA_RPC`, `VITE_SWAP_TREASURY` and `VITE_SWAP_FEE_BPS` at build time; without them the X-Ray works and links out to the terminals instead.
 
@@ -177,6 +183,10 @@ Tests: `npm test` (node and SDK), `npm run typecheck`.
 | `GET` | `/v1/x402` · `/v1/x402/receipts` | the x402 menu and every sale |
 | `GET` | `/v1/x402/check/:mint` · `/v1/x402/xray/:mint` | paid per request in USDC over x402 |
 | `GET` | `/v1/buybacks` | every buyback run of the swap fee, with its transactions |
+| `GET` · `POST` | `/v1/radar` | runner radar signals: live for holders (wallet sign-in), an hour late for everyone else |
+| `GET` | `/v1/claims/:mint` | the links a coin points to (X, Telegram, site, GitHub) and whether they name it back |
+| `POST` | `/v1/claims/:mint/build` | AI check of the GitHub code against what the coin claims (holders) |
+| `GET` | `/v1/chain/operators/:wallet` · `/v1/chain/smart` | the operator a launch wallet belongs to; smart wallets by realized profit |
 
 For agents: [skill.md](https://zooaiagency.com/skill.md).
 
@@ -224,7 +234,7 @@ Holding 500,000+ $ZOOAGENCY: the weekly contest, Telegram alerts 10 minutes firs
 
 ## Disclaimer
 
-Verdicts, odds, radar signals and wallet labels are automated reads of public Solana chain data. They are not investment advice and not a call to buy or sell any token. Do your own research; a clean read does not mean a coin is safe.
+Verdicts, odds, radar signals and wallet labels are automated reads of public Solana chain data. They are not investment advice and not a call to buy or sell any token. Do your own research: no red flags today does not mean none tomorrow.
 
 ## Contributing
 
