@@ -5,6 +5,7 @@ import { num } from "../format";
 import { ago, SITE_XRAY, ticker, useNorth, useNow } from "../components/home/live";
 import { CaRow, BuyButton } from "../components/site/ZooToken";
 import Story, { Lines } from "../components/home/Story";
+import { RecognitionStrip } from "../components/site/Recognition";
 import { oddsPct } from "../components/XRay/ui";
 import { opponentOf, pct, type HumansView, useContestApi } from "../components/contests/data";
 
@@ -419,6 +420,9 @@ export default function Home() {
   return (
     <>
       <Story chain={chain} sample={coins[0]} />
+      <div className="mx-auto mt-10 w-full max-w-[1200px] px-4 sm:px-6">
+        <RecognitionStrip />
+      </div>
       <div className="mt-[clamp(48px,8vw,120px)]">
         {parts.map((p, i) => (
           <Section key={p.name} n={5 + i} of={of} name={p.name}>
