@@ -189,7 +189,7 @@ export class OperatorGraph {
     let last = after;
     let tokens = 0;
     let ties = 0;
-    this.db.exec("BEGIN");
+    this.db.exec("BEGIN IMMEDIATE");
     try {
       for (const r of rows) {
         // Not settled yet: its funder may still be on the way. The next run starts here.
@@ -330,7 +330,7 @@ export class OperatorGraph {
 
   /** Empties the graph and starts reading history from the first token under the current rules. */
   reset(): void {
-    this.db.exec("BEGIN");
+    this.db.exec("BEGIN IMMEDIATE");
     try {
       this.db.exec("DELETE FROM op_members; DELETE FROM op_edges;");
       this.s.setState!.run("tokens_id", 0);

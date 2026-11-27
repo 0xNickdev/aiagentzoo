@@ -256,7 +256,7 @@ export class CabalIndex {
       }
       // Written in one transaction: numbers stay with their oldest wallet, new cabals get the next number.
       const allMembers = new Map<number, string[]>();
-      this.db.exec("BEGIN");
+      this.db.exec("BEGIN IMMEDIATE");
       try {
         const upsert = this.db.prepare("INSERT INTO cabals (key_wallet, body, updated_at) VALUES (?, ?, ?) ON CONFLICT (key_wallet) DO UPDATE SET body = excluded.body, updated_at = excluded.updated_at RETURNING id");
         this.db.exec("DELETE FROM cabal_wallets");

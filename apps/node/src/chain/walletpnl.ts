@@ -165,7 +165,7 @@ export class WalletLedger {
   writeRows(rows: PnlRows, from = 0, to = rows.keys.length): number {
     if (!this.db) throw new Error("wallet ledger has no store here");
     const t0 = performance.now();
-    this.db.exec("BEGIN");
+    this.db.exec("BEGIN IMMEDIATE");
     try {
       for (let i = from; i < to; i++) {
         const k = rows.keys[i]!;

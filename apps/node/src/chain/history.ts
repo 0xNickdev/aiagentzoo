@@ -209,7 +209,7 @@ export class HistoryStore {
   }
 
   write(records: HistoryRecord[], now = Date.now()): void {
-    this.db.exec("BEGIN");
+    this.db.exec("BEGIN IMMEDIATE");
     try {
       for (const r of records) this.writeOne(r, now);
       this.db.exec("COMMIT");
@@ -464,7 +464,7 @@ export class HistoryStore {
       const ids = (this.s.oldTokens!.all(cutoff, chunk) as Array<{ id: number }>).map((r) => Number(r.id));
       if (!ids.length) break;
       const list = ids.map(() => "?").join(",");
-      this.db.exec("BEGIN");
+      this.db.exec("BEGIN IMMEDIATE");
       this.db.prepare(`DELETE FROM wallet_tokens WHERE token_id IN (${list})`).run(...ids);
       this.db.prepare(`DELETE FROM tokens WHERE id IN (${list})`).run(...ids);
       this.db.exec("COMMIT");

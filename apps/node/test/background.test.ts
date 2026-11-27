@@ -88,3 +88,34 @@ test("fills gather on the main thread, the worker writes them and scores the sma
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("the worker keeps building while the main thread writes the same store", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "zoo-bg-"));
+  const store = new HistoryStore(join(dir, "history.db"));
+  try {
+    const t0 = Date.now() - 3 * 3_600_000;
+    for (let i = 0; i < 300; i++) launch(store, pad(`M${i}`), pad(`Dev${i}`), t0 + i * 1000, pad(`F${i % 30}`));
+    const main = new OperatorGraph(store.db);
+    const msgs: BgOut[] = [];
+    const logs: string[] = [];
+    main.reset();
+    const bg = startBackground({ dbPath: join(dir, "history.db"), opgraph: true, pnl: false, graphFirstMs: 0, txTokens: 5, pauseMs: 0 }, { onMessage: (m) => msgs.push(m), log: (m) => logs.push(m) });
+    // Main writes new launches in its own transactions, with reads before the writes, the whole time the worker reads.
+    let n = 0;
+    const writer = setInterval(() => {
+      for (let k = 0; k < 5; k++, n++) launch(store, pad(`N${n}`), pad(`New${n}`), Date.now(), pad(`G${n}`));
+    }, 2);
+    try {
+      await waitFor(msgs, (m) => m.t === "rebuilt", 20_000);
+    } finally {
+      clearInterval(writer);
+      await bg.stop();
+    }
+    assert.deepEqual(logs.filter((l) => /not updated|locked/.test(l)), []);
+    assert.ok(n > 20, `main kept writing (${n})`);
+    assert.ok(main.summary(pad("Dev299")), "the graph was built");
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -17,7 +17,23 @@ const post = (m: BgOut) => port.postMessage(m);
 const log = (m: string) => post({ t: "log", m });
 
 const db = new DatabaseSync(o.dbPath);
-db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 30000;");
+// The busy timeout first: setting the journal mode already needs the lock the main thread may hold.
+db.exec("PRAGMA busy_timeout = 30000;");
+db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
+
+/** A write that found the store locked (the main thread's own write running long) is tried again, waiting longer each time. */
+const isBusy = (e: unknown) => /locked|busy/i.test((e as Error)?.message ?? "");
+async function retry<T>(what: string, f: () => T): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return f();
+    } catch (error) {
+      if (!isBusy(error) || i >= 8 || stopped) throw error;
+      if (i >= 2) log(`${what}: store busy, try ${i + 1}`);
+      await sleep(Math.min(10_000, 100 * 2 ** i));
+    }
+  }
+}
 
 /** Tool prints of recent launches, posted by the main thread that holds the tape; the oldest go past the cap. */
 const prints = new Map<string, PrintTie>();
@@ -41,14 +57,14 @@ async function runGraph(): Promise<void> {
     let tokens = 0;
     let ties = 0;
     for (;;) {
-      const r = graph.update(Date.now(), tx);
+      const r = await retry("operator graph", () => graph.update(Date.now(), tx));
       tokens += r.tokens;
       ties += r.ties;
       if (r.tokens < tx || stopped) break;
       await sleep(pauseMs);
     }
     if (rebuilding && !stopped) {
-      graph.rebuilt();
+      await retry("operator graph", () => graph.rebuilt());
       log(`operator graph: rebuild done, ${tokens} tokens read`);
       post({ t: "rebuilt", tokens });
     } else if (ties) log(`operator graph: ${tokens} tokens read, ${ties} ties`);
@@ -69,7 +85,7 @@ async function writePnl(): Promise<void> {
     while (queue.length) {
       const rows = queue.shift()!;
       for (let i = 0; i < rows.keys.length; i += 5_000) {
-        ledger.writeRows(rows, i, Math.min(rows.keys.length, i + 5_000));
+        await retry("wallet ledger", () => ledger.writeRows(rows, i, Math.min(rows.keys.length, i + 5_000)));
         await sleep(pauseMs);
       }
     }
@@ -94,7 +110,7 @@ async function score(): Promise<void> {
   if (!ledger || !smart || scoring) return;
   scoring = true;
   try {
-    const p = ledger.prune();
+    const p = await retry("wallet ledger prune", () => ledger.prune());
     const list = await ledger.score(Date.now(), { isOperator: (w) => graph?.idOf(w) != null, clustersOf });
     smart.set(list);
     post({ t: "smart", wallets: list.wallets.length });
@@ -152,7 +168,7 @@ port.on("message", (m: BgIn) => {
 if (graph) {
   try {
     if (graph.outdated()) {
-      graph.reset();
+      graph.reset(); // the busy timeout covers this one
       log(`operator graph: tie rules v${OPGRAPH.version}, rebuilding from history in the worker`);
     }
   } catch (error) {

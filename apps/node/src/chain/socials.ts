@@ -160,7 +160,7 @@ export class SocialsRegistry {
   /** Every launch in memory written again in one transaction: dumps seen since the first write land on disk. */
   private persistAll(): void {
     if (!this.db) return;
-    this.db.db.exec("BEGIN");
+    this.db.db.exec("BEGIN IMMEDIATE");
     try {
       for (const [mint, s] of this.byMint) this.persist(mint, s);
       this.db.db.exec("COMMIT");
