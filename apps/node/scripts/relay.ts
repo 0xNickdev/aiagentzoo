@@ -57,7 +57,7 @@ createServer((req, res) => {
     res.end(JSON.stringify({ live: sink.connected && Date.now() - lastAt < 60_000, seq, lastEventSecAgo: Math.round((Date.now() - lastAt) / 1000), readers: clients.size }));
     return;
   }
-  // North asks the relay to follow a Raydium pool it started tracking on its own (a coin read on demand).
+  // North asks the relay to follow a Raydium or DAMM pool it started tracking on its own (a coin read on demand).
   if (url.pathname === "/follow" && req.method === "POST") {
     if (req.headers.authorization !== `Bearer ${TOKEN}`) {
       res.writeHead(401).end();
@@ -71,11 +71,14 @@ createServer((req, res) => {
     req.on("end", () => {
       let n = 0;
       try {
-        const pools = (JSON.parse(body) as { pools?: unknown }).pools;
-        for (const p of Array.isArray(pools) ? pools.slice(0, 20_000) : []) {
-          if (typeof p !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) continue;
-          sink.followRaydium?.(p, Date.now());
-          n += 1;
+        const asked = JSON.parse(body) as { pools?: unknown; damm?: unknown };
+        // Raydium pools, and DAMM v2 pools (a Meteora curve's graduation), which go on a lane of their own.
+        for (const [list, venue] of [[asked.pools, undefined], [asked.damm, "damm"]] as const) {
+          for (const p of Array.isArray(list) ? list.slice(0, 20_000) : []) {
+            if (typeof p !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) continue;
+            sink.followRaydium?.(p, Date.now(), venue);
+            n += 1;
+          }
         }
       } catch {
         /* nothing followed */

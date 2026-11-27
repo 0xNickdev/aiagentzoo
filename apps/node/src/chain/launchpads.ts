@@ -14,6 +14,14 @@ export const DBC_PROGRAM = "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN";
 /** Raydium's AMM v4 and its CPMM: a coin launched straight into a pool, no curve first. */
 export const RAYDIUM_AMM_PROGRAM = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 export const RAYDIUM_CPMM_PROGRAM = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+/**
+ * Meteora's DAMM v2 (cp_amm), where Meteora's curve graduates: its migration_damm_v2 opens the pool. Program id from
+ * the cp_amm IDL in MeteoraAg/damm-v2-sdk. DAMM v1 (Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB) is the older target;
+ * a curve migrating there graduates, but its pool is not followed.
+ */
+export const DAMM_V2_PROGRAM = "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG";
+/** The account DAMM v2 pools opened by Meteora's curve name as their creator: the curve's own pool authority. */
+export const DBC_POOL_AUTHORITY = "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM";
 const PUMP = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
 
 /** Anchor's prefix on an event written by a program calling itself. */
@@ -31,7 +39,8 @@ type Role =
   | { kind: "create"; creator: number; mint: number; quote: number; vault: number; payer: number; named?: boolean }
   /** buyTo / sellFrom: the trader's token account for the token; its owner is the trader, whoever paid the fee. */
   | { kind: "trade"; user: number; mint: number; quote: number; buyTo: number; sellFrom: number; vault: number }
-  | { kind: "migrate"; mint: number };
+  /** pool and to: where the coin goes, the pool the migration opens and its program. */
+  | { kind: "migrate"; mint: number; pool?: number; to?: Venue };
 
 const LAUNCHLAB_IX: Record<string, Role> = {
   [disc(250, 234, 13, 123, 213, 156, 19, 236)]: { kind: "trade", user: 0, mint: 9, quote: 10, buyTo: 5, sellFrom: 5, vault: 7 }, // buy_exact_in
@@ -53,7 +62,8 @@ const DBC_IX: Record<string, Role> = {
   [disc(140, 85, 215, 176, 102, 54, 104, 79)]: { kind: "create", payer: 10, creator: 2, mint: 3, quote: 4, vault: 6, named: true }, // with_spl_token
   [disc(169, 118, 51, 78, 145, 110, 220, 155)]: { kind: "create", payer: 8, creator: 2, mint: 3, quote: 4, vault: 6, named: true }, // with_token2022
   [disc(182, 13, 233, 177, 42, 145, 135, 2)]: { kind: "create", payer: 9, creator: 2, mint: 3, quote: 4, vault: 6, named: true }, // with_token2022_transfer_hook
-  [disc(156, 169, 230, 103, 53, 228, 80, 64)]: { kind: "migrate", mint: 13 }, // migration_damm_v2
+  [disc(156, 169, 230, 103, 53, 228, 80, 64)]: { kind: "migrate", mint: 13, pool: 4, to: "damm" }, // migration_damm_v2
+  [disc(27, 1, 48, 22, 180, 63, 118, 217)]: { kind: "migrate", mint: 7 }, // migrate_meteora_damm (v1): token_a is the base
 };
 
 const LL_POOL_CREATE = disc(151, 215, 226, 9, 118, 161, 115, 174);
@@ -207,7 +217,7 @@ export function fromRpc(tx: RpcTx, fromB58: (s: string) => Buffer): LaunchpadTx 
 
 /** True when any instruction of the transaction runs one of the launchpads. */
 export const touchesLaunchpads = (tx: LaunchpadTx) =>
-  tx.ixs.some((i) => i.program === LAUNCHLAB_PROGRAM || i.program === DBC_PROGRAM || i.program === RAYDIUM_AMM_PROGRAM || i.program === RAYDIUM_CPMM_PROGRAM);
+  tx.ixs.some((i) => i.program === LAUNCHLAB_PROGRAM || i.program === DBC_PROGRAM || i.program === RAYDIUM_AMM_PROGRAM || i.program === RAYDIUM_CPMM_PROGRAM || i.program === DAMM_V2_PROGRAM);
 
 /**
  * Where a Raydium pool's accounts sit in the instruction that opens it. AMM v4's initialize2 is instruction 1 (its first
@@ -266,7 +276,43 @@ function parseRaydium(tx: LaunchpadTx, ts: number): PumpEvent[] {
     const isBuy = sol > 0;
     const user = venue === "raydium" ? a[a.length - (isBuy ? 2 : 3)] : a[tx.mints.get(a[4] ?? "") === mint ? 4 : 5];
     const wallet = venue === "raydium" ? a[a.length - 1] : a[0];
-    out.push({ kind: "trade", venue, mint, user: tx.owners.get(user ?? "") ?? wallet ?? "", isBuy, sol: Math.abs(sol), tokens, ts, curveSol: null });
+    out.push({ kind: "trade", venue, mint, user: tx.owners.get(user ?? "") ?? wallet ?? "", isBuy, sol: Math.abs(sol), tokens, ts, curveSol: null, pool });
+  }
+  return out;
+}
+
+/** DAMM v2's swap and swap2 (the same Anchor names as the curve's, so the same discriminators, on another program). */
+const DAMM_SWAPS = new Set([disc(248, 198, 158, 145, 225, 117, 135, 200), disc(65, 75, 63, 76, 235, 91, 91, 136)]);
+
+/**
+ * Trades in DAMM v2 pools, read like Raydium's: what moved in the pool's two vaults (accounts 4 and 5 of a swap, the
+ * pool at 1), SOL into the pool is a buy. The trader owns the account the tokens went to (output, 3) or came from
+ * (input, 2); the payer (8) when that account was closed in the same transaction. Pools against SOL only.
+ */
+function parseDamm(tx: LaunchpadTx, ts: number): PumpEvent[] {
+  const out: PumpEvent[] = [];
+  const delta = (a: string) => {
+    const d = 10 ** (tx.decimals.get(tx.mints.get(a) ?? "") ?? 9);
+    return Math.round(((tx.after.get(a) ?? 0) - (tx.before.get(a) ?? 0)) * d) / d;
+  };
+  const done = new Set<string>();
+  for (const ix of tx.ixs) {
+    if (ix.program !== DAMM_V2_PROGRAM || ix.data.length < 8 || !DAMM_SWAPS.has(ix.data.subarray(0, 8).toString("hex"))) continue;
+    const a = ix.accounts;
+    const pool = a[1];
+    if (!pool || done.has(pool) || a.length < 9) continue;
+    done.add(pool);
+    const [va, vb] = [a[4]!, a[5]!];
+    const solVault = tx.mints.get(va) === WSOL ? va : tx.mints.get(vb) === WSOL ? vb : null;
+    const tokenVault = solVault === va ? vb : va;
+    if (!solVault || !tx.mints.has(tokenVault)) continue;
+    const mint = tx.mints.get(tokenVault)!;
+    const sol = delta(solVault);
+    const tokens = Math.abs(delta(tokenVault));
+    if (!sol || !tokens) continue;
+    const isBuy = sol > 0;
+    const user = tx.owners.get(a[isBuy ? 3 : 2] ?? "") ?? a[8] ?? "";
+    out.push({ kind: "trade", venue: "damm", mint, user, isBuy, sol: Math.abs(sol), tokens, ts, curveSol: null, pool });
   }
   return out;
 }
@@ -276,7 +322,7 @@ function parseRaydium(tx: LaunchpadTx, ts: number): PumpEvent[] {
  * these events carry no time of their own, so the stream passes the moment it saw them.
  */
 export function parseLaunchpads(tx: LaunchpadTx, ts: number): PumpEvent[] {
-  const out: PumpEvent[] = parseRaydium(tx, ts);
+  const out: PumpEvent[] = [...parseRaydium(tx, ts), ...parseDamm(tx, ts)];
   // The last instruction each launchpad ran: the next event it writes belongs to it.
   const last: Record<string, { role: Role; accounts: string[]; data: Buffer } | undefined> = {};
   const dec = (mint: string, fallback: number) => tx.decimals.get(mint) ?? fallback;
@@ -314,7 +360,13 @@ export function parseLaunchpads(tx: LaunchpadTx, ts: number): PumpEvent[] {
         const role = (venue === "launchlab" ? LAUNCHLAB_IX : DBC_IX)[ix.data.subarray(0, 8).toString("hex")];
         if (!role) continue;
         last[venue] = { role, accounts: ix.accounts, data: ix.data };
-        if (role.kind === "migrate" && ix.accounts[role.mint]) out.push({ kind: "complete", mint: ix.accounts[role.mint]! });
+        if (role.kind === "migrate" && ix.accounts[role.mint]) {
+          const mint = ix.accounts[role.mint]!;
+          out.push({ kind: "complete", mint });
+          // The pool it moved to: the same coin trading on, not a new launch.
+          const pool = role.pool !== undefined ? ix.accounts[role.pool] : undefined;
+          if (pool && role.to) out.push({ kind: "pool", mint, pool, venue: role.to });
+        }
         continue;
       }
       const ev = ix.data.subarray(8, 16).toString("hex");

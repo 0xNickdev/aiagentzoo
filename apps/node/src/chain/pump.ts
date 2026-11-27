@@ -21,7 +21,7 @@ export { capsFrom, devPattern, type DevPattern, type LaunchCode, launchCode, typ
 export { startPumpStream, startRelayFeed, type StreamOptions, type StreamSink } from "./stream.ts";
 
 /** Which chain a launchpad is on: the venue says it where an address's shape cannot (0x is BNB Chain and Base both). */
-export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", raydium: "solana", cpmm: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
+export const CHAIN_OF_VENUE: Record<Venue, "solana" | "bsc" | "base"> = { launchlab: "solana", dbc: "solana", raydium: "solana", cpmm: "solana", damm: "solana", fourmeme: "bsc", flap: "bsc", clanker: "base" };
 export const UNIT_OF_CHAIN: Record<"solana" | "bsc" | "base", Unit> = { solana: "SOL", bsc: "BNB", base: "ETH" };
 
 /** A trade on a followed pool, as the buy bot reads it. */
@@ -216,6 +216,12 @@ interface Tracked {
   supply?: number;
   /** The Raydium AMM v4 or CPMM pool a launch straight into Raydium opened; never one of the PumpSwap pools. */
   rayPool?: string;
+  /**
+   * A LaunchLab or Meteora coin's pool after graduation (Raydium AMM v4 or CPMM, or DAMM v2) and its program: the
+   * migration's pool, its trades counted as this coin's, followed like a Raydium launch's pool.
+   */
+  gradPool?: string;
+  gradVenue?: Venue;
   /** Where its metadata lives. */
   uri?: string;
   /** Launched before the stream watched: read from the chain on demand, live from adoptedAt on. Never marked or graded. */
@@ -435,7 +441,7 @@ export class PumpTape {
   private recent: string[] = [];
   connected = false;
   lastEventAt = 0;
-  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; fourmeme?: number; flap?: number; clanker?: number } = { launches: 0, trades: 0 };
+  seen: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; damm?: number; fourmeme?: number; flap?: number; clanker?: number } = { launches: 0, trades: 0 };
   /** What the amounts are in: SOL on Solana, BNB on BNB Chain, ETH on Base. The moments' wording and the dollar caps read it. */
   readonly unit: Unit;
 
@@ -493,7 +499,7 @@ export class PumpTape {
   }
 
   /** Set by the stream: follow this Raydium pool's trades from now on. */
-  followRaydium?: (pool: string, now: number) => void;
+  followRaydium?: (pool: string, now: number, venue?: Venue) => void;
 
   /** While set, trades are applied without moments or the live counters: a backfill of the past is not news. */
   private quiet = false;
@@ -503,7 +509,7 @@ export class PumpTape {
    * followed, and the recent trades read back from the chain are applied quietly, oldest first. Not in the feed, the
    * launches list, the timed readings or the odds: none of those can judge a coin whose launch nobody here saw.
    */
-  adoptToken(a: { mint: string; creatorPending?: boolean; kind?: "raydium" | "pumpswap" | "curve"; venue?: Venue; quote?: string; platform?: string; mayhem?: boolean; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
+  adoptToken(a: { mint: string; creatorPending?: boolean; kind?: "raydium" | "pumpswap" | "curve"; venue?: Venue; poolVenue?: Venue; quote?: string; platform?: string; mayhem?: boolean; pool: string; creator: string; createdAt: number; mintCreatedAt?: number | null; name?: string; symbol?: string; supply?: number; trades?: Array<{ ev: PumpEvent; tx?: string; slot?: number }> }, now = Date.now()): boolean {
     if (this.tokens.has(a.mint)) return false;
     this.tokens.set(a.mint, {
       mint: a.mint,
@@ -514,7 +520,8 @@ export class PumpTape {
       adoptFrom: { kind: a.kind ?? "raydium", pool: a.pool },
       ...(a.creatorPending ? { creatorPending: true } : {}),
       ...(a.supply ? { supply: a.supply } : {}),
-      ...((a.kind ?? "raydium") === "raydium" ? { rayPool: a.pool } : {}),
+      // A launchpad coin found in the pool it graduated to: that pool is its graduation's, not a launch's.
+      ...((a.kind ?? "raydium") === "raydium" ? (a.poolVenue ? { gradPool: a.pool, gradVenue: a.poolVenue } : { rayPool: a.pool }) : {}),
       adopted: true,
       adoptedAt: now,
       ...(a.mintCreatedAt && a.mintCreatedAt < a.createdAt - 60_000 ? { mintCreatedAt: a.mintCreatedAt } : {}),
@@ -534,7 +541,7 @@ export class PumpTape {
       devIn: 0,
       devOut: 0,
       capPeak: 0,
-      graduated: false,
+      graduated: Boolean(a.poolVenue),
       dumped: false,
       dumpedAt: null,
       createSlot: null,
@@ -556,7 +563,7 @@ export class PumpTape {
     const kind = a.kind ?? "raydium";
     // Followed where it trades: a Raydium pool by the stream's Raydium lane, a PumpSwap pool by the pools lane. A curve
     // needs nothing: the stream reads every pump.fun, LaunchLab and Meteora curve trade already.
-    if (kind === "raydium") this.followRaydium?.(a.pool, now);
+    if (kind === "raydium") this.followRaydium?.(a.pool, now, a.poolVenue ?? a.venue);
     if (kind === "pumpswap") {
       const t = this.tokens.get(a.mint)!;
       t.graduated = true;
@@ -642,17 +649,21 @@ export class PumpTape {
   /** The Raydium pools of launches the tape keeps from the last 48 hours, oldest first, for the stream to follow again after a restart. */
   raydiumPools(now = Date.now()): Array<{ pool: string; venue: Venue; createdAt: number }> {
     const out: Array<{ pool: string; venue: Venue; createdAt: number }> = [];
-    for (const t of this.tokens.values()) if (t.rayPool && t.venue && now - (t.adoptedAt ?? t.createdAt) <= 48 * 3_600_000) out.push({ pool: t.rayPool, venue: t.venue, createdAt: t.adoptedAt ?? t.createdAt });
+    for (const t of this.tokens.values()) {
+      if (!t.venue || now - (t.adoptedAt ?? t.createdAt) > 48 * 3_600_000) continue;
+      if (t.rayPool) out.push({ pool: t.rayPool, venue: t.venue, createdAt: t.adoptedAt ?? t.createdAt });
+      if (t.gradPool && t.gradVenue) out.push({ pool: t.gradPool, venue: t.gradVenue, createdAt: t.adoptedAt ?? t.createdAt });
+    }
     return out.sort((a, b) => a.createdAt - b.createdAt);
   }
 
   /** Adopted coins whose past trades were never read, for a retry after a restart. */
-  unreadAdopted(): Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue }> {
-    const out: Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue }> = [];
+  unreadAdopted(): Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue; poolVenue?: Venue }> {
+    const out: Array<{ mint: string; pool: string; kind: "raydium" | "pumpswap" | "curve"; venue?: Venue; poolVenue?: Venue }> = [];
     for (const t of this.tokens.values()) {
       if (!t.adopted || t.backfillOk) continue;
       const from = t.adoptFrom ?? (t.rayPool ? { kind: "raydium" as const, pool: t.rayPool } : null);
-      if (from) out.push({ mint: t.mint, pool: from.pool, kind: from.kind, ...(t.venue ? { venue: t.venue } : {}) });
+      if (from) out.push({ mint: t.mint, pool: from.pool, kind: from.kind, ...(t.venue ? { venue: t.venue } : {}), ...(t.gradVenue && from.pool === t.gradPool ? { poolVenue: t.gradVenue } : {}) });
     }
     return out;
   }
@@ -852,8 +863,20 @@ export class PumpTape {
     const t = this.tokens.get(ev.mint);
     // Trades on tokens launched before we started listening are not ours to judge.
     if (!t) return;
-    // A trade in a Raydium pool counts only for a coin launched there: a graduated coin's pool is not its curve.
-    if (ev.kind === "trade" && ev.venue && ev.venue !== t.venue) return;
+    // A trade in a Raydium or DAMM pool counts only for a coin launched there, or for the one pool a launchpad coin
+    // graduated into: another pool of the same token is someone else's.
+    if (ev.kind === "trade" && ev.venue && ev.venue !== t.venue && !(ev.pool && ev.pool === t.gradPool)) return;
+    // A LaunchLab or Meteora coin's migration: it graduated, and trades on in that pool under the same coin.
+    if (ev.kind === "pool" && ev.venue) {
+      if (!t.venue || t.venue === ev.venue) return;
+      if (!t.graduated) this.emit(now, "graduated", t, "graduated", tx);
+      t.graduated = true;
+      if (!t.gradPool) {
+        t.gradPool = ev.pool;
+        t.gradVenue = ev.venue;
+      }
+      return;
+    }
     if (ev.kind === "complete" || ev.kind === "pool") {
       // Only the curve's end is a graduation: the complete event, or a pool opened once the curve sits at its end
       // (the complete event missed). Anyone can open a PumpSwap pool for a coin still on the curve; such a pool is
@@ -1206,7 +1229,7 @@ export class PumpTape {
         tokens?: Array<Omit<Tracked, "buyers" | "moreBuyers" | "launchBuys" | "pool" | "poolSol" | "poolPeak" | "drained" | "ammBuys" | "ammSells" | "ammSolIn" | "ammSolOut" | "bundlers"> & Partial<Omit<Tracked, "bundlers">> & { buyers: [string, Buyer][]; moreBuyers?: number[]; launchBuys: [string, number][]; bundlers?: [string, { tok: number; sold: number }][] }>;
         launchesBy?: [string, number[]][];
         recent?: string[];
-        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; fourmeme?: number; flap?: number; clanker?: number };
+        seen?: { launches: number; trades: number; launchlab?: number; dbc?: number; raydium?: number; cpmm?: number; damm?: number; fourmeme?: number; flap?: number; clanker?: number };
         bundleSince?: number;
         feedSince?: number;
         prints?: [string, ToolPrint][];
@@ -1671,11 +1694,13 @@ export class PumpTape {
   /** `light` leaves out the crew and ring counts, for scans over thousands of tokens. */
   /**
    * The early numbers as facts. After another launchpad's token graduates, its trading moves to a Raydium or Meteora
-   * pool the tape does not follow, so what the first wallets still hold is no longer known and is left out.
+   * pool; when that pool was not seen opening (or trades against another token) the tape does not follow it, so what
+   * the first wallets still hold is no longer known and is left out.
    */
   private earlyFacts(t: Tracked) {
     const e = this.early(t);
-    if (t.venue && t.graduated) {
+    // Unless its pool after graduation is followed (a SOL pair): then its trades there are on the tape too.
+    if (t.venue && t.graduated && !(t.gradPool && !t.quote)) {
       const { earlyHeld: _held, ...rest } = e;
       return rest;
     }

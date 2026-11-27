@@ -24,7 +24,7 @@ const DISC = {
  * Where a token was launched, when not pump.fun: Raydium LaunchLab, Meteora's curve, straight into a Raydium AMM v4 or
  * CPMM pool, four.meme or Flap on BNB Chain, or Clanker on Base.
  */
-export type Venue = "launchlab" | "dbc" | "raydium" | "cpmm" | "fourmeme" | "flap" | "clanker";
+export type Venue = "launchlab" | "dbc" | "raydium" | "cpmm" | "damm" | "fourmeme" | "flap" | "clanker";
 
 export type PumpEvent =
   /** quote: the token it trades against when that is not SOL (pump.fun's CreateV2 can pair a launch with any token). */
@@ -52,12 +52,13 @@ export type PumpEvent =
       /** Every wallet that signed the transaction, when more than one did; the mint's own keypair left out. */
       signers?: string[];
     }
-  /** venue: set on a trade in a Raydium pool, which counts only for a coin launched there. */
+  /** venue: set on a trade in a Raydium or DAMM pool, which counts only for a coin launched there or graduated into that pool. */
   /** creatorFee: SOL the trade paid the coin's creator, from pump.fun's event; absent on older events and other launchpads. */
-  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[]; venue?: Venue; creatorFee?: number }
+  | { kind: "trade"; mint: string; sol: number; tokens: number; isBuy: boolean; user: string; ts: number; curveSol: number | null; signers?: string[]; venue?: Venue; creatorFee?: number; pool?: string }
   | { kind: "complete"; mint: string }
   /** A PumpSwap pool against SOL was created for this token: it graduated. */
-  | { kind: "pool"; mint: string; pool: string }
+  /** venue: a launchpad coin's migration into a Raydium or DAMM pool, which it trades in from then on. */
+  | { kind: "pool"; mint: string; pool: string; venue?: Venue }
   /** A buy or sell on a PumpSwap pool. Its event names only the pool, so the tape maps it back to a token. */
   | { kind: "swap"; pool: string; isBuy: boolean; sol: number; tokens: number; user: string; ts: number; poolSol: number; signers?: string[]; creatorFee?: number };
 

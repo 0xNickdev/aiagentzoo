@@ -2,9 +2,9 @@
  * The chain's live feed into the tape: Yellowstone gRPC subscriptions to pump.fun, LaunchLab, Meteora's curve and
  * PumpSwap, or a relay that reads them where the stream runs at full speed.
  */
-import { DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type YellowstoneTx } from "./launchpads.ts";
+import { DAMM_V2_PROGRAM, DBC_PROGRAM, fromYellowstone, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type YellowstoneTx } from "./launchpads.ts";
 import { type PrintableTx, signersOf, toolPrintOf } from "./fingerprint.ts";
-import { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent } from "./pumpParse.ts";
+import { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, type Venue } from "./pumpParse.ts";
 import type { PumpTape } from "./pump.ts";
 
 export interface StreamOptions {
@@ -16,7 +16,7 @@ export interface StreamOptions {
 }
 
 /** Where the stream's events go: the tape, or the relay's buffer. */
-export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"]; raydiumPools?: PumpTape["raydiumPools"]; followRaydium?: (pool: string, now: number) => void };
+export type StreamSink = Pick<PumpTape, "apply" | "poolAddresses" | "prune"> & { connected: boolean; venueOf?: PumpTape["venueOf"]; raydiumPools?: PumpTape["raydiumPools"]; followRaydium?: (pool: string, now: number, venue?: Venue) => void };
 
 /** Raydium pools opened by a launch the stream saw, kept as long as the tape keeps a token, and no more than this many. */
 const RAYDIUM_KEEP_MS = 48 * 3_600_000;
@@ -34,12 +34,18 @@ const CHANNEL = { grpcHttp2AdaptiveWindow: true, grpcInitialStreamWindowSize: 16
 type StreamUpdate = { filters?: string[]; transaction?: { slot?: string | number; transaction?: YellowstoneTx & { signature?: Uint8Array; meta?: { logMessages?: string[] } } }; ping?: unknown };
 
 /**
+ * Raydium and DAMM pools opened by launches or graduations, as hex of their 32 bytes -> when they opened. DAMM v2
+ * carries some 200 transactions a second, nearly all arbitrage in other pools: it is never subscribed whole, only the
+ * followed DAMM pools by address, on a lane of their own.
+ *
  * Raydium pools opened by launches, as hex of their 32 bytes -> when they opened. Most Raydium swaps are in old pools;
  * those are dropped by comparing raw account keys, before the transaction is decoded. Seeded with the pools the tape
  * kept from before a restart; none of them enter the PumpSwap lane.
  */
 export function raydiumFollower(t: Pick<StreamSink, "raydiumPools">) {
   const pools = new Map<string, number>();
+  /** The DAMM pools among them, by address, for the DAMM lane's filter. */
+  const damm = new Map<string, number>();
   const hex = (k: Uint8Array) => Buffer.from(k.buffer, k.byteOffset, k.byteLength).toString("hex");
   const wanted = (raw: NonNullable<StreamUpdate["transaction"]>["transaction"], logs: string[]) => {
     if (logs.some((l) => RAYDIUM_OPENS.has(l) || l.startsWith(AMM_OPEN))) return true;
@@ -48,7 +54,16 @@ export function raydiumFollower(t: Pick<StreamSink, "raydiumPools">) {
     for (const k of raw?.meta?.loadedWritableAddresses ?? []) if (pools.has(hex(k))) return true;
     return false;
   };
-  const follow = (pool: string, now: number) => {
+  const follow = (pool: string, now: number, venue?: Venue) => {
+    if (venue === "damm") {
+      damm.delete(pool);
+      damm.set(pool, now);
+      for (const [k, at] of damm) {
+        if (damm.size <= RAYDIUM_MAX && now - at <= RAYDIUM_KEEP_MS) break;
+        damm.delete(k);
+      }
+      return;
+    }
     pools.set(Buffer.from(fromBase58(pool)).toString("hex"), now);
     if (pools.size <= RAYDIUM_MAX) return;
     // Oldest first, as a Map keeps them: drop what aged out, then the oldest until under the cap.
@@ -57,8 +72,8 @@ export function raydiumFollower(t: Pick<StreamSink, "raydiumPools">) {
       pools.delete(k);
     }
   };
-  for (const p of t.raydiumPools?.() ?? []) follow(p.pool, p.createdAt);
-  return { pools, wanted, follow };
+  for (const p of t.raydiumPools?.() ?? []) follow(p.pool, p.createdAt, p.venue);
+  return { pools, damm, wanted, follow, dammPools: () => [...damm.keys()].sort() };
 }
 
 /**
@@ -80,7 +95,7 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
   const filter = (accounts: string[]) => ({ vote: false, failed: false, accountInclude: accounts, accountExclude: [], accountRequired: [] });
   const request = (transactions: Record<string, ReturnType<typeof filter>>) => ({ accounts: {}, slots: {}, transactions, transactionsStatus: {}, blocks: {}, blocksMeta: {}, entry: {}, accountsDataSlice: [], commitment: CommitmentLevel.CONFIRMED });
 
-  const { wanted: raydiumWanted, follow: followPool } = raydiumFollower(t);
+  const { wanted: raydiumWanted, follow: followPool, dammPools } = raydiumFollower(t);
   // A coin read from the chain on demand (launched before the stream watched) has its pool followed from then on.
   t.followRaydium = followPool;
 
@@ -114,7 +129,8 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
     // transaction only when it opens a pool or trades in one a launch opened.
     const curves = update.filters?.some((f) => f === "launchlab" || f === "dbc");
     const raydium = update.filters?.some((f) => f === "raydium" || f === "cpmm");
-    if (curves || (raydium && raydiumWanted(update.transaction!.transaction!, logs))) {
+    const damm = update.filters?.includes("damm");
+    if (curves || damm || (raydium && raydiumWanted(update.transaction!.transaction!, logs))) {
       const raw = fromYellowstone(update.transaction!.transaction!);
       if (raw)
         for (const ev of parseLaunchpads(raw, Date.now())) {
@@ -123,6 +139,8 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
             if (t.venueOf?.(ev.mint)) continue;
             followPool(ev.pool, Date.now());
           }
+          // A curve's migration: its new pool is followed, for a coin the tape has (the relay, with no tape, follows all).
+          if (ev.kind === "pool" && ev.venue && (!t.venueOf || t.venueOf(ev.mint))) followPool(ev.pool, Date.now(), ev.venue);
           mark(ev);
           if (ev.kind === "create") {
             const print = toolPrintOf(update.transaction!.transaction! as PrintableTx, ev.uri);
@@ -224,6 +242,15 @@ export async function startPumpStream(t: StreamSink, { url, token, log = console
     },
     { stallMs: 15 * 60_000, refreshMs: 60_000 },
   );
+  // The DAMM v2 pools followed, by address only: the program whole is far more than the stream should carry.
+  void lane(
+    "damm",
+    () => {
+      const pools = dammPools();
+      return pools.length ? { damm: filter(pools) } : null;
+    },
+    { stallMs: 15 * 60_000, refreshMs: 60_000 },
+  );
   const pruner = setInterval(() => t.prune(), 10 * 60_000);
   return () => {
     stopped = true;
@@ -243,11 +270,13 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
   let after = 0;
   let epoch = "";
   /** The relay reads the stream, so a pool north starts following on its own is followed there. */
-  const tellRelay = async (pools: string[]) => {
-    if (!pools.length) return;
-    await fetch(`${url}/follow`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ pools }), signal: AbortSignal.timeout(8_000) }).catch(() => null);
+  const tellRelay = async (list: Array<{ pool: string; venue?: Venue }>) => {
+    if (!list.length) return;
+    const pools = list.filter((p) => p.venue !== "damm").map((p) => p.pool);
+    const damm = list.filter((p) => p.venue === "damm").map((p) => p.pool);
+    await fetch(`${url}/follow`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ pools, damm }), signal: AbortSignal.timeout(8_000) }).catch(() => null);
   };
-  t.followRaydium = (pool) => void tellRelay([pool]);
+  t.followRaydium = (pool, _now, venue) => void tellRelay([{ pool, ...(venue ? { venue } : {}) }]);
   const run = async () => {
     let delay = 1_000;
     while (!stopped) {
@@ -273,7 +302,7 @@ export function startRelayFeed(t: PumpTape, { url, token, log = console.log }: O
                 epoch = msg.hello;
                 after = 0;
                 // A relay that started over follows only the pools it saw open: it is told again of the tape's own.
-                void tellRelay(t.raydiumPools().map((p) => p.pool));
+                void tellRelay(t.raydiumPools());
               }
               continue;
             }

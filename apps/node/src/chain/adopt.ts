@@ -1,6 +1,6 @@
-import { DBC_PROGRAM, fromRpc, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type RpcTx } from "./launchpads.ts";
+import { DAMM_V2_PROGRAM, DBC_POOL_AUTHORITY, DBC_PROGRAM, fromRpc, LAUNCHLAB_PROGRAM, parseLaunchpads, RAYDIUM_AMM_PROGRAM, RAYDIUM_CPMM_PROGRAM, type RpcTx } from "./launchpads.ts";
 import { firstSeen, programAddress, readPoolMeta } from "./poolMeta.ts";
-import { fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, type Venue } from "./pumpParse.ts";
+import { base58, fromBase58, parsePumpLogs, PUMP_AMM_PROGRAM, PUMP_PROGRAM, type PumpEvent, type Venue } from "./pumpParse.ts";
 import type { DexRead, PumpTape } from "./pump.ts";
 
 /**
@@ -10,8 +10,9 @@ import type { DexRead, PumpTape } from "./pump.ts";
  * the mint's own birth when its history is short, name, symbol and supply, and the pool's most recent swaps.
  *
  * One coin at a time, a short queue, and a miss is not asked again for ten minutes: a burst of x-rays for coins
- * nobody launched cannot run the RPC dry. Raydium AMM v4 and CPMM, PumpSwap, and the pump.fun, LaunchLab and Meteora
- * curves: what the stream reads. Meteora's DAMM pools (where its curve graduates) are not read.
+ * nobody launched cannot run the RPC dry. Raydium AMM v4 and CPMM, PumpSwap, Meteora's DAMM v2, and the pump.fun,
+ * LaunchLab and Meteora curves: what the stream reads. A Meteora coin found in its DAMM v2 pool is adopted as Meteora's
+ * coin, graduated, not as a launch into the pool.
  */
 
 /** A coin's launch as the long memory kept it. */
@@ -96,6 +97,10 @@ export interface Where {
   venue?: Venue;
   /** The pool or curve account: its signatures are the coin's trades. */
   pool: string;
+  /** A launchpad coin trading in the pool it graduated to: the pool's own program (venue is then the launchpad's). */
+  poolVenue?: Venue;
+  /** That launchpad's curve account, where the launch itself is; for Meteora found from the migration when needed. */
+  curve?: string;
   listedAt: number | null;
   dex?: DexRead;
 }
@@ -104,6 +109,7 @@ export interface Where {
 const OWNERS: Record<string, Pick<Where, "kind" | "venue">> = {
   [RAYDIUM_AMM_PROGRAM]: { kind: "raydium", venue: "raydium" },
   [RAYDIUM_CPMM_PROGRAM]: { kind: "raydium", venue: "cpmm" },
+  [DAMM_V2_PROGRAM]: { kind: "raydium", venue: "damm" },
   [PUMP_AMM_PROGRAM]: { kind: "pumpswap" },
   [PUMP_PROGRAM]: { kind: "curve" },
   [LAUNCHLAB_PROGRAM]: { kind: "curve", venue: "launchlab" },
@@ -113,6 +119,22 @@ const OWNERS: Record<string, Pick<Where, "kind" | "venue">> = {
 async function ownerOf(address: string, rpc: Rpc): Promise<{ owner: string; size: number } | null> {
   const a = await rpc<{ value?: { owner?: string; space?: number; data?: [string, string] } | null }>("getAccountInfo", [address, { encoding: "base64", dataSlice: { offset: 0, length: 0 } }]).catch(() => null);
   return a?.value?.owner ? { owner: a.value.owner, size: a.value.space ?? 0 } : null;
+}
+
+/** Where a DAMM v2 pool keeps its creator (cp_amm's Pool, a fixed layout: 8-byte discriminator, then 640 bytes before it). */
+const DAMM_CREATOR_AT = 648;
+
+/**
+ * Whether a pool is a launchpad coin's graduation: a DAMM v2 pool whose creator is Meteora's curve (every pool its
+ * migration opens names the curve's authority).
+ */
+export async function graduatedFrom(mint: string, w: Where, rpc: Rpc): Promise<Pick<Where, "venue" | "poolVenue" | "curve"> | null> {
+  if (w.venue === "damm") {
+    const a = await rpc<{ value?: { data?: [string, string] } | null }>("getAccountInfo", [w.pool, { encoding: "base64", dataSlice: { offset: DAMM_CREATOR_AT, length: 32 } }]).catch(() => null);
+    const raw = a?.value?.data?.[0] ? Buffer.from(a.value.data[0], "base64") : null;
+    return raw?.length === 32 && base58(raw) === DBC_POOL_AUTHORITY ? { venue: "dbc", poolVenue: "damm" } : null;
+  }
+  return null;
 }
 
 /** pump.fun's bonding curve account for a mint. */
@@ -134,7 +156,12 @@ export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = f
       if (!what) continue;
       const sol = p.quoteToken?.address === WSOL || p.baseToken?.address === WSOL;
       if (what.kind === "raydium" && !sol) continue;
-      return { ...what, pool: p.pairAddress!, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
+      const w: Where = { ...what, pool: p.pairAddress!, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
+      // A DAMM pool is read only as a Meteora coin's graduation.
+      const grad = what.venue === "damm" ? await graduatedFrom(mint, w, rpc) : null;
+      if (grad) return { ...w, ...grad };
+      if (what.venue === "damm") continue;
+      return w;
     }
   } catch {
     /* read the chain instead */
@@ -170,6 +197,8 @@ function eventsOf(w: Pick<Where, "kind" | "venue">, tx: Tx, ts: number): PumpEve
 function isTrade(w: Where, mint: string, ev: PumpEvent): boolean {
   if (w.kind === "pumpswap") return ev.kind === "swap" && ev.pool === w.pool;
   if (ev.kind !== "trade" || ev.mint !== mint) return false;
+  // In the pool it graduated to: only that pool's trades, not the curve's or another pool's.
+  if (w.poolVenue) return ev.venue === w.poolVenue && ev.pool === w.pool;
   return w.kind === "raydium" ? ev.venue === w.venue : true;
 }
 
@@ -219,7 +248,7 @@ export class Adopter {
 
   /** After a restart: tries again to read the past trades of adopted coins that came back partial. */
   async resume(): Promise<void> {
-    for (const c of this.tape.unreadAdopted()) await this.readBack(c.mint, { kind: c.kind, ...(c.venue ? { venue: c.venue } : {}), pool: c.pool, listedAt: null }, null, null, 0).catch(() => {});
+    for (const c of this.tape.unreadAdopted()) await this.readBack(c.mint, { kind: c.kind, ...(c.venue ? { venue: c.venue } : {}), ...(c.poolVenue ? { poolVenue: c.poolVenue } : {}), pool: c.pool, listedAt: null }, null, null, 0).catch(() => {});
   }
 
   /** Where this coin stands, without starting anything. */
@@ -324,6 +353,7 @@ export class Adopter {
       mint,
       kind: w.kind,
       ...(w.venue ? { venue: w.venue } : {}),
+      ...(w.poolVenue ? { poolVenue: w.poolVenue } : {}),
       pool: w.pool,
       // Known from the long memory: its creator and launch, no search.
       creator: k?.creator ?? "",
@@ -344,15 +374,28 @@ export class Adopter {
   /** Who opened the pool or launched the coin, and when: paged back in the slow lane, given up after `openingMs`. */
   private async findOpening(mint: string, w: Where): Promise<void> {
     const until = Date.now() + this.openingMs;
-    // A PumpSwap pool opens at graduation: the launch itself is on pump.fun's curve.
-    const where = w.kind === "pumpswap" ? bondingCurveOf(mint) : w.pool;
+    // A PumpSwap pool opens at graduation: the launch itself is on pump.fun's curve. So does a LaunchLab or Meteora
+    // coin's pool: the launch is on its curve, which for Meteora the migration (the pool's first transaction) names.
+    let where = w.kind === "pumpswap" ? bondingCurveOf(mint) : (w.curve ?? w.pool);
+    if (w.poolVenue && !w.curve) {
+      const opened = (await this.walk(w.pool, until)).oldest;
+      const tx = opened ? await patient(() => this.getTx(opened.signature), this.backoffMs) : null;
+      const curve = tx ? migratedFrom(tx, mint) : null;
+      if (!curve) {
+        this.tape.fillOpening(mint, {});
+        this.log(`adopt ${mint}: opening not found, the migration was not read`);
+        return;
+      }
+      where = curve;
+    }
+    const opening: Pick<Where, "kind" | "venue"> = w.kind === "pumpswap" ? { kind: "curve" } : w.poolVenue ? { kind: "curve", venue: w.venue } : w;
     const first = (await this.walk(where, until)).oldest;
     let found: Parameters<PumpTape["fillOpening"]>[1] = {};
     if (first) {
       const tx = await patient(() => this.getTx(first.signature), this.backoffMs);
       if (tx) {
         const ts = (tx.blockTime ?? first.blockTime ?? 0) * 1000;
-        const made = eventsOf(w.kind === "pumpswap" ? { kind: "curve" } : w, tx, ts).find((e) => e.kind === "create" && e.mint === mint);
+        const made = eventsOf(opening, tx, ts).find((e) => e.kind === "create" && e.mint === mint);
         found = made?.kind === "create"
           ? { creator: made.creator, createdAt: made.ts || ts, ...(made.name ? { name: made.name } : {}), ...(made.symbol ? { symbol: made.symbol } : {}), ...(made.quote ? { quote: made.quote } : {}), ...(made.platform ? { platform: made.platform } : {}), ...(made.supply ? { supply: made.supply } : {}) }
           : { creator: tx.transaction.message.accountKeys[0] ?? "", ...(ts ? { createdAt: ts } : {}) };
@@ -430,6 +473,14 @@ export class Adopter {
       return null;
     }
   }
+}
+
+/** Meteora's curve account in the transaction that migrated this mint to DAMM v2: migration_damm_v2's first account. */
+function migratedFrom(tx: Tx, mint: string): string | null {
+  const MIGRATE = Buffer.from([156, 169, 230, 103, 53, 228, 80, 64]);
+  const raw = fromRpc(tx, fromBase58);
+  const ix = raw.ixs.find((i) => i.program === DBC_PROGRAM && i.data.subarray(0, 8).equals(MIGRATE) && i.accounts[13] === mint);
+  return ix?.accounts[0] ?? null;
 }
 
 /** Signatures asked for the card's first page. */
