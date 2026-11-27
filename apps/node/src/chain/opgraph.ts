@@ -16,20 +16,31 @@ import { exchangeOf, launcherOf } from "./exchanges.ts";
 
 export type TieType = "funder" | "transfer" | "snipers" | "print" | "account";
 export const ONCHAIN_TIES: ReadonlySet<TieType> = new Set(["funder", "transfer", "snipers", "print"]);
+/**
+ * The ties that join groups of any size. Shared snipers are only supporting evidence: sniper bots buy everyone's
+ * launches, and union-find through them chained hundreds of unrelated devs together, so they join two lone wallets at most.
+ */
+export const STRONG_TIES: ReadonlySet<TieType> = new Set(["funder", "transfer", "print"]);
 
 export const OPGRAPH = {
+  /** Bumped when the tie rules change: a node seeing an older version in op_state rebuilds the graph from history. */
+  version: 2,
   /** A funder that paid more launch wallets than this is a service (an exchange, a launcher, a bot farm's hot wallet): not one hand. */
-  funderMaxDevs: 30,
-  /** Early wallets sniping more launches than this are platform-wide bots, not the dev's own: they tie nothing. */
-  sniperMaxSnipes: 40,
-  /** Two launch wallets share at least this many of those early wallets to be tied. */
-  sharedSnipers: 2,
+  funderMaxDevs: 10,
+  /** Early wallets sniping more launches than this (in the long memory) are bots, not the dev's own: they tie nothing. */
+  sniperMaxSnipes: 8,
+  /** Only wallets in this many seconds of the launch count as its snipers. */
+  sniperWithinSec: 5,
+  /** Two launch wallets share at least this many of those rare early wallets to be tied. */
+  sharedSnipers: 3,
+  /** A snipers tie joins only when the joined group stays this small: it never chains groups together. */
+  sniperJoinMax: 2,
   /** An exact tool print shared by at most this many wallets is a private setup; above it, a product anyone uses. */
   printMaxWallets: 12,
   /** An account on launches by more devs than this is borrowed (a famous trader's link): kept out even as evidence. */
   accountMaxDevs: 3,
-  /** A group stops growing here: past it a tie is kept as evidence but joins nothing, so one hub never swallows the chain. */
-  maxMembers: 500,
+  /** A group stops growing here: past it a tie is kept as evidence but joins nothing. A group at the cap is too broad to judge. */
+  maxMembers: 60,
   /** Tokens read per run, and a token is read only once it has settled (its funder traced, its first quarter hour written). */
   perRun: 5_000,
   settleMs: 20 * 60_000,
@@ -60,6 +71,8 @@ export interface OperatorSummary {
   /** The ties that touch the asked wallet, newest first. */
   near: OperatorTie[];
   firstSeen: number;
+  /** The group hit the member cap: too broad to be one hand, so it never moves a verdict. */
+  tooBroad?: boolean;
 }
 
 export interface OpGraphDeps {
@@ -157,7 +170,7 @@ export class OperatorGraph {
     if (ra && ra === rb) return false;
     const sa = ra ? this.sizeOf(ra) : 1;
     const sb = rb ? this.sizeOf(rb) : 1;
-    if (sa + sb > OPGRAPH.maxMembers) return false;
+    if (sa + sb > (STRONG_TIES.has(type) ? OPGRAPH.maxMembers : OPGRAPH.sniperJoinMax)) return false;
     // The bigger group keeps its id; the smaller one's wallets move under it.
     const [bigRoot, bigWallet, smallRoot, smallWallet] = sa >= sb ? [ra ?? a, a, rb, b] : [rb ?? b, b, ra, a];
     this.s.member!.run(bigWallet, bigRoot, at, at);
@@ -169,6 +182,8 @@ export class OperatorGraph {
   /** Reads the tokens written since the last run, at most `limit`, and records the ties they show. */
   update(now = Date.now(), limit: number = OPGRAPH.perRun): { tokens: number; ties: number } {
     const after = Number((this.s.state!.get("tokens_id") as { v: number } | undefined)?.v ?? 0);
+    // A graph started from nothing is built under the current rules.
+    if (!after && this.stateOf("version") === null) this.s.setState!.run("version", OPGRAPH.version);
     type Row = { id: number; mint: string; created_at: number; first_seen: number; funder: string | null; body: Uint8Array; creator_id: number; creator: string };
     const rows = this.s.batch!.all(after, limit) as Row[];
     let last = after;
@@ -215,9 +230,9 @@ export class OperatorGraph {
     // Shared early snipers: the same few non-bot wallets in the first seconds of two devs' launches.
     try {
       const body = JSON.parse(inflateRawSync(r.body).toString()) as { e?: Array<[number, ...number[]]> };
-      const ids = (body.e ?? []).map((e) => e[0]).slice(0, 30);
+      const ids = (body.e ?? []).filter((e) => Number(e[3] ?? 0) <= OPGRAPH.sniperWithinSec).map((e) => e[0]).slice(0, 30);
       if (ids.length) {
-        const snipes = this.db.prepare(`SELECT id, snipes FROM wallets WHERE id IN (${ids.map(() => "?").join(",")})`).all(...ids) as Array<{ id: number; snipes: number }>;
+        const snipes = ids.length < OPGRAPH.sharedSnipers ? [] : this.db.prepare(`SELECT id, snipes FROM wallets WHERE id IN (${ids.map(() => "?").join(",")})`).all(...ids) as Array<{ id: number; snipes: number }>;
         const shared = new Map<number, number>();
         for (const w of snipes) {
           if (Number(w.snipes) > OPGRAPH.sniperMaxSnipes) continue;
@@ -250,6 +265,7 @@ export class OperatorGraph {
 
   /** The operator a launch wallet belongs to, or null when no on-chain tie puts it in a group. */
   summary(creator: string, opts: { members?: number; near?: number } = {}): OperatorSummary | null {
+    if (this.rebuilding()) return null;
     const root = this.rootOf(creator);
     if (!root) return null;
     const rows = this.s.members!.all(root, OPGRAPH.maxMembers) as Array<{ creator: string; first_seen: number }>;
@@ -281,12 +297,75 @@ export class OperatorGraph {
       ties,
       near,
       firstSeen: Math.min(...rows.map((r) => Number(r.first_seen))),
+      ...(all.length >= OPGRAPH.maxMembers ? { tooBroad: true } : {}),
     };
   }
 
   /** The group's id for a wallet, without the summary. */
   idOf(creator: string): string | null {
+    if (this.rebuilding()) return null;
     return this.rootOf(creator);
+  }
+
+  private stateOf(k: string): number | null {
+    const v = (this.s.state!.get(k) as { v: number } | undefined)?.v;
+    return v === undefined ? null : Number(v);
+  }
+
+  /** True while a rebuild is reading history again: the half-built groups say nothing yet. */
+  rebuilding(): boolean {
+    return this.stateOf("rebuilding") === 1;
+  }
+
+  /** True when the tables were built under older tie rules (or never versioned) and hold anything. */
+  outdated(): boolean {
+    if (this.stateOf("version") === OPGRAPH.version) return false;
+    const any = this.db.prepare("SELECT 1 FROM op_members LIMIT 1").get() ?? this.db.prepare("SELECT 1 FROM op_edges LIMIT 1").get();
+    if (!any && !this.stateOf("tokens_id")) {
+      this.s.setState!.run("version", OPGRAPH.version);
+      return false;
+    }
+    return true;
+  }
+
+  /** Empties the graph and starts reading history from the first token under the current rules. */
+  reset(): void {
+    this.db.exec("BEGIN");
+    try {
+      this.db.exec("DELETE FROM op_members; DELETE FROM op_edges;");
+      this.s.setState!.run("tokens_id", 0);
+      this.s.setState!.run("version", OPGRAPH.version);
+      this.s.setState!.run("rebuilding", 1);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  /** Marks a rebuild caught up with history. */
+  rebuilt(): void {
+    this.s.setState!.run("rebuilding", 0);
+  }
+
+  /** One-shot rebuild in batches (the CLI's): reset, then read all of history. */
+  rebuild(now = Date.now(), onBatch: (tokens: number) => void = () => {}): number {
+    this.reset();
+    let total = 0;
+    for (;;) {
+      const r = this.update(now);
+      total += r.tokens;
+      onBatch(total);
+      if (r.tokens < OPGRAPH.perRun) break;
+    }
+    this.rebuilt();
+    return total;
+  }
+
+  /** Group sizes: how many groups of each size, for reports. */
+  sizes(): Map<number, number> {
+    const rows = this.db.prepare("SELECT n, count(*) AS g FROM (SELECT count(*) AS n FROM op_members GROUP BY root) GROUP BY n ORDER BY n").all() as Array<{ n: number; g: number }>;
+    return new Map(rows.map((r) => [Number(r.n), Number(r.g)]));
   }
 
   /** Drops evidence older than the long memory; members not seen since go too. */
@@ -311,27 +390,48 @@ const TIE_TEXT: Record<TieType, string> = {
  * thin. Never avoid on accounts: the group exists only through on-chain ties, and the line names them first.
  */
 export function operatorGraphWarning(s: OperatorSummary | null | undefined, creator?: string): { text: string; avoid: boolean } | null {
-  if (!s || s.creators < 2) return null;
+  if (!s || s.creators < 2 || s.tooBroad) return null;
   if (s.dumped < 3 || s.dumped / Math.max(1, s.launches) < 0.5) return null;
   const kinds = (Object.keys(s.ties) as TieType[]).filter((k) => ONCHAIN_TIES.has(k));
   if (!kinds.length) return null;
+  // A group held mainly by shared snipers is not one hand: no reason from it.
+  const strongN = kinds.filter((k) => STRONG_TIES.has(k)).reduce((n, k) => n + (s.ties[k] ?? 0), 0);
+  if (!strongN || strongN * 2 < (s.ties.snipers ?? 0)) return null;
   // The ties that touch this dev say how it was joined; the group's own say what else holds it.
   const nearKinds = [...new Set(s.near.filter((t) => t.other !== creator).map((t) => t.type))];
   const shown = [...new Set([...nearKinds.filter((k) => ONCHAIN_TIES.has(k)), ...kinds])].slice(0, 2).map((k) => TIE_TEXT[k]);
   const acc = s.accounts.slice(0, 1).map((a) => a.replace(/^x:/, "X ").replace(/^telegram:/, "Telegram ").replace(/^x-community:/, "X community "));
   const others = s.creators - 1;
   const text = `this dev shares ${shown.join(" and ")} as ${others} other launch wallet${others === 1 ? "" : "s"} whose ${s.launches} launches dumped ${s.dumped} times${acc.length ? `; same ${acc[0]}` : ""}`;
-  const strong = kinds.some((k) => k === "funder" || k === "transfer" || k === "snipers");
+  const strong = kinds.some((k) => k === "funder" || k === "transfer");
   return { text, avoid: strong && s.dumped >= 5 && s.dumped / Math.max(1, s.launches) >= 0.7 };
 }
 
 /** Runs the graph every few minutes in the background, and prunes it daily. */
-export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, log = (_m: string) => {} } = {}): () => void {
+export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, catchUpMs = 3_000, log = (_m: string) => {} } = {}): () => void {
+  // Tables built under older tie rules: start over from history; the groups say nothing until it catches up.
+  try {
+    if (g.outdated()) {
+      g.reset();
+      log(`operator graph: tie rules v${OPGRAPH.version}, rebuilding from history in the background`);
+    }
+  } catch (error) {
+    log(`operator graph not reset: ${(error as Error).message}`);
+  }
+  let catchUp: ReturnType<typeof setTimeout> | null = null;
   const run = () => {
     try {
-      // A big backlog (first run on a full store) is worked through a run at a time, never in one block.
+      // A big backlog (a rebuild, or a first run on a full store) is worked through a batch at a time, never in one block.
       const r = g.update();
-      if (r.ties) log(`operator graph: ${r.tokens} tokens read, ${r.ties} ties`);
+      if (g.rebuilding()) {
+        if (r.tokens < OPGRAPH.perRun) {
+          g.rebuilt();
+          log("operator graph: rebuild done");
+        } else {
+          catchUp = setTimeout(run, catchUpMs);
+          catchUp.unref();
+        }
+      } else if (r.ties) log(`operator graph: ${r.tokens} tokens read, ${r.ties} ties`);
     } catch (error) {
       log(`operator graph not updated: ${(error as Error).message}`);
     }
@@ -351,6 +451,7 @@ export function startOperatorGraph(g: OperatorGraph, { everyMs = 5 * 60_000, log
   return () => {
     clearInterval(timer);
     clearTimeout(first);
+    if (catchUp) clearTimeout(catchUp);
     clearInterval(pruner);
   };
 }
