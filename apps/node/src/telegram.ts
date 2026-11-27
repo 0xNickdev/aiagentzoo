@@ -96,12 +96,25 @@ interface RadarStats {
 /** At most this many runner alerts reach one chat in an hour. */
 const RUNNER_PER_HOUR = 8;
 
+const usdShort = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}k`);
+/** The cap at the signal in dollars when the SOL price is known, in SOL otherwise. */
+function capLine(capSol: number): string {
+  const p = solUsd();
+  return p ? T("{c} cap at the signal", { c: usdShort(capSol * p) }) : T("{c} SOL cap at the signal", { c: capSol });
+}
+/** "237 SOL cap at 5 minutes" reads in dollars when the SOL price is known. */
+function dollarReason(r: string): string {
+  const m = /^([\d.]+) SOL cap at 5 minutes$/.exec(r);
+  const p = solUsd();
+  return m && p ? `${usdShort(Number(m[1]) * p)} cap at 5 minutes` : r;
+}
+
 /** A runner alert: short, the coin, its cap at the signal, why the model fired, and what it is not. */
 export function runnerAlert(s: RadarSignal): string {
   return [
     `<b>${T(s.tier === "strong" ? "Runner radar · strong" : "Runner radar · watch")}</b> · <b>$${esc(s.symbol)}</b>`,
-    T("{c} SOL cap at the signal", { c: s.capAtSignal }),
-    ...s.reasons.slice(0, 3).map((r) => `• ${esc(TC(r))}`),
+    capLine(s.capAtSignal),
+    ...s.reasons.slice(0, 3).map((r) => `• ${esc(TC(dollarReason(r)))}`),
     `<code>${s.mint}</code>`,
     T("<i>Not a call to buy. Most coins still die.</i>"),
   ].join("\n");

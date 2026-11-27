@@ -53,7 +53,15 @@ const agoLong = (ms: number) => {
   const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
   return s < 60 ? t("{n} s", { n: s }) : s < 3600 ? t("{n} min", { n: Math.round(s / 60) }) : s < 86_400 ? t("{n} h", { n: Math.round(s / 3600) }) : t("{n} d", { n: Math.round(s / 86_400) });
 };
-const sol = (v: number | null | undefined) => (v == null ? "-" : `${v >= 100 ? Math.round(v) : v.toFixed(1)} SOL`);
+/** The SOL price north sent with the signals; caps read in dollars once it is known. */
+let radarSolUsd: number | null = null;
+const usdShort = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1e3).toFixed(v >= 1e5 ? 0 : 1)}k`);
+const sol = (v: number | null | undefined) => (v == null ? "-" : radarSolUsd ? usdShort(v * radarSolUsd) : `${v >= 100 ? Math.round(v) : v.toFixed(1)} SOL`);
+/** "237 SOL cap at 5 minutes" in dollars when the price is known. */
+const dollarReason = (r: string) => {
+  const m = /^([\d.]+) SOL cap at 5 minutes$/.exec(r);
+  return m && radarSolUsd ? `${usdShort(Number(m[1]) * radarSolUsd)} cap at 5 minutes` : r;
+};
 const times = (v: number | null | undefined) => (v == null ? "-" : `${v >= 10 ? Math.round(v) : v.toFixed(1)}x`);
 
 /** A number that eases to its new value instead of jumping; instant when the reader asks for less motion. */
@@ -141,6 +149,7 @@ export function RadarLive() {
         })
         .then((b) => {
           if (!live) return;
+          radarSolUsd = (b as { solUsd?: number | null }).solUsd ?? radarSolUsd;
           setData(b);
           setFailed(false);
           // Screen readers hear new signals, at most once per poll.
@@ -388,7 +397,7 @@ function Line({ s }: { s: Signal }) {
         </a>
         <ul className="mt-1 flex flex-col gap-0.5 text-fg-2">
           {s.reasons.map((r) => (
-            <li key={r}>{tChain(r)}</li>
+            <li key={r}>{tChain(dollarReason(r))}</li>
           ))}
         </ul>
       </div>
@@ -419,7 +428,7 @@ function Card({ s }: { s: Signal }) {
       </div>
       <ul className="flex flex-col gap-0.5 text-fg-2">
         {s.reasons.map((r) => (
-          <li key={r}>{tChain(r)}</li>
+          <li key={r}>{tChain(dollarReason(r))}</li>
         ))}
       </ul>
       <div className="flex items-center gap-4">

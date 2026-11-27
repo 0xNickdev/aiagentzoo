@@ -40,7 +40,11 @@ export function useRadarRecord(): RadarRecord | null {
     let live = true;
     fetch(`${NORTH}/v1/radar/record`)
       .then((r) => (r.ok ? (r.json() as Promise<RadarRecord>) : null))
-      .then((b) => live && b && Array.isArray(b.top) && setRec(b))
+      .then((b) => {
+        if (!live || !b || !Array.isArray(b.top)) return;
+        trSolUsd = (b as { solUsd?: number | null }).solUsd ?? trSolUsd;
+        setRec(b);
+      })
       .catch(() => {});
     return () => {
       live = false;
@@ -49,7 +53,12 @@ export function useRadarRecord(): RadarRecord | null {
   return rec;
 }
 
-const sol = (v: number) => `${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1)} SOL`;
+let trSolUsd: number | null = null;
+const sol = (v: number) => {
+  const u = trSolUsd ? v * trSolUsd : null;
+  if (u == null) return `${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1)} SOL`;
+  return u >= 1e6 ? `$${(u / 1e6).toFixed(1)}M` : `$${(u / 1e3).toFixed(u >= 1e5 ? 0 : 1)}k`;
+};
 const times = (v: number) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}x`;
 const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const pct = (k: number, n: number) => {

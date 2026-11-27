@@ -3,6 +3,7 @@ import { type GuardianSession, verifyGuardian } from "../guardian.ts";
 import { HOLDER_MIN, TOKEN_MINT } from "../holders.ts";
 import { curveCap, FROZEN, PUBLIC_DELAY_MS, type Signal } from "../chain/radar.ts";
 import { tape } from "../chain/pump.ts";
+import { solUsd } from "../chain/price.ts";
 import { clampInt, clientIp, fromPeer, json, readJson } from "./http.ts";
 import type { RouteContext } from "./context.ts";
 
@@ -48,7 +49,7 @@ export async function radarRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const record = ctx.radarRecord?.() ?? null;
     if (!record) return json(res, 503, { error: "the record is still being built, try again in a minute" });
     res.setHeader("cache-control", "public, max-age=300");
-    return json(res, 200, record);
+    return json(res, 200, { ...record, solUsd: solUsd() });
   }
   if (path !== "/v1/radar" || (req.method !== "GET" && req.method !== "POST")) return false;
   const radar = ctx.radar;
@@ -69,6 +70,7 @@ export async function radarRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     delayMin: Math.round(delay / 60_000),
     model: { frozenAt: FROZEN.frozenAt, tiers: { strong: "top 0.5% of the runner or graduation model", watch: "top 1% of either" } },
     stats: radar.stats(now),
+    solUsd: solUsd(),
     today: { scored: radar.scored.day === new Date(now).toISOString().slice(0, 10) ? radar.scored.n : 0, signals: radar.signals(now).filter((s) => s.at >= Date.parse(new Date(now).toISOString().slice(0, 10))).length, lastSignalAt: radar.lastSignalAt() },
     signals,
   };
