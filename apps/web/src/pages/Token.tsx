@@ -4,6 +4,7 @@ import { pick, t } from "../i18n";
 import { CaRow, TokenDot } from "../components/site/ZooToken";
 import { Corners } from "../components/roadmap/Timeline";
 import RollNumber from "../components/site/RollNumber";
+import { RecognitionStrip } from "../components/site/Recognition";
 
 /** The market as DexScreener reads the pool right now. Nothing here comes from us, so nothing here is a claim of ours. */
 interface Market {
@@ -148,6 +149,7 @@ export default function Token() {
             </div>
           </div>
         </div>
+        <RecognitionStrip className="mt-[clamp(28px,3vw,40px)]" />
         <div className="rm-frame mt-[clamp(32px,4vw,56px)]">
           <Corners />
           <div className="rounded-[2px] border border-line-2 bg-night-surface">

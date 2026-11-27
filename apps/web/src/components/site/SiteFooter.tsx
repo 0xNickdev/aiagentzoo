@@ -1,6 +1,7 @@
 import { BOT_URL, DOCS_URL, EXTENSION_URL, GITHUB_URL, GitHubIcon, NPM_URL, X_URL, XIcon, ZOOAGENCY_DEXSCREENER_URL, ZOOAGENCY_SOLSCAN_URL } from "../../links";
 import { LangSwitch, t } from "../../i18n";
 import { TokenCard } from "./ZooToken";
+import { RecognitionFooter } from "./Recognition";
 
 const COLUMNS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
@@ -82,6 +83,7 @@ export default function SiteFooter() {
         </div>
         <div className="mt-12 flex flex-wrap items-end justify-between gap-3 border-t border-line py-5 text-[12px] text-faint">
           <span>ZOOAI AGENCY · 2026 · MIT</span>
+          <RecognitionFooter />
           <span>{t("Not financial advice. Everything here is read from public chain data.")}</span>
         </div>
       </div>

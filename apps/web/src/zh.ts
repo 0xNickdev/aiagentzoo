@@ -2272,4 +2272,11 @@ export const ZH: Record<string, string> = {
   "the README is a framework's starter text": "README 是框架的默认模板文字",
   "no README": "没有 README",
   "most of the code is copied libraries or build output": "大部分代码是复制的库或构建产物",
+  "Winner, Best Consumer App on Solana.": "冠军，Solana 最佳消费级应用。",
+  "Encode Club x Solana Hackathon 2026, final 8. Now in the Encode Club x Solana accelerator.": "Encode Club x Solana Hackathon 2026 决赛八强。现已进入 Encode Club x Solana 加速器。",
+  "See the certificate": "查看证书",
+  "Hackathon certificate": "黑客松证书",
+  "Encode Club x Solana Hackathon 2026, winner certificate": "Encode Club x Solana Hackathon 2026 冠军证书",
+  "Winner certificate, Best Consumer App on Solana, Encode Club x Solana Hackathon 2026": "冠军证书，Solana 最佳消费级应用，Encode Club x Solana Hackathon 2026",
+  "Best Consumer App on Solana, Encode x Solana Hackathon 2026": "Solana 最佳消费级应用，Encode x Solana Hackathon 2026",
 };

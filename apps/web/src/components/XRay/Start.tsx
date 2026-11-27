@@ -4,6 +4,7 @@ import { minAgo } from "../../format";
 import type { Verdict } from "./types";
 import { NORTH, TONE } from "./shared";
 import { Pn } from "./ui";
+import { RecognitionStrip } from "../site/Recognition";
 
 export interface Moment {
   mint: string;
@@ -58,6 +59,7 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
         <h1>{t("See who you are buying from.")}</h1>
         <p>{t("Paste a token above. The wallets that got in during the first five seconds, who they are across every launch of the last two days, who paid for the creator, and how much of the volume is churn. pump.fun, LaunchLab, Meteora and Raydium, read live from Solana.")}</p>
       </section>
+      <RecognitionStrip className="x-s12" />
       <Pn span="x-s12" title={t("Try one from the chain, right now")} meta={t("live from Solana · tap to x-ray")} body={false}>
         <div className="x-moments">
           {!moments && Array.from({ length: 8 }, (_, i) => (
