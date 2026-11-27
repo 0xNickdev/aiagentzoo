@@ -6,7 +6,7 @@ const CERT = "/hackathon-winner.png";
 function Logos({ h }: { h: number }) {
   return (
     <span className="flex shrink-0 items-center gap-4">
-      <img src="/logos/encode.png" alt="Encode Club" height={h} style={{ height: h, width: "auto" }} />
+      <img src="/logos/encode.png" alt="Encode Club" height={h * 0.4} style={{ height: h * 0.4, width: "auto" }} />
       <img src="/logos/solana-foundation.png" alt="Solana Foundation" height={h * 0.6} style={{ height: h * 0.6, width: "auto" }} />
     </span>
   );
