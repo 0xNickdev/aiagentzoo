@@ -425,3 +425,7 @@
   .x-pulse::after, .x-sk { animation: none; }
   .xr2 { scroll-behavior: auto; }
 }
+.x-award { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 6px 12px 6px 6px; border: 1px solid var(--line, #2a2a2a); border-radius: 999px; color: var(--fg-2, #bbb); font-size: 13px; text-decoration: none; transition: border-color .15s; max-width: 100%; }
+.x-award:hover { border-color: var(--fg, #fff); color: var(--fg, #fff); }
+.x-award b { padding: 2px 9px; border-radius: 999px; background: var(--fg, #fff); color: var(--bg, #000); font-weight: 600; font-size: 12px; }
+.x-award span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -51,8 +51,12 @@ export function Start({ onPick }: { onPick: (mint: string) => void }) {
   return (
     <>
       <section className="x-s12 x-hero">
+        <a href="/hackathon-winner.png" target="_blank" rel="noopener" className="x-award">
+          <b>{t("Winner")}</b>
+          <span>{t("Best Consumer App on Solana, Solana Hackathon 2026 by Encode Club")}</span>
+        </a>
         <h1>{t("See who you are buying from.")}</h1>
-        <p>{t("Paste a token above. The wallets that got in during the first five seconds, who they are across every launch of the last two days, who paid for the creator, and how much of the volume is churn. pump.fun, LaunchLab and Meteora, read live from Solana.")}</p>
+        <p>{t("Paste a token above. The wallets that got in during the first five seconds, who they are across every launch of the last two days, who paid for the creator, and how much of the volume is churn. pump.fun, LaunchLab, Meteora and Raydium, read live from Solana.")}</p>
       </section>
       <Pn span="x-s12" title={t("Try one from the chain, right now")} meta={t("live from Solana · tap to x-ray")} body={false}>
         <div className="x-moments">
