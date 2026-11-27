@@ -80,7 +80,8 @@ export interface Check {
     bundlersPeakPct?: number | null;
     bundledSol?: number | null;
     /** Creator fees paid on this coin in SOL, from pump.fun's events. */
-    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean };
+    /** unclaimed: what waits in pump.fun's creator vaults now, across all of this creator's coins (the vaults are per creator). */
+    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean; unclaimed?: { sol: number; curve: number; pool: number; perCreator: true } };
     bundlesSince?: number | null;
     /** Share of all buying the five largest buyers did. */
     top5BuyingPct?: number | null;

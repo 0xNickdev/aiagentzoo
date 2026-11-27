@@ -124,7 +124,11 @@ export interface TokenCheck {
     bundlersPeakPct: number | null;
     bundledSol: number | null;
     /** Creator fees paid on this coin in SOL (curve + PumpSwap), from pump.fun's events; estimated: partly from volume; partial: adopted. */
-    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean };
+    /**
+     * unclaimed: SOL still waiting in pump.fun's creator vaults (curve and PumpSwap), read on an x-ray. The vaults are
+     * per creator: the amount is across all of this creator's coins, not this coin's alone (perCreator says so).
+     */
+    creatorFees?: { total: number; curve: number; pool: number; estimated?: boolean; partial?: boolean; unclaimed?: { sol: number; curve: number; pool: number; perCreator: true } };
     /** Older than the bundle reader: bundles counted only from this time (ms). */
     bundlesSince: number | null;
     top5BuyingPct: number | null;

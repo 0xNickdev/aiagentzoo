@@ -4,7 +4,8 @@ import { fundersEnabled, traceFunders } from "../chain/funders.ts";
 import { lineage, type LineageView } from "../chain/lineage.ts";
 import { socials } from "../chain/socials.ts";
 import { exchangeOf, launcherOf } from "../chain/exchanges.ts";
-import { holderReport, holdersEnabled, mintRights, poolSolOf } from "../chain/holders.ts";
+import { unclaimedCreatorFees } from "../chain/creatorVault.ts";
+import { holderReport, holdersEnabled, mintRights, poolSolOf, solanaRpc } from "../chain/holders.ts";
 import { handWithin } from "../chain/hand.ts";
 import { checkToken, oddsRunNote, outsideCheck, poolCheck } from "../chain/check.ts";
 import { pools } from "./pools.ts";
@@ -121,11 +122,16 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const pool = deep && found && holdersEnabled() ? tape.poolOf(mint) : null;
     // The biggest buyers' money traced back: a hand spread over wallets and minutes. Launches the tape holds.
     const handP = deep && found ? handWithin(mint, tape.bigBuyersOf(mint), found.creator) : Promise.resolve(null);
-    const [holders, , poolSol] = await Promise.all([
+    // Creator fees still waiting in pump.fun's two vaults: pump.fun and PumpSwap coins, on an x-ray only. The vaults
+    // are the creator's, across all of their coins.
+    const feeCreator = found?.creator || past?.creator || "";
+    const pumpCoin = found ? tape.venueOf(mint) === "pump.fun" : past ? !history?.venueOf(mint) : false;
+    const [holders, , poolSol, unclaimed] = await Promise.all([
       deep && (found || past) && holdersEnabled() ? within(holderReport(mint, fetch, Date.now(), found?.creator ?? past?.creator ?? null)) : Promise.resolve(undefined),
       deep && found && found.creator && fundersEnabled() && !lineage.view(found.creator) ? within(lineage.trace(found.creator)) : Promise.resolve(null),
       // The pool's SOL as it is now, not as the last trade the tape saw left it.
       pool ? within(poolSolOf(pool)) : Promise.resolve(null),
+      deep && feeCreator && pumpCoin && holdersEnabled() ? within(unclaimedCreatorFees(feeCreator, solanaRpc)) : Promise.resolve(null),
     ]);
     if (poolSol !== null && poolSol !== undefined) {
       tape.notePoolSol(mint, poolSol);
@@ -141,6 +147,7 @@ export async function checkRoutes(ctx: RouteContext, req: IncomingMessage, res: 
     const rights = deep && (found || past) && !holders ? await within(mintRights(mint)) : null;
     const linked = found || past ? socials.forMint(mint) : [];
     const check = checkToken(mint, found ?? past, { stream, chain, ...(deep && (found || past) ? { holders: holders ?? null } : {}), ...(rights ? { rights } : {}), hand: await handP, ...(funding !== undefined ? { lineage: funding } : {}), socials: linked, ...(opGraph && (found || past) ? { graph: opGraph.summary((found ?? past)!.creator) } : {}), ...(found ? { tool: tape.printOf(mint), toolShape: tape.shapeOf(mint), operator: tape.operatorOf(found.creator) } : {}) });
+    if (unclaimed && check.facts) check.facts.creatorFees = { ...(check.facts.creatorFees ?? { total: 0, curve: 0, pool: 0 }), unclaimed: { ...unclaimed, perCreator: true } };
     // The odds the first five minutes give, for pump.fun launches the tape still holds.
     if (found) {
       const funder = lineage.funderOf(found.creator) ?? null;

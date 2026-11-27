@@ -220,7 +220,8 @@ export function BundlesSection({ r }: Ctx) {
             [t("Bought in bundles"), `${f.bundlers ? t("{n} wallets", { n: f.bundlers }) : "0"}${f.bundlesSince ? ` · ${t("since {d}", { d: new Date(f.bundlesSince).toISOString().slice(5, 16).replace("T", " ") + " UTC" })}` : ""}`, (f.bundlers ?? 0) >= 10 && (f.bundlersPeakPct ?? 0) >= 30 && !may ? "d" : ""],
             f.bundlers ? [t("Bundlers hold now · at most"), `${f.bundlersHeldPct ?? 0}% · ${f.bundlersPeakPct ?? 0}%`, (f.bundlersPeakPct ?? 0) >= 30 && !may ? "d" : ""] : null,
             f.bundledSol ? [t("{u} through bundles", { u: unitOf(r.mint) }), f.bundledSol.toLocaleString("en-US", { maximumFractionDigits: 1 })] : null,
-            f.creatorFees
+            // Made only to carry the unclaimed read (a coin older than the tape): no total of its own to show.
+            f.creatorFees && (f.creatorFees.total || !f.creatorFees.unclaimed)
               ? [
                   t("Creator fees on this coin"),
                   <span title={t("curve {c} SOL · pool {p} SOL", { c: sol3(f.creatorFees.curve), p: sol3(f.creatorFees.pool) })}>
@@ -230,6 +231,16 @@ export function BundlesSection({ r }: Ctx) {
                 ]
               : null,
             f.creatorFees && f.creatorFees.curve && f.creatorFees.pool ? ["", t("curve {c} SOL · pool {p} SOL", { c: sol3(f.creatorFees.curve), p: sol3(f.creatorFees.pool) })] : null,
+            // The vaults are the creator's, not the coin's: what waits there is from all of their coins.
+            f.creatorFees?.unclaimed
+              ? [
+                  f.creatorFees.total ? "" : t("Creator fees"),
+                  <span title={t("curve {c} SOL · pool {p} SOL", { c: sol3(f.creatorFees.unclaimed.curve), p: sol3(f.creatorFees.unclaimed.pool) })}>
+                    {t("unclaimed: {s} SOL", { s: sol3(f.creatorFees.unclaimed.sol) })}
+                    <small> · {t("across this creator's coins")}</small>
+                  </span>,
+                ]
+              : null,
             f.bundleWallets ? [t("Launch block"), t("{n} wallets · {p}%", { n: f.bundleWallets, p: f.bundleSharePct ?? 0 }), (f.bundleSharePct ?? 0) >= 15 ? "d" : ""] : null,
             f.top5BuyingPct != null && [t("Bought by the top 5"), `${f.top5BuyingPct}%`, f.top5BuyingPct >= 70 ? "d" : ""],
           ]}

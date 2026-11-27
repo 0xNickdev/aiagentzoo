@@ -113,6 +113,9 @@ async function rpc<T>(method: string, params: unknown[], f: typeof fetch): Promi
   }
 }
 
+/** The node's Solana RPC for a one-off read (null without one set): what the x-ray reads on request. */
+export const solanaRpc = <T>(method: string, params: unknown[]): Promise<T | null> => (RPC() ? rpc<T>(method, params, fetch) : Promise.resolve(null));
+
 const onCurve = (address: string) => {
   try {
     return isOnCurve(fromBase58(address));
