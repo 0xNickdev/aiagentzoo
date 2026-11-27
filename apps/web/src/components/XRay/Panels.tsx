@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { chainOf, unitOf } from "../../chain";
-import { t, tChain } from "../../i18n";
+import { pick, t, tChain } from "../../i18n";
 import { pctFine, short } from "../../format";
 import { money } from "../../outcome";
 import { BOT_URL, ZOOAGENCY_CLAWPUMP_URL, ZOOAGENCY_MINT } from "../../links";
@@ -152,7 +152,7 @@ function CautionReasons({ reasons, devNow, isDevRecord }: { reasons: string[]; d
       )}
       {common.length > 0 && (
         <p className="x-rc">
-          <span>{t("Common on coins with buyers:")}</span> {common.join(", ")}
+          <span>{t("Common on coins with buyers:")}</span> {common.join(pick(", ", "，"))}
         </p>
       )}
     </>
