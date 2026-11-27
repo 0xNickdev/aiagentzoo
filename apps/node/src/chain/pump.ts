@@ -2106,6 +2106,11 @@ export class PumpTape {
     return this.tokens.has(mint);
   }
 
+  /** When a mint on the tape was launched (its pool opened), without building its record. */
+  createdAtOf(mint: string): number | null {
+    return this.tokens.get(mint)?.createdAt ?? null;
+  }
+
   /** Every mint the tape holds now, for walking it a slice at a time. */
   mints(): string[] {
     return [...this.tokens.keys()];

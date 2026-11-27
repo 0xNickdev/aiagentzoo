@@ -14,8 +14,9 @@ import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { PoolMetaQueue } from "./chain/poolMeta.ts";
 import { Adopter, adoption, patient } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
-import { OperatorGraph, startOperatorGraph } from "./chain/opgraph.ts";
-import { SmartWallets, startWalletLedger, WalletLedger } from "./chain/walletpnl.ts";
+import { OperatorGraph } from "./chain/opgraph.ts";
+import { SmartWallets, WalletLedger } from "./chain/walletpnl.ts";
+import { startBackground, startPrintFeed } from "./chain/background.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
 import { catchUpPinned, seedPinned } from "./chain/replay.ts";
 import { CabalIndex, startCabals } from "./chain/cabals.ts";
@@ -242,30 +243,31 @@ const radarV2 = config.role === "north" && history
     })
   : null;
 const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lineage.funderOf(c), log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
-// The operator graph: launch wallets tied on chain across launches, read from the long memory every five minutes.
-const opGraph = history && process.env.ZOO_OPGRAPH !== "off"
-  ? new OperatorGraph(history.db, {
-      printOf: (mint) => {
-        const r = tape.printOf(mint);
-        return r ? { key: r.key, wallets: r.wallets, common: r.common, creators: tape.printLaunches(r.key, 6).map((l) => l.creator) } : null;
-      },
-    })
-  : null;
-const stopOpGraph = opGraph ? startOperatorGraph(opGraph, { log: (m) => console.log(`[${config.id}] ${m}`) }) : null;
-// Every trader's SOL in and out per coin, written in batches; once a day the wallets with the best realized SOL become the smart list.
-const walletLedger = history && process.env.ZOO_WALLET_PNL !== "off" ? new WalletLedger(history.db) : null;
+// The operator graph: launch wallets tied on chain across launches, built in the background worker from the long memory;
+// this thread only reads it. Every trader's SOL in and out per coin gathers here and is written there; once a day the
+// worker scores the wallets with the best realized SOL into the smart list. Both off with ZOO_OPGRAPH / ZOO_WALLET_PNL=off.
+const opGraphOn = Boolean(history) && process.env.ZOO_OPGRAPH !== "off";
+const walletPnlOn = Boolean(history) && process.env.ZOO_WALLET_PNL !== "off";
+const opGraph = history && opGraphOn ? new OperatorGraph(history.db) : null;
+const walletLedger = walletPnlOn ? new WalletLedger(null) : null;
 const smart = walletLedger ? new SmartWallets(join(config.dataDir, "smart-wallets.json")) : null;
 if (walletLedger) tape.onFill = (w, m, sol, isBuy, ts) => walletLedger.fill(w, m, sol, isBuy, ts);
-const stopWalletLedger = walletLedger && smart
-  ? startWalletLedger(walletLedger, smart, {
-      isOperator: (w) => opGraph?.idOf(w) != null,
-      clusterOf: (w) => {
+const background = history && (opGraphOn || walletPnlOn)
+  ? startBackground(
+      { dbPath: join(config.dataDir, "history.db"), opgraph: opGraphOn, pnl: walletPnlOn, smartFile: join(config.dataDir, "smart-wallets.json") },
+      {
+        ledger: walletLedger,
+        smart,
         // Wallets paid by one wallet are one hand: only the best of them is listed. Exchanges and launchers pay everyone.
-        const f = sideWallets.funderOf(w) ?? lineage.funderOf(w) ?? null;
-        return f && !exchangeOf(f) && !launcherOf(f) ? `funder:${f}` : null;
+        clusterOf: (w) => {
+          const f = sideWallets.funderOf(w) ?? lineage.funderOf(w) ?? null;
+          return f && !exchangeOf(f) && !launcherOf(f) ? `funder:${f}` : null;
+        },
+        log: (m) => console.log(`[${config.id}] ${m}`),
       },
-    }, { log: (m) => console.log(`[${config.id}] ${m}`) })
+    )
   : null;
+const stopPrintFeed = background && opGraphOn ? startPrintFeed(tape, background) : null;
 // Cabals: wallets that work as one hand, rebuilt from the long memory every hour.
 const cabals = history ? new CabalIndex(history.db) : null;
 const mentions = history ? new Mentions(history.db) : null;
@@ -424,8 +426,11 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
       try {
         stopHistory?.();
         stopCabals?.();
-        stopOpGraph?.();
-        stopWalletLedger?.();
+        stopPrintFeed?.();
+        void background?.stop();
+        // The last half minute of fills is written here, in one go: the node is on its way down.
+        const rest = walletLedger?.drain();
+        if (rest && history) new WalletLedger(history.db).writeRows(rest);
         stopLabels?.();
         stopBuyback?.();
         history?.close();
