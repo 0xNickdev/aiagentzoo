@@ -50,8 +50,8 @@ const LAUNCHLAB_IX: Record<string, Role> = {
   [disc(175, 175, 109, 31, 13, 152, 155, 237)]: { kind: "create", payer: 0, creator: 1, mint: 6, quote: 7, vault: 8 }, // initialize
   [disc(67, 153, 175, 39, 218, 16, 38, 32)]: { kind: "create", payer: 0, creator: 1, mint: 6, quote: 7, vault: 8 }, // initialize_v2
   [disc(37, 190, 126, 222, 44, 154, 171, 17)]: { kind: "create", payer: 0, creator: 1, mint: 6, quote: 7, vault: 8 }, // initialize_with_token_2022
-  [disc(207, 82, 192, 145, 254, 207, 145, 223)]: { kind: "migrate", mint: 1 }, // migrate_to_amm
-  [disc(136, 92, 200, 103, 28, 218, 144, 140)]: { kind: "migrate", mint: 1 }, // migrate_to_cpswap
+  [disc(207, 82, 192, 145, 254, 207, 145, 223)]: { kind: "migrate", mint: 1, pool: 13, to: "raydium" }, // migrate_to_amm
+  [disc(136, 92, 200, 103, 28, 218, 144, 140)]: { kind: "migrate", mint: 1, pool: 5, to: "cpmm" }, // migrate_to_cpswap
 };
 
 const DBC_IX: Record<string, Role> = {

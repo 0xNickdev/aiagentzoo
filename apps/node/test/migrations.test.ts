@@ -1,20 +1,21 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { graduatedFrom } from "../src/chain/adopt.ts";
-import { DBC_POOL_AUTHORITY, fromRpc, parseLaunchpads } from "../src/chain/launchpads.ts";
+import { graduatedFrom, launchLabPoolOf } from "../src/chain/adopt.ts";
+import { DBC_POOL_AUTHORITY, fromRpc, LAUNCHLAB_PROGRAM, parseLaunchpads } from "../src/chain/launchpads.ts";
 import { PumpTape } from "../src/chain/pump.ts";
 import { fromBase58, type PumpEvent } from "../src/chain/pumpParse.ts";
 import { raydiumFollower } from "../src/chain/stream.ts";
 
 // Real mainnet transactions: a Meteora curve migrating to DAMM v2 (2wHj21...), a buy and a sell in that DAMM v2 pool
-// (63QzTU..., 5TMtDv...).
+// (63QzTU..., 5TMtDv...), and a LaunchLab curve migrating to a Raydium CPMM pool (57JVcs...).
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures/migrations.json", import.meta.url), "utf8")) as Array<{ what: string; tx: any }>;
 const parse = (what: string, ts = 0) => parseLaunchpads(fromRpc(fixtures.find((f) => f.what === what)!.tx, fromBase58), ts) as any[];
 
 const DBC_MINT = "3iBohACVmao9UcDjBCv7fpNaPnVMTJ5LmVZWT8LYt1By";
 const DAMM_POOL = "EM7fbQcaFcdpUzTdvqyJkpTH8hPVbM6mXwbueanoEbUk";
-const OTHER_POOL = "69bFbXmMi1D24xXPiEyrzY7uLfLLh84azSLnoMcZUmoo";
+const LL_MINT = "FVWXgqKp1sD5YtNL2LtYEyN52tPX1RrYSsNugvvfLoat";
+const CPMM_POOL = "69bFbXmMi1D24xXPiEyrzY7uLfLLh84azSLnoMcZUmoo";
 const DEV = "11111111111111111111111111111112";
 
 test("a Meteora curve's migration to DAMM v2 graduates the coin and names its pool; that pool's swaps are read", () => {
@@ -29,6 +30,15 @@ test("a Meteora curve's migration to DAMM v2 graduates the coin and names its po
   );
   const [sell] = parse("damm:sell");
   assert.deepEqual([sell.isBuy, sell.sol, sell.tokens], [false, 0.482096333, 20_386_606.656774]);
+});
+
+test("a LaunchLab curve's migration to CPMM graduates the coin and is not a new Raydium launch", () => {
+  const evs = parse("ll:migrate-cpmm");
+  assert.deepEqual(evs, [
+    { kind: "complete", mint: LL_MINT },
+    { kind: "pool", mint: LL_MINT, pool: CPMM_POOL, venue: "cpmm" },
+  ]);
+  assert.equal(evs.filter((e) => e.kind === "create").length, 0);
 });
 
 test("on the tape: the graduated coin trades on in its pool under the same coin, another pool's trades do not count", () => {
@@ -55,18 +65,33 @@ test("on the tape: the graduated coin trades on in its pool under the same coin,
   assert.deepEqual(follower.dammPools(), [DAMM_POOL]);
   assert.equal(follower.pools.size, 0);
 
+  // LaunchLab into CPMM: the Raydium trade in the migration's pool is the coin's, it is not counted as a launch.
+  const ll = new PumpTape();
+  ll.apply({ kind: "create", venue: "launchlab", name: "y", symbol: "Y", mint: LL_MINT, creator: DEV, ts: now - 3_600_000 }, now);
+  for (const ev of parse("ll:migrate-cpmm")) ll.apply(ev, now);
+  const trade: PumpEvent = { kind: "trade", venue: "cpmm", mint: LL_MINT, pool: CPMM_POOL, user: "Buyer11111111111111111111111111111111111111", isBuy: true, sol: 1, tokens: 1000, ts: now - 500, curveSol: null };
+  ll.apply(trade, now);
+  ll.apply({ ...trade, pool: "Side111111111111111111111111111111111111111" }, now);
+  const g = ll.facts(LL_MINT, now)!;
+  assert.equal(g.graduated, true);
+  assert.equal(g.buys, 1);
+  assert.equal(ll.seen.launches, 1);
+  assert.deepEqual(ll.raydiumPools(now).map((p) => [p.pool, p.venue]), [[CPMM_POOL, "cpmm"]]);
 });
 
-test("adoption: a DAMM v2 pool Meteora's curve opened is that coin's, graduated", async () => {
+test("adoption: a Raydium pool with a LaunchLab curve behind it, a DAMM v2 pool Meteora's curve opened", async () => {
+  const curve = launchLabPoolOf(LL_MINT);
   const rpc = async <T>(method: string, params: unknown[]): Promise<T | null> => {
     const [addr, opts] = params as [string, { dataSlice?: { length: number } }];
     if (method !== "getAccountInfo") return null;
+    if (addr === curve) return { value: { owner: LAUNCHLAB_PROGRAM, space: 0 } } as T;
     if (addr === DAMM_POOL && opts.dataSlice?.length === 32) return { value: { data: [Buffer.from(fromBase58(DBC_POOL_AUTHORITY)).toString("base64"), "base64"] } } as T;
     return { value: { data: [Buffer.alloc(32).toString("base64"), "base64"] } } as T;
   };
+  assert.deepEqual(await graduatedFrom(LL_MINT, { kind: "raydium", venue: "cpmm", pool: CPMM_POOL, listedAt: null }, rpc), { venue: "launchlab", poolVenue: "cpmm", curve });
   assert.deepEqual(await graduatedFrom(DBC_MINT, { kind: "raydium", venue: "damm", pool: DAMM_POOL, listedAt: null }, rpc), { venue: "dbc", poolVenue: "damm" });
   // Someone else's DAMM pool for the token is no graduation.
-  assert.equal(await graduatedFrom(DBC_MINT, { kind: "raydium", venue: "damm", pool: OTHER_POOL, listedAt: null }, rpc), null);
+  assert.equal(await graduatedFrom(DBC_MINT, { kind: "raydium", venue: "damm", pool: CPMM_POOL, listedAt: null }, rpc), null);
 
   // Adopted as Meteora's coin, graduated, its DAMM pool followed in the DAMM lane, and its trades there read back.
   const tape = new PumpTape();

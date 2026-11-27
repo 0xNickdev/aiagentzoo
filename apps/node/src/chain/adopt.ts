@@ -11,8 +11,8 @@ import type { DexRead, PumpTape } from "./pump.ts";
  *
  * One coin at a time, a short queue, and a miss is not asked again for ten minutes: a burst of x-rays for coins
  * nobody launched cannot run the RPC dry. Raydium AMM v4 and CPMM, PumpSwap, Meteora's DAMM v2, and the pump.fun,
- * LaunchLab and Meteora curves: what the stream reads. A Meteora coin found in its DAMM v2 pool is adopted as Meteora's
- * coin, graduated, not as a launch into the pool.
+ * LaunchLab and Meteora curves: what the stream reads. A LaunchLab coin found in its Raydium pool, or a Meteora coin in
+ * its DAMM v2 pool, is adopted as that launchpad's coin, graduated, not as a launch into the pool.
  */
 
 /** A coin's launch as the long memory kept it. */
@@ -121,14 +121,22 @@ async function ownerOf(address: string, rpc: Rpc): Promise<{ owner: string; size
   return a?.value?.owner ? { owner: a.value.owner, size: a.value.space ?? 0 } : null;
 }
 
+/** LaunchLab's curve for a mint against SOL: pool_state, seeds ["pool", base_mint, quote_mint] (raydium_launchpad IDL). */
+export const launchLabPoolOf = (mint: string) => programAddress([Buffer.from("pool"), fromBase58(mint), fromBase58(WSOL)], LAUNCHLAB_PROGRAM);
+
 /** Where a DAMM v2 pool keeps its creator (cp_amm's Pool, a fixed layout: 8-byte discriminator, then 640 bytes before it). */
 const DAMM_CREATOR_AT = 648;
 
 /**
- * Whether a pool is a launchpad coin's graduation: a DAMM v2 pool whose creator is Meteora's curve (every pool its
- * migration opens names the curve's authority).
+ * Whether a pool is a launchpad coin's graduation: a Raydium pool whose mint has a LaunchLab curve against SOL, or a
+ * DAMM v2 pool whose creator is Meteora's curve (every pool its migration opens names the curve's authority).
  */
 export async function graduatedFrom(mint: string, w: Where, rpc: Rpc): Promise<Pick<Where, "venue" | "poolVenue" | "curve"> | null> {
+  if (w.venue === "raydium" || w.venue === "cpmm") {
+    const curve = launchLabPoolOf(mint);
+    const o = await ownerOf(curve, rpc);
+    return o?.owner === LAUNCHLAB_PROGRAM ? { venue: "launchlab", poolVenue: w.venue, curve } : null;
+  }
   if (w.venue === "damm") {
     const a = await rpc<{ value?: { data?: [string, string] } | null }>("getAccountInfo", [w.pool, { encoding: "base64", dataSlice: { offset: DAMM_CREATOR_AT, length: 32 } }]).catch(() => null);
     const raw = a?.value?.data?.[0] ? Buffer.from(a.value.data[0], "base64") : null;
@@ -157,8 +165,8 @@ export async function findPool(mint: string, rpc: Rpc, fetchFn: typeof fetch = f
       const sol = p.quoteToken?.address === WSOL || p.baseToken?.address === WSOL;
       if (what.kind === "raydium" && !sol) continue;
       const w: Where = { ...what, pool: p.pairAddress!, listedAt: p.pairCreatedAt ?? null, dex: dexReadOf(p) };
-      // A DAMM pool is read only as a Meteora coin's graduation.
-      const grad = what.venue === "damm" ? await graduatedFrom(mint, w, rpc) : null;
+      // A DAMM pool is read only as a Meteora coin's graduation; a Raydium pool may be a LaunchLab coin's.
+      const grad = what.kind === "raydium" ? await graduatedFrom(mint, w, rpc) : null;
       if (grad) return { ...w, ...grad };
       if (what.venue === "damm") continue;
       return w;
