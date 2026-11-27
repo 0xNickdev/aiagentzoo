@@ -9,14 +9,14 @@
 
 **See who you are buying from. Live on-chain x-ray for Solana launches.**
 
-[![Winner](https://img.shields.io/badge/Winner-Best%20Consumer%20App%20%C2%B7%20Encode%20x%20Solana%20Hackathon%202026-d4af37?labelColor=000000&logo=solana&logoColor=d4af37&style=for-the-badge)](#recognition)
-[![Encode x Solana](https://img.shields.io/badge/Encode%20x%20Solana-Accelerator-000000?logo=solana&logoColor=white&style=for-the-badge)](#recognition)
-[![Website](https://img.shields.io/badge/website-zooaiagency.com-000000?style=for-the-badge)](https://zooaiagency.com)
-[![X](https://img.shields.io/badge/X-%40ZOOClawAgency-000000?logo=x&logoColor=white&style=for-the-badge)](https://x.com/zooclawagency)
-[![Telegram bot](https://img.shields.io/badge/Telegram-%40zooaiagency__bot-000000?logo=telegram&logoColor=white&style=for-the-badge)](https://t.me/zooaiagency_bot)
-[![Chrome extension](https://img.shields.io/badge/Chrome-extension-000000?logo=googlechrome&logoColor=white&style=for-the-badge)](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl)
-[![License: MIT](https://img.shields.io/badge/license-MIT-000000.svg?style=for-the-badge)](LICENSE)
-[![$ZOOAGENCY](https://img.shields.io/badge/%24ZOOAGENCY-2dZn4n...EoS6B-000000?logo=solana&logoColor=white&style=for-the-badge)](https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B)
+[![Winner](.github/badges/winner.svg)](#recognition)
+[![Encode x Solana](.github/badges/encode-x-solana.svg)](#recognition)
+[![Website](.github/badges/website.svg)](https://zooaiagency.com)
+[![X](.github/badges/x.svg)](https://x.com/zooclawagency)
+[![Telegram bot](.github/badges/telegram-bot.svg)](https://t.me/zooaiagency_bot)
+[![Chrome extension](.github/badges/chrome-extension.svg)](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl)
+[![License: MIT](.github/badges/license-mit.svg)](LICENSE)
+[![$ZOOAGENCY](.github/badges/zooagency.svg)](https://solscan.io/token/2dZn4npTgAexBYquT3UqQXGiBdZf4F9tDTw419jEoS6B)
 [![CI](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNickdev/aiagentzoo/actions/workflows/ci.yml)
 
 [**X-Ray**](https://zooaiagency.com/xray) · [**Live feed**](https://zooaiagency.com/feed) · [**Runner radar**](https://zooaiagency.com/radar) · [**Chrome extension**](https://chromewebstore.google.com/detail/zooai-x-ray/jbkieaokkiiajaeclogolieicogbkndl) · [**Telegram bot**](https://t.me/zooaiagency_bot) · [**API for agents**](https://zooaiagency.com/skill.md) · [**Roadmap**](https://zooaiagency.com/roadmap) · [**$ZOOAGENCY**](https://zooaiagency.com/token)
