@@ -429,3 +429,4 @@
 .x-award:hover { border-color: var(--fg, #fff); color: var(--fg, #fff); }
 .x-award b { padding: 2px 9px; border-radius: 999px; background: var(--fg, #fff); color: var(--bg, #000); font-weight: 600; font-size: 12px; }
 .x-award span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .x-award { border-radius: 14px; align-items: flex-start; } .x-award span { white-space: normal; line-height: 1.35; } }
