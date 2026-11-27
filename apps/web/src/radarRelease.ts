@@ -1,5 +1,5 @@
 /** The runner radar opens to holders at this moment; before it the page shows a countdown. */
-export const RADAR_RELEASE_AT = Date.parse("2026-11-27T07:00:00Z");
+export const RADAR_RELEASE_AT = Date.parse("2026-11-27T17:00:00Z");
 
 export const radarPreview = () => {
   try {
