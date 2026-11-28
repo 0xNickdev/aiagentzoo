@@ -250,16 +250,16 @@ export function RadarLive() {
       {best && best.outcome && best.outcome.peakX >= 2 ? (
         <a
           href={`/xray?mint=${best.mint}`}
-          className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-[10px] border border-line bg-panel px-4 py-3 hover:border-line-2"
+          className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-[10px] border border-line bg-panel px-4 py-3 text-[14px] text-fg-2 hover:border-line-2"
         >
-          <span className="text-[12px] text-faint">{t("best signal of the last 24 hours")}</span>
-          <span className="text-[18px] font-medium tracking-[-0.02em] text-white">${best.symbol}</span>
-          <span className="text-[26px] font-semibold tracking-[-0.03em] text-white tabular-nums">{times(best.outcome.peakX)}</span>
-          <span className="text-[12.5px] text-fg-2">
+          <span className="text-faint">{t("best signal of the last 24 hours")}:</span>
+          <span className="font-medium text-white">${best.symbol}</span>
+          <span className="font-medium text-white tabular-nums">{times(best.outcome.peakX)}</span>
+          <span className="tabular-nums">
             {sol(best.capAtSignal)} → {sol(best.outcome.peakCap)} {t("from signal to peak")}
-            {best.outcome.graduated ? ` · ${t("graduated")}` : ""}
+            {best.outcome.graduated ? `, ${t("graduated")}` : ""}
           </span>
-          <span className="ml-auto text-[12px] text-faint">{t("{a} ago", { a: ago(best.at) })} · X-Ray ↗</span>
+          <span className="ml-auto text-faint">{t("{a} ago", { a: ago(best.at) })} · X-Ray ↗</span>
         </a>
       ) : null}
       <div className="grid gap-3 lg:grid-cols-12">
