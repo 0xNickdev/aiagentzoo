@@ -1,5 +1,6 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "peak": "峰值",
   "soon": "即将",
   "hours": "小时",
   "minutes": "分钟",

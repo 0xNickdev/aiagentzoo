@@ -59,8 +59,12 @@ const usdShort = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v
 const sol = (v: number | null | undefined) => (v == null ? "-" : radarSolUsd ? usdShort(v * radarSolUsd) : `${v >= 100 ? Math.round(v) : v.toFixed(1)} SOL`);
 /** "237 SOL cap at 5 minutes" in dollars when the price is known. */
 const dollarReason = (r: string) => {
+  if (!radarSolUsd) return r;
   const m = /^([\d.]+) SOL cap at 5 minutes$/.exec(r);
-  return m && radarSolUsd ? `${usdShort(Number(m[1]) * radarSolUsd)} cap at 5 minutes` : r;
+  if (m) return `${usdShort(Number(m[1]) * radarSolUsd)} cap at 5 minutes`;
+  const n = /^([\d.]+) SOL in$/.exec(r);
+  if (n) return `${usdShort(Number(n[1]) * radarSolUsd)} in`;
+  return r;
 };
 const times = (v: number | null | undefined) => (v == null ? "-" : `${v >= 10 ? Math.round(v) : v.toFixed(1)}x`);
 
@@ -385,6 +389,12 @@ const Now = ({ s }: { s: Signal }) => (
     <span className="text-dim">
       <Morph value={s.xNow} format={times} />
     </span>
+    {s.outcome && s.outcome.peakX > (s.xNow ?? 0) ? (
+      <span className="block text-[11.5px] text-faint">
+        {t("peak")} <span className="text-fg-2">{sol(s.outcome.peakCap)}</span> {times(s.outcome.peakX)}
+        {s.outcome.graduated ? ` · ${t("graduated")}` : ""}
+      </span>
+    ) : null}
   </Wash>
 );
 
