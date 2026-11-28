@@ -155,26 +155,169 @@ function fromStandard(w: StandardWallet): SolanaProvider {
   };
 }
 
-/** The first Solana wallet in the standard list that can connect and sign a message. */
-function standardProvider(): SolanaProvider | undefined {
-  const w = standardWallets.find((x) => x.chains.some((c) => c.startsWith("solana:")) && x.features["standard:connect"] && x.features["solana:signMessage"]);
-  return w ? fromStandard(w) : undefined;
+declare global {
+  interface Window {
+    okxwallet?: { solana?: SolanaProvider };
+    coinbaseSolana?: SolanaProvider;
+    trustwallet?: { solana?: SolanaProvider };
+    jupiter?: { solana?: SolanaProvider };
+  }
 }
 
-let standardCached: { wallet: StandardWallet; provider: SolanaProvider } | null = null;
-function provider(): SolanaProvider | undefined {
-  const injected = window.phantom?.solana ?? window.solflare ?? window.backpack?.solana;
-  if (injected) return injected;
-  // The same standard wallet keeps one adapter, so a connect and the signature after it share the account.
-  const first = standardWallets.find((x) => x.chains.some((c) => c.startsWith("solana:")) && x.features["standard:connect"] && x.features["solana:signMessage"]);
-  if (first) {
-    if (standardCached?.wallet !== first) standardCached = { wallet: first, provider: fromStandard(first) };
-    return standardCached.provider;
+export interface WalletOption {
+  id: string;
+  name: string;
+  provider: SolanaProvider;
+}
+
+const standardAdapters = new Map<StandardWallet, SolanaProvider>();
+const isStandardSolana = (x: StandardWallet) => x.chains.some((c) => c.startsWith("solana:")) && !!x.features["standard:connect"] && !!x.features["solana:signMessage"];
+const norm = (n: string) => n.toLowerCase().replace(/[^a-z]/g, "").replace(/wallet$/, "");
+
+/** Every Solana wallet on the page: injected globals first, then Wallet Standard wallets not already listed. */
+export function listWallets(): WalletOption[] {
+  if (typeof window === "undefined") return [];
+  const out: WalletOption[] = [];
+  const seen = new Set<unknown>();
+  const add = (id: string, name: string, p: SolanaProvider | undefined) => {
+    if (!p || seen.has(p) || typeof p.connect !== "function" || typeof p.signMessage !== "function") return;
+    seen.add(p);
+    out.push({ id, name, provider: p });
+  };
+  const w = window;
+  add("phantom", "Phantom", w.phantom?.solana);
+  add("okx", "OKX Wallet", w.okxwallet?.solana);
+  add("backpack", "Backpack", w.backpack?.solana);
+  add("solflare", "Solflare", w.solflare);
+  add("jupiter", "Jupiter", w.jupiter?.solana);
+  add("coinbase", "Coinbase Wallet", w.coinbaseSolana);
+  add("trust", "Trust Wallet", w.trustwallet?.solana);
+  for (const sw of standardWallets.filter(isStandardSolana)) {
+    if (out.some((o) => norm(o.name) === norm(sw.name))) continue;
+    let p = standardAdapters.get(sw);
+    if (!p) standardAdapters.set(sw, (p = fromStandard(sw)));
+    add(`std:${sw.name}`, sw.name, p);
   }
-  return window.solana ?? standardProvider();
+  const generic = w.solana;
+  if (generic && !seen.has(generic)) {
+    const g = generic as SolanaProvider & Record<string, unknown>;
+    const name = g.isOkxWallet || g.isOKExWallet ? "OKX Wallet" : g.isTrust || g.isTrustWallet ? "Trust Wallet" : g.isCoinbaseWallet ? "Coinbase Wallet" : g.isBackpack ? "Backpack" : "Solana wallet";
+    if (!out.some((o) => o.name === name)) add("solana", name, generic);
+  }
+  return out;
+}
+
+const WALLET_KEY = "aiagentzoo:wallet";
+let chosenId: string | null = (() => {
+  try {
+    return localStorage.getItem(WALLET_KEY);
+  } catch {
+    return null;
+  }
+})();
+function choose(id: string | null) {
+  chosenId = id;
+  try {
+    if (id) localStorage.setItem(WALLET_KEY, id);
+    else localStorage.removeItem(WALLET_KEY);
+  } catch {
+    /* storage blocked */
+  }
+}
+
+function provider(): SolanaProvider | undefined {
+  const all = listWallets();
+  return (all.find((o) => o.id === chosenId) ?? all[0])?.provider;
 }
 /** The injected wallet, for the swap: connect, sign and send, no session needed. */
 export const walletProvider = provider;
+
+const B58MAP = new Map([...B58].map((c, i) => [c, i]));
+function fromBase58(str: string): Uint8Array | null {
+  let n = 0n;
+  for (const c of str) {
+    const v = B58MAP.get(c);
+    if (v === undefined) return null;
+    n = n * 58n + BigInt(v);
+  }
+  const bytes: number[] = [];
+  while (n > 0n) {
+    bytes.unshift(Number(n & 255n));
+    n >>= 8n;
+  }
+  for (const c of str) {
+    if (c !== "1") break;
+    bytes.unshift(0);
+  }
+  return new Uint8Array(bytes);
+}
+
+/** Wallets hand the signature back in different shapes: bytes, {signature}, number arrays, base58, hex or base64 strings. */
+export function signatureBytes(out: unknown): Uint8Array {
+  let v: unknown = out;
+  if (v && typeof v === "object" && !(v instanceof Uint8Array) && !Array.isArray(v) && "signature" in v) v = (v as { signature: unknown }).signature;
+  if (v && typeof v === "object" && !(v instanceof Uint8Array) && !Array.isArray(v) && "data" in v) v = (v as { data: unknown }).data;
+  if (v instanceof Uint8Array) return new Uint8Array(v);
+  if (v instanceof ArrayBuffer) return new Uint8Array(v);
+  if (Array.isArray(v)) return Uint8Array.from(v as number[]);
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (/^(0x)?[0-9a-fA-F]{128}$/.test(s)) return Uint8Array.from(s.replace(/^0x/, "").match(/../g)!.map((h) => parseInt(h, 16)));
+    const b58 = fromBase58(s);
+    if (b58 && b58.length === 64) return b58;
+    try {
+      const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+      if (bin.length === 64) return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    } catch {
+      /* not base64 */
+    }
+  }
+  throw new Error("The wallet returned a signature this site cannot read.");
+}
+
+/* ---------- wallet picker ---------- */
+
+export type PickerState = { mode: "pick"; wallets: WalletOption[] } | { mode: "none" } | null;
+let picker: PickerState = null;
+let pickerResolve: ((w: WalletOption | null) => void) | null = null;
+const pickerListeners = new Set<(p: PickerState) => void>();
+function setPicker(p: PickerState) {
+  picker = p;
+  for (const l of pickerListeners) l(p);
+}
+/** Called by the picker UI: a wallet, or null for cancel. */
+export function resolvePicker(w: WalletOption | null) {
+  const r = pickerResolve;
+  pickerResolve = null;
+  setPicker(null);
+  r?.(w);
+}
+export function usePicker(): PickerState {
+  const [p, setP] = useState<PickerState>(picker);
+  useEffect(() => {
+    pickerListeners.add(setP);
+    return () => void pickerListeners.delete(setP);
+  }, []);
+  return p;
+}
+function askWallet(wallets: WalletOption[]): Promise<WalletOption | null> {
+  pickerResolve?.(null);
+  return new Promise((res) => {
+    pickerResolve = res;
+    setPicker(wallets.length ? { mode: "pick", wallets } : { mode: "none" });
+  });
+}
+
+/** Links that reopen this page inside a wallet app's browser, for phones without an injected wallet. */
+export function walletAppLinks(): Array<{ name: string; href: string }> {
+  const url = window.location.href;
+  return [
+    { name: "Phantom", href: `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(window.location.origin)}` },
+    { name: "OKX Wallet", href: `okx://wallet/dapp/url?dappUrl=${encodeURIComponent(url)}` },
+    { name: "Solflare", href: `https://solflare.com/ul/v1/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(window.location.origin)}` },
+  ];
+}
+export const isMobile = () => typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 export interface GuardianSession {
   publicKey: string;
@@ -237,23 +380,25 @@ export function useGuardian() {
     return () => void listeners.delete(setSession);
   }, []);
 
-  const signIn = useCallback(async () => {
-    const wallet = provider();
-    if (!wallet) {
-      window.open("https://phantom.com/download", "_blank", "noopener");
-      setError("Install a Solana wallet such as Phantom, Jupiter or Solflare, then try again.");
-      return;
-    }
-    setBusy(true);
+  const signIn = useCallback(async (opts?: { switching?: boolean }) => {
     setError(null);
+    const wallets = listWallets();
+    let option: WalletOption | null | undefined = opts?.switching ? undefined : wallets.find((o) => o.id === chosenId);
+    if (!option && wallets.length === 1 && !opts?.switching) option = wallets[0];
+    if (!option) option = await askWallet(wallets);
+    if (!option) return;
+    choose(option.id);
+    const wallet = option.provider;
+    setBusy(true);
     try {
-      const { publicKey } = await wallet.connect();
-      const address = publicKey.toString();
+      const connected = await (wallet.connect as (o?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey?: { toString(): string } } | undefined>)({ onlyIfTrusted: false });
+      const key = connected?.publicKey ?? wallet.publicKey;
+      if (!key) throw new Error("The wallet gave no account.");
+      const address = key.toString();
       const issued = new Date();
       const expires = new Date(issued.getTime() + SESSION_MS);
       const message = sessionMessage(address, issued.toISOString(), expires.toISOString());
-      const signed = await wallet.signMessage(new TextEncoder().encode(message), "utf8");
-      const bytes = signed instanceof Uint8Array ? signed : signed.signature;
+      const bytes = signatureBytes(await wallet.signMessage(new TextEncoder().encode(message), "utf8"));
       publish({ publicKey: address, message, signature: btoa(String.fromCharCode(...bytes)), expiresAt: expires.getTime() });
     } catch (e) {
       setError((e as Error).message || "Signing was cancelled.");
@@ -262,12 +407,22 @@ export function useGuardian() {
     }
   }, []);
 
-  const signOut = useCallback(() => {
-    void provider()?.disconnect?.();
+  const signOut = useCallback(async () => {
     publish(null);
+    try {
+      await provider()?.disconnect?.();
+    } catch {
+      /* some wallets throw on disconnect */
+    }
   }, []);
 
-  return { session, signIn, signOut, error, busy };
+  /** Sign out, then sign in again with a wallet and account picked fresh. */
+  const switchWallet = useCallback(async () => {
+    await signOut();
+    await signIn({ switching: true });
+  }, [signOut, signIn]);
+
+  return { session, signIn: () => signIn(), signOut, switchWallet, error, busy };
 }
 
 export const shortAddress = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;

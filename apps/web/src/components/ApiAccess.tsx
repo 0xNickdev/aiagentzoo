@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WalletChip } from "./WalletChip";
 import { nodeOf, shortAddress, useGuardian } from "../zoo";
 import { Panel } from "./site/Panel";
 import { pick } from "../i18n";
@@ -85,14 +86,14 @@ export default function ApiAccess() {
           </div>
         ) : session ? (
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-[12px] text-fg-2">{shortAddress(session.publicKey)}</span>
+            <WalletChip />
             <button type="button" disabled={working} onClick={getKey} className={btn}>
               {working ? pick("checking your holding…", "正在检查持仓…") : pick("Get my key", "获取密钥")}
             </button>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" disabled={busy} onClick={signIn} className={btn}>
+            <button type="button" disabled={busy} onClick={() => void signIn()} className={btn}>
               {pick("Sign in with your wallet", "用钱包登录")}
             </button>
             <span className="text-[12px] text-dim">{pick("A signature, not a transaction. It costs nothing.", "只是签名，不是交易，不花钱。")}</span>

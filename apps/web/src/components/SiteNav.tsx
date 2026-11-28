@@ -43,6 +43,8 @@ function useScrolledUnder(): boolean {
 }
 
 /** The site's top bar: glass over the page, the five things a trader uses, and $ZOOAGENCY on every page. `active` marks the page on documents outside the app router. */
+import { WalletChip, WalletPicker } from "./WalletChip";
+
 export default function SiteNav({ active }: { active?: string }) {
   const [open, setOpen] = useState(false);
   const appRoute = useRoute();
@@ -81,6 +83,7 @@ export default function SiteNav({ active }: { active?: string }) {
         </div>
         <span className="flex-1" />
         <div className="hidden items-center gap-3 lg:flex">
+          <WalletChip />
           <LangSwitch />
           <TokenChip />
         </div>
@@ -94,6 +97,7 @@ export default function SiteNav({ active }: { active?: string }) {
           {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </nav>
+      <WalletPicker />
 
       {open && (
         <div className="border-t border-line bg-night px-4 pb-5 pt-2 lg:hidden">
@@ -115,6 +119,7 @@ export default function SiteNav({ active }: { active?: string }) {
             ))}
           </div>
           <TokenCard id="menu-ca" className="mt-4" />
+          <WalletChip className="mt-4" />
           <LangSwitch className="mt-4 w-fit" />
         </div>
       )}

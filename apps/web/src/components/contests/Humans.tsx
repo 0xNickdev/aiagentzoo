@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WalletChip } from "../WalletChip";
 import { nodeOf, useGuardian } from "../../zoo";
 import { t, tChain } from "../../i18n";
 import { BOT_URL } from "../../links";
@@ -83,7 +84,7 @@ export default function Humans() {
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="font-mono text-[12px] text-dim">{`${session.publicKey.slice(0, 4)}…${session.publicKey.slice(-4)}`}</span>
+              <WalletChip />
               {tg ? (
                 <a href={`${BOT_URL}?start=link-${tg.code}`} target="_blank" rel="noopener noreferrer" className={BTN}>
                   {t("Open the bot to link ↗")}

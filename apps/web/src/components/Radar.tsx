@@ -1,4 +1,5 @@
 import { useReducedMotion } from "framer-motion";
+import { WalletChip } from "./WalletChip";
 import { useEffect, useRef, useState } from "react";
 import { NODE_URLS } from "../sim/live";
 import { t, tChain } from "../i18n";
@@ -347,7 +348,7 @@ export function RadarLive() {
               ) : (
                 <Btn onClick={() => void linkTelegram()}>{t("Link Telegram")}</Btn>
               )}
-              {session && <span className="font-mono text-[12px] text-dim">{shortAddress(session.publicKey)}</span>}
+              <WalletChip />
             </div>
             {tg && (
               <p className="mt-2 text-[12px] text-dim">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WalletChip } from "../WalletChip";
 import { chainOf } from "../../chain";
 import { t, tChain } from "../../i18n";
 import { NODE_URLS } from "../../sim/live";
@@ -98,6 +99,7 @@ function BuildCheck({ mint }: { mint: string }) {
           {t("Check the code against the claims")}
           <small>{t("holders")}</small>
         </button>
+        <WalletChip className="mt-2" />
       </div>
     );
   }
