@@ -142,7 +142,7 @@ export function fundingIn(tx: ParsedTx | null, wallet: string): string | null {
   return payer;
 }
 
-export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" | "long"; err?: string };
+export type FunderRead = { funder: string | null; why: "found" | "none" | "rpc" | "long"; err?: string; /** The wallet's first transaction (ms), when its history start was read. */ firstAt?: number };
 /**
  * The wallet that first sent SOL into `wallet`, and why not when there is none: "none" is an answer (the history holds
  * no funding), "rpc" is a failed read worth asking again, "long" a history too deep to page back to its start.
@@ -204,6 +204,9 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
     if (pages === 1) keepWhole(wallet, sigs);
   }
   if (!sigs.length) return { funder: null, why: "none" };
+  // Oldest first here: its time is the wallet's age, free with the read.
+  const firstAt = typeof sigs[0]!.blockTime === "number" ? sigs[0]!.blockTime * 1000 : undefined;
+  const age = firstAt != null ? { firstAt } : {};
   // Oldest first: the funding is nearly always the first or second transaction, so those two are read before the rest.
   const get = (list: Sig[]) => Promise.all(list.map(({ signature }) => readTx(signature, fetchFn)));
   const txs = await get(sigs.slice(0, 2));
@@ -215,9 +218,9 @@ export async function readFunder(wallet: string, fetchFn: typeof fetch): Promise
       continue;
     }
     const from = fundingIn(t.result, wallet);
-    if (from) return { funder: from, why: "found" };
+    if (from) return { funder: from, why: "found", ...age };
   }
-  return failed ? { funder: null, why: "rpc", err: failed } : { funder: null, why: "none" };
+  return failed ? { funder: null, why: "rpc", err: failed } : { funder: null, why: "none", ...age };
 }
 
 /**

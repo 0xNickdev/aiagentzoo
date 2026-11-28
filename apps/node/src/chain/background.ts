@@ -1,6 +1,8 @@
 import { Worker } from "node:worker_threads";
 import type { RadarRecord } from "./radar-record.ts";
 import type { Mark20 } from "./radar.ts";
+import type { BuyerRow } from "./radar-buyers.ts";
+import type { WalletQuality } from "./wallet-quality.ts";
 import { PNL, type SmartWallets, WalletLedger } from "./walletpnl.ts";
 
 /**
@@ -37,6 +39,10 @@ export type BgIn =
   | { t: "clusters"; id: number; clusters: Array<string | null> }
   | { t: "graph" }
   | { t: "score" }
+  /** A radar candidate's first 100 buyers at minute twenty, for the slim buyer record. */
+  | { t: "buyers"; mint: string; at: number; rows: BuyerRow[] }
+  /** A new candidate's first 30 buyers (wallet, first buy ms), for the wallet-quality read from history. */
+  | { t: "quality?"; mint: string; buyers: Array<{ wallet: string; at: number }> }
   | { t: "stop" };
 
 export type BgOut =
@@ -47,6 +53,7 @@ export type BgOut =
   | { t: "record"; record: RadarRecord }
   /** Minute-20 marks of radar candidates still waiting for their stage, for the main thread to decide. */
   | { t: "min20"; rows: Mark20[] }
+  | { t: "quality"; mint: string; q: WalletQuality }
   | { t: "clusters?"; id: number; wallets: string[] }
   | { t: "stopped" };
 

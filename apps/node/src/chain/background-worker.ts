@@ -8,6 +8,8 @@ import { DatabaseSync } from "node:sqlite";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parentPort, workerData } from "node:worker_threads";
 import { RecordBuilder } from "./radar-record.ts";
+import { QualityReader } from "./wallet-quality.ts";
+import { type BuyerRow, ensureBuyers, pruneBuyers, writeBuyers } from "./radar-buyers.ts";
 import { OPGRAPH, OperatorGraph } from "./opgraph.ts";
 import { type PnlRows, SmartWallets, WalletLedger } from "./walletpnl.ts";
 import type { BgIn, BgOut, BgOptions, PrintTie } from "./background.ts";
@@ -150,10 +152,25 @@ port.on("message", (m: BgIn) => {
     case "score":
       void score();
       break;
+    case "quality?":
+      void (async () => {
+        try {
+          quality ??= new QualityReader(db);
+          const q = await retry("wallet quality", () => quality!.read(m.buyers));
+          post({ t: "quality", mint: m.mint, q });
+        } catch (error) {
+          log(`wallet quality not read: ${(error as Error).message}`);
+        }
+      })();
+      break;
+    case "buyers":
+      buyerQueue.push(m);
+      void writeBuyerQueue();
+      break;
     case "stop":
       stopped = true;
       void (async () => {
-        while (writing || graphBusy || recording) await sleep(10);
+        while (writing || graphBusy || recording || buyersWriting) await sleep(10);
         try {
           db.close();
         } catch {
@@ -215,5 +232,45 @@ if (record) {
 if (ledger && smart) {
   setTimeout(() => void score(), o.scoreFirstMs ?? 60 * 60_000);
   setInterval(() => void score(), 24 * 3_600_000);
+}
+// The radar's slim buyer record: one short transaction per coin, a pause between, pruned past 14 days every hour.
+let quality: QualityReader | null = null;
+const buyerQueue: Array<{ mint: string; at: number; rows: BuyerRow[] }> = [];
+let buyersWriting = false;
+let buyersReady = false;
+async function writeBuyerQueue(): Promise<void> {
+  if (buyersWriting) return;
+  buyersWriting = true;
+  try {
+    if (!buyersReady) {
+      await retry("radar buyers", () => ensureBuyers(db));
+      buyersReady = true;
+    }
+    while (buyerQueue.length && !stopped) {
+      const b = buyerQueue.shift()!;
+      await retry("radar buyers", () => writeBuyers(db, b.mint, b.at, b.rows));
+      await sleep(pauseMs);
+    }
+  } catch (error) {
+    log(`radar buyers not written: ${(error as Error).message}`);
+  } finally {
+    buyersWriting = false;
+  }
+}
+if (o.record) {
+  setInterval(() => {
+    void (async () => {
+      if (!buyersReady || buyersWriting || stopped) return;
+      buyersWriting = true;
+      try {
+        const n = await retry("radar buyers prune", () => pruneBuyers(db));
+        if (n) log(`radar buyers: pruned ${n} rows past 14 days`);
+      } catch (error) {
+        log(`radar buyers not pruned: ${(error as Error).message}`);
+      } finally {
+        buyersWriting = false;
+      }
+    })();
+  }, 3_600_000);
 }
 post({ t: "ready" });

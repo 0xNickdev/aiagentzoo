@@ -190,7 +190,43 @@ if (config.role === "north") {
   setInterval(() => {
     try {
       writeMarks(join(config.dataDir, "chain-marks.jsonl"), Date.now(), (row, info) => {
-        radar?.consider(row, info);
+        if (!radar) return;
+        // A candidate at minute twenty: its first 100 buyers as they stand now go to the slim buyer record (written in
+        // the worker), and how many of the first 30 still hold feeds the organic label.
+        let held30: { held: number; of: number } | null = null;
+        let chainAge: { fresh: number; known: number } | null = null;
+        if (row.min === 20 && radar.has(row.mint)) {
+          try {
+            const first = tape.firstBuyersOf(row.mint, 100);
+            const f30 = first.slice(0, 30);
+            if (f30.length) held30 = { held: f30.filter((b) => b.holding).length, of: f30.length };
+            const created = tape.createdAtOf(row.mint) ?? row.createdAt;
+            let fresh = 0;
+            let known = 0;
+            for (const b of f30) {
+              const first = sideWallets.firstTxOf(b.wallet);
+              if (first == null) continue;
+              known++;
+              if (created + b.afterMs - first < 24 * 3_600_000) fresh++;
+            }
+            if (known) chainAge = { fresh, known };
+            if (first.length) background?.send({ t: "buyers", mint: row.mint, at: row.at, rows: first });
+          } catch (error) {
+            console.log(`[${config.id}] radar buyers not read: ${(error as Error).message}`);
+          }
+        }
+        const sig = radar.consider(row, { ...info, held30, chainAge });
+        // A new minute-5 candidate: its first 30 buyers' funders traced, at most 2k new wallets a day.
+        if (sig && row.min === 5) {
+          try {
+            const f30 = tape.firstBuyersOf(row.mint, 30);
+            const created = tape.createdAtOf(row.mint) ?? row.createdAt;
+            background?.send({ t: "quality?", mint: row.mint, buyers: f30.map((b) => ({ wallet: b.wallet, at: created + b.afterMs })) });
+            sideWallets.enqueueBudgeted(f30.map((b) => b.wallet), Number(process.env.ZOO_RADAR_FUNDERS_PER_DAY ?? 2_000));
+          } catch {
+            /* traced another time */
+          }
+        }
         try {
           radarV2?.consider(row as unknown as V2Row, info);
         } catch (error) {
@@ -269,6 +305,7 @@ const background = history && (opGraphOn || walletPnlOn || radar)
       {
         onMessage: (m) => {
           if (m.t === "record") radarRecord = m.record;
+          if (m.t === "quality" && radar) radar.setQuality(m.mint, m.q);
           if (m.t === "min20" && radar) console.log(`[${config.id}] radar backfill: ${radar.backfill(m.rows)} of ${m.rows.length} candidates confirmed at minute 20`);
         },
         ledger: walletLedger,

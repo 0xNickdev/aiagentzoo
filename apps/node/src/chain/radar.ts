@@ -1,5 +1,7 @@
 import { appendFileSync, closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from "node:fs";
 import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { type Organic, organicOf } from "./organic.ts";
+import type { WalletQuality } from "./wallet-quality.ts";
 
 /**
  * The runner radar: the logistic models frozen on 21 Nov 2026 (the silent trial on the VPS, ~/runner-trial), scored
@@ -184,7 +186,15 @@ export interface Outcome {
   peakX: number;
   graduated: boolean;
   checkedAt: number;
+  /** The cap 1, 2, 6 and 24 hours after the signal (after the confirmation once confirmed), SOL; null when the coin had left the tape. Added 28 Nov. */
+  capAt1h?: number | null;
+  capAt2h?: number | null;
+  capAt6h?: number | null;
+  capAt24h?: number | null;
 }
+
+/** The checkpoints after the signal at which the cap is written down once. */
+export const CAP_AFTER = [["capAt1h", 1], ["capAt2h", 2], ["capAt6h", 6], ["capAt24h", 24]] as const;
 
 /**
  * A signal fires at minute five as a candidate and is confirmed at minute twenty, or not: the coin must be up at least
@@ -228,6 +238,20 @@ export interface Mark20 {
   curveSol: number | null;
   graduated: boolean | null;
   creatorSoldPct: number | null;
+  /** The live minute-20 reading also carries these, for the organic label (the backfill does not). */
+  buyers?: number | null;
+  buys?: number | null;
+  sells?: number | null;
+  solIn?: number | null;
+  solOut?: number | null;
+  creatorFeesSol?: number | null;
+}
+
+/** What the main thread adds to a minute-20 reading from the tape: how many of the first 30 buyers still hold. */
+export interface At20Extra {
+  held30?: { held: number; of: number } | null;
+  /** Of the first 30 buyers with a traced first transaction, how many made it under a day before buying. */
+  chainAge?: { fresh: number; known: number } | null;
 }
 
 export interface Signal {
@@ -252,6 +276,12 @@ export interface Signal {
   models: Array<"RB" | "G">;
   scores: { RB: number; G: number };
   reasons: string[];
+  /** Buys and sells at minute five, for the sell ramp of the organic label. */
+  at5?: { buys: number | null; sells: number | null };
+  /** The organic label from the minute-20 reading: a label only, nothing is hidden by it. */
+  organic?: Organic;
+  /** How seasoned the first 30 buyers were (history.db, read at minute five in the worker), plus on-chain age where traced. */
+  wallets?: WalletQuality & { chainFresh?: number; chainKnown?: number };
   outcome?: Outcome;
 }
 
@@ -343,10 +373,17 @@ export class Radar {
       }
       if (x.kind === "outcome") {
         const s = this.byMint.get(x.mint);
-        if (s) s.outcome = { peakCap: x.peakCap, peakX: x.peakX, graduated: x.graduated, checkedAt: x.checkedAt };
+        if (s) {
+          s.outcome = { peakCap: x.peakCap, peakX: x.peakX, graduated: x.graduated, checkedAt: x.checkedAt };
+          for (const [k] of CAP_AFTER) if (x[k] !== undefined) s.outcome[k] = x[k];
+        }
       } else if (x.kind === "stage") {
         const s = this.byMint.get(x.mint);
         if (s) applyStage(s, x);
+      } else if ((x as { kind?: string }).kind === "quality") {
+        const q = x as unknown as { mint: string; q: WalletQuality };
+        const s = this.byMint.get(q.mint);
+        if (s && !s.wallets) s.wallets = q.q;
       } else if (now - x.at <= KEEP_MS && !this.byMint.has(x.mint)) {
         x.stage ??= "candidate";
         x.capAt5 ??= x.capAtSignal;
@@ -431,8 +468,8 @@ export class Radar {
    * One 5-minute reading. Coins the trial does not grade (graduated already, adopted, mayhem, non-SOL) never signal:
    * the caller passes `skip` for what the mark line does not say.
    */
-  consider(x: MarkRow, info: { symbol: string; skip?: boolean }, now = Date.now()): Signal | null {
-    if (x.min === 20) return this.confirm(x, true);
+  consider(x: MarkRow, info: { symbol: string; skip?: boolean } & At20Extra, now = Date.now()): Signal | null {
+    if (x.min === 20) return this.confirm(x, true, info);
     if (x.min !== 5 || x.graduated || info.skip || this.byMint.has(x.mint)) return null;
     const l = this.lookup(x.mint);
     if (!l) return null;
@@ -457,6 +494,7 @@ export class Radar {
       models: j.models,
       scores: { RB: r3(j.scores.RB), G: r3(j.scores.G) },
       reasons: reasonsOf(this.frozen.models[lead], f),
+      at5: { buys: x.buys, sells: x.sells },
     };
     this.list.unshift(s);
     this.byMint.set(s.mint, s);
@@ -468,7 +506,20 @@ export class Radar {
    * The minute-20 reading of a candidate: confirmed or rejected, once, with a stage line in the file. Returns the
    * signal when it is confirmed. `live` reads the tape's cap for a coin graduated by then; the backfill cannot.
    */
-  private confirm(x: Mark20, live: boolean): Signal | null {
+  /** The wallet-quality read of a candidate's first buyers, from the worker: kept on the signal and in the file. */
+  setQuality(mint: string, q: WalletQuality): void {
+    const s = this.byMint.get(mint);
+    if (!s || s.wallets) return;
+    s.wallets = q;
+    this.append({ kind: "quality", mint, q });
+  }
+
+  /** Whether this mint is a signal the radar keeps (any stage). */
+  has(mint: string): boolean {
+    return this.byMint.has(mint);
+  }
+
+  private confirm(x: Mark20, live: boolean, extra: At20Extra = {}): Signal | null {
     const s = this.byMint.get(x.mint);
     if (!s || (s.stage ?? "candidate") !== "candidate") return null;
     const graduated = Boolean(x.graduated);
@@ -489,7 +540,16 @@ export class Radar {
     }
     const capAt5 = s.capAt5 ?? s.capAtSignal;
     const ok = confirms(capAt5, { cap, graduated, devSold: x.creatorSoldPct, poolSol });
-    const line: StageLine = { kind: "stage", mint: s.mint, stage: ok ? "confirmed" : "rejected", at: x.at, capAt20: r1(cap ?? 0), devSold: x.creatorSoldPct, graduated, ...(graduated ? { poolSol: poolSol == null ? null : r1(poolSol) } : {}) };
+    let organic: Organic | null = null;
+    if (live) {
+      try {
+        organic = organicOf({ buyers: x.buyers ?? null, buys: x.buys ?? null, sells: x.sells ?? null, solIn: x.solIn ?? null, solOut: x.solOut, creatorFeesSol: x.creatorFeesSol, buys5: s.at5?.buys, sells5: s.at5?.sells, held30: extra.held30, wallets: s.wallets });
+        if (s.wallets && extra.chainAge) s.wallets = { ...s.wallets, chainFresh: extra.chainAge.fresh, chainKnown: extra.chainAge.known };
+      } catch {
+        /* the stage stands without a label */
+      }
+    }
+    const line: StageLine = { kind: "stage", mint: s.mint, stage: ok ? "confirmed" : "rejected", at: x.at, capAt20: r1(cap ?? 0), devSold: x.creatorSoldPct, graduated, ...(graduated ? { poolSol: poolSol == null ? null : r1(poolSol) } : {}), ...(organic ? { organic } : {}), ...(s.wallets ? { wallets: s.wallets } : {}) };
     applyStage(s, line);
     this.append(line);
     return ok ? s : null;
@@ -555,7 +615,16 @@ export class Radar {
       if (h?.cap_peak != null && h.cap_peak_at != null && h.cap_peak_at > from && h.cap_peak > peak) peak = h.cap_peak;
       if (h?.graduated_at != null && h.graduated_at > from) graduated = true;
       const next: Outcome = { peakCap: r1(peak), peakX: r1(peak / Math.max(sig.capAtSignal, 1e-9)), graduated, checkedAt: now };
-      const changed = !sig.outcome || next.peakCap !== o.peakCap || next.graduated !== o.graduated;
+      let marked = false;
+      for (const [k, h] of CAP_AFTER) {
+        if (o[k] !== undefined) next[k] = o[k];
+        else if (now - from >= h * 3_600_000) {
+          // Written once, at the first refresh past the checkpoint (a restart late by hours reads it late, not never).
+          next[k] = live?.cap != null ? r1(live.cap) : null;
+          marked = true;
+        }
+      }
+      const changed = !sig.outcome || marked || next.peakCap !== o.peakCap || next.graduated !== o.graduated;
       sig.outcome = next;
       if (changed) this.append({ kind: "outcome", mint: sig.mint, ...next });
     }
@@ -604,9 +673,15 @@ export interface StageLine {
   graduated: boolean;
   /** SOL in the pool at minute twenty, on lines for a coin graduated by then (absent on the first rule's lines). */
   poolSol?: number | null;
+  /** The organic label from the live minute-20 reading (added 28 Nov). */
+  organic?: Organic;
+  /** The wallet-quality aggregates as they stood at minute twenty, for the regrade. */
+  wallets?: Signal["wallets"];
 }
 
 function applyStage(s: Signal, l: StageLine) {
+  if (l.organic) s.organic = l.organic;
+  if (l.wallets) s.wallets = l.wallets;
   if (l.stage === "rejected") {
     s.stage = "rejected";
     return;

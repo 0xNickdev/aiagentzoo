@@ -159,6 +159,20 @@ const CHAIN: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+) early wallets? with a runner record$/, (m) => `${m[1]} 个早期钱包有拉盘战绩`],
   [/^(\d+) first-second wallets$/, (m) => `首秒钱包 ${m[1]} 个`],
   [/^only (\d+) first-second wallets$/, (m) => `首秒钱包只有 ${m[1]} 个`],
+  // The organic label (apps/node/src/chain/organic.ts).
+  [/^(\d+) buyers at ([\d.]+) SOL each on average$/, (m) => `${m[1]} 个买家，平均每人 ${m[2]} SOL`],
+  [/^(\d+) buyers at ([\d.]+) SOL each, looks botted$/, (m) => `${m[1]} 个买家，每人只有 ${m[2]} SOL，像是机器人刷的`],
+  [/^net \+([\d.]+) SOL still flowing in$/, (m) => `净流入 +${m[1]} SOL，资金还在进`],
+  [/^net (-[\d.]+) SOL, more sold than bought$/, (m) => `净流出 ${m[1]} SOL，卖的比买的多`],
+  [/^net SOL flat, sells ate the buys$/, () => "净流入持平，卖单吃掉了买单"],
+  [/^sells caught up with buys after minute 5$/, () => "第 5 分钟后卖单追上了买单"],
+  [/^(\d+) sells per 100 buys, buyers not leaving$/, (m) => `每 100 笔买入只有 ${m[1]} 笔卖出，买家没走`],
+  [/^(\d+) of the first (\d+) buyers still hold$/, (m) => `前 ${m[2]} 个买家里 ${m[1]} 个还在持有`],
+  [/^only (\d+) of the first (\d+) buyers still hold$/, (m) => `前 ${m[2]} 个买家里只有 ${m[1]} 个还在持有`],
+  [/^none of the first (\d+) buyers still hold$/, (m) => `前 ${m[1]} 个买家已全部离场`],
+  [/^creator fees ([\d.]+) SOL$/, (m) => `创作者费用 ${m[1]} SOL`],
+  [/^(\d+) of the first (\d+) buyers are seasoned wallets \(traded 50\+ coins\)$/, (m) => `前 ${m[2]} 个买家里 ${m[1]} 个是老钱包（交易过 50+ 个币）`],
+  [/^(\d+) of the first (\d+) buyers are brand new wallets$/, (m) => `前 ${m[2]} 个买家里 ${m[1]} 个是全新钱包`],
 ];
 
 export function TC(text: string): string {
@@ -186,6 +200,9 @@ export const BOT_ZH: Record<string, string> = {
   "Transfers we can see on chain: who received the SOL, not who owns the wallets.": "这是链上可见的转账：谁收到了 SOL，不代表谁拥有这些钱包。",
   "Open the money map": "打开资金地图",
   "Stop radar pings": "关闭雷达提醒",
+  "Buying looks organic": "买盘看起来是自然的",
+  "Buying looks mixed": "买盘真假参半",
+  "Buying looks pumped": "买盘看起来是刷出来的",
   "Ping me when one turns": "有币变脸时提醒我",
   "Radar pings are a holder perk: hold {h}+ $ZOOAGENCY and /link your wallet, then /radar on.": "雷达提醒是持币者福利：持有 {h}+ $ZOOAGENCY，用 /link 绑定钱包，然后 /radar on。",
   "Radar pings on. Coins with no red flags are re-checked every minute; the moment one turns, the dev sells, bundles leave, the pool drains, you hear first. /radar off to stop.": "雷达提醒已开。没有红旗的币每分钟重新检查；一旦变脸，开发者卖出、捆绑撤离、池子被抽干，你第一个知道。/radar off 关闭。",

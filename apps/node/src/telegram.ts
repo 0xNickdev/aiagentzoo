@@ -93,6 +93,8 @@ export interface RadarSignal {
   capAt5?: number;
   upX?: number;
   outcome?: { peakX: number; graduated: boolean };
+  /** The organic label from the minute-20 reading (a label, nothing hidden by it). */
+  organic?: { tag: "organic" | "mixed" | "pumped"; lines: string[] };
 }
 interface RadarStats {
   days: number;
@@ -127,10 +129,13 @@ export function runnerAlert(s: RadarSignal): string {
     `<b>${head}</b> · <b>$${esc(s.symbol)}</b> · ${T(s.tier)}`,
     up ? `${capLine(s.capAtSignal, true)} · ${up}` : capLine(s.capAtSignal, confirmed),
     ...s.reasons.slice(0, 3).map((r) => `• ${esc(TC(dollarReason(r)))}`),
+    ...(s.organic ? [`<b>${T(ORGANIC_TAG[s.organic.tag])}</b>`, ...s.organic.lines.slice(0, 3).map((r) => `• ${esc(TC(r))}`)] : []),
     `<code>${s.mint}</code>`,
     T("<i>Not a call to buy. Most coins still die.</i>"),
   ].join("\n");
 }
+
+const ORGANIC_TAG = { organic: "Buying looks organic", mixed: "Buying looks mixed", pumped: "Buying looks pumped" } as const;
 
 /** Holders get chain alerts this much sooner than everyone else. */
 export const HOLDER_HEAD_START_MS = 10 * 60_000;

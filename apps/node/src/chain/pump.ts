@@ -1113,6 +1113,21 @@ export class PumpTape {
     return { at: b.at ?? null, soldOut: b.exitAt !== undefined, exitAt: b.exitAt ?? null };
   }
 
+  /**
+   * The first buyers by their first buy, the creator left out: wallet, ms after launch, SOL in, tokens bought, and
+   * whether they still hold. For the radar's slim buyer record and its first-30-holding count.
+   */
+  firstBuyersOf(mint: string, limit = 100): Array<{ wallet: string; afterMs: number; sol: number; tok: number; holding: boolean }> {
+    const t = this.tokens.get(mint);
+    if (!t) return [];
+    const out: Array<{ wallet: string; afterMs: number; sol: number; tok: number; holding: boolean }> = [];
+    for (const [wallet, b] of t.buyers) {
+      if (wallet === t.creator || b.at === undefined) continue;
+      out.push({ wallet, afterMs: Math.max(0, b.at - t.createdAt), sol: b.sol, tok: b.tok ?? 0, holding: b.exitAt === undefined && (b.tok ?? 0) - (b.sold ?? 0) > 0 });
+    }
+    return out.sort((x, y) => x.afterMs - y.afterMs).slice(0, limit);
+  }
+
   /** The biggest buyers by what they took at most, the creator left out: who a hand spread over many wallets would be. */
   bigBuyersOf(mint: string, limit = 24): Array<{ wallet: string; took: number; held: number; at?: number }> {
     const t = this.tokens.get(mint);

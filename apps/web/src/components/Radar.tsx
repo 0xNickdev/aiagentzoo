@@ -32,6 +32,8 @@ interface Signal {
   capAt5?: number;
   upX?: number;
   outcome?: { peakCap: number; peakX: number; graduated: boolean };
+  /** The organic label from the minute-20 reading: a label only, nothing is hidden by it. */
+  organic?: { tag: "organic" | "mixed" | "pumped"; lines: string[] };
 }
 /** When a signal counts as fired: its confirmation, or minute five for a candidate. */
 const when = (s: Signal) => s.confirmedAt ?? s.at;
@@ -372,7 +374,7 @@ export function RadarLive() {
             </div>
           ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+            <table className="w-full min-w-[720px] text-left text-[12.5px]">
               <thead className="text-[11.5px] text-faint">
                 <tr className="border-b border-line">
                   <th className="px-3.5 py-2 font-normal">{t("Coin")}</th>
@@ -382,6 +384,7 @@ export function RadarLive() {
                   <th className="px-3.5 py-2 text-right font-normal">{t("Highest after")}</th>
                   <th className="px-3.5 py-2 text-right font-normal">{t("Now")}</th>
                   <th className="px-3.5 py-2 text-right font-normal">{t("Graduated")}</th>
+                  <th className="px-3.5 py-2 font-normal">{t("Buying")}</th>
                 </tr>
               </thead>
               <tbody className="tabular-nums">
@@ -398,6 +401,7 @@ export function RadarLive() {
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.outcome ? `${sol(s.outcome.peakCap)} · ${times(s.outcome.peakX)}` : "-"}</td>
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.capNow == null ? "-" : `${sol(s.capNow)} · ${times(s.xNow)}`}</td>
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.outcome ? t(s.outcome.graduated ? "yes" : "no") : "-"}</td>
+                    <td className="px-3.5 py-2" title={s.organic?.lines.map((r) => tChain(r)).join(" · ")}>{s.organic ? <OrganicTag s={s} /> : <span className="text-faint">-</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -453,6 +457,24 @@ const Now = ({ s }: { s: Signal }) => (
   </Wash>
 );
 
+const TAG = { organic: "organic", mixed: "mixed", pumped: "looks pumped" } as const;
+/** The organic tag in words, solid text: white for organic, dim for mixed, faint for looks pumped. */
+const OrganicTag = ({ s }: { s: Signal }) =>
+  s.organic ? <span className={s.organic.tag === "organic" ? "text-white" : s.organic.tag === "pumped" ? "text-faint" : "text-dim"}>{t(TAG[s.organic.tag])}</span> : null;
+/** The tag and its two or three lines, under the model's reasons. */
+const OrganicLines = ({ s }: { s: Signal }) =>
+  s.organic ? (
+    <div className="mt-1.5 text-[12px]">
+      <span className="text-faint">{t("Buying")}: </span>
+      <OrganicTag s={s} />
+      <ul className="mt-0.5 flex flex-col gap-0.5 text-dim">
+        {s.organic.lines.map((r) => (
+          <li key={r}>{tChain(r)}</li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
 function Line({ s }: { s: Signal }) {
   return (
     <div className="grid grid-cols-[minmax(0,1.4fr)_70px_90px_120px_70px_60px] items-start gap-x-3 px-3.5 py-3 text-[12.5px]">
@@ -465,6 +487,7 @@ function Line({ s }: { s: Signal }) {
             <li key={r}>{tChain(dollarReason(r))}</li>
           ))}
         </ul>
+        <OrganicLines s={s} />
       </div>
       <span className="pt-0.5 text-dim tabular-nums">{ago(when(s))}</span>
       <span className="pt-0.5 text-right text-fg-2 tabular-nums">
@@ -499,6 +522,7 @@ function Card({ s }: { s: Signal }) {
           <li key={r}>{tChain(dollarReason(r))}</li>
         ))}
       </ul>
+      <OrganicLines s={s} />
       <Since s={s} />
       <div className="flex items-center gap-4">
         <span>
@@ -537,7 +561,9 @@ function PastCard({ s }: { s: Signal }) {
         {fact(t("Highest after"), s.outcome ? `${sol(s.outcome.peakCap)} · ${times(s.outcome.peakX)}` : "-")}
         {fact(t("Now"), s.capNow == null ? "-" : `${sol(s.capNow)} · ${times(s.xNow)}`)}
         {fact(t("Graduated"), s.outcome ? t(s.outcome.graduated ? "yes" : "no") : "-")}
+        {s.organic ? fact(t("Buying"), t(TAG[s.organic.tag])) : null}
       </div>
+      {s.organic ? <p className="text-[12px] text-dim">{s.organic.lines.map((r) => tChain(r)).join(" · ")}</p> : null}
     </div>
   );
 }

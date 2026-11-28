@@ -1,4 +1,4 @@
-import { funderOf, fundersEnabled } from "./funders.ts";
+import { fundersEnabled, readFunder } from "./funders.ts";
 import type { KolLabel, Labels } from "./labels.ts";
 
 /**
@@ -10,6 +10,8 @@ import type { KolLabel, Labels } from "./labels.ts";
 export interface SideWallet {
   funder: string | null;
   at: number;
+  /** The wallet's first transaction (ms), when the trace read its history start. */
+  first?: number;
 }
 
 const KEEP_MS = 14 * 24 * 3_600_000;
@@ -40,14 +42,36 @@ export class SideWallets {
     void this.drain();
   }
 
+  /** Lookups taken today (UTC) under a daily budget, for callers that must not spend the RPC plan. */
+  private budget = { day: "", n: 0 };
+
+  /**
+   * Like enqueue, but at most `perDay` new wallets a UTC day (known and queued wallets cost nothing). Returns how many
+   * were queued. The radar's first-30 buyers of each minute-5 candidate come in here.
+   */
+  enqueueBudgeted(wallets: string[], perDay = 2_000, now = Date.now()): number {
+    if (!fundersEnabled()) return 0;
+    const day = new Date(now).toISOString().slice(0, 10);
+    if (this.budget.day !== day) this.budget = { day, n: 0 };
+    const fresh: string[] = [];
+    for (const w of wallets) {
+      if (this.budget.n + fresh.length >= perDay) break;
+      if (this.funders.has(w) || this.queue.includes(w) || fresh.includes(w)) continue;
+      fresh.push(w);
+    }
+    this.budget.n += fresh.length;
+    if (fresh.length) this.enqueue(fresh);
+    return fresh.length;
+  }
+
   private async drain(): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
       while (this.queue.length && !this.stopped) {
         const w = this.queue.shift()!;
-        const funder = await funderOf(w, this.f).catch(() => null);
-        this.funders.set(w, { funder, at: Date.now() });
+        const r = await readFunder(w, this.f).catch(() => null);
+        this.funders.set(w, { funder: r?.funder ?? null, at: Date.now(), ...(r?.firstAt != null ? { first: r.firstAt } : {}) });
         if (this.funders.size > 200_000) this.funders.delete(this.funders.keys().next().value!);
         await new Promise((r) => setTimeout(r, this.gapMs));
       }
@@ -63,6 +87,11 @@ export class SideWallets {
     return () => {
       this.stopped = true;
     };
+  }
+
+  /** The wallet's first transaction (ms), when traced; null otherwise. */
+  firstTxOf(wallet: string): number | null {
+    return this.funders.get(wallet)?.first ?? null;
   }
 
   /** Who funded the wallet: a wallet, null when none was found, undefined when not traced yet. */
