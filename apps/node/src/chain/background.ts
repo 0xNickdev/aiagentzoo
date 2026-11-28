@@ -1,5 +1,6 @@
 import { Worker } from "node:worker_threads";
 import type { RadarRecord } from "./radar-record.ts";
+import type { Mark20 } from "./radar.ts";
 import { PNL, type SmartWallets, WalletLedger } from "./walletpnl.ts";
 
 /**
@@ -44,6 +45,8 @@ export type BgOut =
   | { t: "rebuilt"; tokens: number }
   | { t: "smart"; wallets: number }
   | { t: "record"; record: RadarRecord }
+  /** Minute-20 marks of radar candidates still waiting for their stage, for the main thread to decide. */
+  | { t: "min20"; rows: Mark20[] }
   | { t: "clusters?"; id: number; wallets: string[] }
   | { t: "stopped" };
 

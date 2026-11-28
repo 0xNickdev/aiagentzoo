@@ -15,6 +15,7 @@ export interface RecordRow {
   graduated: boolean;
   tier: "strong" | "watch";
   live: boolean;
+  capAt5?: number;
 }
 interface Rates {
   n: number;
@@ -31,6 +32,8 @@ export interface RadarRecord {
   top: RecordRow[];
   picks: Rates & { strong: number; watch: number };
   base: Rates;
+  /** Picks confirmed at minute twenty, from confirmation to peak (absent on an older node). */
+  confirmed?: Rates & { perDay: number | null; top: RecordRow[] };
 }
 
 /** The public track record from north, read once; it is rebuilt there every hour. */
@@ -69,7 +72,7 @@ const pct = (k: number, n: number) => {
 
 const Grad = () => <span className="inline-block rounded-[4px] border border-white px-[5px] text-[10.5px] leading-4 text-white">{t("graduated")}</span>;
 
-function Big({ r }: { r: RecordRow }) {
+function Big({ r, from = "from signal to peak" }: { r: RecordRow; from?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-3 rounded-[10px] border border-line bg-night-raised/40 p-3.5">
       <div className="flex items-baseline gap-2">
@@ -81,7 +84,7 @@ function Big({ r }: { r: RecordRow }) {
       </div>
       <div>
         <div className="text-[40px] font-semibold leading-none tracking-[-0.05em] text-white tabular-nums sm:text-[48px]">{times(r.multiple)}</div>
-        <div className="mt-1.5 text-[12px] text-dim">{t("from signal to peak")}</div>
+        <div className="mt-1.5 text-[12px] text-dim">{t(from)}</div>
       </div>
       <div className="flex items-center gap-2 text-[12.5px]">
         <span className="min-w-0 truncate text-fg-2 tabular-nums">
@@ -150,7 +153,39 @@ export function TrackRecord({ rec }: { rec: RadarRecord | null }) {
         </div>
       )}
       <p className="mt-3 text-[12px] leading-[1.55] text-dim">{t("Multiples are from signal to peak. The peak is the highest cap after the signal, not a price anyone sold at; most signals still fall.")}</p>
+      {rec.confirmed && <Confirmed c={rec.confirmed} />}
     </Panel>
+  );
+}
+
+/** The second record: the same graded picks through the minute-20 rule, from the minute-20 cap. */
+function Confirmed({ c }: { c: NonNullable<RadarRecord["confirmed"]> }) {
+  const big = c.top.slice(0, 3);
+  return (
+    <div className="mt-5 border-t border-line pt-4">
+      <h3 className="mb-2 text-[14px] font-medium tracking-[-0.02em] text-white">{t("Confirmed signals")}</h3>
+      {c.n > 0 ? (
+        <p className="mb-3 max-w-[100ch] text-[13px] leading-[1.6] text-fg-2">
+          {t("{n} confirmed picks, about {d} a day: {g} graduated, {x2} reached 2x, {x5} reached 5x and {x10} reached 10x from confirmation to peak. The same minute-20 rule applied to every graded pick since the freeze.", {
+            n: c.n.toLocaleString("en-US"),
+            d: c.perDay ?? "-",
+            g: pct(c.graduated, c.n),
+            x2: pct(c.x2, c.n),
+            x5: pct(c.x5, c.n),
+            x10: pct(c.x10, c.n),
+          })}
+        </p>
+      ) : (
+        <p className="py-3 text-[12.5px] text-faint">{t("No confirmed pick graded yet.")}</p>
+      )}
+      {big.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {big.map((r) => (
+            <Big key={r.mint} r={r} from="from confirmation to peak" />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

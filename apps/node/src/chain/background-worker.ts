@@ -198,6 +198,9 @@ async function buildRecord(): Promise<void> {
       await sleep(pauseMs);
     });
     post({ t: "record", record: r });
+    // Candidates in radar.jsonl that never got their minute-20 stage (a restart, older lines): their marks, to decide on the main thread.
+    const rows = record.undecided();
+    if (rows.length) post({ t: "min20", rows });
     log(`radar record: ${r.picks.n} graded picks, ${r.top.length} runners 3x or more (${Date.now() - t0} ms)`);
   } catch (error) {
     log(`radar record not built: ${(error as Error).message}`);

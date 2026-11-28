@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { type GuardianSession, verifyGuardian } from "../guardian.ts";
 import { HOLDER_MIN, TOKEN_MINT } from "../holders.ts";
-import { curveCap, FROZEN, PUBLIC_DELAY_MS, type Signal } from "../chain/radar.ts";
+import { CONFIRM_DEV_SOLD, CONFIRM_UP, curveCap, FROZEN, PUBLIC_DELAY_MS, type Signal } from "../chain/radar.ts";
 import { tape } from "../chain/pump.ts";
 import { solUsd } from "../chain/price.ts";
 import { clampInt, clientIp, fromPeer, json, readJson } from "./http.ts";
@@ -38,7 +38,8 @@ function guardianHeader(req: IncomingMessage): GuardianSession | undefined {
 }
 
 /**
- * GET or POST /v1/radar: the runner radar's signals and their record. Holders see signals the moment they fire;
+ * GET or POST /v1/radar: the runner radar's confirmed signals and their record (`?stage=early` adds the minute-five
+ * candidates for holders). Holders see signals the moment they fire;
  * everyone else gets 403 with the same list held back an hour, so the page still shows what the radar said and
  * what came of it. `delay` (minutes) asks for an older cut; it can only add to the public hour, never take from it.
  */
@@ -64,15 +65,19 @@ export async function radarRoutes(ctx: RouteContext, req: IncomingMessage, res: 
   const delay = who.ok ? asked : Math.max(asked, PUBLIC_DELAY_MS);
   const limit = clampInt(url.searchParams.get("limit"), 200, 1, 2000);
   const since = clampInt(url.searchParams.get("since"), 0, 0, Number.MAX_SAFE_INTEGER);
-  const signals = radar.signals(now, delay).filter((s) => s.at > since).slice(0, limit).map(withNow);
+  // Confirmed signals for everyone (live or an hour late); the minute-five candidates only for holders who ask.
+  const signals = radar.signals(now, delay).filter((s) => s.confirmedAt! > since).slice(0, limit).map(withNow);
+  const early = who.ok && url.searchParams.get("stage") === "early";
   const out = {
     access: who.ok ? "live" : "delayed",
     delayMin: Math.round(delay / 60_000),
     model: { frozenAt: FROZEN.frozenAt, tiers: { strong: "top 0.5% of the runner or graduation model", watch: "top 1% of either" } },
     stats: radar.stats(now),
     solUsd: solUsd(),
-    today: { scored: radar.scored.day === new Date(now).toISOString().slice(0, 10) ? radar.scored.n : 0, signals: radar.signals(now).filter((s) => s.at >= Date.parse(new Date(now).toISOString().slice(0, 10))).length, lastSignalAt: radar.lastSignalAt() },
+    today: { scored: radar.scored.day === new Date(now).toISOString().slice(0, 10) ? radar.scored.n : 0, signals: radar.todayCount(now), lastSignalAt: radar.lastSignalAt() },
+    confirm: { upX: CONFIRM_UP, devSoldUnder: CONFIRM_DEV_SOLD, atMin: 20 },
     signals,
+    ...(early ? { candidates: radar.signals(now, delay, "early").filter((s) => s.at > since).slice(0, limit).map(withNow) } : {}),
   };
   res.setHeader("cache-control", "no-store");
   if (who.ok) return json(res, 200, out);

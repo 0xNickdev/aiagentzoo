@@ -220,7 +220,7 @@ const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? n
 // Which launches linked which X account or Telegram, kept beside it for 90 days instead of the tape's two.
 if (history) socials.attach(history.db);
 // The runner radar: the models frozen on 21 Nov scored on every 5-minute reading; signals kept in radar.jsonl.
-const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db) : null;
+const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db, undefined, (mint) => tape.capNow(mint)) : null;
 if (radar) {
   console.log(`[${config.id}] radar restored: ${radar.load()} signals, ${radar.restoreDay(join(config.dataDir, "radar-day.json"), join(config.dataDir, "chain-marks.jsonl"))} scored today`);
   setInterval(() => {
@@ -267,6 +267,7 @@ const background = history && (opGraphOn || walletPnlOn || radar)
       {
         onMessage: (m) => {
           if (m.t === "record") radarRecord = m.record;
+          if (m.t === "min20" && radar) console.log(`[${config.id}] radar backfill: ${radar.backfill(m.rows)} of ${m.rows.length} candidates confirmed at minute 20`);
         },
         ledger: walletLedger,
         smart,

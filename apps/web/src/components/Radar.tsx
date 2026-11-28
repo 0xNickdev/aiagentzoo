@@ -25,8 +25,15 @@ interface Signal {
   reasons: string[];
   capNow: number | null;
   xNow: number | null;
+  /** Confirmed at minute twenty (capAtSignal is then the minute-20 cap), or a minute-five candidate. */
+  stage?: "candidate" | "confirmed" | "rejected";
+  confirmedAt?: number;
+  capAt5?: number;
+  upX?: number;
   outcome?: { peakCap: number; peakX: number; graduated: boolean };
 }
+/** When a signal counts as fired: its confirmation, or minute five for a candidate. */
+const when = (s: Signal) => s.confirmedAt ?? s.at;
 interface Tally {
   n: number;
   x2: number;
@@ -42,6 +49,8 @@ interface RadarBody {
   stats: { settledAfterHours: number; days: number; all: Tally };
   today?: { scored: number; signals: number; lastSignalAt?: number | null };
   signals: Signal[];
+  /** The minute-five candidates, for holders who ask with ?stage=early. */
+  candidates?: Signal[];
 }
 
 const ago = (ms: number) => {
@@ -137,6 +146,8 @@ export function RadarLive() {
   const [note, setNote] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [said, setSaid] = useState("");
+  /** Holders can look at the minute-five candidates, before the minute-20 confirmation. */
+  const [early, setEarly] = useState(false);
   const [boxRef, width] = useWidth<HTMLDivElement>();
   const seen = useRef<Set<string> | null>(null);
   const record = useRadarRecord();
@@ -145,7 +156,7 @@ export function RadarLive() {
     let live = true;
     const guardian = session ? { publicKey: session.publicKey, message: session.message, signature: session.signature } : null;
     const load = () =>
-      fetch(`${NORTH}/v1/radar`, guardian ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ guardian }) } : undefined)
+      fetch(`${NORTH}/v1/radar${early ? "?stage=early" : ""}`, guardian ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ guardian }) } : undefined)
         .then(async (r) => {
           // A 403 still carries the hour-late list: the page shows that, with the reason live is locked.
           if (!r.ok && r.status !== 403) throw new Error(String(r.status));
@@ -168,7 +179,7 @@ export function RadarLive() {
       live = false;
       window.clearInterval(timer);
     };
-  }, [session, tick]);
+  }, [session, tick, early]);
   // Ages tick every second between polls.
   const [, setNow] = useState(0);
   useEffect(() => {
@@ -188,14 +199,16 @@ export function RadarLive() {
 
   const now = Date.now();
   const holder = data?.access === "live";
-  const recent = (data?.signals ?? []).filter((s) => now - s.at < LIVE_MS);
-  const past = (data?.signals ?? []).filter((s) => now - s.at >= LIVE_MS);
+  const showEarly = holder && early && Array.isArray(data?.candidates);
+  const list = showEarly ? data!.candidates! : (data?.signals ?? []);
+  const recent = list.filter((s) => now - when(s) < LIVE_MS);
+  const past = list.filter((s) => now - when(s) >= LIVE_MS);
   const best = (data?.signals ?? [])
-    .filter((s) => s.outcome && now - s.at < 24 * 3_600_000)
+    .filter((s) => s.outcome && now - when(s) < 24 * 3_600_000)
     .sort((a, b) => (b.outcome?.peakX ?? 0) - (a.outcome?.peakX ?? 0))[0];
   const a = data?.stats.all;
   // The node says when the newest signal fired to everyone (time only), so the hour-late page is not stuck on "-".
-  const lastAt = data?.today?.lastSignalAt ?? data?.signals[0]?.at ?? null;
+  const lastAt = data?.today?.lastSignalAt ?? (data?.signals[0] ? when(data.signals[0]) : null);
   const frozen = data ? new Date(data.model.frozenAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "21 Nov";
   const cards = width < 640;
 
@@ -214,15 +227,18 @@ export function RadarLive() {
 
       <section className="mb-3 grid items-center gap-5 rounded-[12px] border border-line bg-night-surface p-4 sm:grid-cols-[minmax(0,320px)_1fr]">
         <div className="mx-auto w-full max-w-[320px]">
-          <RadarDisc blips={recent} active={active} onActive={setActive} />
+          <RadarDisc blips={recent.map((s) => ({ ...s, at: when(s) }))} active={active} onActive={setActive} />
         </div>
         <div className="grid min-w-0 grid-cols-3 gap-3">
-          <Counter k={t("signals today")} v={data?.today?.signals ?? null} />
+          <Counter k={t("confirmed today")} v={data?.today?.signals ?? null} />
           <Counter k={t("coins scored today")} v={data?.today?.scored ?? null} />
           <div className="flex min-w-0 flex-col gap-2">
-            <span className="text-[12px] text-dim">{t("last signal")}</span>
+            <span className="text-[12px] text-dim">{t("last confirmed")}</span>
             <span className="text-[22px] font-medium leading-none tracking-[-0.035em] text-white sm:text-[28px] tabular-nums">{lastAt ? t("{a} ago", { a: agoLong(lastAt) }) : "-"}</span>
           </div>
+          <p className="col-span-3 text-[12.5px] leading-[1.55] text-fg-2">
+            {t("A signal is confirmed at minute 20: the coin is up at least 20% since minute five and the dev has not sold half. About 20-30 a day.")}
+          </p>
           <p className="col-span-3 text-[12.5px] leading-[1.55] text-dim">
             {t("Each square is a live signal: nearer the centre is fresher, filled is strong, outlined is watch. The model is frozen since {d} and graded publicly.", { d: frozen })}
           </p>
@@ -256,15 +272,27 @@ export function RadarLive() {
           <span className="font-medium text-white">${best.symbol}</span>
           <span className="font-medium text-white tabular-nums">{times(best.outcome.peakX)}</span>
           <span className="tabular-nums">
-            {sol(best.capAtSignal)} → {sol(best.outcome.peakCap)} {t("from signal to peak")}
+            {sol(best.capAtSignal)} → {sol(best.outcome.peakCap)} {t("from confirmation to peak")}
             {best.outcome.graduated ? `, ${t("graduated")}` : ""}
           </span>
-          <span className="ml-auto text-faint">{t("{a} ago", { a: ago(best.at) })} · X-Ray ↗</span>
+          <span className="ml-auto text-faint">{t("{a} ago", { a: ago(when(best)) })} · X-Ray ↗</span>
         </a>
       ) : null}
       <div className="grid gap-3 lg:grid-cols-12">
-        <Panel title={t("Signals")} meta={holder ? t("the last 2 hours · refreshes every 5 seconds") : t("the last 2 hours, an hour late")} className="lg:col-span-8" bodyClass="p-0">
+        <Panel title={t("Signals")} meta={showEarly ? t("the minute-five candidates, before confirmation") : holder ? t("the last 2 hours · refreshes every 5 seconds") : t("the last 2 hours, an hour late")} className="lg:col-span-8" bodyClass="p-0">
           <div ref={boxRef}>
+            {holder && (
+              <div className="flex items-center justify-end border-b border-line px-3.5 py-2">
+                <button
+                  type="button"
+                  aria-pressed={early}
+                  onClick={() => setEarly((v) => !v)}
+                  className={`rounded-[6px] border px-2 py-0.5 text-[12px] ${early ? "border-white text-white" : "border-line-2 text-dim hover:text-white"}`}
+                >
+                  {t("Early (minute 5)")}
+                </button>
+              </div>
+            )}
             {failed && !data && (
               <div className="flex items-center justify-between gap-3 px-3.5 py-6 text-[12.5px] text-dim">
                 {t("The chain reader did not answer.")}
@@ -277,7 +305,7 @@ export function RadarLive() {
               <div className="grid grid-cols-[minmax(0,1.4fr)_70px_90px_120px_70px_60px] gap-x-3 border-b border-line px-3.5 py-2 text-[11.5px] text-faint">
                 <span>{t("Coin and why")}</span>
                 <span>{t("Age")}</span>
-                <span className="text-right">{t("Cap at signal")}</span>
+                <span className="text-right">{t(showEarly ? "Cap at signal" : "Cap at confirmation")}</span>
                 <span className="text-right">{t("Cap now, move")}</span>
                 <span>{t("Tier")}</span>
                 <span />
@@ -303,14 +331,14 @@ export function RadarLive() {
             </p>
             {a && a.n ? (
               <p className="mt-2 text-[12px] leading-[1.55] text-dim">
-                {t("Live record, last {d} days: {n} settled signals; {x2} moved 2x past their cap at the signal and {g} graduated. A peak is the highest cap after the signal, not a price anyone sold at.", { d: data?.stats.days ?? 7, n: a.n, x2: a.x2, g: a.graduated })}
+                {t("Live record, last {d} days: {n} settled confirmed signals; {x2} moved 2x past their cap at confirmation and {g} graduated. A peak is the highest cap after confirmation, not a price anyone sold at.", { d: data?.stats.days ?? 7, n: a.n, x2: a.x2, g: a.graduated })}
               </p>
             ) : (
               <p className="mt-2 text-[12px] text-dim">{t("No settled signals yet: a signal counts once it is a day old.")}</p>
             )}
           </Panel>
           <Panel title={t("In Telegram")} meta={t("holders")}>
-            <p className="text-[13px] leading-[1.55] text-fg-2">{t("Link your wallet to the bot, then send /radar on for strong signals, or /radar all for the watch tier too.")}</p>
+            <p className="text-[13px] leading-[1.55] text-fg-2">{t("Link your wallet to the bot, then send /radar on for confirmed signals, or /radar all for the minute-five candidates too.")}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {!session ? (
                 <Btn onClick={() => void signIn()}>{t("Sign in with your wallet")}</Btn>
@@ -332,7 +360,7 @@ export function RadarLive() {
 
         <TrackRecord rec={record} />
 
-        <Panel title={t("History")} meta={t("how each coin moved after its signal")} className="lg:col-span-12" bodyClass="p-0">
+        <Panel title={t("History")} meta={t(showEarly ? "how each coin moved after its signal" : "how each coin moved after confirmation")} className="lg:col-span-12" bodyClass="p-0">
           {data && !past.length ? (
             <p className="px-3.5 py-8 text-center text-[12.5px] leading-[1.55] text-faint">{t("Nothing older than two hours yet.")}</p>
           ) : cards ? (
@@ -349,7 +377,7 @@ export function RadarLive() {
                   <th className="px-3.5 py-2 font-normal">{t("Coin")}</th>
                   <th className="px-3.5 py-2 font-normal">{t("Signal")}</th>
                   <th className="px-3.5 py-2 font-normal">{t("Tier")}</th>
-                  <th className="px-3.5 py-2 text-right font-normal">{t("Cap at signal")}</th>
+                  <th className="px-3.5 py-2 text-right font-normal">{t(showEarly ? "Cap at signal" : "Cap at confirmation")}</th>
                   <th className="px-3.5 py-2 text-right font-normal">{t("Highest after")}</th>
                   <th className="px-3.5 py-2 text-right font-normal">{t("Now")}</th>
                   <th className="px-3.5 py-2 text-right font-normal">{t("Graduated")}</th>
@@ -363,8 +391,8 @@ export function RadarLive() {
                         ${s.symbol}
                       </a>
                     </td>
-                    <td className="px-3.5 py-2 text-dim">{t("{a} ago", { a: ago(s.at) })}</td>
-                    <td className="px-3.5 py-2 text-dim">{t(s.tier)}</td>
+                    <td className="px-3.5 py-2 text-dim">{t("{a} ago", { a: ago(when(s)) })}</td>
+                    <td className="px-3.5 py-2 text-dim">{stageNote(s) ?? t(s.tier)}</td>
                     <td className="px-3.5 py-2 text-right text-fg-2">{sol(s.capAtSignal)}</td>
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.outcome ? `${sol(s.outcome.peakCap)} · ${times(s.outcome.peakX)}` : "-"}</td>
                     <td className="px-3.5 py-2 text-right text-fg-2">{s.capNow == null ? "-" : `${sol(s.capNow)} · ${times(s.xNow)}`}</td>
@@ -396,9 +424,17 @@ function Counter({ k, v }: { k: string; v: number | null }) {
   );
 }
 
+/** A candidate says it is early or failed the minute-20 check; a confirmed signal shows only its tier. */
+const stageNote = (s: Signal) => (s.stage === "rejected" ? t("rejected at minute 20") : s.stage === "candidate" ? t("early, not confirmed") : null);
 const Tier = ({ s }: { s: Signal }) => (
   <span className={`inline-block rounded-[4px] border px-[5px] text-[10.5px] leading-4 ${s.tier === "strong" ? "border-white text-white" : "border-line-2 text-dim"}`}>{t(s.tier)}</span>
 );
+/** "up 1.6x since minute 5" under a confirmed signal's cap, or why a candidate is not confirmed. */
+const Since = ({ s }: { s: Signal }) => {
+  const note = stageNote(s);
+  if (note) return <span className="block text-[11.5px] text-faint">{note}</span>;
+  return s.upX != null ? <span className="block text-[11.5px] text-faint">{t("up {x}x since minute 5", { x: s.upX.toFixed(1) })}</span> : null;
+};
 const Now = ({ s }: { s: Signal }) => (
   <Wash value={s.capNow}>
     <span className="text-white">
@@ -429,8 +465,11 @@ function Line({ s }: { s: Signal }) {
           ))}
         </ul>
       </div>
-      <span className="pt-0.5 text-dim tabular-nums">{ago(s.at)}</span>
-      <span className="pt-0.5 text-right text-fg-2 tabular-nums">{sol(s.capAtSignal)}</span>
+      <span className="pt-0.5 text-dim tabular-nums">{ago(when(s))}</span>
+      <span className="pt-0.5 text-right text-fg-2 tabular-nums">
+        {sol(s.capAtSignal)}
+        <Since s={s} />
+      </span>
       <span className="pt-0.5 text-right">
         <Now s={s} />
       </span>
@@ -452,13 +491,14 @@ function Card({ s }: { s: Signal }) {
           ${s.symbol}
         </a>
         <Tier s={s} />
-        <span className="ml-auto text-faint tabular-nums">{t("{a} ago", { a: ago(s.at) })}</span>
+        <span className="ml-auto text-faint tabular-nums">{t("{a} ago", { a: ago(when(s)) })}</span>
       </div>
       <ul className="flex flex-col gap-0.5 text-fg-2">
         {s.reasons.map((r) => (
           <li key={r}>{tChain(dollarReason(r))}</li>
         ))}
       </ul>
+      <Since s={s} />
       <div className="flex items-center gap-4">
         <span>
           <span className="text-faint">{t("at signal")}</span> <span className="text-fg-2 tabular-nums">{sol(s.capAtSignal)}</span>
@@ -489,10 +529,10 @@ function PastCard({ s }: { s: Signal }) {
           ${s.symbol}
         </a>
         <Tier s={s} />
-        <span className="ml-auto text-faint tabular-nums">{t("{a} ago", { a: ago(s.at) })}</span>
+        <span className="ml-auto text-faint tabular-nums">{t("{a} ago", { a: ago(when(s)) })}</span>
       </div>
       <div className="grid grid-cols-1 gap-y-1">
-        {fact(t("Cap at signal"), sol(s.capAtSignal))}
+        {fact(t(s.stage === "confirmed" ? "Cap at confirmation" : "Cap at signal"), sol(s.capAtSignal))}
         {fact(t("Highest after"), s.outcome ? `${sol(s.outcome.peakCap)} · ${times(s.outcome.peakX)}` : "-")}
         {fact(t("Now"), s.capNow == null ? "-" : `${sol(s.capNow)} · ${times(s.xNow)}`)}
         {fact(t("Graduated"), s.outcome ? t(s.outcome.graduated ? "yes" : "no") : "-")}

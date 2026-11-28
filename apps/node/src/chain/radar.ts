@@ -186,12 +186,55 @@ export interface Outcome {
   checkedAt: number;
 }
 
+/**
+ * A signal fires at minute five as a candidate and is confirmed at minute twenty, or not: the coin must be up at least
+ * 20% since minute five (or have graduated by then) and the dev must not have sold half. Old lines carry no stage and
+ * are candidates.
+ */
+export type Stage = "candidate" | "confirmed" | "rejected";
+export const CONFIRM_UP = 1.2;
+export const CONFIRM_DEV_SOLD = 50;
+
+/** What the minute-20 reading says, for the confirmation. */
+export interface At20 {
+  /** The cap at minute twenty, SOL (for a coin graduated by then, its cap at that time). */
+  cap: number | null;
+  graduated: boolean;
+  devSold: number | null;
+}
+
+/** The confirmation rule: up 20% since minute five or graduated, and the dev sold less than half. */
+export function confirms(capAt5: number, m: At20): boolean {
+  if ((m.devSold ?? 0) >= CONFIRM_DEV_SOLD) return false;
+  if (m.graduated) return true;
+  return m.cap != null && m.cap >= CONFIRM_UP * capAt5;
+}
+
+/** A minute-20 mark line as the backfill hands it over (the fields the rule reads). */
+export interface Mark20 {
+  mint: string;
+  at: number;
+  curveSol: number | null;
+  graduated: boolean | null;
+  creatorSoldPct: number | null;
+}
+
 export interface Signal {
   mint: string;
   symbol: string;
+  /** The minute-five reading that made it a candidate. */
   at: number;
   createdAt: number;
+  /** The entry shown: the cap at minute five for a candidate, at minute twenty once confirmed. */
   capAtSignal: number;
+  /** The cap at minute five, kept once confirmed. */
+  capAt5?: number;
+  stage?: Stage;
+  /** When the minute-20 reading confirmed it. */
+  confirmedAt?: number;
+  /** The cap at minute twenty over the cap at minute five. */
+  upX?: number;
+  /** The original tier, a label only once confirmed. */
   tier: Tier;
   models: Array<"RB" | "G">;
   scores: { RB: number; G: number };
@@ -264,10 +307,14 @@ export class Radar {
   private readonly db: DatabaseSync | null;
   private readonly frozen: Frozen;
 
-  constructor(file: string | null, db: DatabaseSync | null, frozen: Frozen = FROZEN) {
+  /** The tape's cap now, for a coin that graduated before its minute-20 reading (the curve says nothing then). */
+  private readonly capNow: ((mint: string) => number | null) | null;
+
+  constructor(file: string | null, db: DatabaseSync | null, frozen: Frozen = FROZEN, capNow: ((mint: string) => number | null) | null = null) {
     this.file = file;
     this.db = db;
     this.frozen = frozen;
+    this.capNow = capNow;
   }
 
   /** Reads the file back: signal lines, then outcome lines that update them. Only the last week stays in memory. */
@@ -275,7 +322,7 @@ export class Radar {
     if (!this.file || !existsSync(this.file)) return 0;
     for (const line of readFileSync(this.file, "utf8").split("\n")) {
       if (!line) continue;
-      let x: (Signal & { kind?: undefined }) | ({ kind: "outcome"; mint: string } & Outcome);
+      let x: (Signal & { kind?: undefined }) | ({ kind: "outcome"; mint: string } & Outcome) | StageLine;
       try {
         x = JSON.parse(line);
       } catch {
@@ -284,7 +331,12 @@ export class Radar {
       if (x.kind === "outcome") {
         const s = this.byMint.get(x.mint);
         if (s) s.outcome = { peakCap: x.peakCap, peakX: x.peakX, graduated: x.graduated, checkedAt: x.checkedAt };
+      } else if (x.kind === "stage") {
+        const s = this.byMint.get(x.mint);
+        if (s) applyStage(s, x);
       } else if (now - x.at <= KEEP_MS && !this.byMint.has(x.mint)) {
+        x.stage ??= "candidate";
+        x.capAt5 ??= x.capAtSignal;
         this.list.push(x);
         this.byMint.set(x.mint, x);
       }
@@ -330,9 +382,15 @@ export class Radar {
     }
   }
 
-  /** When the newest signal fired, held back nothing: the page says how long ago, without naming the coin. */
+  /** When the newest confirmed signal fired, held back nothing: the page says how long ago, without naming the coin. */
   lastSignalAt(): number | null {
-    return this.list[0]?.at ?? null;
+    return this.signals(Number.MAX_SAFE_INTEGER)[0]?.confirmedAt ?? null;
+  }
+
+  /** Confirmed signals since midnight UTC. */
+  todayCount(now = Date.now()): number {
+    const mid = Date.parse(utcDay(now));
+    return this.list.filter((s) => s.stage === "confirmed" && s.confirmedAt! >= mid).length;
   }
 
   private stmts() {
@@ -361,6 +419,7 @@ export class Radar {
    * the caller passes `skip` for what the mark line does not say.
    */
   consider(x: MarkRow, info: { symbol: string; skip?: boolean }, now = Date.now()): Signal | null {
+    if (x.min === 20) return this.confirm(x, true);
     if (x.min !== 5 || x.graduated || info.skip || this.byMint.has(x.mint)) return null;
     const l = this.lookup(x.mint);
     if (!l) return null;
@@ -379,6 +438,8 @@ export class Radar {
       at: x.at ?? now,
       createdAt: x.createdAt,
       capAtSignal: r1(f.c5),
+      capAt5: r1(f.c5),
+      stage: "candidate",
       tier: j.tier,
       models: j.models,
       scores: { RB: r3(j.scores.RB), G: r3(j.scores.G) },
@@ -388,6 +449,37 @@ export class Radar {
     this.byMint.set(s.mint, s);
     this.append(s);
     return s;
+  }
+
+  /**
+   * The minute-20 reading of a candidate: confirmed or rejected, once, with a stage line in the file. Returns the
+   * signal when it is confirmed. `live` reads the tape's cap for a coin graduated by then; the backfill cannot.
+   */
+  private confirm(x: Mark20, live: boolean): Signal | null {
+    const s = this.byMint.get(x.mint);
+    if (!s || (s.stage ?? "candidate") !== "candidate") return null;
+    const graduated = Boolean(x.graduated);
+    let cap: number | null = curveCap(x.curveSol);
+    if (graduated && live && this.capNow) {
+      try {
+        cap = this.capNow(x.mint) ?? cap;
+      } catch {
+        /* the curve's last cap stands */
+      }
+    }
+    const capAt5 = s.capAt5 ?? s.capAtSignal;
+    const ok = confirms(capAt5, { cap, graduated, devSold: x.creatorSoldPct });
+    const line: StageLine = { kind: "stage", mint: s.mint, stage: ok ? "confirmed" : "rejected", at: x.at, capAt20: r1(cap ?? 0), devSold: x.creatorSoldPct, graduated };
+    applyStage(s, line);
+    this.append(line);
+    return ok ? s : null;
+  }
+
+  /** Rebuilds the stage of candidates the node missed (a restart, older lines) from minute-20 marks the worker read. */
+  backfill(rows: Mark20[]): number {
+    let n = 0;
+    for (const x of rows) if (this.confirm(x, false)) n++;
+    return n;
   }
 
   private append(line: object) {
@@ -412,6 +504,8 @@ export class Radar {
     });
     const s = this.stmts();
     for (const sig of this.list) {
+      // A confirmed signal is measured from its minute-20 cap, a candidate from minute five.
+      const from = sig.confirmedAt ?? sig.at;
       const o = sig.outcome ?? { peakCap: sig.capAtSignal, peakX: 1, graduated: false, checkedAt: 0 };
       // A settled signal two days on is no longer moving enough to read every minute.
       if (now - sig.at > 2 * DAY && sig.outcome && now - o.checkedAt < 3_600_000) continue;
@@ -421,8 +515,8 @@ export class Radar {
       if (live?.cap != null && live.cap > peak) peak = live.cap;
       if (live?.graduated) graduated = true;
       const h = s?.peak.get(sig.mint) as { cap_peak: number | null; cap_peak_at: number | null; graduated_at: number | null } | undefined;
-      if (h?.cap_peak != null && h.cap_peak_at != null && h.cap_peak_at > sig.at && h.cap_peak > peak) peak = h.cap_peak;
-      if (h?.graduated_at != null && h.graduated_at > sig.at) graduated = true;
+      if (h?.cap_peak != null && h.cap_peak_at != null && h.cap_peak_at > from && h.cap_peak > peak) peak = h.cap_peak;
+      if (h?.graduated_at != null && h.graduated_at > from) graduated = true;
       const next: Outcome = { peakCap: r1(peak), peakX: r1(peak / Math.max(sig.capAtSignal, 1e-9)), graduated, checkedAt: now };
       const changed = !sig.outcome || next.peakCap !== o.peakCap || next.graduated !== o.graduated;
       sig.outcome = next;
@@ -434,14 +528,18 @@ export class Radar {
     return this.list.length;
   }
 
-  /** Signals newest first, optionally only those at least `delayMs` old. */
-  signals(now = Date.now(), delayMs = 0): Signal[] {
-    return this.list.filter((s) => now - s.at >= delayMs);
+  /**
+   * Confirmed signals newest confirmation first, or with "early" every minute-five candidate (any stage) newest first;
+   * optionally only those at least `delayMs` old (from the confirmation, or from minute five for early).
+   */
+  signals(now = Date.now(), delayMs = 0, stage: "confirmed" | "early" = "confirmed"): Signal[] {
+    if (stage === "early") return this.list.filter((s) => now - s.at >= delayMs);
+    return this.list.filter((s) => s.stage === "confirmed" && now - s.confirmedAt! >= delayMs).sort((a, b) => b.confirmedAt! - a.confirmedAt!);
   }
 
-  /** The record of settled signals (a day old or more): how many ran 2x and 5x past their cap at the signal, graduated, and the median peak. */
+  /** The record of settled confirmed signals (a day old or more): how many ran 2x and 5x past their cap at confirmation, graduated, and the median peak. */
   stats(now = Date.now()) {
-    const done = this.list.filter((s) => now - s.at >= SETTLED_MS && s.outcome);
+    const done = this.list.filter((s) => s.stage === "confirmed" && now - s.confirmedAt! >= SETTLED_MS && s.outcome);
     const by = (tier?: Tier) => {
       const xs = done.filter((s) => !tier || s.tier === tier);
       const peaks = xs.map((s) => s.outcome!.peakX).sort((a, b) => a - b);
@@ -455,4 +553,30 @@ export class Radar {
     };
     return { settledAfterHours: SETTLED_MS / 3_600_000, days: KEEP_MS / DAY, all: by(), strong: by("strong"), watch: by("watch") };
   }
+}
+
+/** A stage line in radar.jsonl: what the minute-20 reading decided. */
+export interface StageLine {
+  kind: "stage";
+  mint: string;
+  stage: "confirmed" | "rejected";
+  at: number;
+  capAt20: number;
+  devSold: number | null;
+  graduated: boolean;
+}
+
+function applyStage(s: Signal, l: StageLine) {
+  if (l.stage === "rejected") {
+    s.stage = "rejected";
+    return;
+  }
+  const c5 = s.capAt5 ?? s.capAtSignal;
+  s.stage = "confirmed";
+  s.capAt5 = c5;
+  s.capAtSignal = l.capAt20;
+  s.confirmedAt = l.at;
+  s.upX = Math.round((l.capAt20 / Math.max(c5, 1e-9)) * 100) / 100;
+  // The outcome starts again from the minute-20 cap.
+  delete s.outcome;
 }

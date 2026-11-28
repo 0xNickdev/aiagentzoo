@@ -1,6 +1,23 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
   "best signal of the last 24 hours": "过去 24 小时最佳信号",
+  "from confirmation to peak": "从确认到峰值",
+  "A signal is confirmed at minute 20: the coin is up at least 20% since minute five and the dev has not sold half. About 20-30 a day.": "信号在第 20 分钟确认：币比第五分钟至少涨了 20%，且开发者没有卖掉一半。每天大约 20-30 个。",
+  "Early (minute 5)": "早期（第 5 分钟）",
+  "early, not confirmed": "早期，未确认",
+  "rejected at minute 20": "第 20 分钟未通过",
+  "Cap at confirmation": "确认时市值",
+  "up {x}x since minute 5": "比第 5 分钟涨了 {x} 倍",
+  "the minute-five candidates, before confirmation": "第五分钟候选，确认之前",
+  "Confirmed signals": "确认信号",
+  "{n} confirmed picks, about {d} a day: {g} graduated, {x2} reached 2x, {x5} reached 5x and {x10} reached 10x from confirmation to peak. The same minute-20 rule applied to every graded pick since the freeze.": "{n} 个确认信号，每天约 {d} 个：从确认到峰值 {g} 毕业，{x2} 达到 2 倍，{x5} 达到 5 倍，{x10} 达到 10 倍。对冻结以来每个已评分信号套用同一条第 20 分钟规则。",
+  "No confirmed pick graded yet.": "还没有已评分的确认信号。",
+  "Link your wallet to the bot, then send /radar on for confirmed signals, or /radar all for the minute-five candidates too.": "把钱包绑定到机器人，然后发 /radar on 收确认信号，或 /radar all 连第五分钟候选一起收。",
+  "Live record, last {d} days: {n} settled confirmed signals; {x2} moved 2x past their cap at confirmation and {g} graduated. A peak is the highest cap after confirmation, not a price anyone sold at.": "实时战绩，近 {d} 天：已结算确认信号 {n} 个；{x2} 个涨到确认时市值的 2 倍以上，{g} 个毕业。最高点是确认之后到过的最高市值，不是有人卖在那里的价格。",
+  "how each coin moved after confirmation": "每个币在确认之后怎么走",
+  "confirmed today": "今日确认",
+  "last confirmed": "上次确认",
+
   "peak": "峰值",
   "soon": "即将",
   "hours": "小时",

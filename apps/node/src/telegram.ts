@@ -87,6 +87,11 @@ export interface RadarSignal {
   capAtSignal: number;
   tier: "strong" | "watch";
   reasons: string[];
+  /** Confirmed at minute twenty, or still a minute-five candidate (no stage: a candidate). */
+  stage?: "candidate" | "confirmed" | "rejected";
+  confirmedAt?: number;
+  capAt5?: number;
+  upX?: number;
   outcome?: { peakX: number; graduated: boolean };
 }
 interface RadarStats {
@@ -98,8 +103,9 @@ const RUNNER_PER_HOUR = 8;
 
 const usdShort = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}k`);
 /** The cap at the signal in dollars when the SOL price is known, in SOL otherwise. */
-function capLine(capSol: number): string {
+function capLine(capSol: number, confirmed = false): string {
   const p = solUsd();
+  if (confirmed) return p ? T("{c} cap at minute 20", { c: usdShort(capSol * p) }) : T("{c} SOL cap at minute 20", { c: capSol });
   return p ? T("{c} cap at the signal", { c: usdShort(capSol * p) }) : T("{c} SOL cap at the signal", { c: capSol });
 }
 /** "237 SOL cap at 5 minutes" reads in dollars when the SOL price is known. */
@@ -109,11 +115,17 @@ function dollarReason(r: string): string {
   return m && p ? `${usdShort(Number(m[1]) * p)} cap at 5 minutes` : r;
 }
 
-/** A runner alert: short, the coin, its cap at the signal, why the model fired, and what it is not. */
+/**
+ * A runner alert: short, the coin, its cap, why the model fired, and what it is not. A confirmed signal says so and how
+ * far it rose since minute five; a minute-five candidate (only after /radar all) says it is early and not confirmed.
+ */
 export function runnerAlert(s: RadarSignal): string {
+  const confirmed = s.stage === "confirmed";
+  const head = confirmed ? T("Runner radar · confirmed at minute 20") : T("Runner radar · early, not confirmed");
+  const up = confirmed && s.upX != null ? T("up {x}x since minute 5", { x: s.upX.toFixed(1) }) : null;
   return [
-    `<b>${T(s.tier === "strong" ? "Runner radar · strong" : "Runner radar · watch")}</b> · <b>$${esc(s.symbol)}</b>`,
-    capLine(s.capAtSignal),
+    `<b>${head}</b> · <b>$${esc(s.symbol)}</b> · ${T(s.tier)}`,
+    up ? `${capLine(s.capAtSignal, true)} · ${up}` : capLine(s.capAtSignal, confirmed),
     ...s.reasons.slice(0, 3).map((r) => `• ${esc(TC(dollarReason(r)))}`),
     `<code>${s.mint}</code>`,
     T("<i>Not a call to buy. Most coins still die.</i>"),
@@ -242,7 +254,7 @@ const HELP_LINES = () => [
   "/clean · fresh launches that passed the basic checks",
   T("/watch &lt;token&gt; · alert on dumps, drained pools, graduation, big buys (up to {n})", { n: WATCH_MAX }),
   T("/radar on · holders: runner radar signals, and a ping the moment a coin with no red flags turns"),
-  T("/radar · the latest runner radar signals · /radar all adds the watch tier"),
+  T("/radar · the latest confirmed runner radar signals · /radar all adds the minute-five candidates"),
   T("/link &lt;code&gt; · holders of {h}+ $ZOOAGENCY get alerts {m} minutes first", { h: HOLDER_MIN.toLocaleString("en-US"), m: HOLDER_HEAD_START_MS / 60_000 }),
   "/unwatch &lt;token&gt; · /list",
   "/leaderboard · the contests: guest agents and the odds model on one honest scale",
@@ -666,7 +678,7 @@ export function startTelegram(opts: TelegramOptions): () => void {
     return void send(
       chat,
       [
-        T(all ? "Runner radar on, strong and watch signals." : "Runner radar on, strong signals only. /radar all adds the watch tier."),
+        T(all ? "Runner radar on: confirmed signals, and the minute-five candidates marked early, not confirmed." : "Runner radar on: signals confirmed at minute 20. /radar all also sends the minute-five candidates."),
         T("A signal is not a call to buy: the model is frozen since 21 Nov and graded in public, and most coins still die."),
         T("You also get a ping when a coin with no red flags turns. /radar off to stop."),
       ].join("\n"),
@@ -679,12 +691,12 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (!body) return void send(chat, T("The radar is not reachable right now. Try again in a minute."));
     const holder = await isHolderChat(chat);
     const now = Date.now();
-    const list = body.signals.filter((s) => holder || now - s.at >= 60 * 60_000).slice(0, 6);
-    const lines = [T("<b>Runner radar</b>"), T(holder ? "<i>live, holders</i>" : "<i>an hour late; holders see it live: /link, then /radar on</i>"), ""];
+    const list = body.signals.filter((s) => holder || now - (s.confirmedAt ?? s.at) >= 60 * 60_000).slice(0, 6);
+    const lines = [T("<b>Runner radar</b>"), T(holder ? "<i>live, holders</i>" : "<i>an hour late; holders see it live: /link, then /radar on</i>"), T("<i>Confirmed at minute 20: up at least 20% since minute five, and the dev has not sold half.</i>"), ""];
     if (!list.length) lines.push(T("No signal in this window. Most hours have a few; some have none."));
-    for (const s of list) lines.push(`• <b>$${esc(s.symbol)}</b> · ${T(s.tier)} · ${T("{a} min ago at {c} SOL", { a: Math.round((now - s.at) / 60_000), c: s.capAtSignal })}${s.outcome ? ` · ${T("peak {x}x", { x: s.outcome.peakX })}` : ""}`);
+    for (const s of list) lines.push(`• <b>$${esc(s.symbol)}</b> · ${T(s.tier)} · ${T("{a} min ago at {c} SOL", { a: Math.round((now - (s.confirmedAt ?? s.at)) / 60_000), c: s.capAtSignal })}${s.outcome ? ` · ${T("peak {x}x", { x: s.outcome.peakX })}` : ""}`);
     const a = body.stats.all;
-    if (a.n) lines.push("", T("<i>Settled signals, last {d} days: {n}; {x2} reached 2x their cap at the signal, {x5} reached 5x, {g} graduated. A peak is not an exit.</i>", { d: body.stats.days, n: a.n, x2: a.x2, x5: a.x5, g: a.graduated }));
+    if (a.n) lines.push("", T("<i>Settled confirmed signals, last {d} days: {n}; {x2} reached 2x their cap at confirmation, {x5} reached 5x, {g} graduated. A peak is not an exit.</i>", { d: body.stats.days, n: a.n, x2: a.x2, x5: a.x5, g: a.graduated }));
     lines.push("", T("<i>A signal is not a call to buy.</i>"));
     return void send(chat, lines.join("\n"), [[{ text: T("Open the radar"), url: `${SITE}/radar` }]]);
   };
@@ -1036,19 +1048,22 @@ export function startTelegram(opts: TelegramOptions): () => void {
     if (stopped || !opts.northUrl || Date.now() - runnersAt < 30_000) return;
     runnersAt = Date.now();
     await runnersReady;
-    const body = await north<{ access: string; signals: RadarSignal[] }>("/v1/radar?limit=50");
+    const body = await north<{ access: string; signals: RadarSignal[]; candidates?: RadarSignal[] }>("/v1/radar?limit=50&stage=early");
     if (!body || body.access !== "live") return;
     const now = Date.now();
-    const fresh = body.signals.filter((s) => !seenRunners.has(s.mint)).reverse();
+    // A coin can reach a chat twice: early at minute five (after /radar all), then confirmed at minute twenty.
+    const key = (s: RadarSignal) => (s.stage === "confirmed" ? `${s.mint}:c` : `${s.mint}:e`);
+    const early = (body.candidates ?? []).filter((s) => (s.stage ?? "candidate") === "candidate");
+    const fresh = [...body.signals.map((s) => ({ ...s, stage: "confirmed" as const })), ...early].filter((s) => !seenRunners.has(key(s))).sort((a, b) => (a.confirmedAt ?? a.at) - (b.confirmedAt ?? b.at));
     if (!fresh.length) return;
-    for (const s of fresh) seenRunners.add(s.mint);
+    for (const s of fresh) seenRunners.add(key(s));
     await opts.store.set("tg:radar:seen", [...seenRunners].slice(-500));
     const subs = (await opts.store.get<number[]>("tg:radar")) ?? [];
     const wide = new Set((await opts.store.get<number[]>("tg:radar:all")) ?? []);
     for (const s of fresh) {
-      if (now - s.at > 15 * 60_000) continue;
+      if (now - (s.confirmedAt ?? s.at) > 15 * 60_000) continue;
       for (const chat of subs) {
-        if (s.tier !== "strong" && !wide.has(chat)) continue;
+        if (s.stage !== "confirmed" && !wide.has(chat)) continue;
         if (!(await isHolderChat(chat))) continue;
         const times = (sentTo.get(chat) ?? []).filter((t) => now - t < 3_600_000);
         if (times.length >= RUNNER_PER_HOUR) continue;

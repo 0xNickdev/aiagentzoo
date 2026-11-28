@@ -64,6 +64,10 @@ test("live radar reads the long memory like trial.js and signals once, with outc
   assert.equal(new Radar(null, db).consider(r.x, { symbol: "X", skip: true }), null, "mayhem and non-SOL skipped");
   assert.equal(new Radar(null, db).consider({ ...r.x, graduated: true }, { symbol: "X" }), null);
   assert.equal(new Radar(null, db).consider({ ...r.x, min: 20 }, { symbol: "X" }), null);
+  // Confirmed at minute twenty: up 20% since minute five.
+  const c5 = s.capAtSignal;
+  radar.consider({ ...r.x, min: 20, at: r.x.at + 15 * 60_000, curveSol: Math.sqrt(c5 * 1.5 * 32.19) - 30, creatorSoldPct: 0 }, { symbol: "TEST" });
+  assert.equal(s.stage, "confirmed");
 
   // The coin ran to 3x the cap at the signal and graduated.
   radar.refresh(() => ({ cap: s.capAtSignal * 3, graduated: true }), r.x.at + 60_000);
@@ -90,8 +94,8 @@ test("live radar reads the long memory like trial.js and signals once, with outc
 
 test("the bot's runner alert is short and says what it is not", async () => {
   const { runnerAlert } = await import("../src/telegram.ts");
-  const text = runnerAlert({ mint: "So11111111111111111111111111111111111111112", symbol: "A<B", at: 0, capAtSignal: 42.5, tier: "strong", reasons: ["269 buyers in 5 minutes", "149 SOL in", "no bundles holding", "extra"] });
-  assert.match(text, /Runner radar · strong/);
+  const text = runnerAlert({ mint: "So11111111111111111111111111111111111111112", symbol: "A<B", at: 0, capAtSignal: 42.5, tier: "strong", stage: "candidate", reasons: ["269 buyers in 5 minutes", "149 SOL in", "no bundles holding", "extra"] });
+  assert.match(text, /Runner radar · early, not confirmed/);
   assert.match(text, /\$A&lt;B/);
   assert.match(text, /42\.5 SOL cap at the signal/);
   assert.equal(text.split("\n").filter((l) => l.startsWith("• ")).length, 3);
