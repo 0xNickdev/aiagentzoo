@@ -31,9 +31,12 @@ function memory(r: (typeof rows)[number], extra: Array<{ mint: string; createdAt
 test("the minute-20 rule: up 20% or graduated, and the dev sold under half", () => {
   assert.equal(confirms(100, { cap: 120, graduated: false, devSold: 0 }), true);
   assert.equal(confirms(100, { cap: 119.9, graduated: false, devSold: 0 }), false);
-  assert.equal(confirms(100, { cap: 50, graduated: true, devSold: 10 }), true, "graduated by minute 20 confirms");
+  assert.equal(confirms(100, { cap: 150, graduated: true, devSold: 10, poolSol: 60 }), true, "graduated, pool up and healthy");
+  assert.equal(confirms(100, { cap: 50, graduated: true, devSold: 10, poolSol: 60 }), false, "graduated is not enough: the pool cap must be up 20%");
+  assert.equal(confirms(100, { cap: 300, graduated: true, devSold: 0, poolSol: 30 }), false, "drained pool");
+  assert.equal(confirms(100, { cap: 300, graduated: true, devSold: 0 }), false, "no pool reading");
   assert.equal(confirms(100, { cap: 300, graduated: false, devSold: 50 }), false, "dev sold half: rejected");
-  assert.equal(confirms(100, { cap: 300, graduated: true, devSold: 80 }), false);
+  assert.equal(confirms(100, { cap: 300, graduated: true, devSold: 80, poolSol: 80 }), false);
   assert.equal(confirms(100, { cap: null, graduated: false, devSold: null }), false);
 });
 
@@ -77,11 +80,23 @@ test("a candidate at minute five is confirmed at minute twenty, measured from th
 
 test("a coin graduated before minute twenty is confirmed at the tape's cap; a dev who sold half is rejected", () => {
   const db = memory(pick);
-  const grad = new Radar(null, db, FROZEN, () => 420);
+  const c5 = curveCap(pick.x.curveSol);
+  const grad = new Radar(null, db, FROZEN, () => ({ cap: c5 * 2, poolSol: 70 }));
   const s = grad.consider(pick.x, { symbol: "RUN" }, pick.x.at)!;
-  grad.consider({ ...pick.x, min: 20, at: pick.x.at + 15 * M, graduated: true, curveSol: 0, creatorSoldPct: 0 }, { symbol: "RUN" });
+  grad.consider({ ...pick.x, min: 20, at: pick.x.at + 15 * M, graduated: true, curveSol: 85, creatorSoldPct: 0 }, { symbol: "RUN" });
   assert.equal(s.stage, "confirmed");
-  assert.equal(s.capAtSignal, 420);
+  assert.equal(s.capAtSignal, Math.round(c5 * 20) / 10, "the pool's cap, not the curve's placeholder");
+
+  const drained = new Radar(null, db, FROZEN, () => ({ cap: c5 * 2, poolSol: 12 }));
+  const dr = drained.consider(pick.x, { symbol: "RUN" }, pick.x.at)!;
+  drained.consider({ ...pick.x, min: 20, at: pick.x.at + 15 * M, graduated: true, curveSol: 85, creatorSoldPct: 0 }, { symbol: "RUN" });
+  assert.equal(dr.stage, "rejected", "a drained pool does not confirm");
+
+  // The backfill has no pool for that moment: a graduated candidate stays undecided.
+  const bf = new Radar(null, db);
+  const b = bf.consider(pick.x, { symbol: "RUN" }, pick.x.at)!;
+  assert.equal(bf.backfill([{ mint: pick.x.mint, at: pick.x.at + 15 * M, curveSol: 85, graduated: true, creatorSoldPct: 0 }]), 0);
+  assert.equal(b.stage, "candidate");
 
   const dump = new Radar(null, db);
   const d = dump.consider(pick.x, { symbol: "RUN" }, pick.x.at)!;
@@ -138,6 +153,29 @@ test("the confirmed record recomputes past picks through the minute-20 rule, fro
   const r2 = await new RecordBuilder(db, marks, null, { ...FROZEN, frozenAt: pick.x.createdAt - 1 }).update(pick.x.createdAt + 31 * H);
   assert.equal(r2.picks.n, 1);
   assert.equal(r2.confirmed.n, 0);
+});
+
+test("confirmations on a graduation alone (first rule, no pool reading) are taken back on startup, once", () => {
+  const dir = mkdtempSync(join(tmpdir(), "radar-restage-"));
+  const file = join(dir, "radar.jsonl");
+  const db = memory(pick);
+  const c5 = curveCap(pick.x.curveSol);
+  const sig = { mint: pick.x.mint, symbol: "RUN", at: pick.x.at, createdAt: pick.x.createdAt, capAtSignal: c5, capAt5: c5, stage: "candidate", tier: "watch", models: ["G"], scores: { RB: 0, G: 0 }, reasons: [] };
+  const old = { kind: "stage", mint: pick.x.mint, stage: "confirmed", at: pick.x.at + 15 * M, capAt20: 411.2, devSold: 0, graduated: true };
+  const ok = { ...sig, mint: "GOOD" };
+  const okStage = { kind: "stage", mint: "GOOD", stage: "confirmed", at: pick.x.at + 15 * M, capAt20: c5 * 2, devSold: 0, graduated: false };
+  writeFileSync(file, [sig, old, ok, okStage].map((l) => JSON.stringify(l)).join("\n") + "\n");
+  const r = new Radar(file, db);
+  r.load(pick.x.at + H);
+  assert.equal(r.signals(pick.x.at + H).length, 2);
+  assert.equal(r.restage(pick.x.at + H), 1);
+  assert.deepEqual(r.signals(pick.x.at + H).map((s) => s.mint), ["GOOD"]);
+  const back = new Radar(file, db);
+  back.load(pick.x.at + H);
+  assert.equal(back.restage(pick.x.at + H), 0, "the restage line is read back");
+  const s = back.signals(pick.x.at + H, 0, "early").find((x) => x.mint === pick.x.mint)!;
+  assert.equal(s.stage, "candidate");
+  assert.equal(s.capAtSignal, c5);
 });
 
 test("/v1/radar serves confirmed signals; candidates only for holders asking ?stage=early", async () => {

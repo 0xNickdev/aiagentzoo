@@ -194,6 +194,8 @@ export interface Outcome {
 export type Stage = "candidate" | "confirmed" | "rejected";
 export const CONFIRM_UP = 1.2;
 export const CONFIRM_DEV_SOLD = 50;
+/** A coin graduated by minute twenty confirms only on a live pool: at least this much SOL left in it. */
+export const CONFIRM_POOL_SOL = 40;
 
 /** What the minute-20 reading says, for the confirmation. */
 export interface At20 {
@@ -201,14 +203,23 @@ export interface At20 {
   cap: number | null;
   graduated: boolean;
   devSold: number | null;
+  /** SOL in the PumpSwap pool, for a coin graduated by then. */
+  poolSol?: number | null;
 }
 
-/** The confirmation rule: up 20% since minute five or graduated, and the dev sold less than half. */
+/**
+ * The confirmation rule: up 20% since minute five and the dev sold less than half. A coin graduated by then is read
+ * on its pool: the cap from the pool price must be up 20% too, and the pool must still hold 40 SOL (not drained).
+ */
 export function confirms(capAt5: number, m: At20): boolean {
   if ((m.devSold ?? 0) >= CONFIRM_DEV_SOLD) return false;
-  if (m.graduated) return true;
-  return m.cap != null && m.cap >= CONFIRM_UP * capAt5;
+  if (m.cap == null || m.cap < CONFIRM_UP * capAt5) return false;
+  if (m.graduated) return m.poolSol != null && m.poolSol >= CONFIRM_POOL_SOL;
+  return true;
 }
+
+/** Where a graduated coin's market stands: the cap from the pool's last price and the SOL left in the pool. */
+export type Market = (mint: string) => { cap: number | null; poolSol: number | null } | null;
 
 /** A minute-20 mark line as the backfill hands it over (the fields the rule reads). */
 export interface Mark20 {
@@ -234,6 +245,8 @@ export interface Signal {
   confirmedAt?: number;
   /** The cap at minute twenty over the cap at minute five. */
   upX?: number;
+  /** Confirmed under the first rule on a graduation alone, with no pool reading: to be restaged. Not served. */
+  unverifiedGrad?: boolean;
   /** The original tier, a label only once confirmed. */
   tier: Tier;
   models: Array<"RB" | "G">;
@@ -307,10 +320,10 @@ export class Radar {
   private readonly db: DatabaseSync | null;
   private readonly frozen: Frozen;
 
-  /** The tape's cap now, for a coin that graduated before its minute-20 reading (the curve says nothing then). */
-  private readonly capNow: ((mint: string) => number | null) | null;
+  /** The tape's pool market now, for a coin that graduated before its minute-20 reading (the curve says nothing then). */
+  private readonly capNow: Market | null;
 
-  constructor(file: string | null, db: DatabaseSync | null, frozen: Frozen = FROZEN, capNow: ((mint: string) => number | null) | null = null) {
+  constructor(file: string | null, db: DatabaseSync | null, frozen: Frozen = FROZEN, capNow: Market | null = null) {
     this.file = file;
     this.db = db;
     this.frozen = frozen;
@@ -460,19 +473,43 @@ export class Radar {
     if (!s || (s.stage ?? "candidate") !== "candidate") return null;
     const graduated = Boolean(x.graduated);
     let cap: number | null = curveCap(x.curveSol);
-    if (graduated && live && this.capNow) {
+    let poolSol: number | null = null;
+    if (graduated) {
+      // The curve's last cap is a placeholder once the coin is on its pool: only the pool's own price and SOL count.
+      // The backfill has neither for that moment, so it leaves the candidate undecided rather than guess.
+      if (!live || !this.capNow) return null;
+      let m: ReturnType<Market> = null;
       try {
-        cap = this.capNow(x.mint) ?? cap;
+        m = this.capNow(x.mint);
       } catch {
-        /* the curve's last cap stands */
+        /* no market read */
       }
+      cap = m?.cap ?? null;
+      poolSol = m?.poolSol ?? null;
     }
     const capAt5 = s.capAt5 ?? s.capAtSignal;
-    const ok = confirms(capAt5, { cap, graduated, devSold: x.creatorSoldPct });
-    const line: StageLine = { kind: "stage", mint: s.mint, stage: ok ? "confirmed" : "rejected", at: x.at, capAt20: r1(cap ?? 0), devSold: x.creatorSoldPct, graduated };
+    const ok = confirms(capAt5, { cap, graduated, devSold: x.creatorSoldPct, poolSol });
+    const line: StageLine = { kind: "stage", mint: s.mint, stage: ok ? "confirmed" : "rejected", at: x.at, capAt20: r1(cap ?? 0), devSold: x.creatorSoldPct, graduated, ...(graduated ? { poolSol: poolSol == null ? null : r1(poolSol) } : {}) };
     applyStage(s, line);
     this.append(line);
     return ok ? s : null;
+  }
+
+  /**
+   * Signals confirmed under the first rule only because they graduated before minute twenty (stage lines without a
+   * pool reading) go back to candidates, with a line saying so: their minute-20 pool was never read, so they are not
+   * confirmed. Returns how many flipped.
+   */
+  restage(now = Date.now()): number {
+    let n = 0;
+    for (const s of this.list) {
+      if (s.stage !== "confirmed" || !s.unverifiedGrad) continue;
+      const line: StageLine = { kind: "stage", mint: s.mint, stage: "candidate", at: now, capAt20: 0, devSold: null, graduated: true };
+      applyStage(s, line);
+      this.append(line);
+      n++;
+    }
+    return n;
   }
 
   /** Rebuilds the stage of candidates the node missed (a restart, older lines) from minute-20 marks the worker read. */
@@ -559,11 +596,14 @@ export class Radar {
 export interface StageLine {
   kind: "stage";
   mint: string;
-  stage: "confirmed" | "rejected";
+  /** "candidate": a confirmation taken back (graduated before minute 20 with no pool reading). */
+  stage: "confirmed" | "rejected" | "candidate";
   at: number;
   capAt20: number;
   devSold: number | null;
   graduated: boolean;
+  /** SOL in the pool at minute twenty, on lines for a coin graduated by then (absent on the first rule's lines). */
+  poolSol?: number | null;
 }
 
 function applyStage(s: Signal, l: StageLine) {
@@ -572,6 +612,16 @@ function applyStage(s: Signal, l: StageLine) {
     return;
   }
   const c5 = s.capAt5 ?? s.capAtSignal;
+  if (l.stage === "candidate") {
+    s.stage = "candidate";
+    s.capAtSignal = c5;
+    delete s.confirmedAt;
+    delete s.upX;
+    delete s.unverifiedGrad;
+    delete s.outcome;
+    return;
+  }
+  if (l.graduated && l.poolSol === undefined) s.unverifiedGrad = true;
   s.stage = "confirmed";
   s.capAt5 = c5;
   s.capAtSignal = l.capAt20;

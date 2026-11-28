@@ -81,8 +81,18 @@ interface Graded {
   conf: Conf | null;
 }
 
-interface M20 extends Mark20 {
-  createdAt: number;
+/** A minute-20 reading, kept as numbers only: [at, createdAt, curveSol (NaN for null), creatorSoldPct (NaN for null), graduated 0/1]. */
+type M20 = [number, number, number, number, number];
+const num = (v: number | null | undefined) => (typeof v === "number" ? v : NaN);
+const orNull = (v: number) => (Number.isNaN(v) ? null : v);
+
+/** The fields of a 5-minute reading the frozen models read, and nothing else: the record holds 30 hours of them. */
+function slim(x: MarkRow): MarkRow {
+  return {
+    mint: x.mint, min: x.min, at: x.at, createdAt: x.createdAt, graduated: x.graduated, buyers: x.buyers, buys: x.buys, sells: x.sells,
+    curveSol: x.curveSol, solIn: x.solIn, top5BuyingPct: x.top5BuyingPct, churnPct: x.churnPct, creatorSoldPct: x.creatorSoldPct,
+    earlyHeldPct: x.earlyHeldPct, bundlersPeakPct: x.bundlersPeakPct, bundledSol: x.bundledSol,
+  };
 }
 
 const KEEP_M20_MS = 8 * 24 * 3_600_000;
@@ -107,6 +117,8 @@ export class RecordBuilder {
   private picks = new Map<string, Graded>();
   /** Minute-20 readings since the freeze, by mint, for the confirmation; older than 8 days they leave. */
   private m20 = new Map<string, M20>();
+  /** Minute-20 marks of radar.jsonl candidates without a stage, taken before grading frees them. */
+  private open: Mark20[] = [];
   /** Multiples of every graded reading, rounded to 0.1, and graduations: the base rate. */
   private base = { xs: [] as number[], grads: 0 };
   private q: Record<"token" | "prior" | "early", StatementSync> | null = null;
@@ -167,6 +179,7 @@ export class RecordBuilder {
         closeSync(fd);
       }
     }
+    this.open = this.findUndecided();
     this.grade(now);
     return this.build(now);
   }
@@ -182,11 +195,11 @@ export class RecordBuilder {
       return;
     }
     if (x.min === 20) {
-      if (x.createdAt > this.frozen.frozenAt && !this.m20.has(x.mint)) this.m20.set(x.mint, { mint: x.mint, at: x.at, createdAt: x.createdAt, curveSol: x.curveSol, graduated: x.graduated, creatorSoldPct: x.creatorSoldPct });
+      if (x.createdAt > this.frozen.frozenAt && !this.m20.has(x.mint)) this.m20.set(x.mint, [x.at, x.createdAt, num(x.curveSol), num(x.creatorSoldPct), x.graduated ? 1 : 0]);
       return;
     }
     if (x.min !== 5 || x.graduated || x.createdAt <= this.frozen.frozenAt) return;
-    this.pending.push({ mint: x.mint, at: x.at, createdAt: x.createdAt, x });
+    this.pending.push({ mint: x.mint, at: x.at, createdAt: x.createdAt, x: slim(x) });
   }
 
   /** Readings 30 hours old are scored and graded once; picks keep being re-read so a late peak still counts. */
@@ -199,6 +212,9 @@ export class RecordBuilder {
         continue;
       }
       const t = this.token(p.mint);
+      // Graded once: a minute-20 reading is kept only for a pick.
+      const m20 = this.m20.get(p.mint);
+      this.m20.delete(p.mint);
       if (!t || t.cap_peak == null) continue;
       const pr = s.prior.get(t.creator_id, t.created_at) as { n: number; g: number };
       const early = (s.early.all(t.id) as Array<{ w: number }>).map((o) => Number(o.w));
@@ -207,7 +223,7 @@ export class RecordBuilder {
       this.base.xs.push(r1(o.peak / f.c5));
       if (o.graduated) this.base.grads++;
       const j = judge(f, this.frozen);
-      if (j.tier && !this.picks.has(p.mint)) this.picks.set(p.mint, { mint: p.mint, at: p.at, c5: f.c5, peak: o.peak, graduated: o.graduated, tier: j.tier, conf: this.confirmOf(p.mint, f.c5) });
+      if (j.tier && !this.picks.has(p.mint)) this.picks.set(p.mint, { mint: p.mint, at: p.at, c5: f.c5, peak: o.peak, graduated: o.graduated, tier: j.tier, conf: this.confirmOf(m20, f.c5) });
     }
     this.pending = keep;
     for (const g of this.picks.values()) {
@@ -222,16 +238,16 @@ export class RecordBuilder {
         g.conf.graduated ||= c.graduated;
       }
     }
-    for (const [mint, m] of this.m20) if (now - m.createdAt > KEEP_M20_MS) this.m20.delete(mint);
+    for (const [mint, m] of this.m20) if (now - m[1] > KEEP_M20_MS) this.m20.delete(mint);
   }
 
   /** The minute-20 rule on a pick's own reading; null when it had no minute-20 reading or failed the rule. */
-  private confirmOf(mint: string, c5: number): Conf | null {
-    const m = this.m20.get(mint);
-    if (!m) return null;
-    const cap = curveCap(m.curveSol);
-    if (!confirms(c5, { cap, graduated: Boolean(m.graduated), devSold: m.creatorSoldPct })) return null;
-    return { at: m.at, c20: cap, peak: cap, graduated: false };
+  private confirmOf(m: M20 | undefined, c5: number): Conf | null {
+    // A coin graduated by minute twenty: the marks hold no pool reading for that moment, so the record does not confirm it.
+    if (!m || m[4]) return null;
+    const cap = curveCap(orNull(m[2]));
+    if (!confirms(c5, { cap, graduated: false, devSold: orNull(m[3]) })) return null;
+    return { at: m[0], c20: cap, peak: cap, graduated: false };
   }
 
   /** Lines of radar.jsonl, parsed; a missing file reads as none. */
@@ -251,6 +267,10 @@ export class RecordBuilder {
 
   /** Minute-20 marks of live candidates in radar.jsonl that have no stage line yet: the backfill on the main thread decides them. */
   undecided(): Mark20[] {
+    return this.open;
+  }
+
+  private findUndecided(): Mark20[] {
     const open = new Set<string>();
     for (const x of this.radarLines()) {
       if (x.kind === "stage") open.delete(x.mint);
@@ -259,7 +279,8 @@ export class RecordBuilder {
     const out: Mark20[] = [];
     for (const mint of open) {
       const m = this.m20.get(mint);
-      if (m) out.push({ mint, at: m.at, curveSol: m.curveSol, graduated: m.graduated, creatorSoldPct: m.creatorSoldPct });
+      // Graduated by minute twenty: the main thread cannot read that pool after the fact, so it is not sent.
+      if (m && !m[4]) out.push({ mint, at: m[0], curveSol: orNull(m[2]), graduated: false, creatorSoldPct: orNull(m[3]) });
     }
     return out;
   }

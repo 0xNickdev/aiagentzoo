@@ -8,7 +8,7 @@ import { clampInt, clientIp, fromPeer, json, readJson } from "./http.ts";
 import type { RouteContext } from "./context.ts";
 
 /** A signal as served, with where the coin stands now (the tape's cap; null once the tape has forgotten it). */
-const withNow = (s: Signal) => {
+const withNow = ({ unverifiedGrad: _u, ...s }: Signal) => {
   const f = tape.facts(s.mint);
   const cap = f ? (f.graduated ? tape.capNow(s.mint) : curveCap(f.curveSol)) : null;
   const capNow = cap == null ? null : Math.round(cap * 10) / 10;

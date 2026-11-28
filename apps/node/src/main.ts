@@ -220,9 +220,11 @@ const history = config.role === "north" && process.env.ZOO_HISTORY !== "off" ? n
 // Which launches linked which X account or Telegram, kept beside it for 90 days instead of the tape's two.
 if (history) socials.attach(history.db);
 // The runner radar: the models frozen on 21 Nov scored on every 5-minute reading; signals kept in radar.jsonl.
-const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db, undefined, (mint) => tape.capNow(mint)) : null;
+const radar = config.role === "north" && history ? new Radar(join(config.dataDir, "radar.jsonl"), history.db, undefined, (mint) => ({ cap: tape.capNow(mint), poolSol: tape.facts(mint, Date.now(), true)?.poolSol ?? null })) : null;
 if (radar) {
   console.log(`[${config.id}] radar restored: ${radar.load()} signals, ${radar.restoreDay(join(config.dataDir, "radar-day.json"), join(config.dataDir, "chain-marks.jsonl"))} scored today`);
+  // Confirmations given on a graduation alone, before the pool check, are taken back.
+  console.log(`[${config.id}] radar restaged: ${radar.restage()} graduated-before-20 confirmations back to candidates`);
   setInterval(() => {
     try {
       radar.refresh((mint) => {
