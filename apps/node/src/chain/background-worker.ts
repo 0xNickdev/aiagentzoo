@@ -10,7 +10,8 @@ import { parentPort, workerData } from "node:worker_threads";
 import { RecordBuilder } from "./radar-record.ts";
 import { QualityReader } from "./wallet-quality.ts";
 import { type BuyerRow, ensureBuyers, pruneBuyers, writeBuyers } from "./radar-buyers.ts";
-import { OPGRAPH, OperatorGraph } from "./opgraph.ts";
+import { OPGRAPH, OperatorGraph, openOpGraphDb } from "./opgraph.ts";
+import { dirname, join } from "node:path";
 import { type PnlRows, SmartWallets, WalletLedger } from "./walletpnl.ts";
 import type { BgIn, BgOut, BgOptions, PrintTie } from "./background.ts";
 
@@ -42,7 +43,18 @@ async function retry<T>(what: string, f: () => T): Promise<T> {
 const prints = new Map<string, PrintTie>();
 const PRINTS_MAX = 200_000;
 
-const graph = o.opgraph ? new OperatorGraph(db, { printOf: (mint) => prints.get(mint) ?? null }) : null;
+// The graph writes only its own file; history.db is read on a separate read-only connection, one short statement at a
+// time, so the main thread's history writes never wait on the graph (and the WAL can checkpoint between batches).
+const graph = o.opgraph
+  ? new OperatorGraph(openOpGraphDb(o.graphDbPath ?? join(dirname(o.dbPath), "opgraph.db")), {
+      src: (() => {
+        const ro = new DatabaseSync(o.dbPath, { readOnly: true });
+        ro.exec("PRAGMA busy_timeout = 30000;");
+        return ro;
+      })(),
+      printOf: (mint) => prints.get(mint) ?? null,
+    })
+  : null;
 const ledger = o.pnl ? new WalletLedger(db) : null;
 const smart = o.pnl && o.smartFile ? new SmartWallets(o.smartFile) : null;
 

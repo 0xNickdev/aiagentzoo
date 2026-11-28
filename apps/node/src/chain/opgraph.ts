@@ -1,4 +1,5 @@
-import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { existsSync } from "node:fs";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { inflateRawSync } from "node:zlib";
 import { exchangeOf, launcherOf } from "./exchanges.ts";
 
@@ -78,20 +79,13 @@ export interface OperatorSummary {
 export interface OpGraphDeps {
   /** A launch's exact tool print and the other wallets that launched with it, while the tape still holds it. */
   printOf?: (mint: string) => { key: string; wallets: number; common: boolean; creators: string[] } | null;
+  /** Where tokens, wallets and socials are read (history.db, read-only); the graph's own tables stay in `db`. Defaults to `db`. */
+  src?: DatabaseSync;
+  /** A reader only: no schema is made (the writer made it). */
+  readOnly?: boolean;
 }
 
-type Pair = [string, string];
-const ordered = (a: string, b: string): Pair => (a < b ? [a, b] : [b, a]);
-
-export class OperatorGraph {
-  readonly db: DatabaseSync;
-  private readonly s: Record<string, StatementSync>;
-  private readonly deps: OpGraphDeps;
-
-  constructor(db: DatabaseSync, deps: OpGraphDeps = {}) {
-    this.db = db;
-    this.deps = deps;
-    db.exec(`
+const OPGRAPH_SCHEMA = `
       CREATE TABLE IF NOT EXISTS op_members (
         creator TEXT PRIMARY KEY,
         root TEXT NOT NULL,
@@ -110,8 +104,43 @@ export class OperatorGraph {
       CREATE INDEX IF NOT EXISTS op_edges_b ON op_edges (b);
       CREATE INDEX IF NOT EXISTS op_edges_seen ON op_edges (first_seen);
       CREATE TABLE IF NOT EXISTS op_state (k TEXT PRIMARY KEY, v INTEGER NOT NULL) WITHOUT ROWID;
-    `);
+    `;
+
+/** The graph's own file (opgraph.db): WAL, so the worker writes while the main thread reads, never inside history.db. */
+export function openOpGraphDb(path: string, opts: { readOnly?: boolean } = {}): DatabaseSync {
+  if (opts.readOnly) {
+    // Make the file and schema first if the worker has not yet, then read it only.
+    if (!existsSync(path)) {
+      const w = openOpGraphDb(path);
+      w.exec(OPGRAPH_SCHEMA);
+      w.close();
+    }
+    const db = new DatabaseSync(path, { readOnly: true });
+    db.exec("PRAGMA busy_timeout = 5000;");
+    return db;
+  }
+  const db = new DatabaseSync(path);
+  db.exec("PRAGMA busy_timeout = 30000;");
+  db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
+  return db;
+}
+
+type Pair = [string, string];
+const ordered = (a: string, b: string): Pair => (a < b ? [a, b] : [b, a]);
+
+export class OperatorGraph {
+  readonly db: DatabaseSync;
+  readonly src: DatabaseSync;
+  private readonly s: Record<string, StatementSync>;
+  private readonly deps: OpGraphDeps;
+
+  constructor(db: DatabaseSync, deps: OpGraphDeps = {}) {
+    this.db = db;
+    this.src = deps.src ?? db;
+    this.deps = deps;
+    if (!deps.readOnly) db.exec(OPGRAPH_SCHEMA);
     const p = (sql: string) => db.prepare(sql);
+    const h = (sql: string) => this.src.prepare(sql);
     this.s = {
       root: p("SELECT root FROM op_members WHERE creator = ?"),
       size: p("SELECT count(*) AS n FROM op_members WHERE root = ?"),
@@ -122,12 +151,12 @@ export class OperatorGraph {
       near: p("SELECT a, b, type, detail, first_seen FROM op_edges WHERE a = ? UNION ALL SELECT a, b, type, detail, first_seen FROM op_edges WHERE b = ? ORDER BY first_seen DESC LIMIT ?"),
       state: p("SELECT v FROM op_state WHERE k = ?"),
       setState: p("INSERT INTO op_state (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v"),
-      batch: p("SELECT t.id, t.mint, t.created_at, t.first_seen, t.funder, t.body, t.creator_id, w.wallet AS creator FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.id > ? ORDER BY t.id LIMIT ?"),
-      funderDevs: p("SELECT count(DISTINCT creator_id) AS n FROM tokens WHERE funder = ?"),
-      funderPrev: p("SELECT w.wallet FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.funder = ? AND t.creator_id <> ? ORDER BY t.created_at DESC LIMIT 1"),
-      isCreator: p("SELECT launches FROM wallets WHERE wallet = ?"),
-      sniperCreators: p("SELECT DISTINCT t.creator_id FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.wallet_id = ? AND wt.role = 1 AND t.creator_id <> ? LIMIT 60"),
-      walletName: p("SELECT wallet FROM wallets WHERE id = ?"),
+      batch: h("SELECT t.id, t.mint, t.created_at, t.first_seen, t.funder, t.body, t.creator_id, w.wallet AS creator FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.id > ? ORDER BY t.id LIMIT ?"),
+      funderDevs: h("SELECT count(DISTINCT creator_id) AS n FROM tokens WHERE funder = ?"),
+      funderPrev: h("SELECT w.wallet FROM tokens t JOIN wallets w ON w.id = t.creator_id WHERE t.funder = ? AND t.creator_id <> ? ORDER BY t.created_at DESC LIMIT 1"),
+      isCreator: h("SELECT launches FROM wallets WHERE wallet = ?"),
+      sniperCreators: h("SELECT DISTINCT t.creator_id FROM wallet_tokens wt JOIN tokens t ON t.id = wt.token_id WHERE wt.wallet_id = ? AND wt.role = 1 AND t.creator_id <> ? LIMIT 60"),
+      walletName: h("SELECT wallet FROM wallets WHERE id = ?"),
     };
   }
 
@@ -137,9 +166,9 @@ export class OperatorGraph {
     if (this.social === undefined) {
       try {
         this.social = {
-          accounts: this.db.prepare("SELECT account FROM social_links WHERE mint = ?"),
-          devs: this.db.prepare("SELECT count(DISTINCT creator) AS n FROM social_links WHERE account = ?"),
-          others: this.db.prepare("SELECT creator FROM social_links WHERE account = ? GROUP BY creator ORDER BY max(created_at) DESC LIMIT 20"),
+          accounts: this.src.prepare("SELECT account FROM social_links WHERE mint = ?"),
+          devs: this.src.prepare("SELECT count(DISTINCT creator) AS n FROM social_links WHERE account = ?"),
+          others: this.src.prepare("SELECT creator FROM social_links WHERE account = ? GROUP BY creator ORDER BY max(created_at) DESC LIMIT 20"),
         };
       } catch {
         this.social = null;
@@ -232,7 +261,7 @@ export class OperatorGraph {
       const body = JSON.parse(inflateRawSync(r.body).toString()) as { e?: Array<[number, ...number[]]> };
       const ids = (body.e ?? []).filter((e) => Number(e[3] ?? 0) <= OPGRAPH.sniperWithinSec).map((e) => e[0]).slice(0, 30);
       if (ids.length) {
-        const snipes = ids.length < OPGRAPH.sharedSnipers ? [] : this.db.prepare(`SELECT id, snipes FROM wallets WHERE id IN (${ids.map(() => "?").join(",")})`).all(...ids) as Array<{ id: number; snipes: number }>;
+        const snipes = ids.length < OPGRAPH.sharedSnipers ? [] : this.src.prepare(`SELECT id, snipes FROM wallets WHERE id IN (${ids.map(() => "?").join(",")})`).all(...ids) as Array<{ id: number; snipes: number }>;
         const shared = new Map<number, number>();
         for (const w of snipes) {
           if (Number(w.snipes) > OPGRAPH.sniperMaxSnipes) continue;
@@ -273,13 +302,13 @@ export class OperatorGraph {
     const all = rows.map((r) => r.creator);
     const others = all.filter((w) => w !== creator);
     const list = (xs: string[]) => xs.map(() => "?").join(",");
-    const rec = this.db.prepare(`SELECT sum(launches) AS l, sum(dumped) AS d FROM wallets WHERE wallet IN (${list(others)})`).get(...others) as { l: number | null; d: number | null };
+    const rec = this.src.prepare(`SELECT sum(launches) AS l, sum(dumped) AS d FROM wallets WHERE wallet IN (${list(others)})`).get(...others) as { l: number | null; d: number | null };
     const ties: Partial<Record<TieType, number>> = {};
     const tieRows = this.db.prepare(`SELECT type, count(*) AS n FROM op_edges WHERE a IN (${list(all)}) AND b IN (${list(all)}) GROUP BY type`).all(...all, ...all) as Array<{ type: TieType; n: number }>;
     for (const t of tieRows) ties[t.type] = Number(t.n);
     let accounts: string[] = [];
     try {
-      accounts = (this.db.prepare(`SELECT DISTINCT account FROM social_links WHERE creator IN (${list(all)}) LIMIT 8`).all(...all) as Array<{ account: string }>).map((a) => a.account);
+      accounts = (this.src.prepare(`SELECT DISTINCT account FROM social_links WHERE creator IN (${list(all)}) LIMIT 8`).all(...all) as Array<{ account: string }>).map((a) => a.account);
     } catch {
       /* no socials table on this store */
     }

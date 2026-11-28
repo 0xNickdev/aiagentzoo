@@ -21,6 +21,8 @@ export interface PrintTie {
 export interface BgOptions {
   dbPath: string;
   opgraph: boolean;
+  /** The graph's own store; defaults to opgraph.db next to history.db. */
+  graphDbPath?: string;
   pnl: boolean;
   smartFile?: string;
   /** Tokens per graph transaction, and the pause between transactions. */

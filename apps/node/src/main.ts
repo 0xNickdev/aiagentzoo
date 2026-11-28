@@ -14,7 +14,7 @@ import { startPumpStream, startRelayFeed, tape } from "./chain/pump.ts";
 import { PoolMetaQueue } from "./chain/poolMeta.ts";
 import { Adopter, adoption, patient } from "./chain/adopt.ts";
 import { HistoryStore, startHistory } from "./chain/history.ts";
-import { OperatorGraph } from "./chain/opgraph.ts";
+import { OperatorGraph, openOpGraphDb } from "./chain/opgraph.ts";
 import { SmartWallets, WalletLedger } from "./chain/walletpnl.ts";
 import { startBackground, startPrintFeed } from "./chain/background.ts";
 import { exchangeOf, launcherOf } from "./chain/exchanges.ts";
@@ -287,7 +287,8 @@ const stopHistory = history ? startHistory(history, tape, { funderOf: (c) => lin
 // worker scores the wallets with the best realized SOL into the smart list. Both off with ZOO_OPGRAPH / ZOO_WALLET_PNL=off.
 const opGraphOn = Boolean(history) && process.env.ZOO_OPGRAPH !== "off";
 const walletPnlOn = Boolean(history) && process.env.ZOO_WALLET_PNL !== "off";
-const opGraph = history && opGraphOn ? new OperatorGraph(history.db) : null;
+// Its own file (opgraph.db), read-only here; the old op_* tables in history.db are left as they are and no longer used.
+const opGraph = history && opGraphOn ? new OperatorGraph(openOpGraphDb(join(config.dataDir, "opgraph.db"), { readOnly: true }), { src: history.db, readOnly: true }) : null;
 const walletLedger = walletPnlOn ? new WalletLedger(null) : null;
 const smart = walletLedger ? new SmartWallets(join(config.dataDir, "smart-wallets.json")) : null;
 if (walletLedger) tape.onFill = (w, m, sol, isBuy, ts) => walletLedger.fill(w, m, sol, isBuy, ts);
