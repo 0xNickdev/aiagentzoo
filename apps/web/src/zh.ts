@@ -1,5 +1,6 @@
 /** Simplified Chinese, keyed by the English text. Crypto terms follow the Chinese meme-coin community's own usage. */
 export const ZH: Record<string, string> = {
+  "best signal of the last 24 hours": "过去 24 小时最佳信号",
   "peak": "峰值",
   "soon": "即将",
   "hours": "小时",

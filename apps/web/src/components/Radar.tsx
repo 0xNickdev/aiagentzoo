@@ -190,6 +190,9 @@ export function RadarLive() {
   const holder = data?.access === "live";
   const recent = (data?.signals ?? []).filter((s) => now - s.at < LIVE_MS);
   const past = (data?.signals ?? []).filter((s) => now - s.at >= LIVE_MS);
+  const best = (data?.signals ?? [])
+    .filter((s) => s.outcome && now - s.at < 24 * 3_600_000)
+    .sort((a, b) => (b.outcome?.peakX ?? 0) - (a.outcome?.peakX ?? 0))[0];
   const a = data?.stats.all;
   // The node says when the newest signal fired to everyone (time only), so the hour-late page is not stuck on "-".
   const lastAt = data?.today?.lastSignalAt ?? data?.signals[0]?.at ?? null;
@@ -244,6 +247,21 @@ export function RadarLive() {
       )}
       {signError && <p className="mb-3 text-[12.5px] text-danger">{signError}</p>}
 
+      {best && best.outcome && best.outcome.peakX >= 2 ? (
+        <a
+          href={`/xray?mint=${best.mint}`}
+          className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-[10px] border border-line bg-panel px-4 py-3 hover:border-line-2"
+        >
+          <span className="text-[12px] text-faint">{t("best signal of the last 24 hours")}</span>
+          <span className="text-[18px] font-medium tracking-[-0.02em] text-white">${best.symbol}</span>
+          <span className="text-[26px] font-semibold tracking-[-0.03em] text-white tabular-nums">{times(best.outcome.peakX)}</span>
+          <span className="text-[12.5px] text-fg-2">
+            {sol(best.capAtSignal)} → {sol(best.outcome.peakCap)} {t("from signal to peak")}
+            {best.outcome.graduated ? ` · ${t("graduated")}` : ""}
+          </span>
+          <span className="ml-auto text-[12px] text-faint">{t("{a} ago", { a: ago(best.at) })} · X-Ray ↗</span>
+        </a>
+      ) : null}
       <div className="grid gap-3 lg:grid-cols-12">
         <Panel title={t("Signals")} meta={holder ? t("the last 2 hours · refreshes every 5 seconds") : t("the last 2 hours, an hour late")} className="lg:col-span-8" bodyClass="p-0">
           <div ref={boxRef}>
